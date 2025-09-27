@@ -1,0 +1,41 @@
+{
+  "qa_available": true,
+  "qa_period": {
+    "deadline": "2025-10-14",
+    "method": "Email to usarmy.acq@army.mil per L.2.1"
+  },
+  "issues": [
+    {
+      "issue_id": "AMB001",
+      "rfp_refs": ["L.3.1", "C.5 (PWS Attachment)"],
+      "description": "Need to address >100 PWS tasks but Technical Volume limited to 25 pages, risking superficial coverage.",
+      "question": "Section L.3.1 limits the Technical Volume to 25 pages while the PWS lists over 100 distinct tasks. Would the Government prefer grouped summaries by task category or selective depth on higher-risk tasks?"
+    },
+    {
+      "issue_id": "AMB002",
+      "rfp_refs": ["A.3", "M.1"],
+      "description": "Transportation excluded in Section A, yet Evaluation mentions integrated logistics—scope boundary unclear.",
+      "question": "Section A.3 excludes Transportation while Section M.1 evaluates integrated logistics. Should incidental Transportation coordination (e.g., internal repositioning) be addressed or omitted?"
+    },
+    {
+      "issue_id": "AMB003",
+      "rfp_refs": ["B.1", "F.2"],
+      "description": "Base period stated as 366 days including 60-day transition; unclear if transition tasks billable inside CLIN 0001 FFP value only.",
+      "question": "Please confirm whether all transition-in tasks are fully included within the CLIN 0001 Firm-Fixed-Price amount or if any separate pricing detail is desired for transparency."
+    },
+    {
+      "issue_id": "AMB004",
+      "rfp_refs": ["H.7", "M.2.1"],
+      "description": "Key Personnel lock (180 days) may limit ability to optimize staffing tied to Technical sub-factors.",
+      "question": "Given the 180-day restriction on Key Personnel substitutions in Section H.7, would the Government accept naming pre-approved alternates to maintain performance continuity under the Technical Factor?"
+    },
+    {
+      "issue_id": "AMB005",
+      "rfp_refs": ["J - Attachment 0014", "C.5.4"],
+      "description": "GFFE list lacks clear condition acceptance and turnover criteria impacting 24-hour maintenance response window.",
+      "question": "Will the Government provide initial condition reports for all GFFE items in Attachment 0014 to anchor the 24-hour preventive maintenance response requirement in C.5.4?"
+    }
+  ],
+  "total_issues": 5,
+  "priority": "High (multiple items affect approach and compliance matrix)"
+}

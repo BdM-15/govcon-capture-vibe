@@ -1,0 +1,44 @@
+[
+  {
+    "section": "A",
+    "reference": "Sec A Para 3",
+    "type": "admin",
+    "snippet": "Questions due 14 Oct 2025 1400 EST; proposals due 28 Oct 2025 1400 EST.",
+    "importance_score": 10
+  },
+  {
+    "section": "L",
+    "reference": "L.3.1",
+    "type": "instruction",
+    "snippet": "Volume I shall not exceed 25 pages in 11 pt font with 1 inch margins.",
+    "importance_score": 9
+  },
+  {
+    "section": "M",
+    "reference": "M.2.2",
+    "type": "evaluation",
+    "snippet": "Technical Factor is more important than Past Performance. Price is least important when differences exist.",
+    "importance_score": 8
+  },
+  {
+    "section": "C",
+    "reference": "C.5.4",
+    "type": "work",
+    "snippet": "Contractor shall provide preventive maintenance for APS-4 equipment within 24 hours of notification.",
+    "importance_score": 9
+  },
+  {
+    "section": "B",
+    "reference": "CLIN 0001",
+    "type": "work",
+    "snippet": "Firm-Fixed-Price base operations support for 366-day base period (includes 60-day transition).",
+    "importance_score": 8
+  },
+  {
+    "section": "H",
+    "reference": "H.7",
+    "type": "admin",
+    "snippet": "Key Personnel may not be swapped without CO approval within first 180 days.",
+    "importance_score": 7
+  }
+]

@@ -1,0 +1,113 @@
+[
+  {
+    "req_id": "A001",
+    "rfp_ref": "A.3 / Page 2",
+    "description": "Competition limited to EAGLE BOA holders under NAICS 561210 by the RFP close date.",
+    "proposal_evidence": "Intro Section 1.1 states: 'We are an approved EAGLE BOA holder under NAICS 561210.'",
+    "coverage_score": 100,
+    "gaps": [],
+    "suggestion": "N/A"
+  },
+  {
+    "req_id": "A002",
+    "rfp_ref": "A.7 / Page 2",
+    "description": "Incumbent is KBRwyle under contract W52P1J-12-G-0061-0001.",
+    "proposal_evidence": "Capture Strategy subsection discusses incumbent KBRwyle history and differentiators.",
+    "coverage_score": 95,
+    "gaps": ["No explicit contract number in executive summary"],
+    "suggestion": "Add contract number in Executive Summary to show awareness."
+  },
+  {
+    "req_id": "A003",
+    "rfp_ref": "A.9 / Page 3",
+    "description": "Questions due 2025-10-14 1400 EST; proposals due 2025-10-28 1400 EST.",
+    "proposal_evidence": "Proposal Schedule table lists both deadlines correctly.",
+    "coverage_score": 100,
+    "gaps": [],
+    "suggestion": "N/A"
+  },
+  {
+    "req_id": "L001",
+    "rfp_ref": "L.3.1 / Page 45",
+    "description": "Technical Volume limited to 25 pages, 11 pt font, 1 inch margins; PDF only.",
+    "proposal_evidence": "Draft PDF is 27 pages including cover and TOC.",
+    "coverage_score": 70,
+    "gaps": ["Two pages over limit"],
+    "suggestion": "Condense staffing narrative and remove redundant graphics to reach 25 pages."
+  },
+  {
+    "req_id": "L002",
+    "rfp_ref": "L.4.2 / Page 47",
+    "description": "Offer shall remain valid for 180 days from proposal due date.",
+    "proposal_evidence": "No explicit validity statement found in Volume I.",
+    "coverage_score": 0,
+    "gaps": ["Missing 180-day validity attestation"],
+    "suggestion": "Insert a sentence in the transmittal letter confirming 180-day proposal validity."
+  },
+  {
+    "req_id": "M001",
+    "rfp_ref": "M.1 / Page 77",
+    "description": "Best Value tradeoff among Technical, Past Performance, and Cost/Price.",
+    "proposal_evidence": "Executive Summary mentions best value approach aligning people, performance history, and price discipline.",
+    "coverage_score": 90,
+    "gaps": ["Could explicitly restate factor order"],
+    "suggestion": "Add explicit sentence: 'We recognize Technical outweighs Past Performance; combined they outweigh Cost/Price.'"
+  },
+  {
+    "req_id": "M002",
+    "rfp_ref": "M.2.1 / Page 78",
+    "description": "Technical Factor sub-factors: Staffing Approach, Maintenance Execution, Supply Chain Resilience.",
+    "proposal_evidence": "Sections 3, 4, and 5 map to the three sub-factors with labeled headers.",
+    "coverage_score": 95,
+    "gaps": ["Supply Chain section lacks resilience metric table"],
+    "suggestion": "Add a resilience KPI table (MTTR, parts availability %) referencing Attachment 0014 assets."
+  },
+  {
+    "req_id": "J001",
+    "rfp_ref": "J - Attachment 0014 / Injected",
+    "description": "Government Furnished Facilities and Equipment (GFFE) provided per PWS tasks.",
+    "proposal_evidence": "Maintenance Plan references GFFE qualitatively but no inventory table.",
+    "coverage_score": 60,
+    "gaps": [
+      "Missing crosswalk of GFFE to tasks",
+      "No condition acceptance process"
+    ],
+    "suggestion": "Insert table mapping each GFFE item to preventive maintenance task and acceptance criteria."
+  },
+  {
+    "req_id": "C001",
+    "rfp_ref": "C.5.4 / Page 32",
+    "description": "Provide preventive maintenance for APS-4 equipment within 24 hours of notification.",
+    "proposal_evidence": "Section 4.2 states 24-hour response but lacks clock start definition.",
+    "coverage_score": 85,
+    "gaps": ["Does not define trigger event for 24-hour window"],
+    "suggestion": "Clarify response time starts at Government email acknowledgment; include escalation ladder."
+  },
+  {
+    "req_id": "B001",
+    "rfp_ref": "B.1 / Page 10",
+    "description": "CLIN 0001: Firm-Fixed-Price base operations support for a 366-day base period including 60-day transition.",
+    "proposal_evidence": "Pricing Volume shows CLIN 0001 single FFP line but transition tasks listed separately in narrative.",
+    "coverage_score": 80,
+    "gaps": ["Narrative separation may imply separate billing"],
+    "suggestion": "Explicitly state transition tasks are included within CLIN 0001 fixed price."
+  },
+  {
+    "req_id": "H001",
+    "rfp_ref": "H.7 / Page 59",
+    "description": "Key Personnel changes prohibited first 180 days without CO approval.",
+    "proposal_evidence": "Key Personnel matrix lists commitments but no replacement protocol during restriction window.",
+    "coverage_score": 75,
+    "gaps": ["Lacks contingency plan for unexpected departure"],
+    "suggestion": "Add rapid replacement procedure and pre-vetted alternates in Appendix."
+  },
+  {
+    "summary": {
+      "total_reqs": 11,
+      "compliance_rate": 86,
+      "critical_gaps": 2,
+      "a_section_coverage": 98,
+      "high_risk_reqs": ["L002", "J001"]
+    }
+  }
+]
