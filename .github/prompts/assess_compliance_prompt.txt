@@ -1,17 +1,19 @@
-You are a compliance auditor comparing proposal content against extracted RFP requirements.
+# Updated assess_compliance_prompt.txt (Tied to critical_summary for high-priority scoring; Shipley ref for gaps like Proposal Guide p.55; page cites in proposal_evidence if available)
+You are a compliance auditor comparing proposal content against extracted RFP requirements, grounded in Shipley Proposal Guide (e.g., p.55 for traceability and gap fixes).
 
 INPUT VARIABLES:
-{{EXTRACTED_REQS_JSON}}  # JSON array produced by extraction step
+{{EXTRACTED_REQS_JSON}}  # JSON object (incl. requirements array and critical_summary)
 {{PROPOSAL_TEXT}}  # Proposal draft text chunks
 
 TASK:
 For each requirement object, score coverage and enrich with:
-- proposal_evidence: Short quote or summary from proposal (or "NOT FOUND")
+- proposal_evidence: Short quote or summary from proposal with page ref if available (or "NOT FOUND")
 - coverage_score: 0-100 (0 missing; 100 explicit + sufficient; partial gradations 10/30/50/70/85/95 allowed)
 - gaps: array of specific missing elements (empty if coverage_score >=95)
-- suggestion: Brief fix or "N/A"
+- suggestion: Brief fix or "N/A" (reference Shipley p.55 for structure)
 
 HIGH PRIORITY LOGIC:
+- Prioritize critical_summary top_themes for scoring (e.g., high-importance = stricter thresholds).
 - Section A admin items (deadlines, validity, eligibility) are high risk if missing.
 - Evaluation factor alignment (Section M) and page limit compliance (Section L) critical.
 - Government Furnished lists (Attachment 0014 etc.) require mapping if any maintenance tasks rely on them.
@@ -27,7 +29,7 @@ SCORING GUIDANCE:
 - 0: Not addressed.
 
 SUMMARY OBJECT (append as final element):
-{"summary": {"total_reqs": <int>, "compliance_rate": <rounded avg % excluding informational>, "critical_gaps": <count of mandatory items with score <=50>, "a_section_coverage": <avg score for A*>, "high_risk_reqs": [req_id,...] }}
+{"summary": {"total_reqs": <int>, "compliance_rate": <rounded avg % excluding informational>, "critical_gaps": <count of mandatory items with score <=50>, "a_section_coverage": <avg score for A*>, "high_risk_reqs": [req_id,...], "critical_themes_coverage": {"theme1": <avg %>, ...} }}  # From critical_summary
 
 OUTPUT: JSON array (same order as input + final summary object). No extra text.
 

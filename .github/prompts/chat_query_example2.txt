@@ -1,0 +1,1 @@
+(Summary-based): "Summarize critical themes from the parsed RFP, focusing on evaluation factors. Prioritize by importance score."
