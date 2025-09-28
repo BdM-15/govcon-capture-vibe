@@ -7,7 +7,7 @@ Complements LightRAG for structured outputs.
 
 import json
 import ollama
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 import os
 
@@ -60,36 +60,59 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> list:
     with open(prompt_file, 'r') as f:
         template = f.read()
 
-    # Fill template
-    prompt = template.replace("{{RFP_TEXT}}", rfp_text)
-    prompt = prompt.replace("{{ATTACHMENTS_TEXT}}", attachments_text)
+    # Chunk the text to fit within LLM context (approx 6000 words per chunk)
+    def chunk_text(text: str, chunk_size: int = 6000) -> List[str]:
+        words = text.split()
+        return [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
 
-    # Call LLM
-    response = call_ollama(prompt)
+    rfp_chunks = chunk_text(rfp_text)
+    attachments_chunks = chunk_text(attachments_text) if attachments_text else []
 
-    try:
-        # Clean response (remove markdown code blocks)
-        response = response.strip()
-        if response.startswith("```json"):
-            response = response[7:]
-        if response.endswith("```"):
-            response = response[:-3]
-        response = response.strip()
+    all_requirements = []
 
-        data = json.loads(response)
-        if isinstance(data, dict) and "requirements" in data:
-            # New format with requirements and critical_summary
-            return data["requirements"]
-        elif isinstance(data, list):
-            # Old format, just the array
-            return data
-        else:
-            print("Warning: Unexpected JSON structure")
-            return []
-    except json.JSONDecodeError as e:
-        print(f"Failed to parse requirements JSON: {e}")
-        print(f"Cleaned response: {response[:500]}...")
-        return []
+    for i, chunk in enumerate(rfp_chunks + attachments_chunks):
+        # Fill template
+        prompt = template.replace("{{RFP_TEXT}}", chunk)
+        prompt = prompt.replace("{{ATTACHMENTS_TEXT}}", attachments_text if i < len(rfp_chunks) else "")
+
+        # Call LLM
+        response = call_ollama(prompt)
+
+        try:
+            # Clean response (remove markdown code blocks)
+            response = response.strip()
+            if response.startswith("```json"):
+                response = response[7:]
+            if response.endswith("```"):
+                response = response[:-3]
+            response = response.strip()
+
+            data = json.loads(response)
+            if isinstance(data, dict) and "requirements" in data:
+                # New format with requirements and critical_summary
+                all_requirements.extend(data["requirements"])
+            elif isinstance(data, list):
+                # Old format, just the array
+                all_requirements.extend(data)
+            else:
+                print("Warning: Unexpected JSON structure")
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse requirements JSON for chunk {i}: {e}")
+            print(f"Cleaned response: {response[:500]}...")
+
+    # Remove duplicates based on req_id or description
+    seen = set()
+    unique_reqs = []
+    for req in all_requirements:
+        key = (req.get('req_id'), req.get('description'))
+        if key not in seen:
+            seen.add(key)
+            unique_reqs.append(req)
+
+    # Sort by req_id to organize A-Z
+    unique_reqs.sort(key=lambda x: x.get('req_id', ''))
+
+    return unique_reqs
 
 
 def assess_compliance(extracted_reqs: list, proposal_text: str) -> list:

@@ -114,5 +114,24 @@
       "processing_start_time": 1759076085,
       "processing_end_time": 1759076191
     }
+  },
+  "doc-73c3179f39a31d1d35e32bd002994759": {
+    "status": "processed",
+    "chunks_count": 3,
+    "chunks_list": [
+      "chunk-f54d8d095b5a9d4d5ffd337573dee386",
+      "chunk-b97a254ba953e5daadec1faf2047bbc6",
+      "chunk-26099bc70bbda9bcb4ead05012a5d754"
+    ],
+    "content_summary": "Extracted Requirements:\n[{\"rfp_ref\": \"A001 / Page 1\", \"section\": \"Administrative Requirements\", \"req_id\": \"A001\", \"description\": \"Respond to this RFP within the required timeframe.\", \"sub_factors\": [], \"compliance_type\": \"mandatory\", \"snippet\": \"All ...",
+    "content_length": 12976,
+    "created_at": "2025-09-28T16:47:15.272320+00:00",
+    "updated_at": "2025-09-28T16:49:07.702058+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_114715_2199b321",
+    "metadata": {
+      "processing_start_time": 1759078035,
+      "processing_end_time": 1759078147
+    }
   }
 }

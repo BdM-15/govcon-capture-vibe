@@ -10,6 +10,10 @@ import json
 import os
 from typing import List, Optional
 import pandas as pd
+import nest_asyncio
+
+# Apply nest_asyncio to fix event loop conflicts in Streamlit
+nest_asyncio.apply()
 
 # Import our modules
 from src.rfp_parser import parse_rfp_documents
@@ -47,7 +51,6 @@ def display_requirements_table(requirements: List[dict]):
 
     st.dataframe(
         df[display_cols],
-        use_container_width=True,
         column_config={
             "req_id": st.column_config.TextColumn("ID", width="small"),
             "section": st.column_config.TextColumn("Section", width="medium"),
@@ -226,7 +229,7 @@ def main():
 
                         # Display detailed assessment
                         assessment_df = pd.DataFrame(assessment[:-1] if 'summary' in assessment[-1] else assessment)
-                        st.dataframe(assessment_df, use_container_width=True)
+                        st.dataframe(assessment_df)
                     else:
                         st.error("Assessment failed")
                 else:

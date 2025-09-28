@@ -1518,5 +1518,181 @@
     "create_time": 1759076981,
     "update_time": 1759076981,
     "_id": "doc-d3e9a2d4fb9735fbda0da20feff06f0c"
+  },
+  "doc-73c3179f39a31d1d35e32bd002994759": {
+    "relation_pairs": [
+      [
+        "Project Timeline",
+        "Proposal"
+      ],
+      [
+        "Proposal",
+        "Special Requirements"
+      ],
+      [
+        "Proposal",
+        "Timeline"
+      ],
+      [
+        "Attachments",
+        "Proposal"
+      ],
+      [
+        "Deliveries/Performance",
+        "Proposal"
+      ],
+      [
+        "Company's Main Office",
+        "Transition Plan"
+      ],
+      [
+        "All Responses",
+        "Online Portal"
+      ],
+      [
+        "CLINs",
+        "Proposal"
+      ],
+      [
+        "Evaluation Factors",
+        "M.2.3 / Page 56"
+      ],
+      [
+        "B - Page 4",
+        "Supplemental Information"
+      ],
+      [
+        "Proposal",
+        "Supplemental Information"
+      ],
+      [
+        "Proposal",
+        "Sub-Factor 3"
+      ],
+      [
+        "J-Attachment 0014 / Page 3",
+        "Work Description"
+      ],
+      [
+        "Proposal",
+        "Sub-Factor 2"
+      ],
+      [
+        "Project Proposals",
+        "Proposal"
+      ],
+      [
+        "Deadline",
+        "Project Deliverables"
+      ],
+      [
+        "Evaluation Factors",
+        "M001 / Page 56"
+      ],
+      [
+        "Environmental Standards",
+        "Proposal"
+      ],
+      [
+        "C - Attachment 0014 / Page 3",
+        "Work Description"
+      ],
+      [
+        "B001 / Page 5",
+        "Supplies/Services & CLINs"
+      ],
+      [
+        "Instructions",
+        "L001 / Page 45"
+      ],
+      [
+        "Proposal",
+        "Resumes"
+      ],
+      [
+        "A001 / Page 1",
+        "Supplemental Information"
+      ],
+      [
+        "Financial Statements",
+        "Proposal"
+      ],
+      [
+        "Project Deliverables",
+        "Safety Standards"
+      ],
+      [
+        "L.3.1 / Page 45",
+        "Special Requirements"
+      ],
+      [
+        "Instructions",
+        "Proposal"
+      ],
+      [
+        "J - Attachment 002 / Page 5",
+        "Supplies/Services & CLINs"
+      ],
+      [
+        "Proposal",
+        "Supplies/Services"
+      ],
+      [
+        "Evaluation Factors",
+        "Proposal"
+      ],
+      [
+        "Government Assets",
+        "Proposal"
+      ],
+      [
+        "PDF File",
+        "Proposal"
+      ],
+      [
+        "A - Attachment 001 / Page 2",
+        "List of Attachments"
+      ],
+      [
+        "Company's Past Performance",
+        "Proposal"
+      ],
+      [
+        "H001 / Page 10",
+        "List of Attachments"
+      ],
+      [
+        "Proposal",
+        "Work Description"
+      ],
+      [
+        "Company's Main Office",
+        "Project Deliverables"
+      ],
+      [
+        "A001 / Page 1",
+        "Administrative Requirements"
+      ],
+      [
+        "Appendix C",
+        "Proposal"
+      ],
+      [
+        "PWS",
+        "Project Deliverables"
+      ],
+      [
+        "All Responses",
+        "PDF File"
+      ],
+      [
+        "H - Page 10",
+        "Performance Evaluation"
+      ]
+    ],
+    "count": 42,
+    "create_time": 1759078147,
+    "update_time": 1759078147,
+    "_id": "doc-73c3179f39a31d1d35e32bd002994759"
   }
 }

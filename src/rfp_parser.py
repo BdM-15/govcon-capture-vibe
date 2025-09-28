@@ -7,14 +7,14 @@ Handles multiple file types and combines into single text string.
 
 import os
 from typing import Dict, List, Optional
-from pypdf import PdfReader
+import fitz  # PyMuPDF
 import docx
 import openpyxl
 
 
 def extract_text_from_pdf(file_path: str) -> str:
     """
-    Extract text from PDF file.
+    Extract text from PDF file using PyMuPDF.
 
     Args:
         file_path: Path to PDF file
@@ -24,9 +24,10 @@ def extract_text_from_pdf(file_path: str) -> str:
     """
     text = ""
     try:
-        reader = PdfReader(file_path)
-        for page in reader.pages:
-            text += page.extract_text() + "\n"
+        doc = fitz.open(file_path)
+        for page in doc:
+            text += page.get_text() + "\n"
+        doc.close()
     except Exception as e:
         print(f"Error reading PDF {file_path}: {e}")
     return text

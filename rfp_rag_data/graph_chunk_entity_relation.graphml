@@ -85,11 +85,11 @@
 </node>
 <node id="Proposal">
   <data key="d0">Proposal</data>
-  <data key="d1">document</data>
-  <data key="d2">A proposal is a formal document submitted to meet specific requirements or standards, as mentioned in the RFP.&lt;SEP&gt;A proposal submitted to meet specific requirements.&lt;SEP&gt;A Proposal is a document submitted by an Offeror outlining their qualifications and terms for award.</data>
-  <data key="d3">chunk-d4419ff42139d71e432ad022f14d174f&lt;SEP&gt;chunk-95e7f989fd12777b24a45fb4190ae372&lt;SEP&gt;chunk-113cdfc65b439944535e6613fa79ae29</data>
+  <data key="d1">content</data>
+  <data key="d2">A proposal is a formal document submitted to meet specific requirements or standards, as mentioned in the RFP.&lt;SEP&gt;A proposal submitted to meet specific requirements.&lt;SEP&gt;A Proposal is a document submitted by an Offeror outlining their qualifications and terms for award.&lt;SEP&gt;A proposal is a document that outlines a plan or solution for a specific task or project.&lt;SEP&gt;A proposal is a document submitted as part of a request for proposal process.</data>
+  <data key="d3">chunk-95e7f989fd12777b24a45fb4190ae372&lt;SEP&gt;chunk-113cdfc65b439944535e6613fa79ae29&lt;SEP&gt;chunk-b97a254ba953e5daadec1faf2047bbc6&lt;SEP&gt;chunk-d4419ff42139d71e432ad022f14d174f&lt;SEP&gt;chunk-26099bc70bbda9bcb4ead05012a5d754</data>
   <data key="d4">unknown_source</data>
-  <data key="d5">1759076926</data>
+  <data key="d5">1759078135</data>
 </node>
 <node id="Attachment A">
   <data key="d0">Attachment A</data>
@@ -207,11 +207,11 @@ The Government is a public body responsible for purchasing supplies and services
 </node>
 <node id="Timeline">
   <data key="d0">Timeline</data>
-  <data key="d1">concept</data>
-  <data key="d2">The sequence of events in chronological order.</data>
-  <data key="d3">chunk-d4419ff42139d71e432ad022f14d174f</data>
+  <data key="d1">category</data>
+  <data key="d2">The sequence of events in chronological order.&lt;SEP&gt;A timeline is a graphical representation of a sequence of events or tasks with their start and end dates.</data>
+  <data key="d3">chunk-d4419ff42139d71e432ad022f14d174f&lt;SEP&gt;chunk-26099bc70bbda9bcb4ead05012a5d754</data>
   <data key="d4">unknown_source</data>
-  <data key="d5">1759076187</data>
+  <data key="d5">1759078136</data>
 </node>
 <node id="Milestone">
   <data key="d0">Milestone</data>
@@ -272,10 +272,10 @@ The Government is a public body responsible for purchasing supplies and services
 <node id="Special Requirements">
   <data key="d0">Special Requirements</data>
   <data key="d1">category</data>
-  <data key="d2">Unique or additional requirements beyond the standard specifications.</data>
-  <data key="d3">chunk-d4419ff42139d71e432ad022f14d174f</data>
+  <data key="d2">Unique or additional requirements beyond the standard specifications.&lt;SEP&gt;Special requirements are additional conditions or specifications that must be met in a proposal.</data>
+  <data key="d3">chunk-d4419ff42139d71e432ad022f14d174f&lt;SEP&gt;chunk-b97a254ba953e5daadec1faf2047bbc6</data>
   <data key="d4">unknown_source</data>
-  <data key="d5">1759076187</data>
+  <data key="d5">1759078135</data>
 </node>
 <node id="Risk Management">
   <data key="d0">Risk Management</data>
@@ -847,11 +847,11 @@ The Government is a public body responsible for purchasing supplies and services
 </node>
 <node id="Financial Statements">
   <data key="d0">Financial Statements</data>
-  <data key="d1">document</data>
-  <data key="d2">Financial statements include the balance sheet, income statement, and cash flow statement.</data>
-  <data key="d3">chunk-ab5c433ef195114b49df8f2dce8764ba</data>
+  <data key="d1">content</data>
+  <data key="d2">Financial statements include the balance sheet, income statement, and cash flow statement.&lt;SEP&gt;Financial statements provide financial information about a company or organization over a specific period.</data>
+  <data key="d3">chunk-ab5c433ef195114b49df8f2dce8764ba&lt;SEP&gt;chunk-b97a254ba953e5daadec1faf2047bbc6</data>
   <data key="d4">unknown_source</data>
-  <data key="d5">1759076916</data>
+  <data key="d5">1759078136</data>
 </node>
 <node id="Independent Accounting Firm">
   <data key="d0">Independent Accounting Firm</data>
@@ -4997,6 +4997,422 @@ The Government is a public body responsible for purchasing supplies and services
   <data key="d4">unknown_source</data>
   <data key="d5">1759076979</data>
 </node>
+<node id="Attachments">
+  <data key="d0">Attachments</data>
+  <data key="d1">content</data>
+  <data key="d2">Attachments are supplementary documents submitted along with the main proposal to provide additional information or context.&lt;SEP&gt;Attachments are supplementary documents included with the proposal.</data>
+  <data key="d3">chunk-26099bc70bbda9bcb4ead05012a5d754&lt;SEP&gt;chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078135</data>
+</node>
+<node id="Government Assets">
+  <data key="d0">Government Assets</data>
+  <data key="d1">category</data>
+  <data key="d2">Government assets refer to property, resources, and infrastructure owned by a government entity.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078135</data>
+</node>
+<node id="CLINs">
+  <data key="d0">CLINs</data>
+  <data key="d1">category</data>
+  <data key="d2">CLINs stands for Cost-Plus Incentive Fee Contracts, which are types of contracts used in public procurements.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078135</data>
+</node>
+<node id="Work Description">
+  <data key="d0">Work Description</data>
+  <data key="d1">content</data>
+  <data key="d2">A work description outlines the tasks and activities required to complete a project or service.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078135</data>
+</node>
+<node id="Evaluation Factors">
+  <data key="d0">Evaluation Factors</data>
+  <data key="d1">category</data>
+  <data key="d2">Evaluation factors are criteria used to assess the performance of proposals or bids.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078135</data>
+</node>
+<node id="Instructions">
+  <data key="d0">Instructions</data>
+  <data key="d1">content</data>
+  <data key="d2">Instructions provide guidance on how to prepare and submit responses to an RFP.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078135</data>
+</node>
+<node id="Deliveries/Performance">
+  <data key="d0">Deliveries/Performance</data>
+  <data key="d1">category</data>
+  <data key="d2">Delivery plans and performance timelines outline the expected outcomes and milestones of a project.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Supplemental Information">
+  <data key="d0">Supplemental Information</data>
+  <data key="d1">content</data>
+  <data key="d2">Supplemental information provides additional details or explanations relevant to the proposal.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Project Timeline">
+  <data key="d0">Project Timeline</data>
+  <data key="d1">category</data>
+  <data key="d2">A project timeline outlines the schedule for completing various tasks and phases of a project.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Online Portal">
+  <data key="d0">Online Portal</data>
+  <data key="d1">category</data>
+  <data key="d2">An online portal is a web-based platform for submitting documents or information.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Company's Past Performance">
+  <data key="d0">Company's Past Performance</data>
+  <data key="d1">content</data>
+  <data key="d2">The company's past performance includes historical achievements, completed projects, and relevant experiences.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Sub-Factor 2">
+  <data key="d0">Sub-Factor 2</data>
+  <data key="d1">category</data>
+  <data key="d2">Sub-Factor 2 is a specific detail or consideration under the Evaluation Factors section.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Sub-Factor 3">
+  <data key="d0">Sub-Factor 3</data>
+  <data key="d1">category</data>
+  <data key="d2">Sub-Factor 3 is another specific detail or consideration under the Work Description section.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Resumes">
+  <data key="d0">Resumes</data>
+  <data key="d1">content</data>
+  <data key="d2">A resume is a document summarizing a person's employment history, skills, and qualifications.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Project Proposals">
+  <data key="d0">Project Proposals</data>
+  <data key="d1">content</data>
+  <data key="d2">A project proposal outlines the plan for completing a project or service, including objectives, methods, and timelines.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="PDF File">
+  <data key="d0">PDF File</data>
+  <data key="d1">artifact</data>
+  <data key="d2">PDF file is a container that uses the Portable Document Format to organize and present all your content in a manner independent of application software, hardware, and operating system.&lt;SEP&gt;A PDF file is a digital document format that retains formatting from the original source.</data>
+  <data key="d3">chunk-26099bc70bbda9bcb4ead05012a5d754&lt;SEP&gt;chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Appendix C">
+  <data key="d0">Appendix C</data>
+  <data key="d1">content</data>
+  <data key="d2">Appendix C provides guidelines for formatting attached documents.</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Company's Main Office">
+  <data key="d0">Company's Main Office</data>
+  <data key="d1">location</data>
+  <data key="d2">The company's main office is the primary location where all work related to the project must be performed unless otherwise specified.</data>
+  <data key="d3">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Project Objectives">
+  <data key="d0">Project Objectives</data>
+  <data key="d1">concept</data>
+  <data key="d2">Project objectives are specific, measurable goals that a team aims to achieve within a given timeframe.</data>
+  <data key="d3">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="PWS">
+  <data key="d0">PWS</data>
+  <data key="d1">document</data>
+  <data key="d2">PWS stands for Project Work Statement, which is a document that describes the scope, requirements, deliverables, and other aspects of a project.</data>
+  <data key="d3">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Transition Plan">
+  <data key="d0">Transition Plan</data>
+  <data key="d1">document</data>
+  <data key="d2">A transition plan is a document that outlines how an organization will manage the shift from one state or process to another, typically during organizational changes.</data>
+  <data key="d3">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Supplies/Services">
+  <data key="d0">Supplies/Services</data>
+  <data key="d1">category</data>
+  <data key="d2">Supplies/services refer to products and services provided as part of a project or contract.</data>
+  <data key="d3">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Safety Standards">
+  <data key="d0">Safety Standards</data>
+  <data key="d1">concept</data>
+  <data key="d2">Safety standards are guidelines that ensure the safety and well-being of people in various environments.</data>
+  <data key="d3">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Environmental Standards">
+  <data key="d0">Environmental Standards</data>
+  <data key="d1">concept</data>
+  <data key="d2">Environmental standards are regulations that govern human activities to protect the environment and natural resources.</data>
+  <data key="d3">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="Deadline">
+  <data key="d0">Deadline</data>
+  <data key="d1">category</data>
+  <data key="d2">A deadline is a specified date by which something must be done or completed.</data>
+  <data key="d3">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078136</data>
+</node>
+<node id="A001 / Page 1">
+  <data key="d0">A001 / Page 1</data>
+  <data key="d1">rfp_ref</data>
+  <data key="d2">Reference to Request for Proposal document A001 on page 1.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="L.3.1 / Page 45">
+  <data key="d0">L.3.1 / Page 45</data>
+  <data key="d1">rfp_ref</data>
+  <data key="d2">Reference to Request for Proposal document L.3.1 on page 45.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="M.2.3 / Page 56">
+  <data key="d0">M.2.3 / Page 56</data>
+  <data key="d1">rfp_ref</data>
+  <data key="d2">Reference to Request for Proposal document M.2.3 on page 56.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="C - Attachment 0014 / Page 3">
+  <data key="d0">C - Attachment 0014 / Page 3</data>
+  <data key="d1">rfp_ref</data>
+  <data key="d2">Reference to Request for Proposal document C with attachment 0014 on page 3.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="J - Attachment 002 / Page 5">
+  <data key="d0">J - Attachment 002 / Page 5</data>
+  <data key="d1">rfp_ref</data>
+  <data key="d2">Reference to Request for Proposal document J with attachment 002 on page 5.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="H - Page 10">
+  <data key="d0">H - Page 10</data>
+  <data key="d1">rfp_ref</data>
+  <data key="d2">Reference to Request for Proposal document H on page 10.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="A001">
+  <data key="d0">A001</data>
+  <data key="d1">req_id</data>
+  <data key="d2">Request for Proposal number A001, applicable across multiple sections and documents.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="L001">
+  <data key="d0">L001</data>
+  <data key="d1">req_id</data>
+  <data key="d2">Request for Proposal number L001, specifically related to Special Requirements.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="M001">
+  <data key="d0">M001</data>
+  <data key="d1">req_id</data>
+  <data key="d2">Request for Proposal number M001, related to Evaluation Factors.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="C001">
+  <data key="d0">C001</data>
+  <data key="d1">req_id</data>
+  <data key="d2">Request for Proposal number C001, part of the Work Description section.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="J001">
+  <data key="d0">J001</data>
+  <data key="d1">req_id</data>
+  <data key="d2">Request for Proposal number J001, related to Supplies/Services &amp; CLINs.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="H001">
+  <data key="d0">H001</data>
+  <data key="d1">req_id</data>
+  <data key="d2">Request for Proposal number H001, focusing on Performance Evaluation.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="C002">
+  <data key="d0">C002</data>
+  <data key="d1">req_id</data>
+  <data key="d2">Request for Proposal number C002, a specific task requirement in Work Description.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="B001">
+  <data key="d0">B001</data>
+  <data key="d1">req_id</data>
+  <data key="d2">Request for Proposal number B001, related to Supplies/Services &amp; CLINs.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="A - Attachment 001 / Page 2">
+  <data key="d0">A - Attachment 001 / Page 2</data>
+  <data key="d1">rfp_ref</data>
+  <data key="d2">Reference to Request for Proposal document A with attachment 001 on page 2.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="B - Page 4">
+  <data key="d0">B - Page 4</data>
+  <data key="d1">rfp_ref</data>
+  <data key="d2">Reference to Request for Proposal document B on page 4.</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078137</data>
+</node>
+<node id="All Responses">
+  <data key="d0">All Responses</data>
+  <data key="d3">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d2">All responses must be submitted via the designated online portal.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078139</data>
+</node>
+<node id="Project Deliverables">
+  <data key="d0">Project Deliverables</data>
+  <data key="d3">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d2">All deliverables must be completed at the company's main office.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078142</data>
+</node>
+<node id="Administrative Requirements">
+  <data key="d0">Administrative Requirements</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d2">All proposals must be submitted by the deadline specified.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078144</data>
+</node>
+<node id="Supplies/Services &amp; CLINs">
+  <data key="d0">Supplies/Services &amp; CLINs</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d2">Provide all necessary supplies and services according to the attached list.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078145</data>
+</node>
+<node id="Performance Evaluation">
+  <data key="d0">Performance Evaluation</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d2">Proposals must include performance evaluation metrics.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078145</data>
+</node>
+<node id="L001 / Page 45">
+  <data key="d0">L001 / Page 45</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d2">Provide a detailed transition plan for the acquisition.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078145</data>
+</node>
+<node id="M001 / Page 56">
+  <data key="d0">M001 / Page 56</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d2">Proposals will be evaluated based on the cost, technical approach, and delivery schedule.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078145</data>
+</node>
+<node id="J-Attachment 0014 / Page 3">
+  <data key="d0">J-Attachment 0014 / Page 3</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d2">Provide specific technical specifications and deliverables as detailed in Attachment 0014 on page 3.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078145</data>
+</node>
+<node id="B001 / Page 5">
+  <data key="d0">B001 / Page 5</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d2">List all supplies and services to be furnished under this contract, including itemized prices.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078146</data>
+</node>
+<node id="H001 / Page 10">
+  <data key="d0">H001 / Page 10</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d2">Attach all necessary documents, including task details and supporting data.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078146</data>
+</node>
+<node id="List of Attachments">
+  <data key="d0">List of Attachments</data>
+  <data key="d3">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d2">Attach all necessary documents, including task details and supporting data.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759078146</data>
+</node>
 <edge source="EAGLE BOA" target="Section A">
   <data key="d6">1.0</data>
   <data key="d7">The competition is limited to EAGLE BOA holders.</data>
@@ -5110,12 +5526,12 @@ The Government is a public body responsible for purchasing supplies and services
   <data key="d11">1759076190</data>
 </edge>
 <edge source="Proposal" target="Special Requirements">
-  <data key="d6">1.0</data>
-  <data key="d7">The proposal must include special requirements.</data>
-  <data key="d8">additional information,regulatory compliance</data>
-  <data key="d9">chunk-d4419ff42139d71e432ad022f14d174f</data>
+  <data key="d6">2.0</data>
+  <data key="d7">The proposal must include special requirements.&lt;SEP&gt;The proposal must include all special requirements.</data>
+  <data key="d8">additional conditions,additional information,compliance,regulatory compliance</data>
+  <data key="d9">chunk-d4419ff42139d71e432ad022f14d174f&lt;SEP&gt;chunk-b97a254ba953e5daadec1faf2047bbc6</data>
   <data key="d10">unknown_source</data>
-  <data key="d11">1759076191</data>
+  <data key="d11">1759078140</data>
 </edge>
 <edge source="Proposal" target="Offeror">
   <data key="d6">1.0</data>
@@ -5132,6 +5548,166 @@ The Government is a public body responsible for purchasing supplies and services
   <data key="d9">chunk-113cdfc65b439944535e6613fa79ae29</data>
   <data key="d10">unknown_source</data>
   <data key="d11">1759076961</data>
+</edge>
+<edge source="Proposal" target="Attachments">
+  <data key="d6">2.0</data>
+  <data key="d7">Submit all required attachments with your proposal.&lt;SEP&gt;The proposal includes multiple attachments for additional details and supporting materials.</data>
+  <data key="d8">attachment details,submission,supplementary information,supporting documents</data>
+  <data key="d9">chunk-26099bc70bbda9bcb4ead05012a5d754&lt;SEP&gt;chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078138</data>
+</edge>
+<edge source="Proposal" target="Government Assets">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal must provide comprehensive details on all provided Government assets.</data>
+  <data key="d8">detailed information,requirements</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078138</data>
+</edge>
+<edge source="Proposal" target="CLINs">
+  <data key="d6">1.0</data>
+  <data key="d7">All necessary supplies and services must be included in the CLINs provided.</data>
+  <data key="d8">compliance,inclusion of required items</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078138</data>
+</edge>
+<edge source="Proposal" target="Work Description">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal must provide a detailed work description.</data>
+  <data key="d8">clarity,detailed work description</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078139</data>
+</edge>
+<edge source="Proposal" target="Evaluation Factors">
+  <data key="d6">1.0</data>
+  <data key="d7">Proposals must propose evaluation factors for performance.</data>
+  <data key="d8">performance criteria,standards</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078139</data>
+</edge>
+<edge source="Proposal" target="Instructions">
+  <data key="d6">1.0</data>
+  <data key="d7">All responses must follow specific instructions provided.</data>
+  <data key="d8">guidance,requirements</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078140</data>
+</edge>
+<edge source="Proposal" target="Deliveries/Performance">
+  <data key="d6">1.0</data>
+  <data key="d7">Proposals must propose delivery plans and performance timelines.</data>
+  <data key="d8">delivery plans,timelines</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078141</data>
+</edge>
+<edge source="Proposal" target="Supplemental Information">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal may include additional required information.</data>
+  <data key="d8">additional details,explanations</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078141</data>
+</edge>
+<edge source="Proposal" target="Project Timeline">
+  <data key="d6">1.0</data>
+  <data key="d7">Proposals must submit the project timeline by the deadline.</data>
+  <data key="d8">milestones,schedule</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078141</data>
+</edge>
+<edge source="Proposal" target="Company's Past Performance">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal must include evidence of past performance and relevant projects.</data>
+  <data key="d8">evidence of success,relevant projects</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078142</data>
+</edge>
+<edge source="Proposal" target="Sub-Factor 2">
+  <data key="d6">1.0</data>
+  <data key="d7">Proposals must address Sub-Factor 2 as part of the Evaluation Factors section.</data>
+  <data key="d8">compliance,consideration</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078142</data>
+</edge>
+<edge source="Proposal" target="Sub-Factor 3">
+  <data key="d6">1.0</data>
+  <data key="d7">Proposals must include Sub-Factor 3 in their Work Description section.</data>
+  <data key="d8">clarity,consideration</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078143</data>
+</edge>
+<edge source="Proposal" target="Resumes">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal may include resumes as part of the required documents.</data>
+  <data key="d8">experience,qualifications</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078143</data>
+</edge>
+<edge source="Proposal" target="Financial Statements">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal must include financial statements as part of the attached documents.</data>
+  <data key="d8">compliance,financial information</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078143</data>
+</edge>
+<edge source="Proposal" target="Project Proposals">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal must develop a comprehensive project plan.</data>
+  <data key="d8">comprehensive plan,objectives</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078144</data>
+</edge>
+<edge source="Proposal" target="Appendix C">
+  <data key="d6">1.0</data>
+  <data key="d7">All attached documents must be formatted according to the guidelines specified in Appendix C.</data>
+  <data key="d8">formatting details,requirements</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078145</data>
+</edge>
+<edge source="Proposal" target="PDF File">
+  <data key="d6">1.0</data>
+  <data key="d7">All proposals must be submitted as one PDF file.</data>
+  <data key="d8">format,submission</data>
+  <data key="d9">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078145</data>
+</edge>
+<edge source="Proposal" target="Timeline">
+  <data key="d6">1.0</data>
+  <data key="d7">Provide a detailed performance plan that includes a timeline for key milestones.</data>
+  <data key="d8">milestones,performance plan</data>
+  <data key="d9">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078145</data>
+</edge>
+<edge source="Proposal" target="Supplies/Services">
+  <data key="d6">2.0</data>
+  <data key="d7">The offeror must provide a detailed breakdown of the supplies and services required for this project.&lt;SEP&gt;Propose the best solution for providing all necessary supplies/services.</data>
+  <data key="d8">breakdown,proposals,requirements</data>
+  <data key="d9">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078146</data>
+</edge>
+<edge source="Proposal" target="Environmental Standards">
+  <data key="d6">1.0</data>
+  <data key="d7">Comply with all safety and environmental standards outlined in the RFP.</data>
+  <data key="d8">proposals,requirements</data>
+  <data key="d9">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078146</data>
 </edge>
 <edge source="Government" target="Security Personnel">
   <data key="d6">1.0</data>
@@ -5428,6 +6004,14 @@ The Government is a public body responsible for purchasing supplies and services
   <data key="d9">chunk-d4419ff42139d71e432ad022f14d174f</data>
   <data key="d10">unknown_source</data>
   <data key="d11">1759076189</data>
+</edge>
+<edge source="Special Requirements" target="L.3.1 / Page 45">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal must include a comprehensive transition plan.</data>
+  <data key="d8">proposal format,special instructions</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078144</data>
 </edge>
 <edge source="NS Mayport Security Office" target="Site Visit">
   <data key="d6">1.0</data>
@@ -7972,5 +8556,165 @@ The Government is a public body responsible for purchasing supplies and services
   <data key="d9">chunk-4bde9c7fed9e4aec22409141e4f5abdb</data>
   <data key="d10">unknown_source</data>
   <data key="d11">1759076979</data>
+</edge>
+<edge source="Work Description" target="C - Attachment 0014 / Page 3">
+  <data key="d6">2.0</data>
+  <data key="d7">Perform the work in accordance with the specific task requirements outlined in Attachment 0014.&lt;SEP&gt;Perform the work at specified locations and times.</data>
+  <data key="d8">details,work assignment</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078145</data>
+</edge>
+<edge source="Work Description" target="J-Attachment 0014 / Page 3">
+  <data key="d6">1.0</data>
+  <data key="d7">Provide specific technical specifications and deliverables as detailed in Attachment 0014 on page 3.</data>
+  <data key="d8">deliverables,technical specifications</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078145</data>
+</edge>
+<edge source="Evaluation Factors" target="M.2.3 / Page 56">
+  <data key="d6">1.0</data>
+  <data key="d7">Proposals should outline how they will ensure data privacy and security.</data>
+  <data key="d8">compliance,evaluation criteria</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078145</data>
+</edge>
+<edge source="Evaluation Factors" target="M001 / Page 56">
+  <data key="d6">1.0</data>
+  <data key="d7">Proposals will be evaluated based on the cost, technical approach, and delivery schedule.</data>
+  <data key="d8">evaluation criteria,technical approach</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078145</data>
+</edge>
+<edge source="Instructions" target="L001 / Page 45">
+  <data key="d6">1.0</data>
+  <data key="d7">Provide a detailed transition plan for the acquisition.</data>
+  <data key="d8">proposal format,special instructions</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078145</data>
+</edge>
+<edge source="Supplemental Information" target="A001 / Page 1">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal must be submitted in compliance with the FAR and other applicable regulations.</data>
+  <data key="d8">compliance information,procedural requirements</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078145</data>
+</edge>
+<edge source="Supplemental Information" target="B - Page 4">
+  <data key="d6">1.0</data>
+  <data key="d7">Provide details on all provided Government assets by page 4.</data>
+  <data key="d8">compliance,government asset details</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078146</data>
+</edge>
+<edge source="Online Portal" target="All Responses">
+  <data key="d6">1.0</data>
+  <data key="d7">All responses must be submitted via the designated online portal.</data>
+  <data key="d8">requirements,submission method</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078139</data>
+</edge>
+<edge source="PDF File" target="All Responses">
+  <data key="d6">1.0</data>
+  <data key="d7">All proposals must be submitted as one PDF file, with the total size not exceeding 2 MB.</data>
+  <data key="d8">size limit,submission format</data>
+  <data key="d9">chunk-b97a254ba953e5daadec1faf2047bbc6</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078141</data>
+</edge>
+<edge source="Company's Main Office" target="Project Deliverables">
+  <data key="d6">1.0</data>
+  <data key="d7">All deliverables must be completed at the company's main office.</data>
+  <data key="d8">performance,work location</data>
+  <data key="d9">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078142</data>
+</edge>
+<edge source="Company's Main Office" target="Transition Plan">
+  <data key="d6">1.0</data>
+  <data key="d7">The offeror must submit a detailed transition plan as part of its proposal.</data>
+  <data key="d8">performance,requirements</data>
+  <data key="d9">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078143</data>
+</edge>
+<edge source="PWS" target="Project Deliverables">
+  <data key="d6">1.0</data>
+  <data key="d7">All tasks must be performed as outlined in the PWS and attachments.</data>
+  <data key="d8">requirements,scope</data>
+  <data key="d9">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078143</data>
+</edge>
+<edge source="Safety Standards" target="Project Deliverables">
+  <data key="d6">1.0</data>
+  <data key="d7">Comply with all safety and environmental standards outlined in the RFP.</data>
+  <data key="d8">compliance,regulations</data>
+  <data key="d9">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078143</data>
+</edge>
+<edge source="Deadline" target="Project Deliverables">
+  <data key="d6">1.0</data>
+  <data key="d7">All proposals must be submitted in the prescribed format by the deadline specified.</data>
+  <data key="d8">submission,timeframe</data>
+  <data key="d9">chunk-26099bc70bbda9bcb4ead05012a5d754</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078144</data>
+</edge>
+<edge source="A001 / Page 1" target="Administrative Requirements">
+  <data key="d6">1.0</data>
+  <data key="d7">All proposals must be submitted by the deadline specified.</data>
+  <data key="d8">administrative task,compliance</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078144</data>
+</edge>
+<edge source="J - Attachment 002 / Page 5" target="Supplies/Services &amp; CLINs">
+  <data key="d6">1.0</data>
+  <data key="d7">Provide all necessary supplies and services according to the attached list.</data>
+  <data key="d8">service requirements,supply list</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078145</data>
+</edge>
+<edge source="H - Page 10" target="Performance Evaluation">
+  <data key="d6">1.0</data>
+  <data key="d7">Proposals must include performance evaluation metrics.</data>
+  <data key="d8">evaluation plan,metrics</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078145</data>
+</edge>
+<edge source="A - Attachment 001 / Page 2" target="List of Attachments">
+  <data key="d6">1.0</data>
+  <data key="d7">Submit all required attachments by the deadline on page 2.</data>
+  <data key="d8">document submission,procedural requirements</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078147</data>
+</edge>
+<edge source="Supplies/Services &amp; CLINs" target="B001 / Page 5">
+  <data key="d6">1.0</data>
+  <data key="d7">List all supplies and services to be furnished under this contract, including itemized prices.</data>
+  <data key="d8">service requirements,supply list</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078146</data>
+</edge>
+<edge source="H001 / Page 10" target="List of Attachments">
+  <data key="d6">1.0</data>
+  <data key="d7">Attach all necessary documents, including task details and supporting data.</data>
+  <data key="d8">document submission,supporting data</data>
+  <data key="d9">chunk-f54d8d095b5a9d4d5ffd337573dee386</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759078146</data>
 </edge>
 </graph></graphml>
