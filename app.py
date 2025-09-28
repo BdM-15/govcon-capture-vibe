@@ -8,7 +8,7 @@ import streamlit as st
 import asyncio
 import json
 import os
-from typing import List, Optional
+from typing import List, Optional, Dict
 import pandas as pd
 import nest_asyncio
 
@@ -16,7 +16,6 @@ import nest_asyncio
 nest_asyncio.apply()
 
 # Import our modules
-from src.rfp_parser import parse_rfp_documents
 from src.rfp_rag import get_rfp_rag
 from src.llm_utils import extract_requirements, assess_compliance
 
@@ -109,9 +108,9 @@ async def process_rfp_files(uploaded_files) -> dict:
         temp_files.append(temp_path)
 
     try:
-        # Parse documents
-        with st.spinner("Parsing documents..."):
-            parsed = parse_rfp_documents(temp_files)
+        # Extract text from files
+        with st.spinner("Extracting text from files..."):
+            parsed = extract_text_from_files(temp_files)
 
         if not parsed['all_text'].strip():
             st.error("No text extracted from files")
@@ -119,21 +118,42 @@ async def process_rfp_files(uploaded_files) -> dict:
 
         st.success(f"Extracted {len(parsed['all_text'])} characters")
 
-        # Extract requirements
+        # Initialize RAG and index documents using native processing
+        with st.spinner("Setting up knowledge base..."):
+            rag = await get_rfp_rag()
+            # Index the main document text using LightRAG's native processing
+            track_id = await rag.index_rfp(parsed['all_text'], temp_files[0] if temp_files else None)
+
+        # Extract requirements using the processed documents
         with st.spinner("Extracting requirements..."):
-            extraction_result = extract_requirements(parsed['main_text'], parsed['attachments_text'])
+            # Get processed documents from LightRAG
+            processed_docs = await rag.get_processed_documents(track_id)
+            # Use the processed document content for requirement extraction
+            doc_content = list(processed_docs.values())[0] if processed_docs else parsed['all_text']
+
+            # Split content for main vs attachments (simple heuristic)
+            main_content = doc_content
+            attachments_content = ""
+            if "ATTACHMENT" in doc_content.upper():
+                parts = doc_content.upper().split("ATTACHMENT", 1)
+                if len(parts) > 1:
+                    main_content = parts[0]
+                    attachments_content = "ATTACHMENT" + parts[1]
+
+            extraction_result = extract_requirements(main_content, attachments_content)
             requirements = extraction_result.get('requirements', [])
             structured_attributes = extraction_result.get('structured_attributes', {})
             critical_summary = extraction_result.get('critical_summary', {})
 
         st.success(f"Extracted {len(requirements)} requirements")
 
-        # Initialize RAG
-        with st.spinner("Setting up knowledge base..."):
-            rag = await get_rfp_rag()
-            await rag.index_rfp(parsed['all_text'])
-            await rag.index_rfp(f"Extracted Requirements:\n{json.dumps(requirements)}")
-            await rag.index_rfp(f"Structured Attributes:\n{json.dumps(structured_attributes)}")
+        # Index extracted requirements into RAG for querying
+        with st.spinner("Indexing requirements..."):
+            reqs_text = f"Extracted Requirements:\n{json.dumps(requirements)}"
+            await rag.index_rfp(reqs_text, "extracted_requirements.json")
+
+            attrs_text = f"Structured Attributes:\n{json.dumps(structured_attributes)}"
+            await rag.index_rfp(attrs_text, "structured_attributes.json")
 
         return {
             'parsed': parsed,
@@ -161,6 +181,86 @@ async def query_rfp(question: str) -> str:
     except Exception as e:
         st.error(f"Query failed: {e}")
         return ""
+
+def extract_text_from_files(file_paths: List[str]) -> Dict[str, str]:
+    """
+    Extract text from uploaded files.
+    Note: PDF parsing is limited without PyMuPDF - using basic text extraction.
+
+    Args:
+        file_paths: List of file paths
+
+    Returns:
+        Dict with 'all_text', 'main_text', 'attachments_text'
+    """
+    all_text = ""
+    main_text = ""
+    attachments_text = ""
+
+    for file_path in file_paths:
+        file_ext = file_path.lower().split('.')[-1]
+
+        try:
+            if file_ext == 'pdf':
+                # Basic PDF text extraction (limited)
+                try:
+                    import fitz  # PyMuPDF
+                    doc = fitz.open(file_path)
+                    text = ""
+                    for page in doc:
+                        text += page.get_text() + "\n"
+                    doc.close()
+                except ImportError:
+                    # Fallback: try to read as text (won't work well for PDFs)
+                    with open(file_path, 'rb') as f:
+                        content = f.read()
+                        text = content.decode('utf-8', errors='ignore')
+                    print(f"Warning: PyMuPDF not available, PDF text extraction may be poor for {file_path}")
+            elif file_ext in ['docx', 'doc']:
+                try:
+                    import docx
+                    doc = docx.Document(file_path)
+                    text = "\n".join([para.text for para in doc.paragraphs])
+                except ImportError:
+                    with open(file_path, 'rb') as f:
+                        content = f.read()
+                        text = content.decode('utf-8', errors='ignore')
+                    print(f"Warning: python-docx not available, DOCX text extraction may be poor for {file_path}")
+            elif file_ext in ['xlsx', 'xls']:
+                try:
+                    import openpyxl
+                    wb = openpyxl.load_workbook(file_path)
+                    text = ""
+                    for sheet in wb.worksheets:
+                        for row in sheet.iter_rows(values_only=True):
+                            text += " ".join([str(cell) for cell in row if cell]) + "\n"
+                except ImportError:
+                    with open(file_path, 'rb') as f:
+                        content = f.read()
+                        text = content.decode('utf-8', errors='ignore')
+                    print(f"Warning: openpyxl not available, Excel text extraction may be poor for {file_path}")
+            else:
+                # Try to read as plain text
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    text = f.read()
+
+            all_text += text + "\n\n"
+
+            # Simple heuristic: if filename contains 'attachment' or similar, treat as attachment
+            if any(keyword in file_path.lower() for keyword in ['attachment', 'att', 'j', 'appendix']):
+                attachments_text += text + "\n\n"
+            else:
+                main_text += text + "\n\n"
+
+        except Exception as e:
+            print(f"Error extracting text from {file_path}: {e}")
+            continue
+
+    return {
+        'all_text': all_text.strip(),
+        'main_text': main_text.strip(),
+        'attachments_text': attachments_text.strip()
+    }
 
 def main():
     st.title("📋 GovCon-Capture-Vibe")

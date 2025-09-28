@@ -52,6 +52,8 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> Dict[str,
     Returns:
         Dict with 'structured_attributes', 'requirements', 'critical_summary'
     """
+    import re
+
     # Load prompt template
     prompt_file = "prompts/extract_requirements_prompt.txt"
     if not os.path.exists(prompt_file):
@@ -59,6 +61,56 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> Dict[str,
 
     with open(prompt_file, 'r') as f:
         template = f.read()
+
+    # Preprocessing: Find potential requirement sentences
+    def find_potential_requirements(text: str) -> List[str]:
+        """Find sentences that likely contain requirements."""
+        # Split into sentences
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+
+        # Keywords that indicate requirements
+        req_keywords = [
+            r'\bshall\b', r'\bmust\b', r'\bwill\b', r'\brequired\b', r'\bmandatory\b',
+            r'\bshall not\b', r'\bmust not\b', r'\bwill not\b',
+            r'\bcontractor shall\b', r'\bofferor shall\b', r'\bofferors shall\b',
+            r'\bthe contractor\b.*\bshall\b', r'\bthe offeror\b.*\bshall\b'
+        ]
+
+        potential_reqs = []
+        for sentence in sentences:
+            sentence_lower = sentence.lower()
+            if any(re.search(keyword, sentence_lower) for keyword in req_keywords):
+                # Clean up the sentence
+                clean_sentence = sentence.strip()
+                if len(clean_sentence) > 20:  # Avoid very short fragments
+                    potential_reqs.append(clean_sentence)
+
+        return potential_reqs
+
+    # Get potential requirements from both main text and attachments
+    all_text = rfp_text + "\n\n" + attachments_text
+    potential_reqs = find_potential_requirements(all_text)
+
+    # Limit to top 100 most relevant potential requirements to avoid overwhelming the LLM
+    # Prioritize sentences with stronger requirement language
+    def score_requirement(sentence: str) -> int:
+        score = 0
+        lower = sentence.lower()
+        if 'shall' in lower: score += 3
+        if 'must' in lower: score += 3
+        if 'required' in lower: score += 2
+        if 'mandatory' in lower: score += 2
+        if 'contractor shall' in lower: score += 2
+        if 'offeror shall' in lower: score += 2
+        if 'offerors shall' in lower: score += 2
+        if 'will' in lower and 'shall' not in lower: score += 1  # Avoid false positives
+        return score
+
+    potential_reqs.sort(key=score_requirement, reverse=True)
+    top_potential_reqs = potential_reqs[:100]  # Limit to avoid context overflow
+
+    # Add the potential requirements to the prompt for better context
+    potential_reqs_text = "\n".join(f"- {req}" for req in top_potential_reqs[:20])  # Show top 20 in prompt
 
     # Chunk the text to fit within LLM context (approx 3000 words per chunk for better performance)
     def chunk_text(text: str, chunk_size: int = 3000) -> List[str]:
@@ -68,14 +120,39 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> Dict[str,
     rfp_chunks = chunk_text(rfp_text)
     attachments_chunks = chunk_text(attachments_text) if attachments_text else []
 
-    all_structured_attributes = {}
+    all_structured_attributes = {
+        "client_company": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "department": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "project_background": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "objectives": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "scope": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "timeline": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "budget": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "evaluation_criteria": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "deliverables": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "bidder_requirements": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "compliance_items": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "risk_management": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "required_competencies": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "schedule": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "special_conditions": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "packaging_marking": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "inspection_acceptance": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "contract_admin_data": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "contract_clauses": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""},
+        "representations": {"content": "Not specified", "source_snippet": "", "page_number": 0, "section_title": ""}
+    }
     all_requirements = []
     all_critical_summaries = []
 
     for i, chunk in enumerate(rfp_chunks + attachments_chunks):
-        # Fill template
+        # Fill template with potential requirements context
         prompt = template.replace("{{RFP_TEXT}}", chunk)
         prompt = prompt.replace("{{ATTACHMENTS_TEXT}}", attachments_text if i < len(rfp_chunks) else "")
+
+        # Add potential requirements to help the LLM
+        if potential_reqs_text:
+            prompt += f"\n\nPOTENTIAL REQUIREMENTS FOUND IN TEXT:\n{potential_reqs_text}\n\nUse these as examples of the types of sentences to extract and format properly."
 
         # Call LLM
         response = call_ollama(prompt)
@@ -95,7 +172,10 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> Dict[str,
                 if "structured_attributes" in data:
                     # Merge structured attributes (prefer first non-"Not specified")
                     for key, value in data["structured_attributes"].items():
-                        if key not in all_structured_attributes or all_structured_attributes[key]["content"] == "Not specified":
+                        if key not in all_structured_attributes or (
+                            isinstance(all_structured_attributes.get(key), dict) and
+                            all_structured_attributes[key].get("content") == "Not specified"
+                        ):
                             all_structured_attributes[key] = value
                 if "requirements" in data:
                     all_requirements.extend(data["requirements"])
@@ -107,10 +187,62 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> Dict[str,
             print(f"Failed to parse requirements JSON for chunk {i}: {e}")
             print(f"Cleaned response: {response[:500]}...")
 
+            # Try to extract requirements from malformed JSON
+            try:
+                # Check if response contains multiple JSON objects separated by commas
+                if '},{' in response:
+                    # Split on '},{' and add back the braces
+                    parts = response.split('},{')
+                    for j, part in enumerate(parts):
+                        if j == 0:
+                            part = part + '}'
+                        elif j == len(parts) - 1:
+                            part = '{' + part
+                        else:
+                            part = '{' + part + '}'
+
+                        try:
+                            req_data = json.loads(part.strip())
+                            if isinstance(req_data, dict) and 'req_id' in req_data:
+                                # This is a proper requirement object
+                                all_requirements.append(req_data)
+                            elif isinstance(req_data, dict) and 'requirements' in req_data and isinstance(req_data['requirements'], list):
+                                # This has a nested requirements array - extract individual requirements
+                                for nested_req in req_data['requirements']:
+                                    if isinstance(nested_req, dict) and 'req_id' in nested_req:
+                                        all_requirements.append(nested_req)
+                        except json.JSONDecodeError:
+                            continue
+
+                # If that doesn't work, try to find individual JSON objects
+                import re
+                json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+                matches = re.findall(json_pattern, response)
+                for match in matches:
+                    try:
+                        req_data = json.loads(match)
+                        if isinstance(req_data, dict) and 'req_id' in req_data:
+                            # This is a proper requirement object
+                            all_requirements.append(req_data)
+                        elif isinstance(req_data, dict) and 'requirements' in req_data and isinstance(req_data['requirements'], list):
+                            # This has a nested requirements array - extract individual requirements
+                            for nested_req in req_data['requirements']:
+                                if isinstance(nested_req, dict) and 'req_id' in nested_req:
+                                    all_requirements.append(nested_req)
+                    except json.JSONDecodeError:
+                        continue
+
+            except Exception as fallback_e:
+                print(f"Fallback parsing also failed: {fallback_e}")
+                continue
+
     # Remove duplicates based on req_id or description
     seen = set()
     unique_reqs = []
     for req in all_requirements:
+        # Skip non-dict items that might have been added incorrectly
+        if not isinstance(req, dict):
+            continue
         key = (req.get('req_id'), req.get('description'))
         if key not in seen:
             seen.add(key)
@@ -132,8 +264,6 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> Dict[str,
         "requirements": unique_reqs,
         "critical_summary": {"top_themes": unique_themes}
     }
-
-
 def assess_compliance(extracted_reqs: list, proposal_text: str) -> list:
     """
     Assess proposal compliance against requirements.

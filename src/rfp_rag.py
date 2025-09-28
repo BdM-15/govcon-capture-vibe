@@ -68,18 +68,24 @@ class RFPRAG:
         await self.rag.initialize_storages()
         await initialize_pipeline_status()
 
-    async def index_rfp(self, rfp_text: str):
+    async def index_rfp(self, rfp_text: str, file_path: str = None):
         """
-        Index RFP text into the knowledge graph.
+        Index RFP text into the knowledge graph using LightRAG's native document processing.
 
         Args:
             rfp_text: Full RFP text to index
+            file_path: Optional file path for the document
         """
         if not self.rag:
             await self.initialize()
 
-        await self.rag.ainsert(rfp_text)
-        print(f"Indexed {len(rfp_text)} characters into RAG")
+        # Use LightRAG's native document processing pipeline
+        track_id = await self.rag.apipeline_enqueue_documents(
+            input=rfp_text,
+            file_paths=[file_path] if file_path else None
+        )
+        print(f"Enqueued RFP document for processing with track_id: {track_id}")
+        return track_id
 
     async def query_rfp(self, query: str, mode: str = "hybrid") -> str:
         """
@@ -106,6 +112,41 @@ class RFPRAG:
         if self.rag:
             await self.rag.finalize_storages()
 
+    async def get_processed_documents(self, track_id: str = None):
+        """
+        Retrieve processed documents from LightRAG storage.
+
+        Args:
+            track_id: Optional track_id to filter documents
+
+        Returns:
+            Dict of document_id -> document_content
+        """
+        if not self.rag:
+            await self.initialize()
+
+        documents = {}
+
+        if track_id:
+            # Get documents by track_id
+            doc_statuses = await self.rag.aget_docs_by_track_id(track_id)
+            doc_ids = list(doc_statuses.keys())
+        else:
+            # Get all documents
+            all_docs = await self.rag.full_docs.get_all()
+            doc_ids = list(all_docs.keys())
+
+        # Retrieve full content for each document
+        for doc_id in doc_ids:
+            try:
+                doc_data = await self.rag.full_docs.get_by_id(doc_id)
+                if doc_data and 'content' in doc_data:
+                    documents[doc_id] = doc_data['content']
+            except Exception as e:
+                print(f"Error retrieving document {doc_id}: {e}")
+
+        return documents
+
 
 # Global instance for reuse
 _rfp_rag_instance: Optional[RFPRAG] = None
@@ -126,10 +167,14 @@ async def get_rfp_rag() -> RFPRAG:
 async def main():
     rag = await get_rfp_rag()
     sample_text = "This is a sample RFP with requirements for Section A deadlines."
-    await rag.index_rfp(sample_text)
+    track_id = await rag.index_rfp(sample_text, "sample_rfp.txt")
 
     response = await rag.query_rfp("What are the deadlines in Section A?")
     print(response)
+
+    # Retrieve and print processed documents
+    documents = await rag.get_processed_documents(track_id)
+    print("Processed documents:", documents)
 
     await rag.close()
 

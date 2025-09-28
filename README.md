@@ -88,19 +88,20 @@ Example user inputs for the AI chat (save as .txt in prompts/ for testing):
 
 ### Pipeline (Planned Flow)
 
-1. Extract Requirements (all sections, no truncation) -> JSON.
-2. Assess Compliance (score coverage, gaps) -> JSON with summary.
-3. Generate Questions for Government (optional if Q&A window open).
-4. Improve Draft Sections (targeted enhancements driven by gaps & evaluation factors).
+1. **Document Processing**: Upload RFP files → LightRAG native document processing (automatic text extraction, chunking, and indexing).
+2. Extract Requirements (all sections, no truncation) → JSON.
+3. Assess Compliance (score coverage, gaps) → JSON with summary.
+4. Generate Questions for Government (optional if Q&A window open).
+5. Improve Draft Sections (targeted enhancements driven by gaps & evaluation factors).
 
-Status: Prompt templates complete.
+Status: Document processing pipeline complete; prompt templates complete.
 
 ## Tech Stack
 
 - **Core**: Python 3.13+ with LightRAG (or LangChain fallback) for RAG pipelines.
 - **LLM/Embeddings**: Ollama (local) with 7-8B models (e.g., llama3, mistral, nomic-embed-text) for efficiency.
 - **UI**: Streamlit for simple, interactive web app.
-- **Doc Handling**: PyPDF2, python-docx, openpyxl for reading PDF/Word/Excel.
+- **Doc Handling**: LightRAG's native document processing pipeline (handles PDF/Word/Excel automatically).
 - **Env Setup**: uv/uvx (faster alternative to plain pip).
 - **Dev Tools**: VS Code, GitHub Copilot/PowerShell for scripting.
 - **Constraints**: Optimized for hardware (Lenovo LEGION 5i: i9-14900HX, RTX 4060, 64GB RAM)—CPU/GPU for Ollama, avoid heavy deps.
@@ -121,7 +122,7 @@ All open-source, local-run; no cloud/internet required post-setup.
 
 ✅ **Core Pipeline Complete:**
 
-- Document parsing (PDF/Word/Excel)
+- **Document Processing**: LightRAG native pipeline (automatic text extraction, chunking, metadata, and indexing)
 - Requirement extraction with LLM
 - LightRAG indexing and querying
 - Compliance assessment
@@ -146,6 +147,7 @@ All open-source, local-run; no cloud/internet required post-setup.
 
 - **Vibe-Coding**: Iterative builds with Copilot; follow copilot-instructions.md.
 - **Principles**: Minimal code (avoid 10k+ lines), modular functions, no overfitting/bloat, easy maintenance/scaling.
+- **Architecture**: LightRAG's native document processing pipeline handles all document ingestion, cleaning, chunking, and metadata extraction automatically.
 - **Inspirations/Forks**:
   - Shipley Guides (Proposal/Capture PDFs in /docs).
   - Repos: [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG), [abh2050/RFP_generation_langchain_agent_RAG](https://github.com/abh2050/RFP_generation_langchain_agent_RAG), [felixlkw/ai-rfp-simulator](https://github.com/felixlkw/ai-rfp-simulator).
@@ -166,4 +168,4 @@ MIT.
 - Prompts: Modular Ollama prompts for extraction/outline/gaps/ambiguities (JSON outputs).
 - Future: Integrate with Capture Plans; add API if scaled.
 
-Last updated: September 27, 2025 (prompt set expanded; no-limit extraction policy added).
+Last updated: September 28, 2025 (refactored to use LightRAG's native document processing pipeline; removed custom PDF extraction).

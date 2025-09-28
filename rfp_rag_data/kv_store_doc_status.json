@@ -135,33 +135,283 @@
     }
   },
   "doc-241cd3dcaa45081f84a200616238e294": {
-    "status": "failed",
-    "error_msg": "Embedding func: Worker execution timeout after 60s",
+    "status": "processed",
+    "chunks_count": 49,
+    "chunks_list": [
+      "chunk-b93d2cb9a756ad50b242c1df1af5728c",
+      "chunk-12b0df4e630445c8059b34b5a3b00246",
+      "chunk-cdcd76d89a8592483fc826e139c09bf6",
+      "chunk-24219cfd316366572b40433667a746e1",
+      "chunk-10081f1c430a409788e902f00ca54287",
+      "chunk-ebf98c5013f7619c3cce8d08a94ba54b",
+      "chunk-bdc99a8df6dfcc909ef1fca110430d33",
+      "chunk-58062cdd9d21de8c9d9649544377fedd",
+      "chunk-54c49951d394a7818591c99cec3cb193",
+      "chunk-f5c4861e1f4a0884e9b329329cec8ac4",
+      "chunk-fbfd0d266f8d3ec76882dc59c8553254",
+      "chunk-9afefe08af249df71a935d3684dbf0b9",
+      "chunk-4b8a275e1d1f6944214be6987542fd8a",
+      "chunk-d56dbb86a7bc4d95976b839cb7a17d21",
+      "chunk-e849fdf9ef10252b52bce82529e5defc",
+      "chunk-8380f45bbb0c42e2262e31be88fa6ca7",
+      "chunk-ae4c9f8ad79575b28bfe8f80257f6fe5",
+      "chunk-b9acdcb8c5e8090b9cd0b29648a46242",
+      "chunk-9405242494e5df93130ab2086936017e",
+      "chunk-530a2390de2fda3aa93a84eca602d74e",
+      "chunk-483cdb85b209708c92e703bb0b3a4fe1",
+      "chunk-e7e0a989d1b297fbeb3918cc40bbfc11",
+      "chunk-d6a5b304e7b675e513223658c8f76e31",
+      "chunk-ba1a3c7c92da716a57c25f623363d8ad",
+      "chunk-39257810bf14a33f5c516678438bb054",
+      "chunk-3b3ba268ebc43258465b5d46fbce8ed2",
+      "chunk-f2e3479ff7fb179b64cf97b586014644",
+      "chunk-c4df8acdebd0ee4245132f447e4b8979",
+      "chunk-23c24ccb35214f6cf996452bbf0ed6dc",
+      "chunk-753d5f9559ec90791ff213b670c3c815",
+      "chunk-986cf5a9bf44e9edf3c4ead0cabf15b1",
+      "chunk-5d199c161e08e0d9e8ab1b86c63f6373",
+      "chunk-1c223ed1acde906b6f30405bb34a9ca8",
+      "chunk-90f73b3c4d2b5a31c097ed28f9ab6538",
+      "chunk-fd9df2c7b2ff9a424902196b9cb76441",
+      "chunk-4dd311724db91d38a329072e7c683061",
+      "chunk-052825ada7780c0f9f077a29396919f9",
+      "chunk-a1016f8df3b9ab6f82723de3d2559607",
+      "chunk-39eec5d2752f04b63976d57d1064f45e",
+      "chunk-5884a332cd48e083d667f0884242871d",
+      "chunk-9c9f91c9090001415b769d3f02d00508",
+      "chunk-5744d9b3ca72af35ff84afe8743815c5",
+      "chunk-db44f51dfab7b260f6afa6e7905f4f52",
+      "chunk-928071dce19d32f359c56615e7739544",
+      "chunk-40883cd7de774962b566bed0c4ef9ad6",
+      "chunk-d385674444ad928948eb360871f2332f",
+      "chunk-0cee9f4ba9d9a38d5fbeabdba3942f27",
+      "chunk-f1d64c9b953eb5114611442c33d4d6a1",
+      "chunk-9ac5aea08576a2e7f13f2db28e076b45"
+    ],
     "content_summary": "SOLICITATION, OFFER AND AWARD\n1. THIS CONTRACT IS A RATED ORDER \nUNDER DPAS (15 CFR 7900)\nRATING\nPAGE             OF       PAGES\n2. CONTRACT NUMBER\n3. SOLICITATION NUMBER\n4. TYPE OF SOLICITATION\n5. DATE ISSUED\n6. REQUISITION/PURCHASE NUMBER\nCODE\n7. I...",
     "content_length": 225260,
     "created_at": "2025-09-28T17:34:31.502377+00:00",
-    "updated_at": "2025-09-28T17:47:09.642710+00:00",
+    "updated_at": "2025-09-28T19:21:29.076834+00:00",
     "file_path": "unknown_source",
     "track_id": "insert_20250928_123431_edcbe073",
     "metadata": {
-      "processing_start_time": 1759081569,
-      "processing_end_time": 1759081629
-    },
-    "chunks_list": []
+      "processing_start_time": 1759085751,
+      "processing_end_time": 1759087289
+    }
   },
   "doc-ad6b8411abc85bc30a33682b992d643d": {
-    "status": "failed",
-    "error_msg": "Embedding func: Worker execution timeout after 60s",
+    "status": "processed",
+    "chunks_count": 5,
+    "chunks_list": [
+      "chunk-41a665e2ac216d0a76647568822c9eba",
+      "chunk-f415f06139ed13e49d4e87079a80ee30",
+      "chunk-a6f8fadc9320dbd6218ca4a422395ccd",
+      "chunk-e8e2856a6c2a3e8a7cbf5b6d58380163",
+      "chunk-5d1e178e305f1213af5c52aed66f32b1"
+    ],
     "content_summary": "Extracted Requirements:\n[{\"rfp_ref\": \"A - Page 3\", \"section\": \"Supplemental Information\", \"req_id\": \"A001\", \"description\": \"The contract should be submitted via Electronic format.\", \"sub_factors\": [], \"compliance_type\": \"mandatory\", \"snippet\": \"The c...",
     "content_length": 21734,
     "created_at": "2025-09-28T17:46:09.521291+00:00",
-    "updated_at": "2025-09-28T17:47:09.777091+00:00",
+    "updated_at": "2025-09-28T19:27:51.754880+00:00",
     "file_path": "unknown_source",
     "track_id": "insert_20250928_124609_b920ae96",
     "metadata": {
-      "processing_start_time": 1759081569,
-      "processing_end_time": 1759081629
-    },
+      "processing_start_time": 1759087580,
+      "processing_end_time": 1759087671
+    }
+  },
+  "doc-28157ff808666b6c320a917e67e27039": {
+    "status": "processed",
+    "chunks_count": 8,
+    "chunks_list": [
+      "chunk-1ac4f7d8999ee76fbed5ec03201e5111",
+      "chunk-70faf89fe3323f58f635bf073b57f9a0",
+      "chunk-130cbb284ec4a97934cf31201a8452bf",
+      "chunk-dea7da9ae7f0d471a71f07042b90b806",
+      "chunk-fd82544a189af5bf5cf90cd886d4b540",
+      "chunk-2c1ab2dfaef6be25afaee70974b89b5a",
+      "chunk-a9b5347fe8314b94960768f011911477",
+      "chunk-81934555e2b269586e0d5f53801085ed"
+    ],
+    "content_summary": "Extracted Requirements:\n[{\"rfp_ref\": \"A.1 / Page 2\", \"section\": \"Supplemental Information\", \"req_id\": \"A001\", \"description\": \"This is the first requirement for this RFP.\", \"sub_factors\": [], \"compliance_type\": \"mandatory\", \"snippet\": \"This is the fir...",
+    "content_length": 33250,
+    "created_at": "2025-09-28T19:21:29.576826+00:00",
+    "updated_at": "2025-09-28T19:26:19.967303+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_142129_4b6d3e27",
+    "metadata": {
+      "processing_start_time": 1759087289,
+      "processing_end_time": 1759087579
+    }
+  },
+  "doc-600becc00cdb338bfcaff989f9c20a89": {
+    "status": "processed",
+    "chunks_count": 2,
+    "chunks_list": [
+      "chunk-02ceb84cbed4bf2dc4fee3cd0338ea93",
+      "chunk-3b809aa48f7941b00796b2724b379ae3"
+    ],
+    "content_summary": "Structured Attributes:\n{\"client_company\": {\"content\": \"The U.S. Department of Defense\", \"source_snippet\": \"The solicitation is issued by the U.S. Department of Defense, Contracting Officer's Representative (COR), USAFA, B-Win-12-0965.\", \"page_number\"...",
+    "content_length": 4765,
+    "created_at": "2025-09-28T19:26:20.427187+00:00",
+    "updated_at": "2025-09-28T19:27:44.680127+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_142620_d07f86a3",
+    "metadata": {
+      "processing_start_time": 1759087580,
+      "processing_end_time": 1759087664
+    }
+  },
+  "doc-2e93438b3abeeea3aab704eb33e9a353": {
+    "status": "processed",
+    "chunks_count": 2,
+    "chunks_list": [
+      "chunk-2ec2390d8f4ece2b748de7aacc373d7c",
+      "chunk-db362961229a11e869a6278b7151f616"
+    ],
+    "content_summary": "Extracted Requirements:\n[{\"req_id\": \"A002\", \"description\": \"The contractor shall meet the estimated start date of 01 January 2027 for initial performance.\", \"owner\": \"Contracting Officer\", \"status\": \"Not Started\", \"due_date\": \"01 January 2027\"}, {\"re...",
+    "content_length": 8022,
+    "created_at": "2025-09-28T22:24:24.991005+00:00",
+    "updated_at": "2025-09-28T22:25:26.351737+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_172424_30276afb",
+    "metadata": {
+      "processing_start_time": 1759098264,
+      "processing_end_time": 1759098326
+    }
+  },
+  "doc-303f7a4bbb280ce87fc4849eeeaaf444": {
+    "status": "processed",
+    "chunks_count": 2,
+    "chunks_list": [
+      "chunk-e41930e3df8c01069692e117685753ad",
+      "chunk-d0ac7e76dbd88bf24aa32987c7ad7759"
+    ],
+    "content_summary": "Structured Attributes:\n{\"client_company\": {\"content\": \"Not specified\", \"source_snippet\": \"\", \"page_number\": 0, \"section_title\": \"\"}, \"department\": {\"content\": \"Not specified\", \"source_snippet\": \"\", \"page_number\": 0, \"section_title\": \"\"}, \"project_bac...",
+    "content_length": 7244,
+    "created_at": "2025-09-28T22:25:26.611370+00:00",
+    "updated_at": "2025-09-28T22:26:15.485591+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_172526_404df908",
+    "metadata": {
+      "processing_start_time": 1759098326,
+      "processing_end_time": 1759098375
+    }
+  },
+  "doc-c46090d998daacf8a6d4614c77e68394": {
+    "status": "processed",
+    "chunks_count": 1,
+    "chunks_list": [
+      "chunk-c46090d998daacf8a6d4614c77e68394"
+    ],
+    "content_summary": "Extracted Requirements:\n[{\"rfp_ref\": \"C.2 / Page 15\", \"section\": \"Scope of Work\", \"req_id\": \"C002\", \"description\": \"The bidder shall provide all deliverables as specified in the CDRLs.\", \"sub_factors\": [\"4: All deliverables must be provided within th...",
+    "content_length": 1328,
+    "created_at": "2025-09-28T22:38:55.947018+00:00",
+    "updated_at": "2025-09-28T22:39:15.941086+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_173855_69bb3ba4",
+    "metadata": {
+      "processing_start_time": 1759099135,
+      "processing_end_time": 1759099155
+    }
+  },
+  "doc-43d063035d759c70f9574fe7877e98fe": {
+    "status": "processed",
+    "chunks_count": 1,
+    "chunks_list": [
+      "chunk-43d063035d759c70f9574fe7877e98fe"
+    ],
+    "content_summary": "Structured Attributes:\n{\"client_company\": {\"content\": \"exact quote from Section A\", \"source_snippet\": \"full quote\", \"page_number\": 1, \"section_title\": \"Section A\"}, \"department\": {\"content\": \"exact quote from Section A\", \"source_snippet\": \"...\", \"pag...",
+    "content_length": 2744,
+    "created_at": "2025-09-28T22:39:16.804064+00:00",
+    "updated_at": "2025-09-28T22:39:46.333512+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_173916_677751b5",
+    "metadata": {
+      "processing_start_time": 1759099156,
+      "processing_end_time": 1759099186
+    }
+  },
+  "doc-c42aed8c876332284a196b005789e950": {
+    "status": "processed",
+    "chunks_count": 3,
+    "chunks_list": [
+      "chunk-4a18138442b7d1e9b5474b8ffbdc4193",
+      "chunk-be3cb97a97534f0df330543e51eb621b",
+      "chunk-1a85e99b096e30546b7446948f870da0"
+    ],
+    "content_summary": "Extracted Requirements:\n[{\"rfp_ref\": \"SECTION.A / Page 3\", \"section\": \"Section A\", \"req_id\": \"A001\", \"description\": \"FAR/DFARS compliance requirements are necessary for the project.\", \"sub_factors\": [], \"compliance_type\": \"mandatory\", \"snippet\": \"FAR...",
+    "content_length": 11840,
+    "created_at": "2025-09-28T22:52:52.638444+00:00",
+    "updated_at": "2025-09-28T22:54:01.884177+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_175252_e3f7a1a6",
+    "metadata": {
+      "processing_start_time": 1759099972,
+      "processing_end_time": 1759100041
+    }
+  },
+  "doc-9fc96e89981a75ec29d38cb9265a8e2d": {
+    "status": "processed",
+    "chunks_count": 1,
+    "chunks_list": [
+      "chunk-9fc96e89981a75ec29d38cb9265a8e2d"
+    ],
+    "content_summary": "Structured Attributes:\n{\"client_company\": {\"content\": \"EXACT QUOTE from Section A about issuing agency/organization\", \"source_snippet\": \"full context quote\", \"page_number\": 1, \"section_title\": \"Section A\"}, \"department\": {\"content\": \"EXACT QUOTE from...",
+    "content_length": 3899,
+    "created_at": "2025-09-28T22:54:02.502081+00:00",
+    "updated_at": "2025-09-28T22:54:35.785711+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_175402_e5c75580",
+    "metadata": {
+      "processing_start_time": 1759100042,
+      "processing_end_time": 1759100075
+    }
+  },
+  "doc-02a8bbe2353bbdfcd97c64580013246b": {
+    "status": "processing",
+    "chunks_count": 5,
+    "chunks_list": [
+      "chunk-522fe1835b88e3f5b5f516204fb0083b",
+      "chunk-bf41ae0dd7c3f4c78bc0908168283936",
+      "chunk-6c1ecebd2014f2c6dc50cf1d79f8227a",
+      "chunk-fb2986ae02d0a4a40d657980a3c2ef11",
+      "chunk-67a1dd277d1ff9127219e86e4fc7411b"
+    ],
+    "content_summary": "Extracted Requirements:\n[{\"rfp_ref\": \"SECTION.SUBSECTION / Page XX\", \"section\": \"\", \"req_id\": \"A001\", \"description\": \"The Contractor shall be responsible for obtaining, either from available Government sources or local utility companies, all utilitie...",
+    "content_length": 20613,
+    "created_at": "2025-09-28T23:08:34.210751+00:00",
+    "updated_at": "2025-09-28T23:14:45.218564+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_180834_2194c8ff",
+    "metadata": {
+      "processing_start_time": 1759101285
+    }
+  },
+  "doc-94af9268367cf35b11512d98f6ff5264": {
+    "status": "processing",
+    "chunks_count": 1,
+    "chunks_list": [
+      "chunk-94af9268367cf35b11512d98f6ff5264"
+    ],
+    "content_summary": "Structured Attributes:\n{\"client_company\": {\"content\": \"Not specified\", \"source_snippet\": \"\", \"page_number\": 0, \"section_title\": \"\"}, \"department\": {\"content\": \"Not specified\", \"source_snippet\": \"\", \"page_number\": 0, \"section_title\": \"\"}, \"project_bac...",
+    "content_length": 2808,
+    "created_at": "2025-09-28T23:14:45.208466+00:00",
+    "updated_at": "2025-09-28T23:14:45.219439+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_181445_9f9e1643",
+    "metadata": {
+      "processing_start_time": 1759101285
+    }
+  },
+  "doc-1d4af8acd04e67ee619d55da862fc433": {
+    "status": "pending",
+    "content_summary": "This is a test RFP with requirements for Section A deadlines.",
+    "content_length": 61,
+    "created_at": "2025-09-28T23:26:18.951862+00:00",
+    "updated_at": "2025-09-28T23:26:18.951869+00:00",
+    "file_path": "test.txt",
+    "track_id": "enqueue_20250928_182618_5671151e",
     "chunks_list": []
   }
 }

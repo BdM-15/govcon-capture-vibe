@@ -8,9 +8,37 @@ First step in the full pipeline: Extract -> Index -> Query.
 import asyncio
 import json
 from typing import List, Dict, Any
-from src.rfp_parser import parse_rfp_documents
 from src.rfp_rag import get_rfp_rag
 from src.llm_utils import extract_requirements
+
+
+def extract_text_from_files(file_paths: List[str]) -> Dict[str, str]:
+    """
+    Extract text from files (simplified version for pipeline).
+    """
+    all_text = ""
+    main_text = ""
+    attachments_text = ""
+
+    for file_path in file_paths:
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                text = f.read()
+            all_text += text + "\n\n"
+
+            # Simple heuristic for attachments
+            if any(keyword in file_path.lower() for keyword in ['attachment', 'att', 'j', 'appendix']):
+                attachments_text += text + "\n\n"
+            else:
+                main_text += text + "\n\n"
+        except Exception as e:
+            print(f"Error reading {file_path}: {e}")
+
+    return {
+        'all_text': all_text.strip(),
+        'main_text': main_text.strip(),
+        'attachments_text': attachments_text.strip()
+    }
 
 
 async def process_rfp_files(file_paths: List[str]) -> Dict[str, Any]:
@@ -23,9 +51,9 @@ async def process_rfp_files(file_paths: List[str]) -> Dict[str, Any]:
     Returns:
         Dict with processing results
     """
-    # Step 1: Parse documents
-    print("Step 1: Parsing RFP documents...")
-    parsed = parse_rfp_documents(file_paths)
+    # Step 1: Extract text from files
+    print("Step 1: Extracting text from RFP files...")
+    parsed = extract_text_from_files(file_paths)
 
     if not parsed['all_text'].strip():
         raise ValueError("No text extracted from files")
@@ -42,16 +70,16 @@ async def process_rfp_files(file_paths: List[str]) -> Dict[str, Any]:
         json.dump(requirements, f, indent=2)
     print("Saved requirements to extracted_requirements.json")
 
-    # Step 3: Index into RAG (both raw text and structured reqs)
+    # Step 3: Index into RAG using native document processing
     print("Step 3: Indexing into RAG...")
     rag = await get_rfp_rag()
 
-    # Index full text for general queries
-    await rag.index_rfp(parsed['all_text'])
+    # Index full text using LightRAG's native processing
+    track_id = await rag.index_rfp(parsed['all_text'], file_paths[0] if file_paths else None)
 
     # Index requirements as structured data for specific queries
     reqs_text = json.dumps(requirements, indent=2)
-    await rag.index_rfp(f"Extracted Requirements:\n{reqs_text}")
+    await rag.index_rfp(f"Extracted Requirements:\n{reqs_text}", "extracted_requirements.json")
 
     # Step 4: Test queries
     print("Step 4: Testing RAG queries...")

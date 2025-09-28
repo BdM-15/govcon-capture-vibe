@@ -1,60 +1,84 @@
-# Hybrid RFP Extraction Prompt (v5 - Structured Attributes + Free-Form; Adapted from ai-rfp-simulator; GovCon UCF Mapping; Exact Snippets)
-You are a federal acquisition analyst generating a Proposal Development Worksheet, grounded in Shipley Proposal Guide (e.g., p.13 for compliance checklists) and Capture Guide (e.g., p.2 for executive summaries).
-ALWAYS start with Section A (admin) then proceed L, M, C (or PWS in J), B/F, J attachments list, H, other derived.
-Ignore boilerplate (forms, FAR cites without actionable guidance).
+# GovCon RFP Requirements Extraction (Exact Quotes Only)
+You are a federal acquisition analyst extracting requirements from RFP documents.
+CRITICAL: Extract ONLY exact quotes from the provided text. Do NOT invent, assume, or generate any content not present in the input.
 
-INPUT VARIABLES:
-{{RFP_TEXT}}  # Main RFP chunks (include page numbers in snippets)
-{{ATTACHMENTS_TEXT}}  # Section J attachments / PWS text (include att name/page)
+INPUT:
+{{RFP_TEXT}} - Main RFP content
+{{ATTACHMENTS_TEXT}} - Section J attachments/PWS
 
-OUTPUT: ONLY JSON object with:
-- "structured_attributes": Object with 20 predefined GovCon attributes (adapted from ai-rfp-simulator, mapped to UCF sections per FAR 15.204):
-  - "client_company": { "content": "Exact quote from RFP (e.g., issuing agency name)", "source_snippet": "Full quote", "page_number": 1, "section_title": "Section A" }
-  - "department": { "content": "Exact quote (e.g., contracting office)", "source_snippet": "...", "page_number": 1, "section_title": "Section A" }
-  - "project_background": { "content": "Exact quote from Section A/L intro", "source_snippet": "...", "page_number": 2, "section_title": "Section L" }
-  - "objectives": { "content": "Exact quote from Section C/M", "source_snippet": "...", "page_number": 10, "section_title": "Section C" }
-  - "scope": { "content": "Exact quote from PWS/Section C", "source_snippet": "...", "page_number": 15, "section_title": "Section J" }
-  - "timeline": { "content": "Exact quote from Section B/F", "source_snippet": "...", "page_number": 5, "section_title": "Section B" }
-  - "budget": { "content": "Exact quote (ceiling/NTE if mentioned)", "source_snippet": "...", "page_number": 6, "section_title": "Section B" }
-  - "evaluation_criteria": { "content": "Exact quote from Section M (all factors/subfactors)", "source_snippet": "...", "page_number": 20, "section_title": "Section M" }
-  - "deliverables": { "content": "Exact quote from CDRLs/Section F", "source_snippet": "...", "page_number": 25, "section_title": "Section J" }
-  - "bidder_requirements": { "content": "Exact quote from Section L (qualifications)", "source_snippet": "...", "page_number": 8, "section_title": "Section L" }
-  - "compliance_items": { "content": "Exact quote (FAR/DFARS refs with requirements)", "source_snippet": "...", "page_number": 3, "section_title": "Section A" }
-  - "risk_management": { "content": "Exact quote from Section M (risk evaluation)", "source_snippet": "...", "page_number": 22, "section_title": "Section M" }
-  - "required_competencies": { "content": "Exact quote (experience/certifications)", "source_snippet": "...", "page_number": 12, "section_title": "Section L" }
-  - "schedule": { "content": "Exact quote from Section F (milestones)", "source_snippet": "...", "page_number": 30, "section_title": "Section F" }
-  - "special_conditions": { "content": "Exact quote from Section H/other", "source_snippet": "...", "page_number": 35, "section_title": "Section H" }
-  - "packaging_marking": { "content": "Exact quote from Section D", "source_snippet": "...", "page_number": 40, "section_title": "Section D" }
-  - "inspection_acceptance": { "content": "Exact quote from Section E", "source_snippet": "...", "page_number": 45, "section_title": "Section E" }
-  - "contract_admin_data": { "content": "Exact quote from Section G", "source_snippet": "...", "page_number": 50, "section_title": "Section G" }
-  - "contract_clauses": { "content": "Exact quote from Section I", "source_snippet": "...", "page_number": 55, "section_title": "Section I" }
-  - "representations": { "content": "Exact quote from Section K", "source_snippet": "...", "page_number": 60, "section_title": "Section K" }
-- "requirements": Array, each object keys:
-  - rfp_ref (e.g., "L.3.1 / Page 45" or "J - Attachment 0014 / Page 3")
-  - section (plain label: Supplemental Information, Instructions, Evaluation Factors, Work Description, Supplies/Services & CLINs, List of Attachments, Special Requirements, Deliveries/Performance)
-  - req_id (prefix by section letter, sequential per section: A001, A002, L001, L002...)
-  - description (EXACT QUOTE/EXCERPT from the RFP text - the full sentence or phrase containing the requirement, not a summary)
-  - sub_factors (array, may be empty - exact sub-requirements as quotes)
-  - compliance_type (mandatory | informational | desirable)
-  - snippet (same as description - the exact quote)
-- "critical_summary": Object with "top_themes": Array of 5-10 critical topics (e.g., { "theme": "Transition Plan", "importance": "High (Sub-Factor 2 in M, Shipley Proposal Guide p.55 emphasis)", "key_reqs": ["L005", "C002"], "summary": "Brief overview of grouped reqs..." }), sorted by eval importance/M-section weighting.
+SEARCH the ENTIRE provided text carefully. You MUST copy EXACT words and phrases from the RFP text - do NOT make up or paraphrase anything.
 
-RULES:
-- For structured_attributes: Extract EXACT quotes only if present; use "Not specified" if missing. Include page/section from text.
-- For requirements: Same as v4 - extract all unique, no truncation, exact quotes as descriptions.
-- Treat SHALL/MUST/WILL as mandatory; MAY/SHOULD as desirable.
-- If Section C references attachment for task details, pull from attachment into description with att/page cite.
-- Include deadlines, page limits, validity period, volume structure, evaluation weighting, performance response times, provided Government assets.
-- Always include page numbers in rfp_ref where possible (from chunk metadata).
-- DESCRIPTION MUST BE THE EXACT TEXT FROM THE RFP - quote it directly, do not paraphrase or summarize.
+REQUIRED OUTPUT FORMAT (return ONLY valid JSON):
 
-QUALITY CHECK BEFORE OUTPUT:
-1. structured_attributes must have all 20 keys, even if "Not specified".
-2. requirements array must include Section M evaluation factors explicitly.
-3. All descriptions/snippets must be exact quotes, not summaries.
-4. OUTPUT ALL unique actionable requirements. DO NOT truncate.
-5. First object MUST be A001 (a real admin requirement).
-6. At least one item each for: A, L, M, C (or J), B, H (if present) if those sections exist.
-7. Ensure req_id is sequential within each section (A001, A002, L001, L002, etc.).
+{
+  "structured_attributes": {
+    "client_company": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "department": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "project_background": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "objectives": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "scope": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "timeline": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "budget": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "evaluation_criteria": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "deliverables": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "bidder_requirements": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "compliance_items": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "risk_management": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "required_competencies": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "schedule": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "special_conditions": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "packaging_marking": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "inspection_acceptance": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "contract_admin_data": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "contract_clauses": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""},
+    "representations": {"content": "", "source_snippet": "", "page_number": 0, "section_title": ""}
+  },
+  "requirements": [
+    {
+      "rfp_ref": "",
+      "section": "",
+      "req_id": "",
+      "description": "",
+      "sub_factors": [],
+      "compliance_type": "",
+      "snippet": ""
+    }
+  ],
+  "critical_summary": {
+    "top_themes": [
+      {
+        "theme": "",
+        "importance": "",
+        "key_reqs": [],
+        "summary": ""
+      }
+    ]
+  }
+}
 
-Return ONLY the JSON object. No prose.
+EXTRACTION RULES:
+
+1. STRUCTURED ATTRIBUTES: For each field, find the EXACT text from the RFP that matches the attribute type. Copy the complete relevant sentence/paragraph. If not found, use "Not specified".
+
+2. REQUIREMENTS: Find EVERY requirement in the text. Look for these patterns:
+   - "shall" (contractor shall, offeror shall, offerors shall)
+   - "must"
+   - "will" (when indicating requirement)
+   - "required"
+   - "mandatory"
+   - Any other clear requirement language
+
+   For each requirement:
+   - rfp_ref: "SECTION.SUBSECTION / Page XX"
+   - section: The section name (A, B, C, etc.)
+   - req_id: Sequential like A001, A002, L001, L002, etc.
+   - description: The COMPLETE exact sentence/paragraph containing the requirement
+   - sub_factors: Any sub-requirements within that paragraph
+   - compliance_type: "mandatory", "desirable", or "informational"
+   - snippet: Same as description
+
+3. CRITICAL SUMMARY: Identify 3-5 top themes from the requirements, with their importance level and key requirement IDs.
+
+4. SEARCH THE ENTIRE TEXT - do not miss sections or pages.
+
+5. Return ONLY the JSON object. No explanations, no markdown, no additional text.
