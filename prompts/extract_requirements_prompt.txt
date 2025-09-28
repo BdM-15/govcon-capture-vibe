@@ -8,7 +8,7 @@ INPUT VARIABLES:
 {{ATTACHMENTS_TEXT}}  # Section J attachments / PWS text (include att name/page)
 
 OUTPUT: ONLY JSON object with:
-- "structured_attributes": Object with 15 predefined GovCon attributes (adapted from ai-rfp-simulator, mapped to UCF sections):
+- "structured_attributes": Object with 20 predefined GovCon attributes (adapted from ai-rfp-simulator, mapped to UCF sections per FAR 15.204):
   - "client_company": { "content": "Exact quote from RFP (e.g., issuing agency name)", "source_snippet": "Full quote", "page_number": 1, "section_title": "Section A" }
   - "department": { "content": "Exact quote (e.g., contracting office)", "source_snippet": "...", "page_number": 1, "section_title": "Section A" }
   - "project_background": { "content": "Exact quote from Section A/L intro", "source_snippet": "...", "page_number": 2, "section_title": "Section L" }
@@ -24,6 +24,11 @@ OUTPUT: ONLY JSON object with:
   - "required_competencies": { "content": "Exact quote (experience/certifications)", "source_snippet": "...", "page_number": 12, "section_title": "Section L" }
   - "schedule": { "content": "Exact quote from Section F (milestones)", "source_snippet": "...", "page_number": 30, "section_title": "Section F" }
   - "special_conditions": { "content": "Exact quote from Section H/other", "source_snippet": "...", "page_number": 35, "section_title": "Section H" }
+  - "packaging_marking": { "content": "Exact quote from Section D", "source_snippet": "...", "page_number": 40, "section_title": "Section D" }
+  - "inspection_acceptance": { "content": "Exact quote from Section E", "source_snippet": "...", "page_number": 45, "section_title": "Section E" }
+  - "contract_admin_data": { "content": "Exact quote from Section G", "source_snippet": "...", "page_number": 50, "section_title": "Section G" }
+  - "contract_clauses": { "content": "Exact quote from Section I", "source_snippet": "...", "page_number": 55, "section_title": "Section I" }
+  - "representations": { "content": "Exact quote from Section K", "source_snippet": "...", "page_number": 60, "section_title": "Section K" }
 - "requirements": Array, each object keys:
   - rfp_ref (e.g., "L.3.1 / Page 45" or "J - Attachment 0014 / Page 3")
   - section (plain label: Supplemental Information, Instructions, Evaluation Factors, Work Description, Supplies/Services & CLINs, List of Attachments, Special Requirements, Deliveries/Performance)
@@ -44,7 +49,7 @@ RULES:
 - DESCRIPTION MUST BE THE EXACT TEXT FROM THE RFP - quote it directly, do not paraphrase or summarize.
 
 QUALITY CHECK BEFORE OUTPUT:
-1. structured_attributes must have all 15 keys, even if "Not specified".
+1. structured_attributes must have all 20 keys, even if "Not specified".
 2. requirements array must include Section M evaluation factors explicitly.
 3. All descriptions/snippets must be exact quotes, not summaries.
 4. OUTPUT ALL unique actionable requirements. DO NOT truncate.
