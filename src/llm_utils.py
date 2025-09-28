@@ -41,7 +41,7 @@ def call_ollama(prompt: str, model: str = None, **kwargs) -> str:
         return ""
 
 
-def extract_requirements(rfp_text: str, attachments_text: str = "") -> list:
+def extract_requirements(rfp_text: str, attachments_text: str = "") -> Dict[str, Any]:
     """
     Extract requirements from RFP text using LLM.
 
@@ -50,7 +50,7 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> list:
         attachments_text: Attachments text
 
     Returns:
-        List of requirement dicts
+        Dict with 'structured_attributes', 'requirements', 'critical_summary'
     """
     # Load prompt template
     prompt_file = "prompts/extract_requirements_prompt.txt"
@@ -60,15 +60,17 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> list:
     with open(prompt_file, 'r') as f:
         template = f.read()
 
-    # Chunk the text to fit within LLM context (approx 6000 words per chunk)
-    def chunk_text(text: str, chunk_size: int = 6000) -> List[str]:
+    # Chunk the text to fit within LLM context (approx 3000 words per chunk for better performance)
+    def chunk_text(text: str, chunk_size: int = 3000) -> List[str]:
         words = text.split()
         return [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
 
     rfp_chunks = chunk_text(rfp_text)
     attachments_chunks = chunk_text(attachments_text) if attachments_text else []
 
+    all_structured_attributes = {}
     all_requirements = []
+    all_critical_summaries = []
 
     for i, chunk in enumerate(rfp_chunks + attachments_chunks):
         # Fill template
@@ -88,12 +90,17 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> list:
             response = response.strip()
 
             data = json.loads(response)
-            if isinstance(data, dict) and "requirements" in data:
-                # New format with requirements and critical_summary
-                all_requirements.extend(data["requirements"])
-            elif isinstance(data, list):
-                # Old format, just the array
-                all_requirements.extend(data)
+            if isinstance(data, dict):
+                # New hybrid format with structured_attributes, requirements, critical_summary
+                if "structured_attributes" in data:
+                    # Merge structured attributes (prefer first non-"Not specified")
+                    for key, value in data["structured_attributes"].items():
+                        if key not in all_structured_attributes or all_structured_attributes[key]["content"] == "Not specified":
+                            all_structured_attributes[key] = value
+                if "requirements" in data:
+                    all_requirements.extend(data["requirements"])
+                if "critical_summary" in data and "top_themes" in data["critical_summary"]:
+                    all_critical_summaries.extend(data["critical_summary"]["top_themes"])
             else:
                 print("Warning: Unexpected JSON structure")
         except json.JSONDecodeError as e:
@@ -112,7 +119,19 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> list:
     # Sort by req_id to organize A-Z
     unique_reqs.sort(key=lambda x: x.get('req_id', ''))
 
-    return unique_reqs
+    # Remove duplicates from critical summaries based on theme
+    seen_themes = set()
+    unique_themes = []
+    for theme in all_critical_summaries:
+        if theme.get('theme') not in seen_themes:
+            seen_themes.add(theme.get('theme'))
+            unique_themes.append(theme)
+
+    return {
+        "structured_attributes": all_structured_attributes,
+        "requirements": unique_reqs,
+        "critical_summary": {"top_themes": unique_themes}
+    }
 
 
 def assess_compliance(extracted_reqs: list, proposal_text: str) -> list:
@@ -156,7 +175,8 @@ if __name__ == "__main__":
     Section M: Best value evaluation.
     """
 
-    reqs = extract_requirements(dummy_rfp)
+    result = extract_requirements(dummy_rfp)
+    reqs = result.get('requirements', [])
     print(f"Extracted {len(reqs)} requirements")
     for req in reqs[:2]:  # Show first 2
         print(json.dumps(req, indent=2))

@@ -133,5 +133,35 @@
       "processing_start_time": 1759078035,
       "processing_end_time": 1759078147
     }
+  },
+  "doc-241cd3dcaa45081f84a200616238e294": {
+    "status": "failed",
+    "error_msg": "Embedding func: Worker execution timeout after 60s",
+    "content_summary": "SOLICITATION, OFFER AND AWARD\n1. THIS CONTRACT IS A RATED ORDER \nUNDER DPAS (15 CFR 7900)\nRATING\nPAGE             OF       PAGES\n2. CONTRACT NUMBER\n3. SOLICITATION NUMBER\n4. TYPE OF SOLICITATION\n5. DATE ISSUED\n6. REQUISITION/PURCHASE NUMBER\nCODE\n7. I...",
+    "content_length": 225260,
+    "created_at": "2025-09-28T17:34:31.502377+00:00",
+    "updated_at": "2025-09-28T17:47:09.642710+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_123431_edcbe073",
+    "metadata": {
+      "processing_start_time": 1759081569,
+      "processing_end_time": 1759081629
+    },
+    "chunks_list": []
+  },
+  "doc-ad6b8411abc85bc30a33682b992d643d": {
+    "status": "failed",
+    "error_msg": "Embedding func: Worker execution timeout after 60s",
+    "content_summary": "Extracted Requirements:\n[{\"rfp_ref\": \"A - Page 3\", \"section\": \"Supplemental Information\", \"req_id\": \"A001\", \"description\": \"The contract should be submitted via Electronic format.\", \"sub_factors\": [], \"compliance_type\": \"mandatory\", \"snippet\": \"The c...",
+    "content_length": 21734,
+    "created_at": "2025-09-28T17:46:09.521291+00:00",
+    "updated_at": "2025-09-28T17:47:09.777091+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_124609_b920ae96",
+    "metadata": {
+      "processing_start_time": 1759081569,
+      "processing_end_time": 1759081629
+    },
+    "chunks_list": []
   }
 }

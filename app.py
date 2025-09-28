@@ -33,6 +33,10 @@ if 'rag_instance' not in st.session_state:
     st.session_state.rag_instance = None
 if 'requirements' not in st.session_state:
     st.session_state.requirements = None
+if 'structured_attributes' not in st.session_state:
+    st.session_state.structured_attributes = None
+if 'critical_summary' not in st.session_state:
+    st.session_state.critical_summary = None
 if 'parsed_data' not in st.session_state:
     st.session_state.parsed_data = None
 
@@ -60,6 +64,37 @@ def display_requirements_table(requirements: List[dict]):
         }
     )
 
+def display_structured_attributes(attributes: dict):
+    """Display structured attributes in a nice format."""
+    if not attributes:
+        st.warning("No structured attributes extracted yet.")
+        return
+
+    st.markdown("### Key RFP Attributes")
+    for key, value in attributes.items():
+        if isinstance(value, dict) and 'content' in value:
+            with st.expander(f"**{key.replace('_', ' ').title()}**"):
+                st.write(f"**Content:** {value['content']}")
+                if value.get('source_snippet'):
+                    st.write(f"**Source:** {value['source_snippet'][:200]}...")
+                if value.get('page_number'):
+                    st.write(f"**Page:** {value['page_number']}")
+                if value.get('section_title'):
+                    st.write(f"**Section:** {value['section_title']}")
+        else:
+            st.write(f"**{key.replace('_', ' ').title()}:** {value}")
+
+def display_critical_summary(summary: dict):
+    """Display critical summary themes."""
+    if not summary or not summary.get('top_themes'):
+        return
+
+    st.markdown("### Critical Themes")
+    for theme in summary['top_themes']:
+        with st.expander(f"**{theme.get('theme', 'Unknown')}** - {theme.get('importance', '')}"):
+            st.write(f"**Key Requirements:** {', '.join(theme.get('key_reqs', []))}")
+            st.write(f"**Summary:** {theme.get('summary', '')}")
+
 async def process_rfp_files(uploaded_files) -> dict:
     """Process uploaded RFP files."""
     if not uploaded_files:
@@ -86,7 +121,10 @@ async def process_rfp_files(uploaded_files) -> dict:
 
         # Extract requirements
         with st.spinner("Extracting requirements..."):
-            requirements = extract_requirements(parsed['main_text'], parsed['attachments_text'])
+            extraction_result = extract_requirements(parsed['main_text'], parsed['attachments_text'])
+            requirements = extraction_result.get('requirements', [])
+            structured_attributes = extraction_result.get('structured_attributes', {})
+            critical_summary = extraction_result.get('critical_summary', {})
 
         st.success(f"Extracted {len(requirements)} requirements")
 
@@ -95,10 +133,13 @@ async def process_rfp_files(uploaded_files) -> dict:
             rag = await get_rfp_rag()
             await rag.index_rfp(parsed['all_text'])
             await rag.index_rfp(f"Extracted Requirements:\n{json.dumps(requirements)}")
+            await rag.index_rfp(f"Structured Attributes:\n{json.dumps(structured_attributes)}")
 
         return {
             'parsed': parsed,
             'requirements': requirements,
+            'structured_attributes': structured_attributes,
+            'critical_summary': critical_summary,
             'rag': rag
         }
 
@@ -140,6 +181,8 @@ def main():
                 if result:
                     st.session_state.parsed_data = result['parsed']
                     st.session_state.requirements = result['requirements']
+                    st.session_state.structured_attributes = result['structured_attributes']
+                    st.session_state.critical_summary = result['critical_summary']
                     st.session_state.rag_instance = result['rag']
                     st.success("✅ RFP processed successfully!")
             else:
@@ -150,9 +193,25 @@ def main():
         st.markdown("This tool extracts requirements from federal RFPs and provides AI-powered analysis using local models only.")
 
     # Main content
-    tab1, tab2, tab3 = st.tabs(["📋 Requirements", "💬 Ask Questions", "📊 Compliance Check"])
+    tab1, tab2, tab3, tab4 = st.tabs(["� Overview", "�📋 Requirements", "💬 Ask Questions", "� Compliance Check"])
 
     with tab1:
+        st.header("RFP Overview")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.session_state.structured_attributes:
+                display_structured_attributes(st.session_state.structured_attributes)
+            else:
+                st.info("Upload and process RFP files to see structured attributes")
+
+        with col2:
+            if st.session_state.critical_summary:
+                display_critical_summary(st.session_state.critical_summary)
+            else:
+                st.info("Critical themes will appear here after processing")
+
+    with tab2:
         st.header("Extracted Requirements")
         if st.session_state.requirements:
             display_requirements_table(st.session_state.requirements)
@@ -168,7 +227,7 @@ def main():
         else:
             st.info("Upload and process RFP files to see extracted requirements")
 
-    with tab2:
+    with tab3:
         st.header("Ask the RFP")
 
         if st.session_state.rag_instance:
@@ -184,7 +243,7 @@ def main():
         else:
             st.info("Upload and process RFP files first")
 
-    with tab3:
+    with tab4:
         st.header("Compliance Assessment")
 
         if st.session_state.requirements:

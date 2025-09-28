@@ -52,7 +52,7 @@ class RFPRAG:
             llm_model_kwargs={
                 "host": os.getenv("LLM_BINDING_HOST", "http://localhost:11434"),
                 "options": {"num_ctx": 8192},
-                "timeout": int(os.getenv("TIMEOUT", "300")),
+                "timeout": int(os.getenv("TIMEOUT", "600")),  # Increased from 300 to 600
             },
             embedding_func=EmbeddingFunc(
                 embedding_dim=int(os.getenv("EMBEDDING_DIM", "1024")),
