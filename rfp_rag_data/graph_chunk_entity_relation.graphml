@@ -1,0 +1,190 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d11" for="edge" attr.name="created_at" attr.type="long"/>
+<key id="d10" for="edge" attr.name="file_path" attr.type="string"/>
+<key id="d9" for="edge" attr.name="source_id" attr.type="string"/>
+<key id="d8" for="edge" attr.name="keywords" attr.type="string"/>
+<key id="d7" for="edge" attr.name="description" attr.type="string"/>
+<key id="d6" for="edge" attr.name="weight" attr.type="double"/>
+<key id="d5" for="node" attr.name="created_at" attr.type="long"/>
+<key id="d4" for="node" attr.name="file_path" attr.type="string"/>
+<key id="d3" for="node" attr.name="source_id" attr.type="string"/>
+<key id="d2" for="node" attr.name="description" attr.type="string"/>
+<key id="d1" for="node" attr.name="entity_type" attr.type="string"/>
+<key id="d0" for="node" attr.name="entity_id" attr.type="string"/>
+<graph edgedefault="undirected"><node id="EAGLE BOA">
+  <data key="d0">EAGLE BOA</data>
+  <data key="d1">organization</data>
+  <data key="d2">EAGLE BOA is an unspecified organization or group.&lt;SEP&gt;EAGLE BOA is an organization that holds a specific certification or status, as mentioned in the RFP requirements.</data>
+  <data key="d3">chunk-52ed217f00cc4622caa4dc02aed13d6a&lt;SEP&gt;chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759074007</data>
+</node>
+<node id="NAICS 561210">
+  <data key="d0">NAICS 561210</data>
+  <data key="d1">category</data>
+  <data key="d2">NAICS 561210 refers to the NAICS code for Marketing, Advertising, and Public Relations Services.&lt;SEP&gt;NAICS 561210 refers to the industry category for software publishers.</data>
+  <data key="d3">chunk-52ed217f00cc4622caa4dc02aed13d6a&lt;SEP&gt;chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759074007</data>
+</node>
+<node id="Section A">
+  <data key="d0">Section A</data>
+  <data key="d3">chunk-52ed217f00cc4622caa4dc02aed13d6a</data>
+  <data key="d2">The competition is limited to EAGLE BOA holders.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759073991</data>
+</node>
+<node id="Section L">
+  <data key="d0">Section L</data>
+  <data key="d3">chunk-52ed217f00cc4622caa4dc02aed13d6a</data>
+  <data key="d2">The Technical Volume has a page limit and specific formatting requirements.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759073991</data>
+</node>
+<node id="Technical Volume">
+  <data key="d0">Technical Volume</data>
+  <data key="d3">chunk-52ed217f00cc4622caa4dc02aed13d6a</data>
+  <data key="d2">The Technical Volume has a page limit and specific formatting requirements.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759073991</data>
+</node>
+<node id="Best Value tradeoff">
+  <data key="d0">Best Value tradeoff</data>
+  <data key="d3">chunk-52ed217f00cc4622caa4dc02aed13d6a</data>
+  <data key="d2">Section M focuses on balancing Technical, Past Performance, and Cost/Price in the Best Value tradeoff.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759073991</data>
+</node>
+<node id="Section M">
+  <data key="d0">Section M</data>
+  <data key="d3">chunk-52ed217f00cc4622caa4dc02aed13d6a</data>
+  <data key="d2">Section M focuses on balancing Technical, Past Performance, and Cost/Price in the Best Value tradeoff.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759073991</data>
+</node>
+<node id="Capture Plan">
+  <data key="d0">Capture Plan</data>
+  <data key="d1">document</data>
+  <data key="d2">The Capture Plan is a document that contains strategies and approaches for capturing business.</data>
+  <data key="d3">chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759074007</data>
+</node>
+<node id="Shipley Proposal Guide">
+  <data key="d0">Shipley Proposal Guide</data>
+  <data key="d1">guide</data>
+  <data key="d2">The Shipley Proposal Guide provides guidelines and best practices for writing proposals.</data>
+  <data key="d3">chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759074007</data>
+</node>
+<node id="Proposal">
+  <data key="d0">Proposal</data>
+  <data key="d1">document</data>
+  <data key="d2">A proposal is a formal document submitted to meet specific requirements or standards, as mentioned in the RFP.</data>
+  <data key="d3">chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759074007</data>
+</node>
+<node id="Attachment A">
+  <data key="d0">Attachment A</data>
+  <data key="d1">document</data>
+  <data key="d2">Attachment A contains detailed task descriptions, PWS text, and other requirements as specified in the RFP.</data>
+  <data key="d3">chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759074007</data>
+</node>
+<node id="Task Details">
+  <data key="d0">Task Details</data>
+  <data key="d1">category</data>
+  <data key="d2">Task details refer to specific work items that need to be addressed in a proposal or project plan.</data>
+  <data key="d3">chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759074007</data>
+</node>
+<node id="PWS Text">
+  <data key="d0">PWS Text</data>
+  <data key="d1">text</data>
+  <data key="d2">PWS text stands for Performance Work Statement, which outlines the requirements and expectations of a project or task.</data>
+  <data key="d3">chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759074007</data>
+</node>
+<node id="EAGLE BOA holders">
+  <data key="d0">EAGLE BOA holders</data>
+  <data key="d3">chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d2">EAGLE BOA holders operate under NAICS 561210.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">unknown_source</data>
+  <data key="d5">1759074007</data>
+</node>
+<edge source="EAGLE BOA" target="Section A">
+  <data key="d6">1.0</data>
+  <data key="d7">The competition is limited to EAGLE BOA holders.</data>
+  <data key="d8">competition,membership requirements</data>
+  <data key="d9">chunk-52ed217f00cc4622caa4dc02aed13d6a</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759073991</data>
+</edge>
+<edge source="NAICS 561210" target="EAGLE BOA holders">
+  <data key="d6">1.0</data>
+  <data key="d7">EAGLE BOA holders operate under NAICS 561210.</data>
+  <data key="d8">certification,industry category</data>
+  <data key="d9">chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759074007</data>
+</edge>
+<edge source="Section L" target="Technical Volume">
+  <data key="d6">1.0</data>
+  <data key="d7">The Technical Volume has a page limit and specific formatting requirements.</data>
+  <data key="d8">formatting,limitation on document length</data>
+  <data key="d9">chunk-52ed217f00cc4622caa4dc02aed13d6a</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759073991</data>
+</edge>
+<edge source="Best Value tradeoff" target="Section M">
+  <data key="d6">1.0</data>
+  <data key="d7">Section M focuses on balancing Technical, Past Performance, and Cost/Price in the Best Value tradeoff.</data>
+  <data key="d8">criteria evaluation,trade-off considerations</data>
+  <data key="d9">chunk-52ed217f00cc4622caa4dc02aed13d6a</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759073991</data>
+</edge>
+<edge source="Capture Plan" target="Proposal">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal must include a Capture Plan for executive overviews.</data>
+  <data key="d8">content inclusion,strategy</data>
+  <data key="d9">chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759074007</data>
+</edge>
+<edge source="Shipley Proposal Guide" target="Proposal">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal should incorporate insights from the Shipley Proposal Guide.</data>
+  <data key="d8">best practices,guidance</data>
+  <data key="d9">chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759074008</data>
+</edge>
+<edge source="Proposal" target="Task Details">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal must include detailed descriptions of tasks as outlined in Attachment A.</data>
+  <data key="d8">content inclusion,work description</data>
+  <data key="d9">chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759074008</data>
+</edge>
+<edge source="Proposal" target="PWS Text">
+  <data key="d6">1.0</data>
+  <data key="d7">The proposal should incorporate the PWS text to meet project requirements.</data>
+  <data key="d8">content inclusion,requirements</data>
+  <data key="d9">chunk-95e7f989fd12777b24a45fb4190ae372</data>
+  <data key="d10">unknown_source</data>
+  <data key="d11">1759074009</data>
+</edge>
+</graph></graphml>

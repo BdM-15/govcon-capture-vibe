@@ -1,0 +1,34 @@
+{
+  "doc-52ed217f00cc4622caa4dc02aed13d6a": {
+    "entity_names": [
+      "EAGLE BOA",
+      "Section L",
+      "Section M",
+      "Best Value tradeoff",
+      "NAICS 561210",
+      "Technical Volume",
+      "Section A"
+    ],
+    "count": 7,
+    "create_time": 1759073993,
+    "update_time": 1759073993,
+    "_id": "doc-52ed217f00cc4622caa4dc02aed13d6a"
+  },
+  "doc-95e7f989fd12777b24a45fb4190ae372": {
+    "entity_names": [
+      "EAGLE BOA",
+      "Capture Plan",
+      "NAICS 561210",
+      "Proposal",
+      "EAGLE BOA holders",
+      "Attachment A",
+      "Task Details",
+      "Shipley Proposal Guide",
+      "PWS Text"
+    ],
+    "count": 9,
+    "create_time": 1759074009,
+    "update_time": 1759074009,
+    "_id": "doc-95e7f989fd12777b24a45fb4190ae372"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "chunk-52ed217f00cc4622caa4dc02aed13d6a": {
+    "tokens": 60,
+    "content": "Section A: Competition limited to EAGLE BOA holders under NAICS 561210.\n        Section L: Technical Volume limited to 25 pages, 11 pt font, 1 inch margins.\n        Section M: Best Value tradeoff among Technical, Past Performance, and Cost/Price.",
+    "chunk_order_index": 0,
+    "full_doc_id": "doc-52ed217f00cc4622caa4dc02aed13d6a",
+    "file_path": "unknown_source",
+    "llm_cache_list": [
+      "default:extract:b172251d0eaaa368f3eb1bf18b219372",
+      "default:extract:27dd8de65c4972de70b85964f06d7c5e"
+    ],
+    "create_time": 1759073976,
+    "update_time": 1759073990,
+    "_id": "chunk-52ed217f00cc4622caa4dc02aed13d6a"
+  },
+  "chunk-95e7f989fd12777b24a45fb4190ae372": {
+    "tokens": 669,
+    "content": "Extracted Requirements:\n[{\"rfp_ref\": \"Section A / Competition limited to EAGLE BOA holders under NAICS 561210\", \"section\": \"Special Requirements\", \"req_id\": \"A001\", \"description\": \"The proposal must be submitted by EAGLE BOA holders under NAICS 561210.\", \"sub_factors\": [], \"compliance_type\": \"mandatory\", \"snippet\": \"\"}, {\"rfp_ref\": \"Section L / Technical Volume limited to 25 pages, 11 pt font, 1 inch margins\", \"section\": \"Special Requirements\", \"req_id\": \"L001\", \"description\": \"The technical proposal must not exceed 25 pages with a font size of 11pt and 1-inch margins.\", \"sub_factors\": [], \"compliance_type\": \"mandatory\", \"snippet\": \"\"}, {\"rfp_ref\": \"Section M / Best Value tradeoff among Technical, Past Performance, and Cost/Price\", \"section\": \"Evaluation Factors\", \"req_id\": \"M001\", \"description\": \"Proposals must demonstrate a balanced approach to the Best Value tradeoff considering Technical, Past Performance, and Cost/Price.\", \"sub_factors\": [\"Technical Merits\", \"Past Performance\", \"Cost/Price\"], \"compliance_type\": \"mandatory\", \"snippet\": \"\"}, {\"rfp_ref\": \"Section M / Shipley grounding in critical_summary for exec overviews like Capture Plan p.2\", \"section\": \"Critical Summary\", \"req_id\": \"M002\", \"description\": \"The executive summary must include a grounded approach to the proposal, incorporating insights from the Shipley Proposal Guide.\", \"sub_factors\": [], \"compliance_type\": \"desirable\", \"snippet\": \"\"}, {\"rfp_ref\": \"Section C / Task details pulled from attachment for L005 / Page 45\", \"section\": \"Work Description\", \"req_id\": \"C001\", \"description\": \"Provide detailed task descriptions in the proposal, as outlined in Attachment A (Page 45).\", \"sub_factors\": [], \"compliance_type\": \"mandatory\", \"snippet\": \"\"}, {\"rfp_ref\": \"Section B / Volume structure (L001)\", \"section\": \"Supplies/Services & CLINs\", \"req_id\": \"B001\", \"description\": \"Proposals must follow the specified volume structure detailed in Section L.\", \"sub_factors\": [], \"compliance_type\": \"mandatory\", \"snippet\": \"\"}, {\"rfp_ref\": \"Section J / PWS text (L005 / Page 45)\", \"section\": \"Supplies/Services & CLINs\", \"req_id\": \"J001\", \"description\": \"Include the required PWS text as specified in Attachment A, Page 45.\", \"sub_factors\": [], \"compliance_type\": \"mandatory\", \"snippet\": \"\"}, {\"rfp_ref\": \"Section H / Other derived (L005 / Page 45)\", \"section\": \"Supplies/Services & CLINs\", \"req_id\": \"H001\", \"description\": \"Include any other derived requirements as specified in Attachment A, Page 45.\", \"sub_factors\": [], \"compliance_type\": \"mandatory\", \"snippet\": \"\"}]",
+    "chunk_order_index": 0,
+    "full_doc_id": "doc-95e7f989fd12777b24a45fb4190ae372",
+    "file_path": "unknown_source",
+    "llm_cache_list": [
+      "default:extract:fba02fca18d2e091f37827553e69b044",
+      "default:extract:85bfe3ba50b609be278b7c4c698a378d"
+    ],
+    "create_time": 1759073993,
+    "update_time": 1759074007,
+    "_id": "chunk-95e7f989fd12777b24a45fb4190ae372"
+  }
+}

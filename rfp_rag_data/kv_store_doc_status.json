@@ -1,0 +1,36 @@
+{
+  "doc-52ed217f00cc4622caa4dc02aed13d6a": {
+    "status": "processed",
+    "chunks_count": 1,
+    "chunks_list": [
+      "chunk-52ed217f00cc4622caa4dc02aed13d6a"
+    ],
+    "content_summary": "Section A: Competition limited to EAGLE BOA holders under NAICS 561210.\n        Section L: Technical Volume limited to 25 pages, 11 pt font, 1 inch margins.\n        Section M: Best Value tradeoff among Technical, Past Performance, and Cost/Price.",
+    "content_length": 246,
+    "created_at": "2025-09-28T15:39:36.699044+00:00",
+    "updated_at": "2025-09-28T15:39:53.094962+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_103936_e2154def",
+    "metadata": {
+      "processing_start_time": 1759073976,
+      "processing_end_time": 1759073993
+    }
+  },
+  "doc-95e7f989fd12777b24a45fb4190ae372": {
+    "status": "processed",
+    "chunks_count": 1,
+    "chunks_list": [
+      "chunk-95e7f989fd12777b24a45fb4190ae372"
+    ],
+    "content_summary": "Extracted Requirements:\n[{\"rfp_ref\": \"Section A / Competition limited to EAGLE BOA holders under NAICS 561210\", \"section\": \"Special Requirements\", \"req_id\": \"A001\", \"description\": \"The proposal must be submitted by EAGLE BOA holders under NAICS 56121...",
+    "content_length": 2549,
+    "created_at": "2025-09-28T15:39:53.114723+00:00",
+    "updated_at": "2025-09-28T15:40:09.464713+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_103953_ba6f3892",
+    "metadata": {
+      "processing_start_time": 1759073993,
+      "processing_end_time": 1759074009
+    }
+  }
+}

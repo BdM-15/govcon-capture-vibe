@@ -1,0 +1,50 @@
+{
+  "doc-52ed217f00cc4622caa4dc02aed13d6a": {
+    "relation_pairs": [
+      [
+        "Best Value tradeoff",
+        "Section M"
+      ],
+      [
+        "Section L",
+        "Technical Volume"
+      ],
+      [
+        "EAGLE BOA",
+        "Section A"
+      ]
+    ],
+    "count": 3,
+    "create_time": 1759073993,
+    "update_time": 1759073993,
+    "_id": "doc-52ed217f00cc4622caa4dc02aed13d6a"
+  },
+  "doc-95e7f989fd12777b24a45fb4190ae372": {
+    "relation_pairs": [
+      [
+        "PWS Text",
+        "Proposal"
+      ],
+      [
+        "Proposal",
+        "Shipley Proposal Guide"
+      ],
+      [
+        "Capture Plan",
+        "Proposal"
+      ],
+      [
+        "Proposal",
+        "Task Details"
+      ],
+      [
+        "EAGLE BOA holders",
+        "NAICS 561210"
+      ]
+    ],
+    "count": 5,
+    "create_time": 1759074009,
+    "update_time": 1759074009,
+    "_id": "doc-95e7f989fd12777b24a45fb4190ae372"
+  }
+}
