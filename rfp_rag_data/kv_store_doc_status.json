@@ -32,5 +32,87 @@
       "processing_start_time": 1759073993,
       "processing_end_time": 1759074009
     }
+  },
+  "doc-d3e9a2d4fb9735fbda0da20feff06f0c": {
+    "status": "processed",
+    "chunks_count": 49,
+    "chunks_list": [
+      "chunk-ce2f32fdc2bc29d4969ecc9b1aa86288",
+      "chunk-1073b4d4189180643415825cc374d4e3",
+      "chunk-b03cbea8d931abaaf8d14418321459cd",
+      "chunk-8d5d62a02d72ba1cedf7b45d510c8814",
+      "chunk-355c349752b1fd2ff522429894fcf87e",
+      "chunk-66e404d5a93547e2cea3f665fce84506",
+      "chunk-2211ffd89de44b44c885669ea37defed",
+      "chunk-61e20defa53eeaf07032c318e7194626",
+      "chunk-9aac7e1e1b6bc048553b5d7ec5c6e3e3",
+      "chunk-f8d7e50713c9e86e99a126cad9ebab2a",
+      "chunk-97e38ffcb4be55def96dc1738c2eb192",
+      "chunk-1299db431727f0434d3ab8f2e1c8f889",
+      "chunk-86e322fa7658a6a86e3952774291e020",
+      "chunk-b62ac6c8e23b6ce28f2bebee830a03ba",
+      "chunk-7300ec0f12e0a3d7c1f3522ea0253ff1",
+      "chunk-45b5e6f3dd44c5bf4d56d18c1f9b1cb5",
+      "chunk-23830e9771ad17bc48c80ddd9a9fe4c8",
+      "chunk-dcfa986aa1caa6039a6a6d64f9853a76",
+      "chunk-30c262bec8342f45a200ff812768d7cc",
+      "chunk-e0ef13c8ffb17f16a10a27d63e130d9a",
+      "chunk-c8548cdb7777e654ae91d38ea2245aaf",
+      "chunk-ab8c2f7c800d48a9b1a3539e9a14a63b",
+      "chunk-85e04ee252d66507561e497292a01994",
+      "chunk-b436dc6e6292513df3d88974e7c62d6e",
+      "chunk-c06163cf45363b6380a05782d06d6a17",
+      "chunk-c84b4b3cae684ad805a8abe1c2f09377",
+      "chunk-e1ecd2329c1094743849f137f84ba05c",
+      "chunk-9fe24455101fe8508c7ef4a65272e4b9",
+      "chunk-31d3f01fdfffadc912ab0203b8ec4133",
+      "chunk-ce31fb39774b753589d27b0a0107c3ed",
+      "chunk-e5b261a180380709d73ab2afa4af4834",
+      "chunk-69fb87354d1632f8f4a7a4e4d1dddddf",
+      "chunk-4bde9c7fed9e4aec22409141e4f5abdb",
+      "chunk-c8c2a78985928063c67fc8a21585a66d",
+      "chunk-ab5c433ef195114b49df8f2dce8764ba",
+      "chunk-a5eb88f53063cae71c831628b90a8402",
+      "chunk-41952fdd0263e1cb864acd6c2ff1ae10",
+      "chunk-5cd1f581d45adaa7bbbcbde141d2d191",
+      "chunk-113cdfc65b439944535e6613fa79ae29",
+      "chunk-d2efb477e1b9fd38da3f10d9d020d3e1",
+      "chunk-24c4881b0047cbb283afa1b2c0a75f3d",
+      "chunk-a0291135d1d7ac8b31878a9b3ba3a033",
+      "chunk-d79ee8205428316dd1a15549cc87832b",
+      "chunk-4bc1cf4c1c12c12b4dc2861447981b33",
+      "chunk-bc136a03f2b3b5e3ff3d70e5b6851e7a",
+      "chunk-c756b068a39a51fa85437e6bdc46229e",
+      "chunk-c31371f2feffb985334b292afd4c9b9c",
+      "chunk-6fde79ec77d650c7f4df4896d83bc9ff",
+      "chunk-16e9f3de8d214919bfce75d7a699b1ba"
+    ],
+    "content_summary": "SOLICITATION, OFFER AND AWARD 1. THIS CONTRACT IS A RATED ORDER \nUNDER DPAS (15 CFR 7900)\nRATING\n PAGE             OF       PAGES\n2. CONTRACT NUMBER 3. SOLICITATION NUMBER 4. TYPE OF SOLICITATION 5. DATE ISSUED 6. REQUISITION/PURCHASE NUMBER\nCODE7. I...",
+    "content_length": 224447,
+    "created_at": "2025-09-28T16:03:09.776291+00:00",
+    "updated_at": "2025-09-28T16:29:41.231640+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_110309_355dcd6f",
+    "metadata": {
+      "processing_start_time": 1759076085,
+      "processing_end_time": 1759076981
+    }
+  },
+  "doc-d4419ff42139d71e432ad022f14d174f": {
+    "status": "processed",
+    "chunks_count": 1,
+    "chunks_list": [
+      "chunk-d4419ff42139d71e432ad022f14d174f"
+    ],
+    "content_summary": "Extracted Requirements:\n[{\"rfp_ref\": \"A001 / Page 1\", \"section\": \"Supplemental Information\", \"req_id\": \"A001\", \"description\": \"Proposal must be submitted via email to the Government's point of contact within the deadline.\", \"sub_factors\": [], \"compli...",
+    "content_length": 3864,
+    "created_at": "2025-09-28T16:14:45.503991+00:00",
+    "updated_at": "2025-09-28T16:16:31.464829+00:00",
+    "file_path": "unknown_source",
+    "track_id": "insert_20250928_111445_a9ee129d",
+    "metadata": {
+      "processing_start_time": 1759076085,
+      "processing_end_time": 1759076191
+    }
   }
 }

@@ -46,5 +46,1477 @@
     "create_time": 1759074009,
     "update_time": 1759074009,
     "_id": "doc-95e7f989fd12777b24a45fb4190ae372"
+  },
+  "doc-d4419ff42139d71e432ad022f14d174f": {
+    "relation_pairs": [
+      [
+        "Proposal",
+        "Subcontractor Evaluation Methods"
+      ],
+      [
+        "Awards",
+        "Performance Recognition Documents"
+      ],
+      [
+        "Direct Expenses",
+        "Project Costs"
+      ],
+      [
+        "Cari Fiebach",
+        "Proposal"
+      ],
+      [
+        "Courtney Peterson",
+        "Proposal"
+      ],
+      [
+        "Indirect Expenses",
+        "Project Costs"
+      ],
+      [
+        "Government",
+        "Proposal"
+      ],
+      [
+        "Past Performance Evaluation",
+        "Recency"
+      ],
+      [
+        "Milestone",
+        "Work Plan"
+      ],
+      [
+        "Proposal",
+        "Special Requirements"
+      ],
+      [
+        "Timeline",
+        "Work Plan"
+      ],
+      [
+        "Risk Management",
+        "Work Plan"
+      ],
+      [
+        "Past Performance Evaluation",
+        "Quality"
+      ],
+      [
+        "Leadership Involvement",
+        "Proposal"
+      ],
+      [
+        "Proposal",
+        "Safety Management"
+      ],
+      [
+        "Contingency Plans",
+        "Risk Management Plan"
+      ],
+      [
+        "Commendation Letters",
+        "Performance Recognition Documents"
+      ]
+    ],
+    "count": 17,
+    "create_time": 1759076191,
+    "update_time": 1759076191,
+    "_id": "doc-d4419ff42139d71e432ad022f14d174f"
+  },
+  "doc-d3e9a2d4fb9735fbda0da20feff06f0c": {
+    "relation_pairs": [
+      [
+        "J-1601000 (MCSF-BI)",
+        "J-1601000-06 Excavation Permit Form"
+      ],
+      [
+        "Contractor",
+        "Extended Contract"
+      ],
+      [
+        "Offerors",
+        "Small Business Utilization (SB)"
+      ],
+      [
+        "Minimum Order Value",
+        "Order Limitations Clause"
+      ],
+      [
+        "Contract Reference",
+        "DoDAAC: N46134"
+      ],
+      [
+        "Attachment JM-1",
+        "Offeror"
+      ],
+      [
+        "Firm-Specific Reservations for Small Business",
+        "WOSB Program"
+      ],
+      [
+        "Offeror",
+        "Phase-In Plans"
+      ],
+      [
+        "Government",
+        "SMS"
+      ],
+      [
+        "Maximum Order Value",
+        "Order Limitations Clause"
+      ],
+      [
+        "FAR 15.404-1",
+        "Public Works and Government Services Canada"
+      ],
+      [
+        "Base Operations Support Services",
+        "Pricing Arrangement FFP"
+      ],
+      [
+        "FAR Clauses Incorporated by Reference",
+        "Page"
+      ],
+      [
+        "Firm-Specific Reservations for Small Business",
+        "Nexus 8405-11"
+      ],
+      [
+        "Accept at Other DoDAAC",
+        "DoDAAC N46134"
+      ],
+      [
+        "ELINs B700 through B718",
+        "Total of ELINs B700 through B718"
+      ],
+      [
+        "Contractor",
+        "Government"
+      ],
+      [
+        "DAAC N69450",
+        "DD 1155's"
+      ],
+      [
+        "Collective Bargaining Agreement CBA-2025-440",
+        "Wage Determinations"
+      ],
+      [
+        "FAR",
+        "Order Limitations"
+      ],
+      [
+        "Offeror",
+        "Solicitation"
+      ],
+      [
+        "Microsoft Office Version 365 compatible",
+        "Offeror"
+      ],
+      [
+        "DAAC N69450",
+        "FedMall"
+      ],
+      [
+        "Offeror",
+        "Price Evaluation Factor"
+      ],
+      [
+        "J-170000 (MCSF-BI)",
+        "J-170000-02-03-04 Transportation Inventories"
+      ],
+      [
+        "J-1601000 (MCSF-BI)",
+        "J-1601000-05-01 Service Desk Guide for Reporting Utility System Outages"
+      ],
+      [
+        "J-1601000 (MCSF-BI)",
+        "J-1601000-04 Installation Utility Maps"
+      ],
+      [
+        "Integrated Solid Waste Management (ISWM)",
+        "Swimming Pools"
+      ],
+      [
+        "Offeror",
+        "Proposal"
+      ],
+      [
+        "Offerors",
+        "Past Performance Questionnaires"
+      ],
+      [
+        "Indefinite Delivery/Indefinite Quantity (IDIQ) Contracts",
+        "Offeror"
+      ],
+      [
+        "NAVFAC Southeast",
+        "ST"
+      ],
+      [
+        "Financial Statements",
+        "Offeror"
+      ],
+      [
+        "Contract Clauses",
+        "Non-Recurring ELINs"
+      ],
+      [
+        "Government",
+        "TCR Rate"
+      ],
+      [
+        "52.211-11 Liquidated Damages-Supplies, Services, or Research and Development",
+        "FAR Clauses Incorporated by Full Text"
+      ],
+      [
+        "Authorized Officer",
+        "Offeror"
+      ],
+      [
+        "Contractor",
+        "Order Limitations Clause"
+      ],
+      [
+        "Contractor",
+        "Postaward Small Business Program Rerepresentation"
+      ],
+      [
+        "J-1602000 (MCSF-BI)",
+        "J-1602000-04 Historical Critical Spare Parts Inventory"
+      ],
+      [
+        "International Brotherhood of Electrical Workers",
+        "Jacobs Technology, Inc."
+      ],
+      [
+        "J-180000 (MCSF-BI)",
+        "J-180000-14 (MCSF-BI) MCSF-BI Storm Water Pollution Prevention Plan"
+      ],
+      [
+        "Defense Federal Acquisition Supplement",
+        "Limitation of Government's Obligation Clause"
+      ],
+      [
+        "Award",
+        "Best Value"
+      ],
+      [
+        "Offerors",
+        "Team Formation Agreements"
+      ],
+      [
+        "Address and POC",
+        "BLDG 1966, BON HOMME RICHARD ST"
+      ],
+      [
+        "Collective Bargaining Agreement CBA-2055-439",
+        "Wage Determinations"
+      ],
+      [
+        "Practical Contingency Plans",
+        "Transportation Equipment"
+      ],
+      [
+        "Location of Performance",
+        "NAVFAC SOUTHEAST PWD MAYPORT"
+      ],
+      [
+        "Offeror",
+        "Prime Contractor"
+      ],
+      [
+        "CLIN/ELIN/Sub-ELIN Quantity",
+        "Pricing Discrepancies"
+      ],
+      [
+        "Base Operations Support (BOS)",
+        "Marine Corps Support Facility - Blount Island (MCSF-BI)"
+      ],
+      [
+        "Florida",
+        "Marine Corps Support Facility Blount Island"
+      ],
+      [
+        "BA-2025-440",
+        "International Brotherhood of Electrical Workers"
+      ],
+      [
+        "ELINs B001 through B014",
+        "Total of ELINs B001 through B014"
+      ],
+      [
+        "252.203-7000",
+        "252.203-7001"
+      ],
+      [
+        "Offeror",
+        "Subcontracts"
+      ],
+      [
+        "Blount Island",
+        "MCSF-BI"
+      ],
+      [
+        "Crane and Railroad Trackage Inventory.pdf",
+        "Fuel Storage Tanks and Berm Inventory.pdf"
+      ],
+      [
+        "Labor Efficient Approach",
+        "Unit Price Labor (UPL)"
+      ],
+      [
+        "Non-recurring Base Operations Support Services",
+        "Option Periods"
+      ],
+      [
+        "Offerors",
+        "Unit Price Labor (UPL) Rate"
+      ],
+      [
+        "252.203-7001",
+        "252.203-7004"
+      ],
+      [
+        "Contractor",
+        "Destination"
+      ],
+      [
+        "Government",
+        "Small Business Utilization (SB)"
+      ],
+      [
+        "52.204-24 Representation Regarding Certain Telecommunications and Video Surveillance Services or Equipment",
+        "FAR Clauses Incorporated by Reference"
+      ],
+      [
+        "Government",
+        "Order"
+      ],
+      [
+        "Past Performance",
+        "Proposal"
+      ],
+      [
+        "J-1601000 (MCSF-BI)",
+        "J-1601000 Utility Assets"
+      ],
+      [
+        "SBSP",
+        "Small Business"
+      ],
+      [
+        "N6945025R0003",
+        "Section F"
+      ],
+      [
+        "Minimize Downtime",
+        "Offerors"
+      ],
+      [
+        "NAICS Code Assigned Order",
+        "Order"
+      ],
+      [
+        "Base Operations Support (BOS)",
+        "Naval Station (NAVSTA) Mayport"
+      ],
+      [
+        "Base Period Recurring Work",
+        "Recurring Base Operations Support Services"
+      ],
+      [
+        "Contracting Officer",
+        "Offeror"
+      ],
+      [
+        "Contract",
+        "Unrestricted Multiple-award Contract"
+      ],
+      [
+        "ELINs A700 through A718",
+        "Total of ELINs A700 through A718"
+      ],
+      [
+        "Labor Efficient Approach",
+        "Transportation Equipment"
+      ],
+      [
+        "Annual Representations and Certifications",
+        "Offeror"
+      ],
+      [
+        "DoDAAC N46134",
+        "Inspect By"
+      ],
+      [
+        "Business Concern",
+        "Veteran-Owned Small Business Concern"
+      ],
+      [
+        "AMAG form",
+        "Contractor"
+      ],
+      [
+        "Government",
+        "Security Personnel"
+      ],
+      [
+        "SDVOSB Joint Venture",
+        "Service-Disabled Veteran-Owned Small Business"
+      ],
+      [
+        "Annex 1700000 Sections C and J",
+        "Transportation Limits of Liabilities"
+      ],
+      [
+        "Naval Station Mayport",
+        "Section D Files"
+      ],
+      [
+        "52.215-21 Requirements for Certified Cost or Pricing Data and Data Other Than Certified Cost or Pricing Data-Modifications (Alternate I)",
+        "FAR Clauses Incorporated by Full Text"
+      ],
+      [
+        "Facilities Support",
+        "Facility Management"
+      ],
+      [
+        "Government",
+        "Watchstanding Services"
+      ],
+      [
+        "Mark For Code",
+        "N/A"
+      ],
+      [
+        "BA-2025-440",
+        "Jacobs Technology, Inc."
+      ],
+      [
+        "Delivery Period",
+        "Line Item Delivery Schedule Estimated Quantity"
+      ],
+      [
+        "NAVFAC Maximo Data",
+        "Quality Water Production"
+      ],
+      [
+        "52.215-21 Requirements for Certified Cost or Pricing Data and Data Other Than Certified Cost or Pricing Data-Modifications",
+        "FAR Clauses Incorporated by Full Text"
+      ],
+      [
+        "Employee",
+        "Safety Training"
+      ],
+      [
+        "J-1503010 (MCSF-BI)",
+        "J-1503010-04 (MCSF-BI)"
+      ],
+      [
+        "Contact Information",
+        "Telephone: 904-270-6716"
+      ],
+      [
+        "J-1601000 (MCSF-BI)",
+        "J-1601000-01 NAVSTA Mayport Points of Demarcation"
+      ],
+      [
+        "Contractor",
+        "PWD Mayport"
+      ],
+      [
+        "Base Operations Support (BOS)",
+        "Transportation Services"
+      ],
+      [
+        "Extended Contract",
+        "Government"
+      ],
+      [
+        "Offerors",
+        "Subcontractor Costs"
+      ],
+      [
+        "Offerors",
+        "Risks During Contract Performance"
+      ],
+      [
+        "Maintenance and Repair Requirements",
+        "Transportation Equipment"
+      ],
+      [
+        "NS Mayport Security Office",
+        "Site Visit"
+      ],
+      [
+        "FAR",
+        "Hire"
+      ],
+      [
+        "DFARS 252.237-7024 NOTICE OF CONTINUATION OF ESSENTIAL CONTRACTOR SERVICES (OCT 2010)",
+        "Offeror"
+      ],
+      [
+        "Commitment Types",
+        "Subcontractors"
+      ],
+      [
+        "Contractor",
+        "Contractor Delivery Schedule"
+      ],
+      [
+        "Offeror",
+        "Proposal Evaluation"
+      ],
+      [
+        "DAAC N69450",
+        "GCPC program"
+      ],
+      [
+        "Maximo Data",
+        "Service Provider"
+      ],
+      [
+        "Contracting Officer",
+        "NAVFAC SOUTHEAST ACQUISITION CORE"
+      ],
+      [
+        "FAR 19.7",
+        "SBSP"
+      ],
+      [
+        "Mayport",
+        "ST"
+      ],
+      [
+        "ELIN Pricing",
+        "Offeror"
+      ],
+      [
+        "Evaluation Preference",
+        "Offer"
+      ],
+      [
+        "J-1503050 (MCSF-BI)",
+        "J-1503050-04 (MCSF-BI)"
+      ],
+      [
+        "Annual Representations and Certifications",
+        "Covered Article"
+      ],
+      [
+        "BOS: FY26 Naval Station Mayport Base Operations Support",
+        "Facilities Support"
+      ],
+      [
+        "FAR/DFARS Provision",
+        "N6945025R0003"
+      ],
+      [
+        "Certified Cost or Pricing Data",
+        "Competitive Acquisition"
+      ],
+      [
+        "DCAA Auditor DoDAAC",
+        "N/A"
+      ],
+      [
+        "J-1503050 (MCSF-BI)",
+        "J-1503050-11 (MCSF-BI)"
+      ],
+      [
+        "Agreements and Lettings",
+        "Joint Venture/Partnership Arrangement"
+      ],
+      [
+        "J-180000 (MCSF-BI)",
+        "J-180000-12 (MCSF-BI) Stormwater System Map (MCSF-BI)"
+      ],
+      [
+        "BA-2025-440",
+        "Service Employees"
+      ],
+      [
+        "ELIN/Sub-ELIN Prices",
+        "Unit Price Rounding"
+      ],
+      [
+        "Contractor Performance Assessment Reports",
+        "Offerors"
+      ],
+      [
+        "Competitive Acquisition",
+        "FAR Clauses"
+      ],
+      [
+        "Inspector of Record, PWD Mayport",
+        "Line Item Delivery Schedule Estimated Quantity"
+      ],
+      [
+        "Contractor",
+        "Worksite Analysis"
+      ],
+      [
+        "CountryCode: USA",
+        "United States"
+      ],
+      [
+        "HUBZone Small Business Concern",
+        "NAICS Codes"
+      ],
+      [
+        "DAAC N69450",
+        "N6945025R0003"
+      ],
+      [
+        "Contracting Officer",
+        "Small Business Professional/Authorized Representative"
+      ],
+      [
+        "FRCS Cybersecurity Program.pdf",
+        "Lift Stations.pdf"
+      ],
+      [
+        "Annual Representations and Certifications",
+        "FAR Clause # Title Date Change"
+      ],
+      [
+        "FAR",
+        "Order Limitations Clause"
+      ],
+      [
+        "Civilian",
+        "FAR"
+      ],
+      [
+        "FAR 15.305(a)(2)(iv)",
+        "Past Performance Evaluation"
+      ],
+      [
+        "GAO",
+        "Protests"
+      ],
+      [
+        "J-1502000 (MCSF-BI)",
+        "J-1502000-25 (MCSF-BI)"
+      ],
+      [
+        "Offeror",
+        "Unspecified Projects"
+      ],
+      [
+        "AMAG form",
+        "Courtney Peterson"
+      ],
+      [
+        "AMAG form",
+        "Cari Fiebach"
+      ],
+      [
+        "Section K - Representations, Certification, & Other Statements",
+        "Storm Water Pollution Prevention Plan"
+      ],
+      [
+        "Offerors",
+        "Small Business Concerns (SDB, WOSB, HUBZone SB, VOSB, SDVOSB)"
+      ],
+      [
+        "Irrigation Equipment and Systems Inventory.pdf",
+        "Sewage Holding Tanks.pdf"
+      ],
+      [
+        "Offeror",
+        "Relevant Projects"
+      ],
+      [
+        "BA-2025-440",
+        "Government Contracting Resources, Inc."
+      ],
+      [
+        "Offeror",
+        "Price Proposal Binder"
+      ],
+      [
+        "Contractor",
+        "Safety Audit"
+      ],
+      [
+        "Handicapped Bus/Van Access",
+        "Site Visit"
+      ],
+      [
+        "252.204-7012",
+        "252.204-7018"
+      ],
+      [
+        "Canadian Commercial Corporation",
+        "FAR 15.403-3(a)(1)"
+      ],
+      [
+        "DoDAAC N46134",
+        "PWD Mayport"
+      ],
+      [
+        "N6945025R0003",
+        "SAM website"
+      ],
+      [
+        "NAICS Code",
+        "Order"
+      ],
+      [
+        "52.216-19 Order Limitations",
+        "Contract"
+      ],
+      [
+        "NAVSTA Mayport",
+        "Utility Services"
+      ],
+      [
+        "Contract Value",
+        "Government"
+      ],
+      [
+        "FAR 52.246-4",
+        "Government-owned Facilities"
+      ],
+      [
+        "Contractor",
+        "Risk Assessment"
+      ],
+      [
+        "DAAC N69450",
+        "FAR clause 52.216-19"
+      ],
+      [
+        "Joint Venture (JV)",
+        "Prime Contractor"
+      ],
+      [
+        "Facilities Support",
+        "Port Operations"
+      ],
+      [
+        "NAVFAC SOUTHEAST ACQUISITION CORE",
+        "Service of Protest"
+      ],
+      [
+        "FAR Clauses Incorporated by Reference",
+        "N6945025R0003"
+      ],
+      [
+        "NAVFAC Southeast",
+        "PWD Mayport"
+      ],
+      [
+        "Government",
+        "Liquidated Damages"
+      ],
+      [
+        "Compressed Air Systems.pdf",
+        "Lighting Systems.pdf"
+      ],
+      [
+        "Order Limitations Clause",
+        "Schedule"
+      ],
+      [
+        "Contractor",
+        "FAR Clause # Title Date Change"
+      ],
+      [
+        "DAAC N69450",
+        "DoDAAC N46134"
+      ],
+      [
+        "Contract",
+        "Long-term Contract"
+      ],
+      [
+        "Offeror",
+        "Staffing Levels"
+      ],
+      [
+        "Joint Venture/Partnership Arrangement",
+        "Offeror"
+      ],
+      [
+        "Florida",
+        "Naval Station Mayport"
+      ],
+      [
+        "Marine Corps Support Facility Blount Island",
+        "Section C Files"
+      ],
+      [
+        "DFARS",
+        "FAR"
+      ],
+      [
+        "Contractor",
+        "Site Visit"
+      ],
+      [
+        "NAVFAC",
+        "Offerors"
+      ],
+      [
+        "Steam Production",
+        "Utilities Management"
+      ],
+      [
+        "Government Preaward Inquiry Form (GPIF)",
+        "NAVFAC SE Division Acquisition Core"
+      ],
+      [
+        "Contractor",
+        "Subcontractor"
+      ],
+      [
+        "DoDAAC N69450",
+        "Issue By"
+      ],
+      [
+        "Address and POC",
+        "Mayport, FL 32228-0073"
+      ],
+      [
+        "Department of Veterans Affairs (VA)",
+        "Paper towels"
+      ],
+      [
+        "Government Contracting Resources, Inc.",
+        "International Brotherhood of Electrical Workers"
+      ],
+      [
+        "Government",
+        "PWD Mayport"
+      ],
+      [
+        "N/A",
+        "Ship From Code"
+      ],
+      [
+        "N/A",
+        "Service Acceptor (DoDAAC)"
+      ],
+      [
+        "Service Contract Labor Standards",
+        "Wage Determinations"
+      ],
+      [
+        "Compliance Monitoring",
+        "Government"
+      ],
+      [
+        "6945025R0003",
+        "Recency/relevancy"
+      ],
+      [
+        "Contract Clauses",
+        "Miller Act"
+      ],
+      [
+        "Firm Written Commitments",
+        "Offerors"
+      ],
+      [
+        "Contracting Officer",
+        "Contractor"
+      ],
+      [
+        "Defense Logistics Agency (DLA)",
+        "Trash liners"
+      ],
+      [
+        "DoDAAC N69450",
+        "Payment Office"
+      ],
+      [
+        "RFP",
+        "Relevant Projects"
+      ],
+      [
+        "Custodial",
+        "Facilities Support"
+      ],
+      [
+        "252.203-7000",
+        "252.203-7002"
+      ],
+      [
+        "PWD Mayport",
+        "United States"
+      ],
+      [
+        "Offeror",
+        "Standard Form 33"
+      ],
+      [
+        "J-180000 (MCSF-BI)",
+        "J-180000-06 Mayport SWPPP Storm Water Pollution Prevention Plan"
+      ],
+      [
+        "Maintenance and Repair Requirements",
+        "Performance Work Statement (PWS)"
+      ],
+      [
+        "DAAC N69450",
+        "FAR clause 52.216-7"
+      ],
+      [
+        "DAAC N69450",
+        "PGP Personal software"
+      ],
+      [
+        "Offerors",
+        "Small Percentage of Contract Value"
+      ],
+      [
+        "Government",
+        "Offeror"
+      ],
+      [
+        "DFARS Clauses Incorporated by Reference",
+        "Storm Water Pollution Prevention Plan"
+      ],
+      [
+        "JL-8",
+        "SBSP"
+      ],
+      [
+        "Offeror",
+        "Quality Management System (QMS)"
+      ],
+      [
+        "CD-ROM",
+        "Offeror"
+      ],
+      [
+        "Contractor",
+        "Government-owned Facilities"
+      ],
+      [
+        "Fuel Storage Tanks and Berm Inventory.pdf",
+        "NAVSTA Mayport Facility-Mounted Weight Handling Equipment (WHE) and Rail/Trackage.xlsx"
+      ],
+      [
+        "Mayport Base",
+        "U.S. Navy"
+      ],
+      [
+        "52.216-18 Ordering",
+        "FAR Clauses Incorporated by Full Text"
+      ],
+      [
+        "Site Visit Instructions",
+        "Solicitation N6945025R0003 MAYPORT BOS"
+      ],
+      [
+        "J-1503050 (MCSF-BI)",
+        "J-1503050-07 (MCSF-BI)"
+      ],
+      [
+        "FAR Clauses Incorporated by Full Text",
+        "Storm Water Pollution Prevention Plan"
+      ],
+      [
+        "Offeror",
+        "Specific Relevant Task Order"
+      ],
+      [
+        "Marine Corps Support Facility - Blount Island (MCSF-BI)",
+        "Outlying Areas"
+      ],
+      [
+        "FRCS Roles and Responsibilities.xlsx",
+        "Portable Toilets.pdf"
+      ],
+      [
+        "Environmental Management",
+        "Grounds Maintenance and Landscaping"
+      ],
+      [
+        "J-1503050 (MCSF-BI)",
+        "J-1503050-09 (MCSF-BI)"
+      ],
+      [
+        "General Services Administration (GSA)",
+        "Toilet paper"
+      ],
+      [
+        "Contractor's Representative",
+        "Payment Office"
+      ],
+      [
+        "Minimum Order Value",
+        "Order Limitations"
+      ],
+      [
+        "NAICS Code",
+        "Small Business Concern"
+      ],
+      [
+        "Mayport",
+        "United States"
+      ],
+      [
+        "FAR Clauses Incorporated by Reference",
+        "Storm Water Pollution Prevention Plan"
+      ],
+      [
+        "Award",
+        "Tradeoff Process"
+      ],
+      [
+        "52.204-1 Approval of Contract",
+        "FAR Clauses Incorporated by Full Text"
+      ],
+      [
+        "CAGE Code",
+        "Offeror"
+      ],
+      [
+        "Nexus 8405-11",
+        "Small Business Concern"
+      ],
+      [
+        "Mentor-Protege Agreements",
+        "Offerors"
+      ],
+      [
+        "Maximum Order Value",
+        "Order Limitations"
+      ],
+      [
+        "FAR Clause 52.216-19",
+        "FedMall"
+      ],
+      [
+        "Offeror",
+        "VETS-4212"
+      ],
+      [
+        "Civilian",
+        "Government"
+      ],
+      [
+        "Electrical Power Distribution",
+        "NAVFAC Maximo Data"
+      ],
+      [
+        "Base Operations Support (BOS)",
+        "Facility Investment"
+      ],
+      [
+        "Contractor's Representative",
+        "WAWF"
+      ],
+      [
+        "Multiple Award Contracts (MACs)",
+        "Offeror"
+      ],
+      [
+        "Government",
+        "Order Limitations Clause"
+      ],
+      [
+        "NAVFAC Southeast PWD Mayport",
+        "PWD Mayport"
+      ],
+      [
+        "J-170000 (MCSF-BI)",
+        "J-170000-09 Historical Fleet Maintenance Data"
+      ],
+      [
+        "Excel (Microsoft Office Version 365 compatible)",
+        "Offeror"
+      ],
+      [
+        "J-1601000 (MCSF-BI)",
+        "J-1601000-10 Specification Attributes"
+      ],
+      [
+        "Utilities Management",
+        "Water Supply"
+      ],
+      [
+        "Offeror",
+        "System for Award Management (SAM)"
+      ],
+      [
+        "Fuel Storage Tank and Berm Inventory.pdf",
+        "NAVSTA Historical E/U/R Work Orders.xlsx"
+      ],
+      [
+        "Independent Accounting Firm",
+        "Offeror"
+      ],
+      [
+        "Cathodic Protection System Inventory.pdf",
+        "Exterior Lighting.pdf"
+      ],
+      [
+        "Government",
+        "Risk Assessment"
+      ],
+      [
+        "J-1503030 (MCSF-BI)",
+        "J-1503030-04 (MCSF-BI)"
+      ],
+      [
+        "Backflow Prevention Devices.pdf",
+        "NAVSTA Cross Connection Control Program.pdf"
+      ],
+      [
+        "Offeror",
+        "Unique Entity Identifier(UEI)"
+      ],
+      [
+        "Contractor",
+        "SMS"
+      ],
+      [
+        "DAAC N69450",
+        "ELINS"
+      ],
+      [
+        "Contractor",
+        "FAR"
+      ],
+      [
+        "ELINs A001 through A014",
+        "Total of ELINs A001 through A014"
+      ],
+      [
+        "FASCSA Order",
+        "Offeror"
+      ],
+      [
+        "Government",
+        "Military"
+      ],
+      [
+        "Fuel Storage Tanks and Berm Inventory.pdf",
+        "NAVSTA Historical E/U/R Work Orders.xlsx"
+      ],
+      [
+        "FAR",
+        "Military"
+      ],
+      [
+        "DAAC N69450",
+        "FAR clause 52.216-18"
+      ],
+      [
+        "52.215-21 Requirements for Certified Cost or Pricing Data and Data Other Than Certified Cost or Pricing Data-Modifications (Alternate III)",
+        "FAR Clauses Incorporated by Full Text"
+      ],
+      [
+        "NAVFAC SE Division Acquisition Core",
+        "Stephanie S. Menciano"
+      ],
+      [
+        "Blount Island",
+        "Contractor"
+      ],
+      [
+        "Contractor",
+        "FAR 52.211-11"
+      ],
+      [
+        "Auxiliary Generator Systems.pdf",
+        "Backflow Prevention Devices.pdf"
+      ],
+      [
+        "Mayport Base",
+        "Naval Station Mayport"
+      ],
+      [
+        "Firm-Specific Reservations for Small Business",
+        "HUBZone Price Evaluation Preference"
+      ],
+      [
+        "Facility Asset Inventories.xlsx",
+        "J-1502000 (MCSF-BI) Facility Investment.xlsx"
+      ],
+      [
+        "Electrical Power Distribution",
+        "Quality Water Production"
+      ],
+      [
+        "N6945025R0003",
+        "Solicitation N6945025R0003 MAYPORT BOS"
+      ],
+      [
+        "N6945025R0003_SectionC.pdf",
+        "sam.gov/"
+      ],
+      [
+        "Government",
+        "Subcontractor"
+      ],
+      [
+        "Custodial Services",
+        "Pest Control"
+      ],
+      [
+        "Courtney Peterson",
+        "NAVFAC SE Division Acquisition Core"
+      ],
+      [
+        "Committee for the Purchase from People Who Are Blind or Severely Disabled",
+        "Hand soap"
+      ],
+      [
+        "Contractor",
+        "TCR Rate"
+      ],
+      [
+        "Naval Station (NAVSTA) Mayport",
+        "Outlying Areas"
+      ],
+      [
+        "N/A",
+        "Service Approver (DoDAAC)"
+      ],
+      [
+        "Naval Station Mayport",
+        "Section C Files"
+      ],
+      [
+        "Factor 2, Management Approach",
+        "Solicitation Submittal Requirements"
+      ],
+      [
+        "Admin DoDAAC",
+        "DoDAAC N69450"
+      ],
+      [
+        "Government",
+        "Joint Venture Arrangements"
+      ],
+      [
+        "Line Item Delivery Schedule Estimated Quantity",
+        "NAVFAC SOUTHEAST PWD MAYPORT"
+      ],
+      [
+        "Corporate Affiliate Experience Project Data Sheet",
+        "Offeror"
+      ],
+      [
+        "DFARS Clauses",
+        "Limitation of Government's Obligation Clause"
+      ],
+      [
+        "Historical Small Business Utilization",
+        "Offerors"
+      ],
+      [
+        "Award",
+        "Government"
+      ],
+      [
+        "Facilities Support",
+        "Facility Investment"
+      ],
+      [
+        "Delivery Period",
+        "Option Line Item 0021"
+      ],
+      [
+        "NAVFAC",
+        "SBSP"
+      ],
+      [
+        "DoDAAC N68732",
+        "Pay Official"
+      ],
+      [
+        "Letters of Commitment",
+        "Offerors"
+      ],
+      [
+        "Corporate Experience Project Data Sheet",
+        "Offeror"
+      ],
+      [
+        "Offerors",
+        "Performance Work Statement"
+      ],
+      [
+        "Repair Requirements",
+        "Transportation Limits"
+      ],
+      [
+        "Attachment J-0200000-17",
+        "Pricing Arrangement FFP"
+      ],
+      [
+        "DAAC N69450",
+        "WAWF point of contact"
+      ],
+      [
+        "Offeror",
+        "Workforce Management"
+      ],
+      [
+        "J-1800000-14 (MCSF-BI) SWPP.pdf",
+        "Storm Water Pollution Prevention Plan"
+      ],
+      [
+        "Blount Island Site Map",
+        "J-1501000-04 NAVSTA Mayport Site Maps.pdf"
+      ],
+      [
+        "Contractor",
+        "NAVFAC SOUTHEAST PWD MAYPORT"
+      ],
+      [
+        "NAVSTA Mayport",
+        "Navy Facilities Command"
+      ],
+      [
+        "Government",
+        "Small Business Concerns (SDB, WOSB, HUBZone SB, VOSB, SDVOSB)"
+      ],
+      [
+        "Maximo Data",
+        "NAVSTA Mayport"
+      ],
+      [
+        "Contractor Use of Mandatory Sources of Supply",
+        "FAR Clause 52.208-9"
+      ],
+      [
+        "Offeror",
+        "Working/Operational Capital"
+      ],
+      [
+        "Contractor",
+        "Order"
+      ],
+      [
+        "J-1502000 (MCSF-BI)",
+        "J-1502000-28 (MCSF-BI)"
+      ],
+      [
+        "Marine Corps Support Facility Blount Island",
+        "Section D Files"
+      ],
+      [
+        "Reserved Portion of Multiple-award Contract",
+        "Small Business Concern"
+      ],
+      [
+        "Offeror",
+        "Scheduling"
+      ],
+      [
+        "J-180000 (MCSF-BI)",
+        "J-180000 (MCSF-BI) Environmental (MCSF-BI)"
+      ],
+      [
+        "DoDAAC (Defense Acquisition and Support Agency)",
+        "N6945025R0003_SectionC.pdf"
+      ],
+      [
+        "Government",
+        "Subcontracting"
+      ],
+      [
+        "Contracting Officer",
+        "GAO"
+      ],
+      [
+        "Contract",
+        "Schedule"
+      ],
+      [
+        "DoDAAC N46134",
+        "LPO DoDAAC"
+      ],
+      [
+        "Contractor",
+        "Watch-standing Services"
+      ],
+      [
+        "252.203-7000",
+        "252.204-7003"
+      ],
+      [
+        "Contracting Officer's Representative Assigned Location",
+        "NAVFAC SOUTHEAST PWD MAYPORT"
+      ],
+      [
+        "Contracting Officer",
+        "FAR"
+      ],
+      [
+        "Security Personnel",
+        "Site Visit Participants"
+      ],
+      [
+        "Contract Clauses",
+        "Facility Investment"
+      ],
+      [
+        "Federal Supply Schedule Contract",
+        "Nexus 8405-11"
+      ],
+      [
+        "DAAC N69450",
+        "DoD-approved ECA certificate"
+      ],
+      [
+        "Offeror",
+        "Solicitation Submittal Requirements"
+      ],
+      [
+        "International Brotherhood of Electrical Workers",
+        "NAVFACINST 11230.1"
+      ],
+      [
+        "Marine Corps Support Facility - Blount Island (MCSF-BI)",
+        "Naval Station Mayport"
+      ],
+      [
+        "International Union of Operating Engineers",
+        "Jacobs Technology, Inc."
+      ],
+      [
+        "Contractor",
+        "Watchstanding Services"
+      ],
+      [
+        "N/A",
+        "Ship To Code"
+      ],
+      [
+        "DAAC N69450",
+        "Unit Price Tasks"
+      ],
+      [
+        "Contractor",
+        "DART Rate"
+      ],
+      [
+        "Offeror",
+        "Waiver of Evaluation Preference"
+      ],
+      [
+        "DART Rate",
+        "Government"
+      ],
+      [
+        "Contracting Officer",
+        "Proposal Evaluation"
+      ]
+    ],
+    "count": 347,
+    "create_time": 1759076981,
+    "update_time": 1759076981,
+    "_id": "doc-d3e9a2d4fb9735fbda0da20feff06f0c"
   }
 }

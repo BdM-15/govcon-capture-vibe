@@ -73,7 +73,9 @@ Located in the `prompts/` folder for reuse / refinement:
   All prompts use simple placeholders like `{{RFP_TEXT}}`, `{{ATTACHMENTS_TEXT}}`, `{{EXTRACTED_REQS_JSON}}`, `{{PROPOSAL_TEXT}}`, `{{COMPLIANCE_ASSESSMENT_JSON}}`.
 
 #### Chat Query Examples
+
 Example user inputs for the AI chat (save as .txt in prompts/ for testing):
+
 - `chat_query_example1.txt`: "What are the sub-factors under Section M.3 for Transition Risk Management? Cite RFP refs and pages."
 - `chat_query_example2.txt`: "Summarize critical themes from the parsed RFP, focusing on evaluation factors. Prioritize by importance score."
 - `chat_query_example3.txt`: "Does my proposal draft address all reqs from Section L.5.2? List gaps with citations and suggestions from Shipley Guide p.55."
@@ -111,9 +113,34 @@ All open-source, local-run; no cloud/internet required post-setup.
 2. Install uv: Follow [uv docs](https://docs.astral.sh/uv/) (e.g., via curl).
 3. Create env: `uv venv --python 3.13`
 4. Activate: `source .venv/bin/activate` (or Windows equiv).
-5. Install deps: `uv add lightrag ollama streamlit pypdf2 python-docx openpyxl` (add as needed).
-6. Ollama setup: `ollama pull llama3` (7B) and `ollama pull nomic-embed-text`.
-7. Run: `streamlit run app.py` (once implemented).
+5. Install deps: `uv sync`
+6. Ollama setup: `ollama pull qwen2.5-coder:7b` and `ollama pull bge-m3:latest`.
+7. Run: `streamlit run app.py`
+
+## Current Status
+
+✅ **Core Pipeline Complete:**
+
+- Document parsing (PDF/Word/Excel)
+- Requirement extraction with LLM
+- LightRAG indexing and querying
+- Compliance assessment
+- Q&A generation (prompts ready)
+
+✅ **UI Implemented:**
+
+- Streamlit web interface
+- File upload and processing
+- Requirements table display
+- AI chat interface
+- Compliance assessment tool
+
+🚧 **Next Steps:**
+
+- Proposal improvement features
+- Advanced compliance matrix
+- Export capabilities
+- Performance optimizations
 
 ## Development Approach
 
