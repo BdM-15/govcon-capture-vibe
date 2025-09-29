@@ -1,8 +1,23 @@
-# GovCon-Capture-Vibe: Local Tool to Read Federal RFPs and Track Requirements
+# GovCon-CapThiThis project is a lightweight, zero-cost, open-source- **Compliance Matrix / Outline**: Simple JSON and table views you can filter—like a checklist of "Did we answer this?"
+
+- **Gap Scan**: Estimates coverage (0–100%), points out missing or weak areas, suggests what to add.
+- **Question Builder**: Spots unclear or conflicting items (e.g., page limits vs. stated task volume) and drafts professional clarification questions.
+- **AI Chat Interface**: After parsing, chat with the data (e.g., "Summarize Section M sub-factors"). Uses RAG for cited responses; see example prompts below.
+- **Simple Interface**: Web page (Streamlit) to upload files and view tables/JSON.to reduce capture and proposal prep effort in government contracting (GovCon). It uses a simple "search + local AI model" approach (often called RAG) to:
+
+1. Parse federal solicitations (RFPs, PWS in attachments) for compliance requirements (e.g., Sections A-M, CLINs, evaluation factors).
+2. Generate Shipley-style compliance matrices, proposal outlines, gap analyses, and ambiguity questions for Q&A periods.ject is a lightweight, zero-cost, open-source tool to reduce capture and proposal prep effort in government contracting (GovCon). It uses a simple "search + local AI model" approach (often called RAG) to:
+
+3. Parse federal solicitations (RFPs, PWS in attachments) for compliance requirements (e.g., Sections A-M, CLINs, evaluation factors).
+4. Generate Shipley-style compliance matrices, proposal outlines, gap analyses, and ambiguity questions for Q&A periods.project is a lightweight, zero-cost, open-source tool to reduce capture and proposal prep effort in government contracting (GovCon). It uses a modern multimodal RAG approach with RAG-Anything + LightRAG integration to:ure-Vibe: Local Tool to Read Federal RFPs and Track Requirements
 
 ## Executive Summary
 
 Reads a federal RFP, pulls out the important stuff (deadlines, instructions, evaluation points, tasks), and gives you a clean checklist so you don’t miss anything. Runs fully on your own machine with local AI models—no fees, no data leaving your box.
+
+**🚨 CURRENT STATUS: Complete System Rebuild in Progress**
+
+The existing system produces unacceptable results (garbage text extraction, hallucinations, only 3-7 requirements extracted vs expected 80-100). We're rebuilding from scratch using modern AI techniques with RAG-Anything + LightRAG integration for reliable, accurate RFP analysis.
 
 ## Overview
 
@@ -19,15 +34,16 @@ Inspired by Shipley Proposal/Capture Guides and examples like Proposal Developme
 - Cut 70–80% of the manual grind of reading and tracing requirements.
 - Run fully on your own computer (offline after setup).
 - Avoid subscription or per-token API costs.
+- Achieve 95%+ accuracy in requirement extraction from any RFP (no fixed quantity targets).
 
 **Quick What-It-Does Summary**
 Drop in an RFP (PDF/Word). The tool:
 
-1. Pulls out key sections (A–M) and attachments.
-2. Lists requirements, instructions, and evaluation points.
-3. Builds a simple checklist / matrix you can track.
-4. Flags possible gaps in your draft proposal.
-5. Helps form clear clarification questions for the Government.
+1. Processes documents using LightRAG's native document processing for text-based RFPs.
+2. Extracts structured requirements using PydanticAI agents with fine-tuned models.
+3. Indexes everything in LightRAG for semantic search and relationship mapping.
+4. Builds compliance matrices, gap analyses, and clarification questions.
+5. Provides AI chat interface for querying the processed RFP data.
 
 ![Shipley Proposal Guide Cover](assets/shipley-proposal-guide-cover.png)  
 ![Shipley Proposal Guide Title Page](assets/shipley-proposal-guide-title.png)  
@@ -52,7 +68,6 @@ Drop in an RFP (PDF/Word). The tool:
   - Planned Output Format (concept): One JSON array where each item looks like: `{ section, reference, type (instruction|evaluation|work|admin), snippet, importance_score }`.
   - Examples:
     - Raw extracted requirements: `examples/sample_requirements.json`
-    - Proposal coverage scoring: `examples/sample_compliance_assessment.json`
     - Questions for Government (QFG): `examples/sample_qfg.json`
     - Older minimal sample (legacy): `examples/sample_output.json`
 - **Compliance Matrix / Outline**: Simple JSON and table views you can filter—like a checklist of “Did we answer this?”
@@ -67,38 +82,34 @@ Drop in an RFP (PDF/Word). The tool:
 Located in the `prompts/` folder for reuse / refinement:
 
 - `extract_requirements_prompt.txt` – Builds the requirements JSON (see `examples/sample_requirements.json`).
-- `assess_compliance_prompt.txt` – Scores proposal coverage (see `examples/sample_compliance_assessment.json`).
 - `generate_qfg_prompt.txt` – Creates clarification questions (see `examples/sample_qfg.json`).
-- `improve_response_prompt.txt` – Improves a draft proposal section for both compliance and persuasiveness.
-  All prompts use simple placeholders like `{{RFP_TEXT}}`, `{{ATTACHMENTS_TEXT}}`, `{{EXTRACTED_REQS_JSON}}`, `{{PROPOSAL_TEXT}}`, `{{COMPLIANCE_ASSESSMENT_JSON}}`.
 
 #### Chat Query Examples
+
 Example user inputs for the AI chat (save as .txt in prompts/ for testing):
+
 - `chat_query_example1.txt`: "What are the sub-factors under Section M.3 for Transition Risk Management? Cite RFP refs and pages."
 - `chat_query_example2.txt`: "Summarize critical themes from the parsed RFP, focusing on evaluation factors. Prioritize by importance score."
-- `chat_query_example3.txt`: "Does my proposal draft address all reqs from Section L.5.2? List gaps with citations and suggestions from Shipley Guide p.55."
-- `chat_query_example4.txt`: "Based on extracted reqs, suggest win themes for Technical Approach (per Shipley Proposal Guide p.50). Include RFP citations."
 - `chat_query_example5.txt`: "Generate 3 clarification questions for ambiguities in PWS tasks (Section C or J Att). Reference critical summary themes."
-- `chat_query_example6.txt`: "Compare RFP CLIN periods (Section B/F) to my proposal timeline. Flag mismatches with page cites."
 - `chat_query_example7.txt`: "Provide an executive overview of the RFP like Shipley Capture Plan p.2, using critical summary and all reqs."
 
 **No-Limit Extraction Policy**: The extraction prompt now outputs _every_ actionable requirement—no artificial cap. If a model output is ever cut off, a truncation marker object is appended so you know to rerun.
 
 ### Pipeline (Planned Flow)
 
-1. Extract Requirements (all sections, no truncation) -> JSON.
-2. Assess Compliance (score coverage, gaps) -> JSON with summary.
+1. **Document Processing**: Upload RFP files → LightRAG native document processing for text-based RFPs → structured content for analysis.
+2. Extract Requirements (all sections, no truncation) → JSON.
 3. Generate Questions for Government (optional if Q&A window open).
-4. Improve Draft Sections (targeted enhancements driven by gaps & evaluation factors).
 
-Status: Prompt templates complete.
+Status: Document processing pipeline complete; prompt templates complete.
 
 ## Tech Stack
 
-- **Core**: Python 3.13+ with LightRAG (or LangChain fallback) for RAG pipelines.
-- **LLM/Embeddings**: Ollama (local) with 7-8B models (e.g., llama3, mistral, nomic-embed-text) for efficiency.
+- **Core**: Python 3.13+ with LightRAG for text-based RFP processing, enhanced with RAG-Anything for multimodal documents.
+- **Document Processing**: LightRAG native document processing for text-based RFPs (Phase 1-3), enhanced with RAG-Anything for multimodal documents (Phase 4-6).
+- **AI Agents**: PydanticAI for structured requirement extraction with fine-tuned Ollama models (Phase 7: Unsloth fine-tuning for domain specialization).
+- **LLM/Embeddings**: Ollama (local) with 7-8B models (e.g., qwen2.5-coder:7b, bge-m3) for efficiency.
 - **UI**: Streamlit for simple, interactive web app.
-- **Doc Handling**: PyPDF2, python-docx, openpyxl for reading PDF/Word/Excel.
 - **Env Setup**: uv/uvx (faster alternative to plain pip).
 - **Dev Tools**: VS Code, GitHub Copilot/PowerShell for scripting.
 - **Constraints**: Optimized for hardware (Lenovo LEGION 5i: i9-14900HX, RTX 4060, 64GB RAM)—CPU/GPU for Ollama, avoid heavy deps.
@@ -111,18 +122,51 @@ All open-source, local-run; no cloud/internet required post-setup.
 2. Install uv: Follow [uv docs](https://docs.astral.sh/uv/) (e.g., via curl).
 3. Create env: `uv venv --python 3.13`
 4. Activate: `source .venv/bin/activate` (or Windows equiv).
-5. Install deps: `uv add lightrag ollama streamlit pypdf2 python-docx openpyxl` (add as needed).
-6. Ollama setup: `ollama pull llama3` (7B) and `ollama pull nomic-embed-text`.
-7. Run: `streamlit run app.py` (once implemented).
+5. Install deps: `uv sync`
+6. Ollama setup: `ollama pull qwen2.5-coder:7b` and `ollama pull bge-m3:latest`.
+7. Run: `streamlit run app.py`
+
+## Current Status
+
+🚨 **Complete System Rebuild in Progress** (Following RFP_ANALYZER_ROADMAP.md)
+
+**Previous System Issues (Resolved):**
+
+- ❌ Garbage text extraction (90%+ PDF headers/footers)
+- ❌ LLM hallucinations (generic responses)
+- ❌ Only 3-7 requirements extracted (expected 80-100)
+- ❌ Fragile JSON parsing with complex error handling
+
+**New Architecture Implementation:**
+
+- **Phase 1**: LightRAG foundation with clean text extraction ✅
+- **Phase 2**: PydanticAI extraction agent ⏳
+- **Phase 3**: Streamlit interface ⏳
+- **Phase 4**: RAG-Anything multimodal enhancement ⏳
+- **Phase 5**: Advanced features ⏳
+- **Phase 6**: Production ready ⏳
+- **Phase 7**: Unsloth fine-tuning for domain specialization ⏳
+
+**Success Criteria:**
+
+- 95%+ accuracy in requirement identification and classification (no fixed quantity targets)
+- Process PDFs in <5 minutes with <4GB memory usage
+- No hallucinations or generic responses
+- Proper A-M section mapping and traceability
+- Clean text extraction (no binary garbage)
 
 ## Development Approach
 
-- **Vibe-Coding**: Iterative builds with Copilot; follow copilot-instructions.md.
-- **Principles**: Minimal code (avoid 10k+ lines), modular functions, no overfitting/bloat, easy maintenance/scaling.
+- **Structured Implementation**: Following 7-phase roadmap in RFP_ANALYZER_ROADMAP.md
+- **LightRAG Core First**: Start with text-based RFP processing, enhance with RAG-Anything for multimodal
+- **PydanticAI Agents**: Structured extraction with fine-tuned models for domain expertise
+- **Unsloth Fine-tuning**: Phase 7 enhancement using Unsloth method for efficient domain specialization
+- **Principles**: Minimal code (<2000 lines total, <500/file), modular components, type safety, comprehensive validation
+- **Architecture**: LightRAG handles document processing → PydanticAI extracts requirements → LightRAG provides knowledge graph and retrieval
 - **Inspirations/Forks**:
-  - Shipley Guides (Proposal/Capture PDFs in /docs).
-  - Repos: [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG), [abh2050/RFP_generation_langchain_agent_RAG](https://github.com/abh2050/RFP_generation_langchain_agent_RAG), [felixlkw/ai-rfp-simulator](https://github.com/felixlkw/ai-rfp-simulator).
-- **Hardware Optimization**: Chunk sizes/prompts tuned for 7-8B models; use GPU if available via Ollama.
+  - Shipley Guides (Proposal/Capture PDFs in /docs)
+  - Repos: [HKUDS/RAG-Anything](https://github.com/HKUDS/RAG-Anything), [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG)
+- **Hardware Optimization**: Tuned for Lenovo LEGION 5i (i9-14900HX, RTX 4060, 64GB RAM)—7-8B Ollama models with GPU acceleration
 
 ## Contributing
 
@@ -139,4 +183,4 @@ MIT.
 - Prompts: Modular Ollama prompts for extraction/outline/gaps/ambiguities (JSON outputs).
 - Future: Integrate with Capture Plans; add API if scaled.
 
-Last updated: September 27, 2025 (prompt set expanded; no-limit extraction policy added).
+Last updated: September 29, 2025 (scoped-down system rebuild focusing on RFP overview, requirements extraction, and chat features following RFP_ANALYZER_ROADMAP.md).
