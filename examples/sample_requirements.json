@@ -1,110 +1,242 @@
 [
   {
-    "rfp_ref": "A.3 / Page 2",
-    "section": "Supplemental Information",
-    "req_id": "A001",
-    "description": "Competition limited to EAGLE BOA holders under NAICS 561210 by the RFP close date.",
+    "id": "A001",
+    "text": "Competition limited to EAGLE BOA holders under NAICS 561210 by the RFP close date.",
+    "type": "eligibility",
+    "compliance_level": "mandatory",
+    "complexity": "low",
+    "section": "A",
+    "evaluation_factors": [],
+    "source_paragraph": "A.3 / Page 2",
+    "dependencies": [],
+    "keywords": ["EAGLE BOA", "NAICS 561210", "eligibility"],
+    "snippet": "This requirement will be competed among Offerors holding an EAGLE Program BOA under NAICS 561210 by the closing date of this RFP. Transportation is excluded.",
     "sub_factors": ["Exclude Transportation scope; focus Maintenance/Supply"],
-    "compliance_type": "mandatory",
-    "snippet": "This requirement will be competed among Offerors holding an EAGLE Program BOA under NAICS 561210 by the closing date of this RFP. Transportation is excluded."
+    "shipley_reference": "Proposal Guide p.15 - Eligibility verification checklist",
+    "risk_level": "high",
+    "traceability": {
+      "section_title": "Supplemental Information",
+      "page_number": 2,
+      "paragraph": "A.3"
+    }
   },
   {
-    "rfp_ref": "A.7 / Page 2",
-    "section": "Supplemental Information",
-    "req_id": "A002",
-    "description": "Incumbent is KBRwyle under contract W52P1J-12-G-0061-0001.",
+    "id": "A002",
+    "text": "Incumbent is KBRwyle under contract W52P1J-12-G-0061-0001.",
+    "type": "background",
+    "compliance_level": "informational",
+    "complexity": "low",
+    "section": "A",
+    "evaluation_factors": [],
+    "source_paragraph": "A.7 / Page 2",
+    "dependencies": [],
+    "keywords": ["incumbent", "KBRwyle", "contract", "W52P1J-12-G-0061-0001"],
+    "snippet": "The incumbent contractor is KBRwyle Technology Solutions, LLC under contract W52P1J-12-G-0061-0001.",
     "sub_factors": [],
-    "compliance_type": "informational",
-    "snippet": "The incumbent contractor is KBRwyle Technology Solutions, LLC under contract W52P1J-12-G-0061-0001."
+    "shipley_reference": "Capture Guide p.35 - Competitive intelligence gathering",
+    "risk_level": "low",
+    "traceability": {
+      "section_title": "Supplemental Information",
+      "page_number": 2,
+      "paragraph": "A.7"
+    }
   },
   {
-    "rfp_ref": "A.9 / Page 3",
-    "section": "Supplemental Information",
-    "req_id": "A003",
-    "description": "Questions due 2025-10-14 1400 EST; proposals due 2025-10-28 1400 EST.",
+    "id": "A003",
+    "text": "Questions due 2025-10-14 1400 EST; proposals due 2025-10-28 1400 EST.",
+    "type": "schedule",
+    "compliance_level": "mandatory",
+    "complexity": "low",
+    "section": "A",
+    "evaluation_factors": [],
+    "source_paragraph": "A.9 / Page 3",
+    "dependencies": [],
+    "keywords": ["questions", "deadline", "proposals", "due date", "timeline"],
+    "snippet": "Questions must be received no later than 14 October 2025 at 1400 EST. Proposals are due 28 October 2025 at 1400 EST.",
     "sub_factors": ["Late submissions may not be accepted"],
-    "compliance_type": "mandatory",
-    "snippet": "Questions must be received no later than 14 October 2025 at 1400 EST. Proposals are due 28 October 2025 at 1400 EST."
+    "shipley_reference": "Proposal Guide p.25 - Schedule management critical path",
+    "risk_level": "critical",
+    "traceability": {
+      "section_title": "Supplemental Information",
+      "page_number": 3,
+      "paragraph": "A.9"
+    }
   },
   {
-    "rfp_ref": "L.3.1 / Page 45",
-    "section": "Instructions",
-    "req_id": "L001",
-    "description": "Technical Volume limited to 25 pages, 11 pt font, 1 inch margins; PDF only.",
+    "id": "L001",
+    "text": "Technical Volume limited to 25 pages, 11 pt font, 1 inch margins; PDF only.",
+    "type": "format",
+    "compliance_level": "mandatory",
+    "complexity": "medium",
+    "section": "L",
+    "evaluation_factors": ["technical_approach"],
+    "source_paragraph": "L.3.1 / Page 45",
+    "dependencies": ["M002"],
+    "keywords": ["page limit", "font", "margins", "PDF", "format"],
+    "snippet": "The Technical Volume shall not exceed twenty-five (25) pages. Minimum 11 point font with one-inch margins. Submit as a single PDF.",
     "sub_factors": ["File name format: 'TechVol_[Offeror].pdf'"],
-    "compliance_type": "mandatory",
-    "snippet": "The Technical Volume shall not exceed twenty-five (25) pages. Minimum 11 point font with one-inch margins. Submit as a single PDF."
+    "shipley_reference": "Proposal Guide p.45 - Format compliance checklist",
+    "risk_level": "high",
+    "traceability": {
+      "section_title": "Instructions, Conditions, and Notices",
+      "page_number": 45,
+      "paragraph": "L.3.1"
+    }
   },
   {
-    "rfp_ref": "L.4.2 / Page 47",
-    "section": "Instructions",
-    "req_id": "L002",
-    "description": "Offer shall remain valid for 180 days from proposal due date.",
+    "id": "L002",
+    "text": "Offer shall remain valid for 180 days from proposal due date.",
+    "type": "contractual",
+    "compliance_level": "mandatory",
+    "complexity": "low",
+    "section": "L",
+    "evaluation_factors": [],
+    "source_paragraph": "L.4.2 / Page 47",
+    "dependencies": [],
+    "keywords": ["validity", "180 days", "offer", "proposal"],
+    "snippet": "Offerors agree that proposals are valid for one hundred and eighty (180) calendar days from the due date.",
     "sub_factors": [],
-    "compliance_type": "mandatory",
-    "snippet": "Offerors agree that proposals are valid for one hundred and eighty (180) calendar days from the due date."
+    "shipley_reference": "Proposal Guide p.30 - Contractual commitments tracking",
+    "risk_level": "medium",
+    "traceability": {
+      "section_title": "Instructions, Conditions, and Notices",
+      "page_number": 47,
+      "paragraph": "L.4.2"
+    }
   },
   {
-    "rfp_ref": "M.1 / Page 77",
-    "section": "Evaluation Factors",
-    "req_id": "M001",
-    "description": "Best Value tradeoff among Technical, Past Performance, and Cost/Price.",
+    "id": "M001",
+    "text": "Best Value tradeoff among Technical, Past Performance, and Cost/Price.",
+    "type": "evaluation_method",
+    "compliance_level": "mandatory",
+    "complexity": "high",
+    "section": "M",
+    "evaluation_factors": ["technical_approach", "past_performance", "cost_price"],
+    "source_paragraph": "M.1 / Page 77",
+    "dependencies": ["M002", "M003", "M004"],
+    "keywords": ["best value", "tradeoff", "technical", "past performance", "cost", "price"],
+    "snippet": "The Government intends to award a single contract using a Best Value Tradeoff considering Technical, Past Performance, and Cost/Price.",
     "sub_factors": [
       "Technical more important than Past Performance",
       "Combined non-price significantly more important than Price"
     ],
-    "compliance_type": "mandatory",
-    "snippet": "The Government intends to award a single contract using a Best Value Tradeoff considering Technical, Past Performance, and Cost/Price."
+    "shipley_reference": "Capture Guide p.25 - Source selection strategy analysis",
+    "risk_level": "critical",
+    "traceability": {
+      "section_title": "Evaluation Factors for Award",
+      "page_number": 77,
+      "paragraph": "M.1"
+    }
   },
   {
-    "rfp_ref": "M.2.1 / Page 78",
-    "section": "Evaluation Factors",
-    "req_id": "M002",
-    "description": "Technical Factor sub-factors: Staffing Approach, Maintenance Execution, Supply Chain Resilience.",
+    "id": "M002",
+    "text": "Technical Factor sub-factors: Staffing Approach, Maintenance Execution, Supply Chain Resilience.",
+    "type": "evaluation_criteria",
+    "compliance_level": "mandatory",
+    "complexity": "high",
+    "section": "M",
+    "evaluation_factors": ["staffing_approach", "maintenance_execution", "supply_chain_resilience"],
+    "source_paragraph": "M.2.1 / Page 78",
+    "dependencies": ["M001"],
+    "keywords": ["technical factor", "sub-factors", "staffing", "maintenance", "supply chain", "resilience"],
+    "snippet": "Technical Factor consists of three sub-factors: (1) Staffing Approach, (2) Maintenance Execution, (3) Supply Chain Resilience.",
     "sub_factors": [
       "Staffing Approach",
-      "Maintenance Execution",
+      "Maintenance Execution", 
       "Supply Chain Resilience"
     ],
-    "compliance_type": "mandatory",
-    "snippet": "Technical Factor consists of three sub-factors: (1) Staffing Approach, (2) Maintenance Execution, (3) Supply Chain Resilience."
+    "shipley_reference": "Proposal Guide p.50 - Technical factor decomposition matrix",
+    "risk_level": "critical",
+    "traceability": {
+      "section_title": "Evaluation Factors for Award",
+      "page_number": 78,
+      "paragraph": "M.2.1"
+    }
   },
   {
-    "rfp_ref": "J - Attachment 0014 / Injected",
-    "section": "List of Attachments",
-    "req_id": "J001",
-    "description": "Government Furnished Facilities and Equipment (GFFE) provided per PWS tasks.",
+    "id": "J001",
+    "text": "Government Furnished Facilities and Equipment (GFFE) provided per PWS tasks.",
+    "type": "resources",
+    "compliance_level": "mandatory",
+    "complexity": "high",
+    "section": "J",
+    "evaluation_factors": ["maintenance_execution"],
+    "source_paragraph": "J - Attachment 0014 / Injected",
+    "dependencies": ["C001"],
+    "keywords": ["GFFE", "government furnished", "facilities", "equipment", "PWS"],
+    "snippet": "Government Furnished Facilities and Equipment are listed in Attachment 0014 and associated with PWS task execution.",
     "sub_factors": ["Offeror must integrate GFFE into maintenance plan"],
-    "compliance_type": "mandatory",
-    "snippet": "Government Furnished Facilities and Equipment are listed in Attachment 0014 and associated with PWS task execution."
+    "shipley_reference": "Proposal Guide p.65 - Government furnished property management",
+    "risk_level": "high",
+    "traceability": {
+      "section_title": "List of Attachments",
+      "page_number": null,
+      "paragraph": "Attachment 0014"
+    }
   },
   {
-    "rfp_ref": "C.5.4 / Page 32",
-    "section": "Work Description",
-    "req_id": "C001",
-    "description": "Provide preventive maintenance for APS-4 equipment within 24 hours of notification.",
+    "id": "C001",
+    "text": "Provide preventive maintenance for APS-4 equipment within 24 hours of notification.",
+    "type": "performance",
+    "compliance_level": "mandatory",
+    "complexity": "high",
+    "section": "C",
+    "evaluation_factors": ["maintenance_execution"],
+    "source_paragraph": "C.5.4 / Page 32",
+    "dependencies": ["J001"],
+    "keywords": ["preventive maintenance", "APS-4", "24 hours", "notification", "response time"],
+    "snippet": "The Contractor shall perform preventive maintenance on APS-4 designated equipment within 24 hours of Government notification.",
     "sub_factors": [
       "24 hour response clock starts upon Government email acknowledgment"
     ],
-    "compliance_type": "mandatory",
-    "snippet": "The Contractor shall perform preventive maintenance on APS-4 designated equipment within 24 hours of Government notification."
+    "shipley_reference": "Proposal Guide p.55 - Performance standard tracking matrix",
+    "risk_level": "critical",
+    "traceability": {
+      "section_title": "Description/Specifications/Work Statement",
+      "page_number": 32,
+      "paragraph": "C.5.4"
+    }
   },
   {
-    "rfp_ref": "B.1 / Page 10",
-    "section": "Supplies/Services & CLINs",
-    "req_id": "B001",
-    "description": "CLIN 0001: Firm-Fixed-Price base operations support for a 366-day base period including 60-day transition.",
+    "id": "B001",
+    "text": "CLIN 0001: Firm-Fixed-Price base operations support for a 366-day base period including 60-day transition.",
+    "type": "contractual",
+    "compliance_level": "mandatory",
+    "complexity": "medium",
+    "section": "B",
+    "evaluation_factors": ["cost_price"],
+    "source_paragraph": "B.1 / Page 10",
+    "dependencies": [],
+    "keywords": ["CLIN 0001", "firm fixed price", "base period", "366 days", "transition"],
+    "snippet": "CLIN 0001 – Firm Fixed Price Base Operations Support – Base Period 366 days (includes 60 day transition).",
     "sub_factors": ["Transition tasks billed under CLIN 0001"],
-    "compliance_type": "mandatory",
-    "snippet": "CLIN 0001 – Firm Fixed Price Base Operations Support – Base Period 366 days (includes 60 day transition)."
+    "shipley_reference": "Proposal Guide p.40 - Contract structure and pricing strategy",
+    "risk_level": "medium",
+    "traceability": {
+      "section_title": "Supplies or Services and Prices/Costs",
+      "page_number": 10,
+      "paragraph": "B.1"
+    }
   },
   {
-    "rfp_ref": "H.7 / Page 59",
-    "section": "Special Requirements",
-    "req_id": "H001",
-    "description": "Key Personnel changes prohibited first 180 days without CO approval.",
+    "id": "H001",
+    "text": "Key Personnel changes prohibited first 180 days without CO approval.",
+    "type": "personnel",
+    "compliance_level": "mandatory",
+    "complexity": "medium",
+    "section": "H",
+    "evaluation_factors": ["staffing_approach"],
+    "source_paragraph": "H.7 / Page 59",
+    "dependencies": ["M002"],
+    "keywords": ["key personnel", "changes", "180 days", "contracting officer", "approval"],
+    "snippet": "Key Personnel substitutions are not permitted within the first 180 days absent written Contracting Officer approval.",
     "sub_factors": [],
-    "compliance_type": "mandatory",
-    "snippet": "Key Personnel substitutions are not permitted within the first 180 days absent written Contracting Officer approval."
+    "shipley_reference": "Proposal Guide p.35 - Key personnel commitment tracking",
+    "risk_level": "high",
+    "traceability": {
+      "section_title": "Special Contract Requirements",
+      "page_number": 59,
+      "paragraph": "H.7"
+    }
   }
 ]

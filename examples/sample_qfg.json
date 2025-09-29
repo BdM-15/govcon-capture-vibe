@@ -1,41 +1,134 @@
 {
+  "qfg_metadata": {
+    "generated_at": "2025-09-29T14:30:00Z",
+    "rfp_title": "APS-4 Equipment Maintenance Support",
+    "analysis_method": "shipley_ambiguity_detection",
+    "critical_themes_prioritization": true,
+    "shipley_reference": "Capture Guide p.25 - Intelligence gathering via questions"
+  },
   "qa_available": true,
   "qa_period": {
     "deadline": "2025-10-14",
-    "method": "Email to usarmy.acq@army.mil per L.2.1"
+    "deadline_time": "1400 EST",
+    "method": "Email to usarmy.acq@army.mil per L.2.1",
+    "days_remaining": 15,
+    "submission_format": "Written questions only, no phone calls",
+    "response_timeline": "5-7 business days typical"
+  },
+  "ambiguity_analysis": {
+    "total_ambiguities_identified": 7,
+    "critical_ambiguities": 3,
+    "medium_priority": 2,
+    "low_priority": 2,
+    "themes_analyzed": [
+      "scope_boundaries",
+      "performance_standards",
+      "evaluation_methodology",
+      "contract_structure",
+      "resource_integration"
+    ]
   },
   "issues": [
     {
       "issue_id": "AMB001",
-      "rfp_refs": ["L.3.1", "C.5 (PWS Attachment)"],
-      "description": "Need to address >100 PWS tasks but Technical Volume limited to 25 pages, risking superficial coverage.",
-      "question": "Section L.3.1 limits the Technical Volume to 25 pages while the PWS lists over 100 distinct tasks. Would the Government prefer grouped summaries by task category or selective depth on higher-risk tasks?"
+      "priority": "critical",
+      "theme": "scope_boundaries",
+      "rfp_refs": ["L.3.1 / Page 45", "C.5 (PWS) / Multiple"],
+      "description": "Page limit constraint versus comprehensive task coverage creates impossible compliance scenario. Technical Volume limited to 25 pages while PWS contains 100+ distinct maintenance tasks requiring detailed approach demonstration.",
+      "impact_assessment": "High risk of inadequate technical approach due to space constraints",
+      "question": "Section L.3.1 limits the Technical Volume to 25 pages while the PWS lists over 100 distinct preventive maintenance tasks. Would the Government prefer offerors to provide grouped summaries by task category (e.g., electrical, mechanical, software) or focus on detailed approaches for the highest-risk/complexity tasks identified in the PWS?",
+      "strategic_value": "Clarifies approach depth expectations and reduces evaluation inconsistency risk",
+      "shipley_reference": "Proposal Guide p.45 - Page limit strategy and content prioritization"
     },
     {
-      "issue_id": "AMB002",
-      "rfp_refs": ["A.3", "M.1"],
-      "description": "Transportation excluded in Section A, yet Evaluation mentions integrated logistics—scope boundary unclear.",
-      "question": "Section A.3 excludes Transportation while Section M.1 evaluates integrated logistics. Should incidental Transportation coordination (e.g., internal repositioning) be addressed or omitted?"
+      "issue_id": "AMB002", 
+      "priority": "critical",
+      "theme": "scope_boundaries",
+      "rfp_refs": ["A.3 / Page 2", "M.1 / Page 77", "M.2.1 / Page 78"],
+      "description": "Transportation exclusion conflicts with integrated logistics evaluation language. Section A.3 explicitly excludes Transportation while Section M evaluates 'integrated logistics' and 'supply chain resilience' which typically include transportation coordination.",
+      "impact_assessment": "Risk of scope misunderstanding affecting technical approach and evaluation scoring",
+      "question": "Section A.3 excludes Transportation from the scope while Section M.1 evaluates 'integrated logistics' and M.2.1 includes 'Supply Chain Resilience' as a technical sub-factor. Should incidental transportation coordination activities (e.g., internal equipment repositioning, parts delivery coordination) be addressed in our technical approach, or should they be explicitly omitted to avoid scope creep?",
+      "strategic_value": "Prevents scope creep while ensuring complete technical approach coverage",
+      "shipley_reference": "Capture Guide p.15 - Scope boundary clarification and competitive positioning"
     },
     {
       "issue_id": "AMB003",
-      "rfp_refs": ["B.1", "F.2"],
-      "description": "Base period stated as 366 days including 60-day transition; unclear if transition tasks billable inside CLIN 0001 FFP value only.",
-      "question": "Please confirm whether all transition-in tasks are fully included within the CLIN 0001 Firm-Fixed-Price amount or if any separate pricing detail is desired for transparency."
+      "priority": "critical", 
+      "theme": "contract_structure",
+      "rfp_refs": ["B.1 / Page 10", "F.2 / Page 55", "H.8 / Page 60"],
+      "description": "Transition period billing structure ambiguity could affect pricing strategy and cost compliance. Base period stated as 366 days including 60-day transition, but unclear whether transition activities are fully absorbed within CLIN 0001 FFP amount.",
+      "impact_assessment": "Risk of pricing non-compliance or inadequate transition resource allocation",
+      "question": "Section B.1 describes CLIN 0001 as 'Firm-Fixed-Price base operations support for 366-day base period (includes 60 day transition).' Please confirm whether all transition-in activities, including knowledge transfer, documentation review, and handover procedures, are fully included within the CLIN 0001 fixed price amount, or if any transition costs should be separately identified for government visibility?",
+      "strategic_value": "Ensures accurate pricing strategy and prevents post-award disputes",
+      "shipley_reference": "Proposal Guide p.40 - Contract structure clarity and pricing strategy"
     },
     {
       "issue_id": "AMB004",
-      "rfp_refs": ["H.7", "M.2.1"],
-      "description": "Key Personnel lock (180 days) may limit ability to optimize staffing tied to Technical sub-factors.",
-      "question": "Given the 180-day restriction on Key Personnel substitutions in Section H.7, would the Government accept naming pre-approved alternates to maintain performance continuity under the Technical Factor?"
+      "priority": "medium",
+      "theme": "performance_standards",
+      "rfp_refs": ["H.7 / Page 59", "M.2.1 / Page 78", "C.5.4 / Page 32"],
+      "description": "Key Personnel restriction period conflicts with performance optimization expectations. 180-day Key Personnel change prohibition may limit ability to optimize staffing for Technical Factor evaluation subfactors.",
+      "impact_assessment": "Moderate risk of staffing inflexibility affecting performance scores",
+      "question": "Given the 180-day restriction on Key Personnel substitutions in Section H.7, would the Government accept the identification of pre-approved alternate Key Personnel to maintain performance continuity under the Technical Factor Staffing Approach subfactor (M.2.1) in case of unexpected departures during the restriction period?",
+      "strategic_value": "Provides staffing flexibility while respecting personnel stability requirements",
+      "shipley_reference": "Proposal Guide p.35 - Key personnel risk mitigation strategies"
     },
     {
       "issue_id": "AMB005",
-      "rfp_refs": ["J - Attachment 0014", "C.5.4"],
-      "description": "GFFE list lacks clear condition acceptance and turnover criteria impacting 24-hour maintenance response window.",
-      "question": "Will the Government provide initial condition reports for all GFFE items in Attachment 0014 to anchor the 24-hour preventive maintenance response requirement in C.5.4?"
+      "priority": "medium",
+      "theme": "resource_integration",
+      "rfp_refs": ["J - Attachment 0014", "C.5.4 / Page 32", "M.2.1 / Page 78"],
+      "description": "GFFE condition assessment impacts 24-hour maintenance response capability. Attachment 0014 GFFE list lacks initial condition reports, creating uncertainty for maintenance planning and response time commitments.",
+      "impact_assessment": "Moderate risk of unrealistic performance commitments or inadequate resource planning",
+      "question": "Will the Government provide initial condition assessment reports for all GFFE items listed in Attachment 0014 prior to contract award to enable accurate maintenance planning and realistic 24-hour response commitments per C.5.4? If not available, should offerors assume average condition or worst-case scenarios for maintenance planning purposes?",
+      "strategic_value": "Enables realistic performance commitments and proper resource allocation",
+      "shipley_reference": "Proposal Guide p.65 - Government furnished property assessment and planning"
+    },
+    {
+      "issue_id": "AMB006",
+      "priority": "low",
+      "theme": "evaluation_methodology", 
+      "rfp_refs": ["M.1 / Page 77", "M.3 / Page 80"],
+      "description": "Past Performance evaluation period and relevance criteria not clearly defined. Section M mentions Past Performance factor but lacks specific timeframe or relevance thresholds.",
+      "impact_assessment": "Minor risk of submitting irrelevant past performance examples",
+      "question": "For the Past Performance evaluation factor in Section M.1, what timeframe should offerors consider (e.g., last 5 years) and are there minimum contract value or technical similarity thresholds that would make past performance examples most relevant to this APS-4 maintenance requirement?",
+      "strategic_value": "Optimizes past performance submissions for maximum evaluation impact",
+      "shipley_reference": "Capture Guide p.30 - Past performance relevance optimization"
+    },
+    {
+      "issue_id": "AMB007",
+      "priority": "low",
+      "theme": "performance_standards",
+      "rfp_refs": ["C.5.4 / Page 32", "H.9 / Page 61"],
+      "description": "24-hour response trigger definition lacks specificity. Unclear whether response time begins at initial government notification, email acknowledgment, or physical site access availability.",
+      "impact_assessment": "Minor risk of performance standard misunderstanding",
+      "question": "For the 24-hour preventive maintenance response requirement in C.5.4, does the response time clock begin upon: (a) initial Government email notification, (b) offeror's email acknowledgment receipt, or (c) Government confirmation of site access availability? This clarification will ensure accurate performance tracking and SLA compliance.",
+      "strategic_value": "Ensures clear performance measurement and prevents disputes",
+      "shipley_reference": "Proposal Guide p.55 - Performance standard clarity and measurement"
     }
   ],
-  "total_issues": 5,
-  "priority": "High (multiple items affect approach and compliance matrix)"
+  "question_strategy": {
+    "total_questions": 7,
+    "strategic_focus": "Scope clarity and performance optimization",
+    "competitive_intelligence_opportunity": "Medium - Questions reveal technical depth and compliance focus",
+    "risk_mitigation_value": "High - Addresses major proposal development risks",
+    "submission_recommendation": "Submit all 7 questions to maximize scope clarity and competitive positioning"
+  },
+  "priority_analysis": {
+    "critical_priority_rationale": "Questions AMB001-AMB003 directly affect proposal compliance and competitive positioning. Must be resolved for accurate proposal development.",
+    "medium_priority_rationale": "Questions AMB004-AMB005 affect technical approach optimization and resource planning accuracy.",
+    "low_priority_rationale": "Questions AMB006-AMB007 provide competitive advantage through detailed understanding but don't affect fundamental compliance."
+  },
+  "submission_timeline": {
+    "recommended_submission_date": "2025-10-10",
+    "days_before_deadline": 4,
+    "rationale": "Allows time for government response analysis and proposal adjustment",
+    "follow_up_strategy": "Monitor for government amendments or responses to other offeror questions"
+  },
+  "competitive_intelligence": {
+    "question_sophistication_level": "High - Demonstrates deep RFP analysis and Shipley methodology application",
+    "technical_depth_indicator": "Advanced understanding of maintenance operations and government contracting",
+    "compliance_focus_strength": "Strong attention to scope boundaries and performance standards",
+    "strategic_positioning": "Positions offeror as detail-oriented and government-focused contractor"
+  }
 }

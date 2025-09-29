@@ -1,44 +1,248 @@
-[
-  {
-    "section": "A",
-    "reference": "Sec A Para 3",
-    "type": "admin",
-    "snippet": "Questions due 14 Oct 2025 1400 EST; proposals due 28 Oct 2025 1400 EST.",
-    "importance_score": 10
+{
+  "analysis_metadata": {
+    "generated_at": "2025-09-29T14:30:00Z",
+    "rfp_title": "APS-4 Equipment Maintenance Support",
+    "analysis_type": "comprehensive_rfp_analysis",
+    "shipley_methodology_version": "2024",
+    "model_used": "qwen2.5-coder:7b",
+    "processing_time_seconds": 45.3
   },
-  {
-    "section": "L",
-    "reference": "L.3.1",
-    "type": "instruction",
-    "snippet": "Volume I shall not exceed 25 pages in 11 pt font with 1 inch margins.",
-    "importance_score": 9
+  "rfp_overview": {
+    "solicitation_number": "W52P1J-25-R-0001",
+    "agency": "U.S. Army",
+    "contract_type": "Firm-Fixed-Price",
+    "total_estimated_value": "$2.5M",
+    "performance_period": "366 days (including 60-day transition)",
+    "competition_type": "Limited to EAGLE BOA holders",
+    "naics_code": "561210"
   },
-  {
-    "section": "M",
-    "reference": "M.2.2",
-    "type": "evaluation",
-    "snippet": "Technical Factor is more important than Past Performance. Price is least important when differences exist.",
-    "importance_score": 8
+  "critical_requirements_summary": [
+    {
+      "requirement_id": "A003",
+      "section": "A",
+      "type": "schedule",
+      "text": "Questions due 14 Oct 2025 1400 EST; proposals due 28 Oct 2025 1400 EST",
+      "compliance_level": "mandatory",
+      "importance_score": 10,
+      "risk_level": "critical",
+      "shipley_reference": "Proposal Guide p.25 - Schedule management critical path",
+      "why_critical": "Late submission results in automatic disqualification"
+    },
+    {
+      "requirement_id": "L001", 
+      "section": "L",
+      "type": "format",
+      "text": "Technical Volume shall not exceed 25 pages in 11 pt font with 1 inch margins; PDF format only",
+      "compliance_level": "mandatory",
+      "importance_score": 9,
+      "risk_level": "high",
+      "shipley_reference": "Proposal Guide p.45 - Format compliance checklist",
+      "why_critical": "Page limit violations may result in disqualification"
+    },
+    {
+      "requirement_id": "C001",
+      "section": "C", 
+      "type": "performance",
+      "text": "Contractor shall provide preventive maintenance for APS-4 equipment within 24 hours of notification",
+      "compliance_level": "mandatory",
+      "importance_score": 9,
+      "risk_level": "critical",
+      "shipley_reference": "Proposal Guide p.55 - Performance standard tracking matrix",
+      "why_critical": "Core performance requirement directly tied to evaluation"
+    },
+    {
+      "requirement_id": "M001",
+      "section": "M",
+      "type": "evaluation_method",
+      "text": "Best Value tradeoff: Technical more important than Past Performance; combined non-price significantly more important than Price",
+      "compliance_level": "mandatory", 
+      "importance_score": 8,
+      "risk_level": "critical",
+      "shipley_reference": "Capture Guide p.25 - Source selection strategy analysis",
+      "why_critical": "Defines competitive strategy and proposal emphasis allocation"
+    },
+    {
+      "requirement_id": "B001",
+      "section": "B",
+      "type": "contractual",
+      "text": "CLIN 0001: Firm-Fixed-Price base operations support for 366-day base period (includes 60-day transition)",
+      "compliance_level": "mandatory",
+      "importance_score": 8,
+      "risk_level": "medium",
+      "shipley_reference": "Proposal Guide p.40 - Contract structure and pricing strategy",
+      "why_critical": "Defines contract structure and pricing approach"
+    },
+    {
+      "requirement_id": "H001",
+      "section": "H",
+      "type": "personnel",
+      "text": "Key Personnel may not be substituted within first 180 days without Contracting Officer approval",
+      "compliance_level": "mandatory",
+      "importance_score": 7,
+      "risk_level": "high",
+      "shipley_reference": "Proposal Guide p.35 - Key personnel commitment tracking",
+      "why_critical": "Affects staffing strategy and risk management approach"
+    }
+  ],
+  "evaluation_factor_analysis": {
+    "source_selection_method": "Best Value Tradeoff",
+    "factor_hierarchy": [
+      {
+        "factor": "Technical Approach",
+        "weight": "Most Important",
+        "sub_factors": [
+          {
+            "name": "Staffing Approach",
+            "evaluation_criteria": "Team qualifications, organizational structure, staffing plan",
+            "discriminators": ["Key personnel experience", "staffing continuity plan", "skill depth"]
+          },
+          {
+            "name": "Maintenance Execution",
+            "evaluation_criteria": "Technical approach, methodology, performance metrics",
+            "discriminators": ["24-hour response capability", "preventive maintenance approach", "GFFE integration"]
+          },
+          {
+            "name": "Supply Chain Resilience", 
+            "evaluation_criteria": "Parts availability, vendor relationships, contingency planning",
+            "discriminators": ["Supply chain redundancy", "local sourcing capability", "inventory management"]
+          }
+        ]
+      },
+      {
+        "factor": "Past Performance",
+        "weight": "Less Important than Technical",
+        "evaluation_criteria": "Relevant contract performance, customer references, quality metrics",
+        "discriminators": ["Similar scope experience", "government customer satisfaction", "performance trends"]
+      },
+      {
+        "factor": "Cost/Price",
+        "weight": "Least Important",
+        "evaluation_criteria": "Price reasonableness, cost realism",
+        "discriminators": ["Competitive pricing", "value proposition", "cost transparency"]
+      }
+    ]
   },
-  {
-    "section": "C",
-    "reference": "C.5.4",
-    "type": "work",
-    "snippet": "Contractor shall provide preventive maintenance for APS-4 equipment within 24 hours of notification.",
-    "importance_score": 9
+  "win_themes_analysis": {
+    "customer_priorities": [
+      "Reliable 24-hour maintenance response",
+      "Seamless transition from incumbent", 
+      "Supply chain resilience and continuity",
+      "Technical expertise with APS-4 systems",
+      "Government contracting experience"
+    ],
+    "recommended_win_themes": [
+      {
+        "theme": "Proven APS-4 Maintenance Excellence",
+        "rationale": "Aligns with core performance requirement and technical evaluation factor",
+        "supporting_evidence_needed": "Similar equipment maintenance experience, response time metrics"
+      },
+      {
+        "theme": "Seamless Transition Expertise",
+        "rationale": "60-day transition period is critical to contract success",
+        "supporting_evidence_needed": "Transition methodology, knowledge transfer processes"
+      },
+      {
+        "theme": "Supply Chain Resilience Leadership",
+        "rationale": "Direct alignment with M.2.1 technical sub-factor",
+        "supporting_evidence_needed": "Vendor relationships, inventory management, contingency planning"
+      },
+      {
+        "theme": "Government Partnership Focus",
+        "rationale": "Demonstrates understanding of government operations and requirements",
+        "supporting_evidence_needed": "Government contracting experience, customer relationships"
+      }
+    ]
   },
-  {
-    "section": "B",
-    "reference": "CLIN 0001",
-    "type": "work",
-    "snippet": "Firm-Fixed-Price base operations support for 366-day base period (includes 60-day transition).",
-    "importance_score": 8
+  "risk_assessment": {
+    "high_risk_areas": [
+      {
+        "risk": "Page limit compliance with comprehensive technical approach",
+        "impact": "Potential disqualification",
+        "mitigation": "Prioritize content by evaluation factor importance, use appendices for supporting data"
+      },
+      {
+        "risk": "GFFE integration complexity",
+        "impact": "Poor maintenance execution evaluation",
+        "mitigation": "Detailed GFFE inventory analysis, integration planning, condition assessment"
+      },
+      {
+        "risk": "24-hour response commitment without clear trigger definition",
+        "impact": "Performance disputes during contract execution",
+        "mitigation": "Clarify response trigger in QFG questions, develop robust response procedures"
+      }
+    ],
+    "medium_risk_areas": [
+      {
+        "risk": "Key personnel availability during 180-day restriction",
+        "impact": "Staffing inflexibility affecting performance",
+        "mitigation": "Pre-qualified backup personnel, contingency staffing plans"
+      },
+      {
+        "risk": "Incumbent knowledge transfer completeness",
+        "impact": "Performance gaps during transition",
+        "mitigation": "Comprehensive transition planning, knowledge capture procedures"
+      }
+    ]
   },
-  {
-    "section": "H",
-    "reference": "H.7",
-    "type": "admin",
-    "snippet": "Key Personnel may not be swapped without CO approval within first 180 days.",
-    "importance_score": 7
+  "competitive_analysis": {
+    "incumbent_advantages": [
+      "Existing APS-4 equipment knowledge",
+      "Established government relationships",
+      "Current GFFE familiarity",
+      "Proven performance history"
+    ],
+    "competitive_opportunities": [
+      "Enhanced supply chain resilience approach",
+      "Advanced maintenance technologies",
+      "Improved response time capabilities", 
+      "Cost optimization strategies"
+    ],
+    "differentiation_strategies": [
+      "Demonstrate superior supply chain redundancy",
+      "Showcase advanced maintenance analytics",
+      "Highlight government partnership approach",
+      "Emphasize transition risk mitigation"
+    ]
+  },
+  "shipley_methodology_insights": {
+    "capture_strategy_elements": {
+      "customer_intimacy": "Focus on government operations understanding",
+      "solution_differentiation": "Advanced maintenance capabilities and supply chain resilience",
+      "competitive_positioning": "Partnership-focused approach vs. incumbent transaction focus"
+    },
+    "proposal_development_priorities": [
+      {
+        "priority": 1,
+        "focus": "Technical Factor compliance and differentiation",
+        "page_allocation": "15-18 pages of 25-page limit"
+      },
+      {
+        "priority": 2, 
+        "focus": "Past Performance relevance and strength",
+        "page_allocation": "4-6 pages"
+      },
+      {
+        "priority": 3,
+        "focus": "Executive Summary and win theme integration",
+        "page_allocation": "2-3 pages"
+      }
+    ]
+  },
+  "recommendations": {
+    "immediate_actions": [
+      "Submit QFG questions by October 10, 2025 to clarify scope boundaries",
+      "Begin detailed GFFE inventory analysis and integration planning",
+      "Develop 25-page Technical Volume content prioritization matrix"
+    ],
+    "proposal_development_focus": [
+      "Emphasize maintenance execution excellence with quantified metrics",
+      "Demonstrate supply chain resilience with specific vendor relationships",
+      "Showcase transition expertise with detailed methodology"
+    ],
+    "competitive_positioning": [
+      "Position as government-focused partner vs. incumbent's established approach",
+      "Highlight innovative maintenance technologies and processes", 
+      "Emphasize proactive risk management and contingency planning"
+    ]
   }
-]
+}
