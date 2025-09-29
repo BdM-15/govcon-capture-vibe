@@ -1,4 +1,15 @@
-# GovCon-CapThis project is a lightweight, zero-cost, open-source tool to reduce capture and proposal prep effort in government contracting (GovCon). It uses a modern multimodal RAG approach with RAG-Anything + LightRAG integration to:ure-Vibe: Local Tool to Read Federal RFPs and Track Requirements
+# GovCon-CapThiThis project is a lightweight, zero-cost, open-source- **Compliance Matrix / Outline**: Simple JSON and table views you can filter—like a checklist of "Did we answer this?"
+
+- **Gap Scan**: Estimates coverage (0–100%), points out missing or weak areas, suggests what to add.
+- **Question Builder**: Spots unclear or conflicting items (e.g., page limits vs. stated task volume) and drafts professional clarification questions.
+- **AI Chat Interface**: After parsing, chat with the data (e.g., "Summarize Section M sub-factors"). Uses RAG for cited responses; see example prompts below.
+- **Simple Interface**: Web page (Streamlit) to upload files and view tables/JSON.to reduce capture and proposal prep effort in government contracting (GovCon). It uses a simple "search + local AI model" approach (often called RAG) to:
+
+1. Parse federal solicitations (RFPs, PWS in attachments) for compliance requirements (e.g., Sections A-M, CLINs, evaluation factors).
+2. Generate Shipley-style compliance matrices, proposal outlines, gap analyses, and ambiguity questions for Q&A periods.ject is a lightweight, zero-cost, open-source tool to reduce capture and proposal prep effort in government contracting (GovCon). It uses a simple "search + local AI model" approach (often called RAG) to:
+
+3. Parse federal solicitations (RFPs, PWS in attachments) for compliance requirements (e.g., Sections A-M, CLINs, evaluation factors).
+4. Generate Shipley-style compliance matrices, proposal outlines, gap analyses, and ambiguity questions for Q&A periods.project is a lightweight, zero-cost, open-source tool to reduce capture and proposal prep effort in government contracting (GovCon). It uses a modern multimodal RAG approach with RAG-Anything + LightRAG integration to:ure-Vibe: Local Tool to Read Federal RFPs and Track Requirements
 
 ## Executive Summary
 
@@ -28,7 +39,7 @@ Inspired by Shipley Proposal/Capture Guides and examples like Proposal Developme
 **Quick What-It-Does Summary**
 Drop in an RFP (PDF/Word). The tool:
 
-1. Processes documents using RAG-Anything's multimodal parser (text, images, tables, equations).
+1. Processes documents using LightRAG's native document processing for text-based RFPs.
 2. Extracts structured requirements using PydanticAI agents with fine-tuned models.
 3. Indexes everything in LightRAG for semantic search and relationship mapping.
 4. Builds compliance matrices, gap analyses, and clarification questions.
@@ -57,7 +68,6 @@ Drop in an RFP (PDF/Word). The tool:
   - Planned Output Format (concept): One JSON array where each item looks like: `{ section, reference, type (instruction|evaluation|work|admin), snippet, importance_score }`.
   - Examples:
     - Raw extracted requirements: `examples/sample_requirements.json`
-    - Proposal coverage scoring: `examples/sample_compliance_assessment.json`
     - Questions for Government (QFG): `examples/sample_qfg.json`
     - Older minimal sample (legacy): `examples/sample_output.json`
 - **Compliance Matrix / Outline**: Simple JSON and table views you can filter—like a checklist of “Did we answer this?”
@@ -72,10 +82,7 @@ Drop in an RFP (PDF/Word). The tool:
 Located in the `prompts/` folder for reuse / refinement:
 
 - `extract_requirements_prompt.txt` – Builds the requirements JSON (see `examples/sample_requirements.json`).
-- `assess_compliance_prompt.txt` – Scores proposal coverage (see `examples/sample_compliance_assessment.json`).
 - `generate_qfg_prompt.txt` – Creates clarification questions (see `examples/sample_qfg.json`).
-- `improve_response_prompt.txt` – Improves a draft proposal section for both compliance and persuasiveness.
-  All prompts use simple placeholders like `{{RFP_TEXT}}`, `{{ATTACHMENTS_TEXT}}`, `{{EXTRACTED_REQS_JSON}}`, `{{PROPOSAL_TEXT}}`, `{{COMPLIANCE_ASSESSMENT_JSON}}`.
 
 #### Chat Query Examples
 
@@ -83,28 +90,23 @@ Example user inputs for the AI chat (save as .txt in prompts/ for testing):
 
 - `chat_query_example1.txt`: "What are the sub-factors under Section M.3 for Transition Risk Management? Cite RFP refs and pages."
 - `chat_query_example2.txt`: "Summarize critical themes from the parsed RFP, focusing on evaluation factors. Prioritize by importance score."
-- `chat_query_example3.txt`: "Does my proposal draft address all reqs from Section L.5.2? List gaps with citations and suggestions from Shipley Guide p.55."
-- `chat_query_example4.txt`: "Based on extracted reqs, suggest win themes for Technical Approach (per Shipley Proposal Guide p.50). Include RFP citations."
 - `chat_query_example5.txt`: "Generate 3 clarification questions for ambiguities in PWS tasks (Section C or J Att). Reference critical summary themes."
-- `chat_query_example6.txt`: "Compare RFP CLIN periods (Section B/F) to my proposal timeline. Flag mismatches with page cites."
 - `chat_query_example7.txt`: "Provide an executive overview of the RFP like Shipley Capture Plan p.2, using critical summary and all reqs."
 
 **No-Limit Extraction Policy**: The extraction prompt now outputs _every_ actionable requirement—no artificial cap. If a model output is ever cut off, a truncation marker object is appended so you know to rerun.
 
 ### Pipeline (Planned Flow)
 
-1. **Document Processing**: Upload RFP files → RAG-Anything multimodal processing (MinerU parser extracts text, images, tables, equations) → structured content for analysis.
+1. **Document Processing**: Upload RFP files → LightRAG native document processing for text-based RFPs → structured content for analysis.
 2. Extract Requirements (all sections, no truncation) → JSON.
-3. Assess Compliance (score coverage, gaps) → JSON with summary.
-4. Generate Questions for Government (optional if Q&A window open).
-5. Improve Draft Sections (targeted enhancements driven by gaps & evaluation factors).
+3. Generate Questions for Government (optional if Q&A window open).
 
 Status: Document processing pipeline complete; prompt templates complete.
 
 ## Tech Stack
 
-- **Core**: Python 3.13+ with RAG-Anything + LightRAG for multimodal RAG pipelines.
-- **Document Processing**: RAG-Anything with MinerU parser for high-fidelity PDF/Office document processing.
+- **Core**: Python 3.13+ with LightRAG for text-based RFP processing, enhanced with RAG-Anything for multimodal documents.
+- **Document Processing**: LightRAG native document processing for text-based RFPs (Phase 1-3), enhanced with RAG-Anything for multimodal documents (Phase 4-6).
 - **AI Agents**: PydanticAI for structured requirement extraction with fine-tuned Ollama models (Phase 7: Unsloth fine-tuning for domain specialization).
 - **LLM/Embeddings**: Ollama (local) with 7-8B models (e.g., qwen2.5-coder:7b, bge-m3) for efficiency.
 - **UI**: Streamlit for simple, interactive web app.
@@ -160,7 +162,7 @@ All open-source, local-run; no cloud/internet required post-setup.
 - **PydanticAI Agents**: Structured extraction with fine-tuned models for domain expertise
 - **Unsloth Fine-tuning**: Phase 7 enhancement using Unsloth method for efficient domain specialization
 - **Principles**: Minimal code (<2000 lines total, <500/file), modular components, type safety, comprehensive validation
-- **Architecture**: RAG-Anything handles document processing → PydanticAI extracts requirements → LightRAG provides knowledge graph and retrieval
+- **Architecture**: LightRAG handles document processing → PydanticAI extracts requirements → LightRAG provides knowledge graph and retrieval
 - **Inspirations/Forks**:
   - Shipley Guides (Proposal/Capture PDFs in /docs)
   - Repos: [HKUDS/RAG-Anything](https://github.com/HKUDS/RAG-Anything), [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG)
@@ -181,4 +183,4 @@ MIT.
 - Prompts: Modular Ollama prompts for extraction/outline/gaps/ambiguities (JSON outputs).
 - Future: Integrate with Capture Plans; add API if scaled.
 
-Last updated: September 29, 2025 (complete system rebuild with RAG-Anything + LightRAG integration following RFP_ANALYZER_ROADMAP.md).
+Last updated: September 29, 2025 (scoped-down system rebuild focusing on RFP overview, requirements extraction, and chat features following RFP_ANALYZER_ROADMAP.md).
