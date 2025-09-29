@@ -54,6 +54,11 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> Dict[str,
     """
     import re
 
+    # DEBUG: Log input text
+    print(f"DEBUG: RFP text length: {len(rfp_text)}")
+    print(f"DEBUG: First 500 chars of RFP text: {rfp_text[:500]}")
+    print(f"DEBUG: Attachments text length: {len(attachments_text)}")
+
     # Load prompt template
     prompt_file = "prompts/extract_requirements_prompt.txt"
     if not os.path.exists(prompt_file):
@@ -156,6 +161,10 @@ def extract_requirements(rfp_text: str, attachments_text: str = "") -> Dict[str,
 
         # Call LLM
         response = call_ollama(prompt)
+
+        # DEBUG: Log LLM response
+        print(f"DEBUG: LLM response length: {len(response)}")
+        print(f"DEBUG: First 1000 chars of LLM response: {response[:1000]}")
 
         try:
             # Clean response (remove markdown code blocks)
