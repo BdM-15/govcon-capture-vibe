@@ -41,7 +41,7 @@
       "shipley_reference": "Proposal Guide p.45 - Page limit strategy and content prioritization"
     },
     {
-      "issue_id": "AMB002", 
+      "issue_id": "AMB002",
       "priority": "critical",
       "theme": "scope_boundaries",
       "rfp_refs": ["A.3 / Page 2", "M.1 / Page 77", "M.2.1 / Page 78"],
@@ -53,7 +53,7 @@
     },
     {
       "issue_id": "AMB003",
-      "priority": "critical", 
+      "priority": "critical",
       "theme": "contract_structure",
       "rfp_refs": ["B.1 / Page 10", "F.2 / Page 55", "H.8 / Page 60"],
       "description": "Transition period billing structure ambiguity could affect pricing strategy and cost compliance. Base period stated as 366 days including 60-day transition, but unclear whether transition activities are fully absorbed within CLIN 0001 FFP amount.",
@@ -87,7 +87,7 @@
     {
       "issue_id": "AMB006",
       "priority": "low",
-      "theme": "evaluation_methodology", 
+      "theme": "evaluation_methodology",
       "rfp_refs": ["M.1 / Page 77", "M.3 / Page 80"],
       "description": "Past Performance evaluation period and relevance criteria not clearly defined. Section M mentions Past Performance factor but lacks specific timeframe or relevance thresholds.",
       "impact_assessment": "Minor risk of submitting irrelevant past performance examples",

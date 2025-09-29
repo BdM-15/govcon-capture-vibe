@@ -38,7 +38,10 @@
       "coverage_score": 100,
       "coverage_quality": "excellent",
       "gaps": [],
-      "strengths": ["Clear eligibility statement", "Current certification status provided"],
+      "strengths": [
+        "Clear eligibility statement",
+        "Current certification status provided"
+      ],
       "improvement_suggestions": [],
       "risk_assessment": {
         "risk_level": "low",
@@ -59,8 +62,13 @@
       "coverage_score": 95,
       "coverage_quality": "very_good",
       "gaps": ["No explicit contract number reference in executive summary"],
-      "strengths": ["Demonstrates incumbent awareness", "Competitive differentiation strategy"],
-      "improvement_suggestions": ["Add contract number W52P1J-12-G-0061-0001 in Executive Summary for completeness"],
+      "strengths": [
+        "Demonstrates incumbent awareness",
+        "Competitive differentiation strategy"
+      ],
+      "improvement_suggestions": [
+        "Add contract number W52P1J-12-G-0061-0001 in Executive Summary for completeness"
+      ],
       "risk_assessment": {
         "risk_level": "low",
         "impact_if_missed": "minor_deduction",
@@ -80,7 +88,10 @@
       "coverage_score": 100,
       "coverage_quality": "excellent",
       "gaps": [],
-      "strengths": ["Accurate deadline tracking", "Internal milestone integration"],
+      "strengths": [
+        "Accurate deadline tracking",
+        "Internal milestone integration"
+      ],
       "improvement_suggestions": [],
       "risk_assessment": {
         "risk_level": "critical",
@@ -100,8 +111,14 @@
       "proposal_evidence": "Current draft PDF is 27 pages including cover page and table of contents.",
       "coverage_score": 70,
       "coverage_quality": "needs_improvement",
-      "gaps": ["Two pages over the 25-page limit", "Risk of non-compliance disqualification"],
-      "strengths": ["Correct font and margin formatting", "PDF format compliance"],
+      "gaps": [
+        "Two pages over the 25-page limit",
+        "Risk of non-compliance disqualification"
+      ],
+      "strengths": [
+        "Correct font and margin formatting",
+        "PDF format compliance"
+      ],
       "improvement_suggestions": [
         "Condense staffing narrative section by 1 page",
         "Remove redundant graphics in maintenance execution section",
@@ -125,7 +142,10 @@
       "proposal_evidence": "NOT FOUND - No explicit validity statement located in any volume.",
       "coverage_score": 0,
       "coverage_quality": "missing",
-      "gaps": ["Missing 180-day validity attestation", "No contractual commitment statement"],
+      "gaps": [
+        "Missing 180-day validity attestation",
+        "No contractual commitment statement"
+      ],
       "strengths": [],
       "improvement_suggestions": [
         "Insert validity statement in transmittal letter: 'This proposal remains valid for 180 days from October 28, 2025'",
@@ -151,7 +171,10 @@
       "coverage_score": 90,
       "coverage_quality": "very_good",
       "gaps": ["Could explicitly restate evaluation factor hierarchy"],
-      "strengths": ["Best value understanding demonstrated", "Factor alignment strategy"],
+      "strengths": [
+        "Best value understanding demonstrated",
+        "Factor alignment strategy"
+      ],
       "improvement_suggestions": [
         "Add explicit sentence: 'We recognize Technical outweighs Past Performance; combined non-price factors significantly outweigh Cost/Price'",
         "Reference specific evaluation methodology from M.1"
@@ -174,8 +197,14 @@
       "proposal_evidence": "Sections 3, 4, and 5 map directly to the three sub-factors with clearly labeled headers and comprehensive coverage.",
       "coverage_score": 95,
       "coverage_quality": "excellent",
-      "gaps": ["Supply Chain Resilience section lacks quantitative resilience metrics"],
-      "strengths": ["Perfect structural alignment", "Comprehensive sub-factor coverage", "Clear section mapping"],
+      "gaps": [
+        "Supply Chain Resilience section lacks quantitative resilience metrics"
+      ],
+      "strengths": [
+        "Perfect structural alignment",
+        "Comprehensive sub-factor coverage",
+        "Clear section mapping"
+      ],
       "improvement_suggestions": [
         "Add resilience KPI table (MTTR, parts availability %) in Section 5",
         "Reference Attachment 0014 GFFE assets in resilience planning"
@@ -203,7 +232,10 @@
         "No condition assessment and acceptance process defined",
         "Lacks integration with 24-hour response requirement"
       ],
-      "strengths": ["Basic GFFE awareness", "Qualitative integration mentioned"],
+      "strengths": [
+        "Basic GFFE awareness",
+        "Qualitative integration mentioned"
+      ],
       "improvement_suggestions": [
         "Create detailed table mapping each GFFE item to preventive maintenance tasks",
         "Define condition acceptance criteria and handover process",
@@ -228,7 +260,9 @@
       "proposal_evidence": "Section 4.2 commits to 24-hour response but lacks clear trigger event definition and escalation procedures.",
       "coverage_score": 85,
       "coverage_quality": "good",
-      "gaps": ["Does not define specific trigger event for 24-hour clock start"],
+      "gaps": [
+        "Does not define specific trigger event for 24-hour clock start"
+      ],
       "strengths": ["Clear 24-hour commitment", "Maintenance process outlined"],
       "improvement_suggestions": [
         "Clarify that response time starts upon Government email acknowledgment receipt",
@@ -253,7 +287,9 @@
       "proposal_evidence": "Pricing Volume shows CLIN 0001 as single FFP line item, but transition tasks are described separately in technical narrative.",
       "coverage_score": 80,
       "coverage_quality": "good",
-      "gaps": ["Narrative separation of transition tasks may imply separate billing structure"],
+      "gaps": [
+        "Narrative separation of transition tasks may imply separate billing structure"
+      ],
       "strengths": ["Correct FFP structure", "366-day period acknowledged"],
       "improvement_suggestions": [
         "Explicitly state that all transition tasks are fully included within CLIN 0001 fixed price",
@@ -277,8 +313,14 @@
       "proposal_evidence": "Key Personnel matrix lists firm commitments but lacks contingency planning for unexpected departures during restriction period.",
       "coverage_score": 75,
       "coverage_quality": "good",
-      "gaps": ["No contingency plan for unexpected Key Personnel departure", "Missing backup personnel identification"],
-      "strengths": ["Clear Key Personnel commitments", "180-day restriction acknowledged"],
+      "gaps": [
+        "No contingency plan for unexpected Key Personnel departure",
+        "Missing backup personnel identification"
+      ],
+      "strengths": [
+        "Clear Key Personnel commitments",
+        "180-day restriction acknowledged"
+      ],
       "improvement_suggestions": [
         "Add rapid replacement procedure for emergency situations",
         "Pre-identify and pre-qualify alternate Key Personnel",

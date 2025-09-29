@@ -29,7 +29,7 @@
       "why_critical": "Late submission results in automatic disqualification"
     },
     {
-      "requirement_id": "L001", 
+      "requirement_id": "L001",
       "section": "L",
       "type": "format",
       "text": "Technical Volume shall not exceed 25 pages in 11 pt font with 1 inch margins; PDF format only",
@@ -41,7 +41,7 @@
     },
     {
       "requirement_id": "C001",
-      "section": "C", 
+      "section": "C",
       "type": "performance",
       "text": "Contractor shall provide preventive maintenance for APS-4 equipment within 24 hours of notification",
       "compliance_level": "mandatory",
@@ -55,7 +55,7 @@
       "section": "M",
       "type": "evaluation_method",
       "text": "Best Value tradeoff: Technical more important than Past Performance; combined non-price significantly more important than Price",
-      "compliance_level": "mandatory", 
+      "compliance_level": "mandatory",
       "importance_score": 8,
       "risk_level": "critical",
       "shipley_reference": "Capture Guide p.25 - Source selection strategy analysis",
@@ -94,17 +94,29 @@
           {
             "name": "Staffing Approach",
             "evaluation_criteria": "Team qualifications, organizational structure, staffing plan",
-            "discriminators": ["Key personnel experience", "staffing continuity plan", "skill depth"]
+            "discriminators": [
+              "Key personnel experience",
+              "staffing continuity plan",
+              "skill depth"
+            ]
           },
           {
             "name": "Maintenance Execution",
             "evaluation_criteria": "Technical approach, methodology, performance metrics",
-            "discriminators": ["24-hour response capability", "preventive maintenance approach", "GFFE integration"]
+            "discriminators": [
+              "24-hour response capability",
+              "preventive maintenance approach",
+              "GFFE integration"
+            ]
           },
           {
-            "name": "Supply Chain Resilience", 
+            "name": "Supply Chain Resilience",
             "evaluation_criteria": "Parts availability, vendor relationships, contingency planning",
-            "discriminators": ["Supply chain redundancy", "local sourcing capability", "inventory management"]
+            "discriminators": [
+              "Supply chain redundancy",
+              "local sourcing capability",
+              "inventory management"
+            ]
           }
         ]
       },
@@ -112,20 +124,28 @@
         "factor": "Past Performance",
         "weight": "Less Important than Technical",
         "evaluation_criteria": "Relevant contract performance, customer references, quality metrics",
-        "discriminators": ["Similar scope experience", "government customer satisfaction", "performance trends"]
+        "discriminators": [
+          "Similar scope experience",
+          "government customer satisfaction",
+          "performance trends"
+        ]
       },
       {
         "factor": "Cost/Price",
         "weight": "Least Important",
         "evaluation_criteria": "Price reasonableness, cost realism",
-        "discriminators": ["Competitive pricing", "value proposition", "cost transparency"]
+        "discriminators": [
+          "Competitive pricing",
+          "value proposition",
+          "cost transparency"
+        ]
       }
     ]
   },
   "win_themes_analysis": {
     "customer_priorities": [
       "Reliable 24-hour maintenance response",
-      "Seamless transition from incumbent", 
+      "Seamless transition from incumbent",
       "Supply chain resilience and continuity",
       "Technical expertise with APS-4 systems",
       "Government contracting experience"
@@ -194,7 +214,7 @@
     "competitive_opportunities": [
       "Enhanced supply chain resilience approach",
       "Advanced maintenance technologies",
-      "Improved response time capabilities", 
+      "Improved response time capabilities",
       "Cost optimization strategies"
     ],
     "differentiation_strategies": [
@@ -217,7 +237,7 @@
         "page_allocation": "15-18 pages of 25-page limit"
       },
       {
-        "priority": 2, 
+        "priority": 2,
         "focus": "Past Performance relevance and strength",
         "page_allocation": "4-6 pages"
       },
@@ -241,7 +261,7 @@
     ],
     "competitive_positioning": [
       "Position as government-focused partner vs. incumbent's established approach",
-      "Highlight innovative maintenance technologies and processes", 
+      "Highlight innovative maintenance technologies and processes",
       "Emphasize proactive risk management and contingency planning"
     ]
   }

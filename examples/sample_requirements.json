@@ -111,10 +111,21 @@
     "compliance_level": "mandatory",
     "complexity": "high",
     "section": "M",
-    "evaluation_factors": ["technical_approach", "past_performance", "cost_price"],
+    "evaluation_factors": [
+      "technical_approach",
+      "past_performance",
+      "cost_price"
+    ],
     "source_paragraph": "M.1 / Page 77",
     "dependencies": ["M002", "M003", "M004"],
-    "keywords": ["best value", "tradeoff", "technical", "past performance", "cost", "price"],
+    "keywords": [
+      "best value",
+      "tradeoff",
+      "technical",
+      "past performance",
+      "cost",
+      "price"
+    ],
     "snippet": "The Government intends to award a single contract using a Best Value Tradeoff considering Technical, Past Performance, and Cost/Price.",
     "sub_factors": [
       "Technical more important than Past Performance",
@@ -135,14 +146,25 @@
     "compliance_level": "mandatory",
     "complexity": "high",
     "section": "M",
-    "evaluation_factors": ["staffing_approach", "maintenance_execution", "supply_chain_resilience"],
+    "evaluation_factors": [
+      "staffing_approach",
+      "maintenance_execution",
+      "supply_chain_resilience"
+    ],
     "source_paragraph": "M.2.1 / Page 78",
     "dependencies": ["M001"],
-    "keywords": ["technical factor", "sub-factors", "staffing", "maintenance", "supply chain", "resilience"],
+    "keywords": [
+      "technical factor",
+      "sub-factors",
+      "staffing",
+      "maintenance",
+      "supply chain",
+      "resilience"
+    ],
     "snippet": "Technical Factor consists of three sub-factors: (1) Staffing Approach, (2) Maintenance Execution, (3) Supply Chain Resilience.",
     "sub_factors": [
       "Staffing Approach",
-      "Maintenance Execution", 
+      "Maintenance Execution",
       "Supply Chain Resilience"
     ],
     "shipley_reference": "Proposal Guide p.50 - Technical factor decomposition matrix",
@@ -163,7 +185,13 @@
     "evaluation_factors": ["maintenance_execution"],
     "source_paragraph": "J - Attachment 0014 / Injected",
     "dependencies": ["C001"],
-    "keywords": ["GFFE", "government furnished", "facilities", "equipment", "PWS"],
+    "keywords": [
+      "GFFE",
+      "government furnished",
+      "facilities",
+      "equipment",
+      "PWS"
+    ],
     "snippet": "Government Furnished Facilities and Equipment are listed in Attachment 0014 and associated with PWS task execution.",
     "sub_factors": ["Offeror must integrate GFFE into maintenance plan"],
     "shipley_reference": "Proposal Guide p.65 - Government furnished property management",
@@ -184,7 +212,13 @@
     "evaluation_factors": ["maintenance_execution"],
     "source_paragraph": "C.5.4 / Page 32",
     "dependencies": ["J001"],
-    "keywords": ["preventive maintenance", "APS-4", "24 hours", "notification", "response time"],
+    "keywords": [
+      "preventive maintenance",
+      "APS-4",
+      "24 hours",
+      "notification",
+      "response time"
+    ],
     "snippet": "The Contractor shall perform preventive maintenance on APS-4 designated equipment within 24 hours of Government notification.",
     "sub_factors": [
       "24 hour response clock starts upon Government email acknowledgment"
@@ -207,7 +241,13 @@
     "evaluation_factors": ["cost_price"],
     "source_paragraph": "B.1 / Page 10",
     "dependencies": [],
-    "keywords": ["CLIN 0001", "firm fixed price", "base period", "366 days", "transition"],
+    "keywords": [
+      "CLIN 0001",
+      "firm fixed price",
+      "base period",
+      "366 days",
+      "transition"
+    ],
     "snippet": "CLIN 0001 – Firm Fixed Price Base Operations Support – Base Period 366 days (includes 60 day transition).",
     "sub_factors": ["Transition tasks billed under CLIN 0001"],
     "shipley_reference": "Proposal Guide p.40 - Contract structure and pricing strategy",
@@ -228,7 +268,13 @@
     "evaluation_factors": ["staffing_approach"],
     "source_paragraph": "H.7 / Page 59",
     "dependencies": ["M002"],
-    "keywords": ["key personnel", "changes", "180 days", "contracting officer", "approval"],
+    "keywords": [
+      "key personnel",
+      "changes",
+      "180 days",
+      "contracting officer",
+      "approval"
+    ],
     "snippet": "Key Personnel substitutions are not permitted within the first 180 days absent written Contracting Officer approval.",
     "sub_factors": [],
     "shipley_reference": "Proposal Guide p.35 - Key personnel commitment tracking",
