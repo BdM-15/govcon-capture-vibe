@@ -165,7 +165,7 @@ All open-source, local-run; no cloud/internet required post-setup.
 - **Architecture**: LightRAG handles document processing → PydanticAI extracts requirements → LightRAG provides knowledge graph and retrieval
 - **Inspirations/Forks**:
   - Shipley Guides (Proposal/Capture PDFs in /docs)
-  - Repos: [HKUDS/RAG-Anything](https://github.com/HKUDS/RAG-Anything), [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG)
+  - Repos: [HKUDS/RAG-Anything](https://github.com/HKUDS/RAG-Anything), [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG), [felixlkw/ai-rfp-simulator](https://github.com/felixlkw/ai-rfp-simulator),[abh2050/RFP_generation_langchain_agent_RAG](https://github.com/abh2050/RFP_generation_langchain_agent_RAG), [makegov/awesome-procurement-data](https://github.com/makegov/awesome-procurement-data)
 - **Hardware Optimization**: Tuned for Lenovo LEGION 5i (i9-14900HX, RTX 4060, 64GB RAM)—7-8B Ollama models with GPU acceleration
 
 ## Contributing
