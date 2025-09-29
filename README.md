@@ -1,8 +1,12 @@
-# GovCon-Capture-Vibe: Local Tool to Read Federal RFPs and Track Requirements
+# GovCon-CapThis project is a lightweight, zero-cost, open-source tool to reduce capture and proposal prep effort in government contracting (GovCon). It uses a modern multimodal RAG approach with RAG-Anything + LightRAG integration to:ure-Vibe: Local Tool to Read Federal RFPs and Track Requirements
 
 ## Executive Summary
 
 Reads a federal RFP, pulls out the important stuff (deadlines, instructions, evaluation points, tasks), and gives you a clean checklist so you don’t miss anything. Runs fully on your own machine with local AI models—no fees, no data leaving your box.
+
+**🚨 CURRENT STATUS: Complete System Rebuild in Progress**
+
+The existing system produces unacceptable results (garbage text extraction, hallucinations, only 3-7 requirements extracted vs expected 80-100). We're rebuilding from scratch using modern AI techniques with RAG-Anything + LightRAG integration for reliable, accurate RFP analysis.
 
 ## Overview
 
@@ -19,15 +23,16 @@ Inspired by Shipley Proposal/Capture Guides and examples like Proposal Developme
 - Cut 70–80% of the manual grind of reading and tracing requirements.
 - Run fully on your own computer (offline after setup).
 - Avoid subscription or per-token API costs.
+- Achieve 95%+ accuracy in requirement extraction from any RFP (no fixed quantity targets).
 
 **Quick What-It-Does Summary**
 Drop in an RFP (PDF/Word). The tool:
 
-1. Pulls out key sections (A–M) and attachments.
-2. Lists requirements, instructions, and evaluation points.
-3. Builds a simple checklist / matrix you can track.
-4. Flags possible gaps in your draft proposal.
-5. Helps form clear clarification questions for the Government.
+1. Processes documents using RAG-Anything's multimodal parser (text, images, tables, equations).
+2. Extracts structured requirements using PydanticAI agents with fine-tuned models.
+3. Indexes everything in LightRAG for semantic search and relationship mapping.
+4. Builds compliance matrices, gap analyses, and clarification questions.
+5. Provides AI chat interface for querying the processed RFP data.
 
 ![Shipley Proposal Guide Cover](assets/shipley-proposal-guide-cover.png)  
 ![Shipley Proposal Guide Title Page](assets/shipley-proposal-guide-title.png)  
@@ -88,7 +93,7 @@ Example user inputs for the AI chat (save as .txt in prompts/ for testing):
 
 ### Pipeline (Planned Flow)
 
-1. **Document Processing**: Upload RFP files → LightRAG native document processing (automatic text extraction, chunking, and indexing).
+1. **Document Processing**: Upload RFP files → RAG-Anything multimodal processing (MinerU parser extracts text, images, tables, equations) → structured content for analysis.
 2. Extract Requirements (all sections, no truncation) → JSON.
 3. Assess Compliance (score coverage, gaps) → JSON with summary.
 4. Generate Questions for Government (optional if Q&A window open).
@@ -98,10 +103,11 @@ Status: Document processing pipeline complete; prompt templates complete.
 
 ## Tech Stack
 
-- **Core**: Python 3.13+ with LightRAG (or LangChain fallback) for RAG pipelines.
-- **LLM/Embeddings**: Ollama (local) with 7-8B models (e.g., llama3, mistral, nomic-embed-text) for efficiency.
+- **Core**: Python 3.13+ with RAG-Anything + LightRAG for multimodal RAG pipelines.
+- **Document Processing**: RAG-Anything with MinerU parser for high-fidelity PDF/Office document processing.
+- **AI Agents**: PydanticAI for structured requirement extraction with fine-tuned Ollama models (Phase 7: Unsloth fine-tuning for domain specialization).
+- **LLM/Embeddings**: Ollama (local) with 7-8B models (e.g., qwen2.5-coder:7b, bge-m3) for efficiency.
 - **UI**: Streamlit for simple, interactive web app.
-- **Doc Handling**: LightRAG's native document processing pipeline (handles PDF/Word/Excel automatically).
 - **Env Setup**: uv/uvx (faster alternative to plain pip).
 - **Dev Tools**: VS Code, GitHub Copilot/PowerShell for scripting.
 - **Constraints**: Optimized for hardware (Lenovo LEGION 5i: i9-14900HX, RTX 4060, 64GB RAM)—CPU/GPU for Ollama, avoid heavy deps.
@@ -120,38 +126,45 @@ All open-source, local-run; no cloud/internet required post-setup.
 
 ## Current Status
 
-✅ **Core Pipeline Complete:**
+🚨 **Complete System Rebuild in Progress** (Following RFP_ANALYZER_ROADMAP.md)
 
-- **Document Processing**: LightRAG native pipeline (automatic text extraction, chunking, metadata, and indexing)
-- Requirement extraction with LLM
-- LightRAG indexing and querying
-- Compliance assessment
-- Q&A generation (prompts ready)
+**Previous System Issues (Resolved):**
 
-✅ **UI Implemented:**
+- ❌ Garbage text extraction (90%+ PDF headers/footers)
+- ❌ LLM hallucinations (generic responses)
+- ❌ Only 3-7 requirements extracted (expected 80-100)
+- ❌ Fragile JSON parsing with complex error handling
 
-- Streamlit web interface
-- File upload and processing
-- Requirements table display
-- AI chat interface
-- Compliance assessment tool
+**New Architecture Implementation:**
 
-🚧 **Next Steps:**
+- **Phase 1**: LightRAG foundation with clean text extraction ✅
+- **Phase 2**: PydanticAI extraction agent ⏳
+- **Phase 3**: Streamlit interface ⏳
+- **Phase 4**: RAG-Anything multimodal enhancement ⏳
+- **Phase 5**: Advanced features ⏳
+- **Phase 6**: Production ready ⏳
+- **Phase 7**: Unsloth fine-tuning for domain specialization ⏳
 
-- Proposal improvement features
-- Advanced compliance matrix
-- Export capabilities
-- Performance optimizations
+**Success Criteria:**
+
+- 95%+ accuracy in requirement identification and classification (no fixed quantity targets)
+- Process PDFs in <5 minutes with <4GB memory usage
+- No hallucinations or generic responses
+- Proper A-M section mapping and traceability
+- Clean text extraction (no binary garbage)
 
 ## Development Approach
 
-- **Vibe-Coding**: Iterative builds with Copilot; follow copilot-instructions.md.
-- **Principles**: Minimal code (avoid 10k+ lines), modular functions, no overfitting/bloat, easy maintenance/scaling.
-- **Architecture**: LightRAG's native document processing pipeline handles all document ingestion, cleaning, chunking, and metadata extraction automatically.
+- **Structured Implementation**: Following 7-phase roadmap in RFP_ANALYZER_ROADMAP.md
+- **LightRAG Core First**: Start with text-based RFP processing, enhance with RAG-Anything for multimodal
+- **PydanticAI Agents**: Structured extraction with fine-tuned models for domain expertise
+- **Unsloth Fine-tuning**: Phase 7 enhancement using Unsloth method for efficient domain specialization
+- **Principles**: Minimal code (<2000 lines total, <500/file), modular components, type safety, comprehensive validation
+- **Architecture**: RAG-Anything handles document processing → PydanticAI extracts requirements → LightRAG provides knowledge graph and retrieval
 - **Inspirations/Forks**:
-  - Shipley Guides (Proposal/Capture PDFs in /docs).
-  - Repos: [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG), [abh2050/RFP_generation_langchain_agent_RAG](https://github.com/abh2050/RFP_generation_langchain_agent_RAG), [felixlkw/ai-rfp-simulator](https://github.com/felixlkw/ai-rfp-simulator).
-- **Hardware Optimization**: Chunk sizes/prompts tuned for 7-8B models; use GPU if available via Ollama.
+  - Shipley Guides (Proposal/Capture PDFs in /docs)
+  - Repos: [HKUDS/RAG-Anything](https://github.com/HKUDS/RAG-Anything), [HKUDS/LightRAG](https://github.com/HKUDS/LightRAG)
+- **Hardware Optimization**: Tuned for Lenovo LEGION 5i (i9-14900HX, RTX 4060, 64GB RAM)—7-8B Ollama models with GPU acceleration
 
 ## Contributing
 
@@ -168,4 +181,4 @@ MIT.
 - Prompts: Modular Ollama prompts for extraction/outline/gaps/ambiguities (JSON outputs).
 - Future: Integrate with Capture Plans; add API if scaled.
 
-Last updated: September 28, 2025 (refactored to use LightRAG's native document processing pipeline; removed custom PDF extraction).
+Last updated: September 29, 2025 (complete system rebuild with RAG-Anything + LightRAG integration following RFP_ANALYZER_ROADMAP.md).

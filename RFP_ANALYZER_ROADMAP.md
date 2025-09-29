@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The current RFP analysis system produces unacceptable results due to fundamental architectural flaws. We need to rebuild from scratch using modern AI techniques and proper data modeling, leveraging LightRAG's native document processing capabilities through RAG-Anything integration.
+The current RFP analysis system produces unacceptable results due to fundamental architectural flaws. We need to rebuild from scratch using modern AI techniques and proper data modeling. Starting with LightRAG core integration for text-based RFPs (most common), then enhancing with RAG-Anything for complex multimodal documents.
 
 ## Current System Problems
 
@@ -15,12 +15,20 @@ The current RFP analysis system produces unacceptable results due to fundamental
 
 ### 📊 Evidence of Failure
 
-- Only 3-7 requirements extracted (expecting 80-100)
+- Only 3-7 requirements extracted (expecting 80-100 from complex RFPs)
 - 90%+ of output is PDF header/footer garbage
 - LLM receives corrupted input data
 - No structured validation of extracted requirements
 
 ## Proposed New Architecture
+
+### Phase 1-3: LightRAG Core (Text-Based RFPs)
+
+```
+PDF Document → LightRAG Native Processing → PydanticAI Agent → Structured Requirements → Query Interface
+```
+
+### Phase 4-6: RAG-Anything Enhancement (Multimodal RFPs)
 
 ```
 PDF Document → RAG-Anything Parser → Multimodal Content → PydanticAI Agent → Structured Requirements → LightRAG → Query Interface
@@ -28,29 +36,32 @@ PDF Document → RAG-Anything Parser → Multimodal Content → PydanticAI Agent
 
 ### 🏗️ Core Components
 
-#### 1. **RAG-Anything Document Processing**
+#### 1. **LightRAG Document Processing** (Phase 1-3)
 
-- **Purpose**: Native multimodal document parsing and content extraction
-- **Technology**: RAG-Anything with MinerU parser for high-fidelity PDF/Office document processing
+- **Purpose**: Native document processing for text-based RFPs
+- **Technology**: LightRAG with custom PDF text extraction (improved over current garbage)
 - **Capabilities**:
-  - PDF text, table, equation, and image extraction
-  - Office document support (DOC/DOCX/PPT/PPTX/XLS/XLSX)
-  - Automatic content categorization and structuring
-  - Direct integration with LightRAG
-- **Benefits**: Eliminates custom PDF extraction, handles complex layouts, preserves document structure
+  - Clean text extraction from PDFs and Office documents
+  - Basic table handling via text parsing
+  - Direct indexing and retrieval
+- **Benefits**: Handles 90%+ of RFPs (UCF format), simpler implementation
 
-#### 2. **PydanticAI Extraction Agent**
+#### 2. **RAG-Anything Enhancement** (Phase 4-6)
+
+- **Purpose**: Advanced multimodal processing for complex RFPs
+- **Technology**: RAG-Anything with MinerU parser
+- **Capabilities**:
+  - High-fidelity extraction of text, images, tables, equations
+  - Complex document layouts and formatting
+  - Direct integration with existing LightRAG system
+- **Benefits**: Future-proofs for complex RFPs, eliminates all custom extraction
+
+#### 3. **PydanticAI Extraction Agent**
 
 - **Purpose**: Intelligent, structured requirement extraction from parsed content
 - **Technology**: PydanticAI with fine-tuned Ollama model
 - **Data Models**: Strict schemas for requirements, attributes, compliance
 - **Benefits**: Type safety, validation, structured output
-
-#### 3. **LightRAG Knowledge Graph**
-
-- **Purpose**: Efficient storage and retrieval of structured requirements
-- **Technology**: LightRAG with Ollama embeddings and multimodal support
-- **Features**: Semantic search, relationship mapping, context preservation, multimodal retrieval
 
 #### 4. **Query Interface**
 
@@ -60,18 +71,18 @@ PDF Document → RAG-Anything Parser → Multimodal Content → PydanticAI Agent
 
 ## Implementation Roadmap
 
-### Phase 1: Foundation Setup (Week 1)
+### Phase 1: LightRAG Foundation (Week 1-2)
 
-**Goal**: Establish clean development environment with RAG-Anything and LightRAG integration
+**Goal**: Establish working LightRAG integration with clean text extraction
 
 #### Tasks:
 
-1. **Create New Repository Structure**
+1. **Create Repository Structure**
 
    ```
    govcon-rfp-analyzer/
    ├── src/
-   │   ├── document_processor.py     # RAG-Anything wrapper
+   │   ├── document_processor.py     # LightRAG document processing
    │   ├── extraction_agent.py       # PydanticAI agent
    │   ├── knowledge_graph.py        # LightRAG wrapper
    │   ├── data_models.py            # Pydantic schemas
@@ -93,28 +104,26 @@ PDF Document → RAG-Anything Parser → Multimodal Content → PydanticAI Agent
    ```toml
    [project]
    dependencies = [
-       "raganything>=1.2.8",          # Multimodal document processing
        "lightrag-hku>=1.4.9",         # RAG framework
        "pydantic-ai>=0.0.14",         # Structured AI agent
        "ollama>=0.6.0",               # Local LLM inference
        "streamlit>=1.50.0",           # Web interface
        "python-dotenv>=1.0.0",        # Configuration
-       "uvicorn>=0.30.0",             # ASGI server
-       "fastapi>=0.115.0"             # API framework
+       "PyPDF2>=3.0.0",               # Clean PDF text extraction
+       "python-docx>=1.1.0",          # Word document support
    ]
    ```
 
-3. **Initialize RAG-Anything + LightRAG Infrastructure**
-   - Set up working directory structure for both systems
-   - Configure MinerU parser for document processing
-   - Create RAG-Anything wrapper for document ingestion
-   - Initialize LightRAG with multimodal support
+3. **Implement Clean Document Processing**
+   - Replace garbage regex extraction with PyPDF2/docx
+   - Basic table handling via text parsing
+   - Initialize LightRAG with proper text indexing
 
-### Phase 2: Data Models & Validation (Week 2)
+### Phase 2: PydanticAI Extraction (Week 3)
 
-**Goal**: Define strict data structures for RFP requirements
+**Goal**: Implement structured requirement extraction with validation
 
-#### Key Data Models:
+#### Key Components:
 
 ```python
 # Core requirement structure
@@ -126,208 +135,185 @@ class Requirement(BaseModel):
     rfp_ref: str
     snippet: str
     sub_factors: List[str] = []
-    priority_score: int = 0
 
-# RFP document structure
-class RFPAttributes(BaseModel):
-    client_company: str
-    department: str
-    project_background: str
-    objectives: str
-    scope: str
-    timeline: str
-    budget: str
-    evaluation_criteria: str
-    deliverables: str
-    bidder_requirements: str
-
-# Complete extraction result
-class ExtractionResult(BaseModel):
-    requirements: List[Requirement]
-    attributes: RFPAttributes
-    metadata: Dict[str, Any]
-```
-
-#### Validation Rules:
-
-- Requirements must have unique IDs
-- Compliance types must be valid literals
-- References must follow RFP section format
-- Descriptions must be substantive (min 20 chars)
-
-### Phase 3: RAG-Anything Document Processing (Week 3)
-
-**Goal**: Implement native document processing pipeline
-
-#### RAG-Anything Configuration:
-
-```python
-from raganything import RAGAnything, RAGAnythingConfig
-
-class DocumentProcessor:
-    def __init__(self):
-        self.config = RAGAnythingConfig(
-            working_dir="./rag_storage",
-            parser="mineru",  # High-fidelity PDF parsing
-            parse_method="auto",  # Automatic content detection
-            enable_image_processing=True,
-            enable_table_processing=True,
-            enable_equation_processing=True,
-        )
-
-        # Initialize with LightRAG integration
-        self.rag = RAGAnything(
-            config=self.config,
-            llm_model_func=ollama_model_func,
-            vision_model_func=vision_model_func,
-            embedding_func=embedding_func,
-        )
-
-    async def process_rfp(self, pdf_path: str) -> Dict[str, Any]:
-        """Process RFP document using RAG-Anything's native pipeline"""
-        # End-to-end processing with multimodal content extraction
-        await self.rag.process_document_complete(
-            file_path=pdf_path,
-            output_dir="./output",
-            parse_method="auto",
-            display_stats=True
-        )
-
-        # Return structured content for extraction agent
-        return await self.extract_structured_content()
-
-    async def extract_structured_content(self) -> Dict[str, Any]:
-        """Extract text, tables, images, equations by section"""
-        # Query processed content and organize by RFP sections
-        pass
-```
-
-#### Processing Strategy:
-
-1. **MinerU Parser**: Automatic high-fidelity extraction
-2. **Content Categorization**: Text, tables, images, equations
-3. **Section Detection**: Identify A-M sections automatically
-4. **Multimodal Integration**: Preserve all content types for analysis
-
-### Phase 4: PydanticAI Extraction Agent (Week 4)
-
-**Goal**: Implement intelligent requirement extraction from structured content
-
-#### Agent Configuration:
-
-```python
 extraction_agent = Agent(
-    model=OllamaModel(
-        model_name="qwen2.5-coder:7b",
-        base_url="http://localhost:11434"
-    ),
+    model=OllamaModel(model_name="qwen2.5-coder:7b"),
     result_type=ExtractionResult,
-    system_prompt="""You are an expert RFP analyst specializing in government contracting.
-    Extract requirements with precision from the provided multimodal content and cite specific sections."""
+    system_prompt="Extract requirements from government RFP documents..."
 )
 ```
 
+### Phase 3: Streamlit Interface (Week 4)
+
+**Goal**: Build functional web interface for RFP processing
+
+#### Features:
+
+- File upload (PDF, DOCX)
+- Real-time processing status
+- Requirements display and export
+- Basic Q&A functionality
+
+### Phase 4: RAG-Anything Integration (Week 5-6) - Future Enhancement
+
+**Goal**: Add multimodal capabilities for complex RFPs
+
+#### When to Implement:
+
+- When text-only processing proves insufficient
+- When encountering RFPs with complex tables/images
+- When accuracy needs improvement beyond 95%
+
+#### Integration Strategy:
+
+- Add RAG-Anything alongside existing LightRAG
+- Maintain backward compatibility
+- Feature flag to enable/disable multimodal processing
+
+### Phase 5: Advanced Features (Week 7-8)
+
+**Goal**: Enhanced capabilities and optimization
+
+#### Features:
+
+- Batch processing multiple RFP files
+- Compliance gap analysis
+- Export to Shipley worksheet formats
+- Performance optimization for large documents
+
+### Phase 7: Advanced Fine-tuning (Week 11-12) - Future Enhancement
+
+**Goal**: Develop domain-specific SLM for maximum accuracy in RFP requirements extraction
+
 #### Fine-tuning Strategy:
 
-- **Base Model**: Qwen2.5-Coder 7B (good for structured tasks)
-- **Training Data**: 50-100 labeled RFP examples
-- **Fine-tuning Focus**: Requirement identification, section mapping, compliance classification
+**Model Selection:**
 
-#### Extraction Workflow:
+- **Base Model**: Qwen2.5-Coder 7B (strong coding/structuring capabilities)
+- **Target**: Custom RFP extraction model with 95%+ accuracy
+- **Training Method**: Unsloth for efficient fine-tuning (2-4x faster, lower memory)
 
-1. **Content Analysis**: Process text, tables, images from RAG-Anything
-2. **Agent Processing**: Extract structured requirements using multimodal context
-3. **Validation**: Ensure all required fields present and valid
-4. **Post-processing**: Cross-reference and deduplicate requirements
+**Training Data Development:**
 
-### Phase 5: LightRAG Integration (Week 5)
+- **Dataset Size**: 500-1000 labeled RFP examples
+- **Data Sources**:
+  - Public federal RFP samples (GSA, DoD, civilian agencies)
+  - Manually labeled examples from existing RFPs
+  - Synthetic data generation using base models
+- **Annotation Schema**: Structured requirements with section mapping, compliance types, citations
+- **Quality Control**: Multi-pass review by GovCon experts
 
-**Goal**: Connect extraction results to knowledge graph with multimodal support
-
-#### RAG Configuration:
+**Unsloth Implementation:**
 
 ```python
-class RFPKnowledgeGraph:
-    def __init__(self):
-        # RAG-Anything provides the document processing layer
-        # LightRAG handles the knowledge graph and retrieval
-        self.rag = RAGAnything(
-            config=RAGAnythingConfig(...),
-            llm_model_func=ollama_model_func,
-            vision_model_func=vision_model_func,
-            embedding_func=embedding_func,
-        )
+# Fine-tuning pipeline using Unsloth
+from unsloth import FastLanguageModel
+import torch
 
-    async def index_requirements(self, extraction_result: ExtractionResult):
-        """Index structured requirements with multimodal relationships"""
-        # Use RAG-Anything's multimodal indexing capabilities
-        content_list = self.convert_to_content_list(extraction_result)
-        await self.rag.insert_content_list(
-            content_list=content_list,
-            file_path="rfp_document.pdf",
-            display_stats=True
-        )
+# Load base model
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name="unsloth/Qwen2.5-Coder-7B",
+    max_seq_length=4096,
+    dtype=None,
+    load_in_4bit=True,
+)
 
-    async def query_requirements(self, query: str) -> List[Requirement]:
-        """Multimodal semantic search across requirements"""
-        # Leverage RAG-Anything's hybrid retrieval
-        results = await self.rag.aquery(
-            query,
-            mode="hybrid"
-        )
-        return self.parse_results(results)
+# Configure LoRA for efficient training
+model = FastLanguageModel.get_peft_model(
+    model,
+    r=16,  # LoRA rank
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                   "gate_proj", "up_proj", "down_proj"],
+    lora_alpha=16,
+    lora_dropout=0,
+    bias="none",
+    use_gradient_checkpointing="unsloth",
+    random_state=3407,
+)
+
+# Training configuration
+training_args = TrainingArguments(
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=4,
+    warmup_steps=5,
+    max_steps=100,  # Adjust based on dataset size
+    learning_rate=2e-4,
+    fp16=not torch.cuda.is_bf16_supported(),
+    bf16=torch.cuda.is_bf16_supported(),
+    logging_steps=1,
+    optim="adamw_8bit",
+    weight_decay=0.01,
+    lr_scheduler_type="linear",
+    seed=3407,
+    output_dir="outputs",
+)
+
+# Train the model
+trainer = SFTTrainer(
+    model=model,
+    tokenizer=tokenizer,
+    train_dataset=rfp_dataset,
+    dataset_text_field="text",
+    max_seq_length=4096,
+    dataset_num_proc=2,
+    packing=False,
+    args=training_args,
+)
+
+trainer.train()
 ```
 
-#### Indexing Strategy:
+**Success Metrics:**
 
-- **Multimodal Entities**: Requirements, sections, compliance types, images, tables
-- **Cross-Modal Relationships**: Link text requirements to supporting images/tables
-- **Hierarchical Structure**: Preserve RFP section organization
-- **Context Preservation**: Maintain relationships between requirements
+- **Accuracy Improvement**: 95%+ accuracy on held-out RFP test set
+- **Hallucination Reduction**: <5% generic or incorrect responses
+- **Processing Speed**: Maintain <2 minute processing time
+- **Model Size**: <8GB quantized model for local deployment
 
-### Phase 6: User Interface & Testing (Week 6)
+#### When to Implement:
 
-**Goal**: Build usable application with comprehensive testing
+- After Phase 1-6 prove base model accuracy limitations
+- When 95% accuracy target requires domain specialization
+- When processing large volumes of similar RFPs
 
-#### Streamlit Interface:
+#### Integration Strategy:
 
-- **Upload Section**: Drag-drop PDF upload with format validation
-- **Processing Section**: Real-time progress with multimodal content preview
-- **Results Section**: Structured display of requirements with citations
-- **Query Section**: Natural language search with multimodal results
-- **Export Section**: JSON/CSV download with full metadata
-
-#### Testing Strategy:
-
-- **Unit Tests**: Each component individually
-- **Integration Tests**: Full RAG-Anything → PydanticAI → LightRAG pipeline
-- **Accuracy Tests**: Compare against manually labeled requirements
-- **Performance Tests**: Processing time and memory usage for large RFPs
+- Feature flag to switch between base and fine-tuned models
+- A/B testing framework for accuracy comparison
+- Gradual rollout with fallback to base model
 
 ## Success Criteria
 
 ### Functional Requirements
 
-- ✅ Extract 80-100 requirements from typical RFP (200+ pages)
-- ✅ 95%+ accuracy in requirement identification
-- ✅ Proper section mapping (A-M compliance)
-- ✅ Structured attributes extraction
-- ✅ Multimodal search capabilities (text + images + tables)
+- ✅ **95%+ accuracy** in requirement identification and classification
+- ✅ Proper section mapping (A-M compliance) for all identified requirements
+- ✅ Structured attributes extraction (client, scope, timeline, etc.)
+- ✅ No hallucinations or generic responses
+- ✅ Traceable citations to source sections/pages
+- ✅ Consistent data formatting and validation
 
 ### Technical Requirements
 
 - ✅ Process PDFs up to 500 pages in <5 minutes
 - ✅ Memory usage <4GB for large documents
 - ✅ Offline operation (no external APIs)
-- ✅ Type-safe data structures
-- ✅ Comprehensive error handling
+- ✅ Type-safe data structures with Pydantic validation
+- ✅ Comprehensive error handling and recovery
 
 ### Quality Requirements
 
-- ✅ No hallucinations or generic responses
-- ✅ Traceable citations to source sections
-- ✅ Consistent data formatting
-- ✅ User-friendly error messages
+- ✅ Clean text extraction (no binary garbage or header/footer noise)
+- ✅ Structured JSON output with all required fields
+- ✅ User-friendly error messages and progress indicators
+- ✅ Export capabilities (JSON, CSV, Shipley formats)
+
+### Performance Targets
+
+- **Text-Based RFPs (Phase 1-3)**: 95% accuracy on UCF format documents
+- **Multimodal RFPs (Phase 4-6)**: 95%+ accuracy on complex documents with tables/images
+- **Processing Speed**: <2 minutes for typical 200-page RFP
+- **Memory Usage**: <2GB for standard documents
 
 ## Risk Mitigation
 
@@ -368,10 +354,21 @@ class RFPKnowledgeGraph:
 
 ### Why Fine-tuning?
 
-- **Domain Expertise**: RFP language is specialized
-- **Accuracy**: General models fail on compliance documents
-- **Consistency**: Reduces variability in outputs
-- **Efficiency**: Smaller models can be fine-tuned for speed
+- **Domain Expertise**: RFP language is highly specialized (FAR/DFARS references, compliance terminology)
+- **Accuracy**: Base models hallucinate generic requirements; fine-tuned models achieve 95%+ accuracy
+- **Consistency**: Reduces variability in extraction quality across different RFP types
+- **Efficiency**: Smaller 7B models can be fine-tuned for speed while maintaining accuracy
+- **Cost-Effective**: Unsloth method enables efficient training on consumer hardware
+
+### Fine-tuning Implementation Strategy
+
+**Phase 7 Enhancement:**
+
+- **Training Method**: Unsloth for 2-4x faster training with lower memory usage
+- **Model**: Qwen2.5-Coder 7B base → Custom RFP extraction model
+- **Dataset**: 500-1000 labeled RFP examples with structured annotations
+- **Quality Target**: 95%+ accuracy on requirements extraction and classification
+- **Hardware**: Optimized for Lenovo LEGION 5i (RTX 4060, 64GB RAM) with 4-bit quantization
 
 ## Next Steps
 
