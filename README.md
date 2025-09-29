@@ -178,7 +178,8 @@ Fork and PR. Focus on GovCon-specific enhancements (e.g., FAR/DFARS checks).
 
 **Rationale**: Build systematic training data collection for Phase 7 Unsloth fine-tuning.
 
-**LightRAG PostgreSQL Support**: 
+**LightRAG PostgreSQL Support**:
+
 - LightRAG natively supports PostgreSQL as enterprise storage backend
 - Provides unified KV, Vector (pgvector), and Graph (Apache AGE) storage
 - Built-in document status tracking and workspace isolation
@@ -203,6 +204,7 @@ LIGHTRAG_DOC_STATUS_STORAGE=PGDocStatusStorage
 ```
 
 **Database Schema Design**:
+
 - `rfp_documents` - Document metadata and raw text
 - `extracted_requirements` - Requirements with user validation flags
 - `training_examples` - Input/output pairs for fine-tuning
@@ -211,32 +213,37 @@ LIGHTRAG_DOC_STATUS_STORAGE=PGDocStatusStorage
 
 **Benefits**:
 
-*Training Data & Fine-tuning Foundation*:
+_Training Data & Fine-tuning Foundation_:
+
 - **Training Data Pipeline**: Systematic collection of 500-1000 labeled RFP examples for Unsloth fine-tuning
 - **User Feedback Loop**: Correction collection and validation for gold standard dataset creation
 - **Quality Scoring**: Track extraction accuracy improvements over time
 
-*Knowledge Accumulation & Pattern Recognition*:
+_Knowledge Accumulation & Pattern Recognition_:
+
 - **Cross-RFP Analysis**: Identify common requirement patterns across different agencies and contract types
 - **Agency-Specific Trends**: Discover DoD vs. civilian agency preferences, evaluation factor evolution
 - **Contract Type Intelligence**: Pattern recognition for FFP vs. T&M vs. IDIQ requirements
 - **Evaluation Criteria Evolution**: Track how Section M factors change over time and across domains
 - **Regulatory Compliance Patterns**: Identify emerging FAR/DFARS requirements and cybersecurity trends
 
-*Strategic Intelligence*:
+_Strategic Intelligence_:
+
 - **Competitive Intelligence**: Analyze historical RFP data to predict upcoming opportunities
 - **Proposal Reuse**: Build library of successful responses mapped to requirement patterns
 - **Risk Assessment**: Historical compliance gap analysis and success rate tracking
 - **Market Trends**: Identify growing technical areas, small business set-aside patterns
 - **Incumbent Analysis**: Track contract renewals, scope changes, and competitive positioning
 
-*Performance Analytics*:
+_Performance Analytics_:
+
 - **A/B Testing**: Compare different LightRAG configurations and extraction strategies
 - **Processing Optimization**: Identify optimal chunk sizes, embedding models, and prompt strategies
 - **Accuracy Metrics**: Track requirement extraction precision/recall across document types
 - **User Satisfaction**: Monitor correction rates and system adoption metrics
 
 **LightRAG Integration**:
+
 - All existing functionality preserved
 - Enhanced with persistent storage and analytics
 - Workspace isolation for different project types
@@ -244,6 +251,7 @@ LIGHTRAG_DOC_STATUS_STORAGE=PGDocStatusStorage
 - Document processing status tracking
 
 **References**:
+
 - LightRAG PostgreSQL Documentation: [postgres_impl.py](https://github.com/HKUDS/LightRAG/blob/main/lightrag/kg/postgres_impl.py)
 - Configuration Examples: [env.example](https://github.com/HKUDS/LightRAG/tree/main)
 - Docker Setup: [postgres-for-rag](https://hub.docker.com/r/shangor/postgres-for-rag)
