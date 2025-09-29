@@ -104,20 +104,18 @@ PDF Document → RAG-Anything Parser → Multimodal Content → PydanticAI Agent
    ```toml
    [project]
    dependencies = [
-       "lightrag-hku>=1.4.9",         # RAG framework
+       "lightrag-hku>=1.4.9",         # RAG framework with native document processing
        "pydantic-ai>=0.0.14",         # Structured AI agent
        "ollama>=0.6.0",               # Local LLM inference
        "streamlit>=1.50.0",           # Web interface
        "python-dotenv>=1.0.0",        # Configuration
-       "PyPDF2>=3.0.0",               # Clean PDF text extraction
-       "python-docx>=1.1.0",          # Word document support
    ]
    ```
 
-3. **Implement Clean Document Processing**
-   - Replace garbage regex extraction with PyPDF2/docx
-   - Basic table handling via text parsing
-   - Initialize LightRAG with proper text indexing
+3. **Implement LightRAG Document Processing**
+   - Use LightRAG's native document processing capabilities
+   - Initialize LightRAG with proper text indexing and retrieval
+   - Test with sample RFP documents
 
 ### Phase 2: PydanticAI Extraction (Week 3)
 
@@ -337,13 +335,13 @@ trainer.train()
 
 ## Technology Decisions
 
-### Why RAG-Anything + LightRAG?
+### Why LightRAG Core First?
 
-- **Native Integration**: RAG-Anything built specifically for LightRAG
-- **Multimodal Support**: Handles PDFs, images, tables, equations natively
-- **No Custom Extraction**: Eliminates fragile PDF parsing code
-- **End-to-End Pipeline**: Seamless document processing to knowledge graph
-- **Local Operation**: No cloud dependencies, works offline
+- **Handles 90%+ of RFPs**: Most federal RFPs are text-based UCF format that LightRAG can process natively
+- **Simpler Implementation**: No need for complex multimodal processing initially
+- **Faster Time to Working System**: Get functional RFP analysis quickly
+- **Future-Proof**: Can add RAG-Anything later for complex documents
+- **Local Operation**: No cloud dependencies, works completely offline
 
 ### Why PydanticAI?
 
@@ -372,11 +370,11 @@ trainer.train()
 
 ## Next Steps
 
-1. **Install RAG-Anything** and verify MinerU parser functionality
+1. **Install LightRAG** and verify native document processing functionality
 2. **Create new repository** with clean structure
 3. **Gather sample RFPs** for testing and training
 4. **Set up development environment** with all dependencies
-5. **Begin Phase 1** implementation with RAG-Anything integration
+5. **Begin Phase 1** implementation with LightRAG native document processing
 6. **Weekly check-ins** to track progress against milestones
 
 ## Alternative Approaches (If Needed)
@@ -405,8 +403,8 @@ trainer.train()
 
 ### Key Principles:
 
-1. **Leverage Natives**: Use RAG-Anything's document processing exclusively
-2. **Multimodal First**: Design for text, images, tables, equations from the start
+1. **LightRAG Native First**: Use LightRAG's built-in document processing for text-based RFPs
+2. **Text-Based Focus**: Design for UCF format documents initially, add multimodal later
 3. **Test Early**: Validate each component with real RFP data
 4. **Fail Fast**: Identify issues early rather than accumulating technical debt
 5. **Document Everything**: Clear APIs and data flow documentation
@@ -425,5 +423,5 @@ trainer.train()
 - No phase completes until end-to-end testing succeeds
 - No release until accuracy requirements are met
 
-This roadmap provides a clear path to a reliable, accurate RFP analysis system using LightRAG's native document processing capabilities through RAG-Anything integration. The focus on structured data models, multimodal processing, and domain-specific fine-tuning should eliminate the hallucinations and garbage output that plague the current system.</content>
+This roadmap provides a clear path to a reliable, accurate RFP analysis system starting with LightRAG's native document processing for text-based RFPs, then enhancing with RAG-Anything for multimodal documents. The focus on structured data models, clean text processing, and domain-specific fine-tuning should eliminate the hallucinations and garbage output that plague the current system.</content>
 <parameter name="filePath">c:\Users\benma\govcon-capture-vibe\RFP_ANALYZER_ROADMAP.md

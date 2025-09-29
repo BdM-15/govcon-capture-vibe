@@ -25,13 +25,13 @@ Following RFP_ANALYZER_ROADMAP.md with incremental approach: Start with LightRAG
 - Env: uv/uvx for deps (no pip); always use/run in virtual env—scripts check/activate (e.g., shebang: #!/usr/bin/env python, comments remind).
 - UI: Streamlit for uploads/queries/results (tables/JSON).
 - Core: LightRAG for text-based RFP processing (Phase 1-3), enhanced with RAG-Anything for multimodal documents (Phase 4-6).
-- Document Processing: RAG-Anything with MinerU parser for high-fidelity PDF/Office document processing (text, images, tables, equations).
+- Document Processing: LightRAG native document processing for text-based RFPs (Phase 1-3), enhanced with RAG-Anything for multimodal documents (Phase 4-6).
 - AI Agents: PydanticAI for structured requirement extraction with fine-tuned Ollama models (Phase 7: Unsloth fine-tuning for domain specialization).
 - Config: .env for secrets (e.g., OLLAMA_BASE_URL); config.py centralizes access with defaults/validation.
 
 ## Usage Tips for Copilot
 
-- Generate small: E.g., "Implement req extraction using RAG-Anything processed documents with PydanticAI agent, grounded in Shipley Proposal Guide p.50."
+- Generate small: E.g., "Implement req extraction using LightRAG processed documents with PydanticAI agent, grounded in Shipley Proposal Guide p.50."
 - Test: Isolate units (Pytest in /tests/; cover edges like truncated PDFs); integrate after.
 - Outputs: JSON for matrices/gaps; traceable to RFP/Shipley refs.
 - Avoid: Heavy deps, global state. Always virtual env; update README for changes.
