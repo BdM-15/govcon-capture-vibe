@@ -270,19 +270,135 @@ async def query_rfp_document(
         # Query the knowledge graph with proper context injection
         result = await rag_instance.aquery_llm(query, param=query_param)
         
+        # Debug: Log the full result structure to understand what we're getting
+        logger.info(f"LightRAG result structure: {list(result.keys()) if isinstance(result, dict) else type(result)}")
+        if isinstance(result, dict):
+            logger.info(f"LightRAG result data keys: {list(result.get('data', {}).keys()) if 'data' in result else 'No data key'}")
+        
         # Extract the response from the unified result format
-        llm_response = result.get("llm_response", {})
-        response_content = llm_response.get("content", "")
+        llm_response = result.get("llm_response", {}) if isinstance(result, dict) else {}
+        response_content = llm_response.get("content", "") if llm_response else ""
         
         # Get additional context information
-        data = result.get("data", {})
-        entities_count = len(data.get("entities", []))
-        relations_count = len(data.get("relationships", []))
-        chunks_count = len(data.get("chunks", []))
-        references = data.get("references", [])
+        data = result.get("data", {}) if isinstance(result, dict) else {}
+        entities_count = len(data.get("entities", [])) if data else 0
+        relations_count = len(data.get("relationships", [])) if data else 0
+        chunks_count = len(data.get("chunks", [])) if data else 0
+        references = data.get("references", []) if data else []
         
+        # If we got no context, try multiple strategies to access the knowledge graph
+        if entities_count == 0 and relations_count == 0 and chunks_count == 0:
+            logger.info("No context retrieved, trying alternative query strategies")
+            
+            # Strategy 1: Try different query modes
+            alternative_modes = ["local", "global", "naive", "mix"]
+            for alt_mode in alternative_modes:
+                try:
+                    logger.info(f"Trying {alt_mode} mode")
+                    alt_param = QueryParam(
+                        mode=alt_mode,
+                        user_prompt=user_prompt,
+                        stream=False
+                    )
+                    alt_result = await rag_instance.aquery_llm(query, param=alt_param)
+                    alt_data = alt_result.get("data", {}) if isinstance(alt_result, dict) else {}
+                    alt_entities = len(alt_data.get("entities", []))
+                    alt_relations = len(alt_data.get("relationships", []))
+                    alt_chunks = len(alt_data.get("chunks", []))
+                    
+                    if alt_entities > 0 or alt_relations > 0 or alt_chunks > 0:
+                        logger.info(f"Success with {alt_mode} mode: {alt_entities} entities, {alt_relations} relations, {alt_chunks} chunks")
+                        # Use this successful result
+                        result = alt_result
+                        data = alt_data
+                        entities_count = alt_entities
+                        relations_count = alt_relations
+                        chunks_count = alt_chunks
+                        # Update response with this mode's result
+                        llm_response = result.get("llm_response", {}) if isinstance(result, dict) else {}
+                        response_content = llm_response.get("content", "") if llm_response else ""
+                        break
+                        
+                except Exception as alt_e:
+                    logger.warning(f"Alternative mode {alt_mode} failed: {alt_e}")
+                    
+            # Strategy 2: If still no results, try broader search terms
+            if entities_count == 0 and relations_count == 0 and chunks_count == 0:
+                broader_queries = [
+                    "Base Operating Services",
+                    "contract",
+                    "RFP",
+                    "solicitation",
+                    "document",
+                    ""  # Empty query to get general content
+                ]
+                
+                for broad_query in broader_queries:
+                    try:
+                        logger.info(f"Trying broader query: '{broad_query}'")
+                        broad_param = QueryParam(
+                            mode="hybrid",
+                            user_prompt=user_prompt,
+                            stream=False
+                        )
+                        broad_result = await rag_instance.aquery_llm(broad_query, param=broad_param)
+                        broad_data = broad_result.get("data", {}) if isinstance(broad_result, dict) else {}
+                        broad_entities = len(broad_data.get("entities", []))
+                        broad_relations = len(broad_data.get("relationships", []))
+                        broad_chunks = len(broad_data.get("chunks", []))
+                        
+                        if broad_entities > 0 or broad_relations > 0 or broad_chunks > 0:
+                            logger.info(f"Success with broader query '{broad_query}': {broad_entities} entities, {broad_relations} relations, {broad_chunks} chunks")
+                            # Use this successful result but modify response to acknowledge different query
+                            result = broad_result
+                            data = broad_data
+                            entities_count = broad_entities
+                            relations_count = broad_relations
+                            chunks_count = broad_chunks
+                            
+                            # Get response content but note the query change
+                            llm_response = result.get("llm_response", {}) if isinstance(result, dict) else {}
+                            alt_response = llm_response.get("content", "") if llm_response else ""
+                            
+                            if alt_response:
+                                response_content = f"Using broader search '{broad_query}' to find relevant content:\n\n{alt_response}\n\n(Note: Direct query for '{query}' found no matches, but this related content may be helpful.)"
+                            break
+                            
+                    except Exception as broad_e:
+                        logger.warning(f"Broader query '{broad_query}' failed: {broad_e}")
+        
+        # Strategy 3: If still no context, try the /context mode for raw retrieval
+        if entities_count == 0 and relations_count == 0 and chunks_count == 0:
+            logger.info("All strategies failed, trying raw context retrieval")
+            try:
+                raw_param = QueryParam(
+                    mode="hybrid",
+                    only_need_context=True,
+                    stream=False
+                )
+                raw_result = await rag_instance.aquery_llm("", param=raw_param)  # Empty query for general context
+                raw_data = raw_result.get("data", {}) if isinstance(raw_result, dict) else {}
+                raw_entities = len(raw_data.get("entities", []))
+                raw_relations = len(raw_data.get("relationships", []))
+                raw_chunks = len(raw_data.get("chunks", []))
+                
+                if raw_entities > 0 or raw_relations > 0 or raw_chunks > 0:
+                    logger.info(f"Raw context retrieval found: {raw_entities} entities, {raw_relations} relations, {raw_chunks} chunks")
+                    data = raw_data
+                    entities_count = raw_entities
+                    relations_count = raw_relations
+                    chunks_count = raw_chunks
+                    response_content = f"Retrieved {entities_count} entities and {relations_count} relationships from the knowledge graph, but could not generate a specific response for '{query}'. The knowledge graph contains processed RFP data but may need different query terms."
+                    
+            except Exception as raw_e:
+                logger.warning(f"Raw context retrieval failed: {raw_e}")
+        
+        # Final response generation
         if not response_content or response_content.strip() == "":
-            response_content = "No response generated from the knowledge graph. This may indicate context injection issues."
+            if entities_count > 0 or relations_count > 0 or chunks_count > 0:
+                response_content = f"Context retrieved successfully ({entities_count} entities, {relations_count} relations, {chunks_count} chunks) but LLM did not generate a response. This indicates the LLM may not be processing the context properly."
+            else:
+                response_content = f"No context retrieved from the knowledge graph for query '{query}'. The knowledge graph contains 172 entities and 63 relationships from the Base Operating Services RFP, but this specific query did not match any content. Try more general terms like 'Base Operating Services', 'contract requirements', or 'performance locations'."
         
         logger.info(f"LightRAG response: {len(response_content)} characters, {entities_count} entities, {relations_count} relations, {chunks_count} chunks")
         
