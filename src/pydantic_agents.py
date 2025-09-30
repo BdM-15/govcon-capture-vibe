@@ -20,7 +20,6 @@ from datetime import datetime
 import re
 
 from pydantic_ai import Agent, RunContext
-from pydantic_ai.models.ollama import OllamaModel
 from pydantic import BaseModel, Field
 
 # Import our structured models
@@ -67,11 +66,10 @@ def create_requirements_extraction_agent() -> Agent[RFPContext, RequirementsExtr
     guaranteed structured output and validation.
     """
     
-    # Use Ollama model for local processing
-    model = OllamaModel('qwen2.5-coder:7b')
-    
+    # Use OpenAI-compatible model configuration for Ollama
+    # PydanticAI will automatically detect and use available models
     agent = Agent(
-        model=model,
+        'ollama:qwen2.5-coder:7b',  # Direct model specification
         result_type=RequirementsExtractionOutput,
         system_prompt="""
         You are an expert federal acquisition analyst specialized in RFP requirements extraction 
@@ -163,10 +161,8 @@ def create_compliance_assessment_agent() -> Agent[RFPContext, ComplianceAssessme
     Shipley 4-level compliance scale with gap analysis.
     """
     
-    model = OllamaModel('qwen2.5-coder:7b')
-    
     agent = Agent(
-        model=model,
+        'ollama:qwen2.5-coder:7b',
         result_type=ComplianceAssessment,
         system_prompt="""
         You are a compliance assessment specialist using Shipley Proposal Guide methodology (p.53-55).
@@ -245,10 +241,8 @@ def create_section_relationship_agent() -> Agent[RFPContext, List[SectionRelatio
     and cross-section dependencies for comprehensive RFP understanding.
     """
     
-    model = OllamaModel('qwen2.5-coder:7b')
-    
     agent = Agent(
-        model=model,
+        'ollama:qwen2.5-coder:7b',
         result_type=List[SectionRelationship],
         system_prompt="""
         You are an RFP structure analyst specialized in identifying section relationships 
