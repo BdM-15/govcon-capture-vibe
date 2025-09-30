@@ -1784,5 +1784,69 @@
     "create_time": 1759254565,
     "update_time": 1759254565,
     "_id": "hybrid:query:fd3ac25ef74abe2a868c0bbd9ae33cde"
+  },
+  "hybrid:query:9a4df49ef403741f683233e92745f2b4": {
+    "return": "Hello! How can I assist you today? Let's chat about anything you're curious or interested in. \"Make Believe, Observe, Share\" is our philosophy here, so feel free to share your thoughts and experiences as well. 😊",
+    "cache_type": "query",
+    "chunk_id": null,
+    "original_prompt": "MBOS",
+    "queryparam": {
+      "mode": "hybrid",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "hl_keywords": "",
+      "ll_keywords": "MBOS",
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1759256517,
+    "update_time": 1759256517,
+    "_id": "hybrid:query:9a4df49ef403741f683233e92745f2b4"
+  },
+  "hybrid:keywords:67bef3cbc3abc4b8eb565acf716b72ae": {
+    "return": "{\"high_level_keywords\": [\"MBOS site visit\", \"Requirements\", \"Procedures\"], \"low_level_keywords\": [\"Visiting hours\", \"Identification verification\", \"Safety protocols\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "What are the MBOS site visit requirements and procedures?",
+    "queryparam": {
+      "mode": "hybrid",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1759256552,
+    "update_time": 1759256552,
+    "_id": "hybrid:keywords:67bef3cbc3abc4b8eb565acf716b72ae"
+  },
+  "hybrid:query:60d8e307335d6c156a9f7ce102744632": {
+    "return": "The U.S. (Department of Energy) Better Buildings Solutions program has specific requirements and procedures for on-site visits for the Model Building Energy Information System (MBOS). Here's an overview:\n\n1. **Purpose**: The primary goal of MBOS site visits is to collect accurate and complete energy-related data, such as metering equipment and building operations information.\n\n2. **Eligibility**: To be eligible for a site visit, buildings must have a unique Energy Star Portfolio Manager (ESPM) property ID number associated with the Model Building Energy Information System (MBOS).\n\n3. **Scheduling**:\n   - Site visits are coordinated through email between the site contact and the MBOS data collector.\n   - Both parties should agree on a date and time for the visit.\n\n4. **Pre-visit communication**: Before the site visit, ensure that:\n   - The building contact has confirmed access to the building and all necessary areas.\n   - All relevant documents (like utility bills, metering equipment datasheets, etc.) are readily available.\n\n5. **Site visit procedures**:\n   - Upon arrival at the building, notify the site contact.\n   - Begin with a walk-through of the entire building to observe and document various aspects such as:\n     + Building layout and zoning\n     + HVAC system components (air handlers, chillers, boilers, etc.)\n     + Lighting fixtures and controls\n     + Plug loads and equipment types\n     + Meter locations and equipment details\n   - Collect relevant documents, such as utility bills, meter datasheets, and building operating schedules.\n   - Take photographs of key areas and equipment for record-keeping.\n\n6. **Post-visit**:\n   - After the site visit, send a follow-up email to the site contact confirming the completion of the visit.\n   - Data collected during the visit will be entered into the MBOS by the data collector within 30 days of the visit.\n   - The site contact can review and verify the data in ESPM.",
+    "cache_type": "query",
+    "chunk_id": null,
+    "original_prompt": "What are the MBOS site visit requirements and procedures?",
+    "queryparam": {
+      "mode": "hybrid",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 60,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "hl_keywords": "MBOS site visit, Requirements, Procedures",
+      "ll_keywords": "Visiting hours, Identification verification, Safety protocols",
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1759256590,
+    "update_time": 1759256590,
+    "_id": "hybrid:query:60d8e307335d6c156a9f7ce102744632"
   }
 }

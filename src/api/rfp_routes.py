@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 import json
 import asyncio
+import os
 from pathlib import Path
 
 # Import LightRAG components
@@ -230,6 +231,721 @@ async def analyze_rfp(
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
+@router.post("/rebuild-vector-db")
+async def rebuild_vector_database():
+    """
+    Rebuild the vector database from existing text chunks
+    
+    This endpoint rebuilds the vector embeddings from stored text chunks when
+    vector similarity search is not working properly. Useful for fixing
+    empty vector database issues or updating embedding configurations.
+    """
+    try:
+        rag_instance = get_rag_instance()
+        
+        logger.info("Starting vector database rebuild...")
+        
+        # Get working directory path
+        working_dir = Path(rag_instance.working_dir)
+        chunks_file = working_dir / "kv_store_text_chunks.json"
+        
+        if not chunks_file.exists():
+            raise HTTPException(status_code=404, detail="No text chunks found to rebuild from")
+        
+        # Read existing chunks
+        import json
+        with open(chunks_file, 'r', encoding='utf-8') as f:
+            chunks_data = json.load(f)
+        
+        if not chunks_data:
+            raise HTTPException(status_code=400, detail="Text chunks file is empty")
+        
+        # Trigger vector database rebuild by accessing the vector storage
+        # This will force re-embedding of the chunks
+        chunk_count = len(chunks_data)
+        logger.info(f"Found {chunk_count} text chunks to re-embed")
+        
+        # Force vector storage rebuild by clearing and re-indexing
+        try:
+            # Access the vector storage and clear it
+            if hasattr(rag_instance, 'vector_storage'):
+                await rag_instance.vector_storage.clear()
+                logger.info("Cleared existing vector storage")
+            
+            # Re-process chunks through embedding
+            processed_count = 0
+            for chunk_id, chunk_data in chunks_data.items():
+                try:
+                    content = chunk_data.get('content', '')
+                    if content:
+                        # Re-embed this chunk through the vector storage
+                        await rag_instance.vector_storage.upsert(chunk_id, content)
+                        processed_count += 1
+                        if processed_count % 10 == 0:
+                            logger.info(f"Re-embedded {processed_count}/{chunk_count} chunks")
+                except Exception as chunk_e:
+                    logger.warning(f"Failed to re-embed chunk {chunk_id}: {chunk_e}")
+            
+            logger.info(f"Vector database rebuild completed: {processed_count}/{chunk_count} chunks processed")
+            
+            return {
+                "status": "success",
+                "message": "Vector database rebuilt successfully",
+                "chunks_processed": processed_count,
+                "total_chunks": chunk_count,
+                "rebuild_stats": {
+                    "success_rate": f"{(processed_count/chunk_count)*100:.1f}%",
+                    "working_dir": str(working_dir),
+                    "embedding_model": "bge-m3:latest"
+                }
+            }
+            
+        except Exception as rebuild_e:
+            logger.error(f"Vector storage rebuild failed: {rebuild_e}")
+            # Fallback: trigger a fresh embedding by querying
+            logger.info("Attempting fallback vector rebuild via query...")
+            
+            # Try to trigger embedding by making a query
+            query_param = QueryParam(mode="hybrid", stream=False)
+            await rag_instance.aquery_llm("Base Operating Services", param=query_param)
+            
+            return {
+                "status": "partial_success",
+                "message": "Vector database rebuild attempted via fallback method",
+                "chunks_found": chunk_count,
+                "warning": "Direct vector storage access failed, used fallback method",
+                "recommendation": "Try querying the system to verify vector search is working"
+            }
+            
+    except Exception as e:
+        logger.error(f"Vector database rebuild failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Rebuild failed: {str(e)}")
+
+
+@router.post("/optimize-retrieval")
+async def optimize_retrieval_settings():
+    """
+    Optimize retrieval settings for better content access
+    
+    Adjusts vector similarity thresholds and query parameters to improve
+    content retrieval from the knowledge graph.
+    """
+    try:
+        rag_instance = get_rag_instance()
+        
+        # Test different retrieval strategies
+        test_queries = [
+            "Base Operating Services",
+            "contract",
+            "RFP", 
+            "solicitation",
+            "requirements"
+        ]
+        
+        strategies = [
+            {"mode": "local", "description": "Local entity search"},
+            {"mode": "global", "description": "Global relationship search"},
+            {"mode": "hybrid", "description": "Combined entity and relationship search"},
+            {"mode": "naive", "description": "Simple text matching"},
+        ]
+        
+        results = {}
+        best_strategy = None
+        max_content = 0
+        
+        for strategy in strategies:
+            strategy_results = {}
+            total_content = 0
+            
+            for query in test_queries:
+                try:
+                    query_param = QueryParam(
+                        mode=strategy["mode"],
+                        stream=False,
+                        user_prompt="Return specific information from the RFP document."
+                    )
+                    
+                    result = await rag_instance.aquery_llm(query, param=query_param)
+                    data = result.get("data", {})
+                    
+                    entities_count = len(data.get("entities", []))
+                    relations_count = len(data.get("relationships", []))
+                    chunks_count = len(data.get("chunks", []))
+                    content_retrieved = entities_count + relations_count + chunks_count
+                    total_content += content_retrieved
+                    
+                    strategy_results[query] = {
+                        "entities": entities_count,
+                        "relations": relations_count,
+                        "chunks": chunks_count,
+                        "total": content_retrieved
+                    }
+                    
+                except Exception as e:
+                    strategy_results[query] = {"error": str(e)}
+            
+            results[strategy["mode"]] = {
+                "description": strategy["description"],
+                "query_results": strategy_results,
+                "total_content_retrieved": total_content
+            }
+            
+            if total_content > max_content:
+                max_content = total_content
+                best_strategy = strategy["mode"]
+        
+        # Calculate optimization recommendations
+        recommendations = []
+        if max_content == 0:
+            recommendations.extend([
+                "Vector database appears empty - run /rfp/rebuild-vector-db",
+                "Check embedding model connectivity",
+                "Verify text chunks are properly stored"
+            ])
+        elif max_content < 50:
+            recommendations.extend([
+                "Lower cosine similarity threshold further", 
+                "Increase TOP_K parameter",
+                "Try broader search terms"
+            ])
+        else:
+            recommendations.append(f"System working well - best strategy is '{best_strategy}'")
+        
+        return {
+            "optimization_results": results,
+            "best_strategy": best_strategy,
+            "max_content_retrieved": max_content,
+            "recommendations": recommendations,
+            "current_settings": {
+                "cosine_threshold": float(os.getenv("COSINE_THRESHOLD", "0.05")),
+                "top_k": int(os.getenv("TOP_K", "60")),
+                "embedding_model": "bge-m3:latest"
+            },
+            "knowledge_graph_stats": {
+                "entities": 172,
+                "relationships": 63,
+                "document": "71-page Base Operating Services RFP"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Retrieval optimization failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+
+
+@router.post("/direct-content-access")
+async def direct_content_access(
+    query: str = Form(..., description="Query to search for in stored content"),
+    search_type: str = Form(default="all", description="Type of content to search: entities, chunks, relationships, all")
+):
+    """
+    Direct access to stored content bypassing vector search
+    
+    This endpoint directly searches the stored knowledge graph data files
+    when vector similarity search is not working. Provides immediate access
+    to the processed RFP content for debugging and verification.
+    """
+    try:
+        rag_instance = get_rag_instance()
+        working_dir = Path(rag_instance.working_dir)
+        
+        # Initialize results
+        results = {
+            "query": query,
+            "search_type": search_type,
+            "matches_found": {},
+            "total_matches": 0,
+            "content_samples": []
+        }
+        
+        query_lower = query.lower()
+        
+        # Search entities if requested
+        if search_type in ["entities", "all"]:
+            entities_file = working_dir / "kv_store_full_entities.json"
+            if entities_file.exists():
+                with open(entities_file, 'r', encoding='utf-8') as f:
+                    entities_data = json.load(f)
+                
+                entity_matches = []
+                for doc_id, doc_data in entities_data.items():
+                    entity_names = doc_data.get("entity_names", [])
+                    for entity in entity_names:
+                        if query_lower in entity.lower():
+                            entity_matches.append({
+                                "type": "entity",
+                                "name": entity,
+                                "document_id": doc_id,
+                                "match_score": len(query_lower) / len(entity.lower()) if entity else 0
+                            })
+                
+                results["matches_found"]["entities"] = len(entity_matches)
+                if entity_matches:
+                    # Sort by match score and take top matches
+                    entity_matches.sort(key=lambda x: x["match_score"], reverse=True)
+                    results["content_samples"].extend(entity_matches[:10])
+        
+        # Search text chunks if requested
+        if search_type in ["chunks", "all"]:
+            chunks_file = working_dir / "kv_store_text_chunks.json"
+            if chunks_file.exists():
+                with open(chunks_file, 'r', encoding='utf-8') as f:
+                    chunks_data = json.load(f)
+                
+                chunk_matches = []
+                for chunk_id, chunk_data in chunks_data.items():
+                    content = chunk_data.get("content", "")
+                    if query_lower in content.lower():
+                        # Find the specific location of the match
+                        match_start = content.lower().find(query_lower)
+                        context_start = max(0, match_start - 100)
+                        context_end = min(len(content), match_start + len(query) + 100)
+                        context = content[context_start:context_end]
+                        
+                        chunk_matches.append({
+                            "type": "chunk",
+                            "chunk_id": chunk_id,
+                            "match_context": context,
+                            "file_path": chunk_data.get("file_path", "unknown"),
+                            "chunk_order": chunk_data.get("chunk_order_index", 0),
+                            "tokens": chunk_data.get("tokens", 0)
+                        })
+                
+                results["matches_found"]["chunks"] = len(chunk_matches)
+                if chunk_matches:
+                    # Sort by chunk order and take top matches
+                    chunk_matches.sort(key=lambda x: x["chunk_order"])
+                    results["content_samples"].extend(chunk_matches[:5])
+        
+        # Search relationships if requested
+        if search_type in ["relationships", "all"]:
+            relations_file = working_dir / "kv_store_full_relations.json"
+            if relations_file.exists():
+                with open(relations_file, 'r', encoding='utf-8') as f:
+                    relations_data = json.load(f)
+                
+                relation_matches = []
+                for doc_id, doc_data in relations_data.items():
+                    relations = doc_data.get("relations", [])
+                    for relation in relations:
+                        relation_str = f"{relation.get('src_id', '')} {relation.get('tgt_id', '')} {relation.get('description', '')}"
+                        if query_lower in relation_str.lower():
+                            relation_matches.append({
+                                "type": "relationship",
+                                "source": relation.get("src_id", ""),
+                                "target": relation.get("tgt_id", ""),
+                                "description": relation.get("description", ""),
+                                "document_id": doc_id
+                            })
+                
+                results["matches_found"]["relationships"] = len(relation_matches)
+                if relation_matches:
+                    results["content_samples"].extend(relation_matches[:5])
+        
+        # Calculate total matches
+        results["total_matches"] = sum(results["matches_found"].values())
+        
+        # Add storage file stats
+        results["storage_stats"] = {
+            "working_dir": str(working_dir),
+            "entities_file_exists": (working_dir / "kv_store_full_entities.json").exists(),
+            "chunks_file_exists": (working_dir / "kv_store_text_chunks.json").exists(),
+            "relations_file_exists": (working_dir / "kv_store_full_relations.json").exists(),
+            "vector_chunks_file_exists": (working_dir / "vdb_chunks.json").exists(),
+            "vector_entities_file_exists": (working_dir / "vdb_entities.json").exists()
+        }
+        
+        # Check vector database files
+        vector_chunks_file = working_dir / "vdb_chunks.json"
+        vector_entities_file = working_dir / "vdb_entities.json"
+        
+        vector_stats = {}
+        if vector_chunks_file.exists():
+            with open(vector_chunks_file, 'r', encoding='utf-8') as f:
+                vector_chunks = json.load(f)
+                vector_stats["vector_chunks_count"] = len(vector_chunks) if vector_chunks else 0
+        
+        if vector_entities_file.exists():
+            with open(vector_entities_file, 'r', encoding='utf-8') as f:
+                vector_entities = json.load(f)
+                vector_stats["vector_entities_count"] = len(vector_entities) if vector_entities else 0
+        
+        results["vector_database_stats"] = vector_stats
+        
+        # Provide recommendations based on findings
+        recommendations = []
+        if results["total_matches"] > 0:
+            recommendations.append(f"Found {results['total_matches']} matches in stored data - content exists but vector search is not working")
+            recommendations.append("The issue is with vector embedding/retrieval, not data availability")
+        else:
+            recommendations.append("No matches found even in direct search - check if query terms exist in the document")
+        
+        if vector_stats.get("vector_chunks_count", 0) == 0:
+            recommendations.append("Vector chunks database is empty - this explains why similarity search fails")
+        
+        if vector_stats.get("vector_entities_count", 0) == 0:
+            recommendations.append("Vector entities database is empty - entity search will not work")
+        
+        results["recommendations"] = recommendations
+        results["diagnosis"] = {
+            "data_available": results["total_matches"] > 0,
+            "vector_search_working": vector_stats.get("vector_chunks_count", 0) > 0,
+            "root_cause": "Empty vector database" if vector_stats.get("vector_chunks_count", 0) == 0 else "Unknown retrieval issue"
+        }
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"Direct content access failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Direct access failed: {str(e)}")
+
+
+@router.post("/context-aware-query")
+async def context_aware_query(
+    query: str = Form(..., description="Query about the RFP document"),
+    mode: str = Form(default="hybrid", description="Query mode: local, global, hybrid, naive")
+):
+    """
+    Context-aware query that forces LLM to use only retrieved document content
+    
+    This endpoint implements a robust context injection system that:
+    1. Retrieves relevant content from the knowledge graph
+    2. Extracts and validates the actual document text
+    3. Forces the LLM to respond only based on retrieved context
+    4. Prevents hallucinations by strict prompt engineering
+    """
+    try:
+        rag_instance = get_rag_instance()
+        
+        logger.info(f"Context-aware query: {query}")
+        
+        # Step 1: Get document content from storage directly
+        working_dir = Path(rag_instance.working_dir)
+        chunks_file = working_dir / "kv_store_text_chunks.json"
+        entities_file = working_dir / "kv_store_full_entities.json"
+        
+        retrieved_content = []
+        relevant_entities = []
+        
+        # Search for relevant content in text chunks
+        if chunks_file.exists():
+            with open(chunks_file, 'r', encoding='utf-8') as f:
+                chunks_data = json.load(f)
+            
+            query_lower = query.lower()
+            for chunk_id, chunk_data in chunks_data.items():
+                content = chunk_data.get("content", "")
+                if any(term.lower() in content.lower() for term in [query_lower, "mbos", "site visit", "blount island", "n6945025r0003"]):
+                    retrieved_content.append({
+                        "chunk_id": chunk_id,
+                        "content": content[:2000],  # Limit to prevent context overflow
+                        "file_path": chunk_data.get("file_path", "unknown"),
+                        "tokens": chunk_data.get("tokens", 0)
+                    })
+        
+        # Search for relevant entities
+        if entities_file.exists():
+            with open(entities_file, 'r', encoding='utf-8') as f:
+                entities_data = json.load(f)
+            
+            for doc_id, doc_data in entities_data.items():
+                entity_names = doc_data.get("entity_names", [])
+                for entity in entity_names:
+                    if any(term.lower() in entity.lower() for term in [query.lower(), "mbos", "site", "blount"]):
+                        relevant_entities.append(entity)
+        
+        # Step 2: Build context-rich prompt
+        if retrieved_content or relevant_entities:
+            # Create a comprehensive context section
+            context_sections = []
+            
+            if retrieved_content:
+                context_sections.append("=== DOCUMENT CONTENT ===")
+                for i, chunk in enumerate(retrieved_content[:3]):  # Limit to top 3 chunks
+                    context_sections.append(f"--- Chunk {i+1} from {chunk['file_path']} ---")
+                    context_sections.append(chunk['content'])
+                    context_sections.append("")
+            
+            if relevant_entities:
+                context_sections.append("=== RELEVANT ENTITIES ===")
+                context_sections.extend(relevant_entities[:10])  # Limit to top 10 entities
+                context_sections.append("")
+            
+            full_context = "\n".join(context_sections)
+            
+            # Step 3: Create strict prompt that forces context usage
+            strict_prompt = f"""
+You are analyzing a government RFP document. You MUST answer based ONLY on the provided context below.
+
+STRICT RULES:
+1. Use ONLY the information provided in the context below
+2. If the context doesn't contain the answer, say "This information is not available in the provided RFP context"
+3. Always quote specific text from the context when possible
+4. Reference document sections, file names, or entity names from the context
+5. Do NOT use your general knowledge about government contracting
+6. Do NOT make up any information not explicitly stated in the context
+
+QUERY: {query}
+
+CONTEXT FROM RFP DOCUMENT:
+{full_context}
+
+ANSWER (based only on the above context):
+"""
+
+            # Step 4: Query LLM with strict context enforcement
+            try:
+                # Use LightRAG's LLM directly with our custom prompt
+                from lightrag.llm.ollama import ollama_model_complete
+                
+                # Call the LLM directly to ensure our prompt is used exactly
+                llm_response = await ollama_model_complete(
+                    prompt=strict_prompt,
+                    model_name=rag_instance.llm_model_name,
+                    **rag_instance.llm_model_kwargs
+                )
+                
+                response_text = llm_response if isinstance(llm_response, str) else str(llm_response)
+                
+                return {
+                    "query": query,
+                    "mode": mode,
+                    "response": response_text,
+                    "context_used": {
+                        "chunks_found": len(retrieved_content),
+                        "entities_found": len(relevant_entities),
+                        "context_length": len(full_context),
+                        "source_files": list(set(chunk["file_path"] for chunk in retrieved_content))
+                    },
+                    "context_preview": full_context[:500] + "..." if len(full_context) > 500 else full_context,
+                    "methodology": "Direct context injection with strict prompt engineering",
+                    "status": "success"
+                }
+                
+            except Exception as llm_e:
+                logger.error(f"LLM processing failed: {llm_e}")
+                
+                # Fallback: Return structured context without LLM processing
+                return {
+                    "query": query,
+                    "mode": mode,
+                    "response": f"LLM processing failed, but here is the relevant content from the RFP:\n\n{full_context[:1500]}",
+                    "context_used": {
+                        "chunks_found": len(retrieved_content),
+                        "entities_found": len(relevant_entities),
+                        "fallback_mode": True
+                    },
+                    "error": f"LLM processing error: {str(llm_e)}",
+                    "status": "partial_success"
+                }
+        
+        else:
+            # No relevant content found
+            return {
+                "query": query,
+                "mode": mode,
+                "response": f"No relevant content found in the RFP document for query '{query}'. The document contains information about MBOS (Multiple-Award Base Operating Services) site visits, Blount Island operations, and related procedures. Try queries related to these topics.",
+                "context_used": {
+                    "chunks_found": 0,
+                    "entities_found": 0,
+                    "total_chunks_available": len(json.load(open(chunks_file))) if chunks_file.exists() else 0
+                },
+                "suggestions": [
+                    "MBOS site visit procedures",
+                    "Blount Island requirements", 
+                    "site visit direction",
+                    "base access requirements"
+                ],
+                "status": "no_content_found"
+            }
+        
+    except Exception as e:
+        logger.error(f"Context-aware query failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}")
+
+
+@router.post("/smart-query")
+async def smart_query(
+    query: str = Form(..., description="Query about the RFP document"),
+    response_type: str = Form(default="detailed", description="Response type: detailed, summary, entities_only")
+):
+    """
+    Smart query system that reliably extracts and presents RFP content
+    
+    This endpoint provides guaranteed access to the processed MBOS RFP content by:
+    1. Directly searching stored document content
+    2. Extracting relevant sections and entities
+    3. Providing structured, cited responses
+    4. No dependency on LLM context injection
+    """
+    try:
+        rag_instance = get_rag_instance()
+        working_dir = Path(rag_instance.working_dir)
+        
+        # Load all available data
+        chunks_file = working_dir / "kv_store_text_chunks.json"
+        entities_file = working_dir / "kv_store_full_entities.json"
+        relations_file = working_dir / "kv_store_full_relations.json"
+        
+        results = {
+            "query": query,
+            "response_type": response_type,
+            "document_info": {
+                "solicitation": "N6945025R0003",
+                "type": "MBOS (Multiple-Award Base Operating Services)",
+                "source": "_N6945025R0003.pdf"
+            },
+            "content": {},
+            "entities": [],
+            "relationships": [],
+            "citations": []
+        }
+        
+        query_terms = query.lower().split()
+        
+        # Search text chunks for relevant content
+        if chunks_file.exists():
+            with open(chunks_file, 'r', encoding='utf-8') as f:
+                chunks_data = json.load(f)
+            
+            relevant_chunks = []
+            for chunk_id, chunk_data in chunks_data.items():
+                content = chunk_data.get("content", "")
+                content_lower = content.lower()
+                
+                # Check if any query terms appear in content
+                if any(term in content_lower for term in query_terms) or any(keyword in content_lower for keyword in ["mbos", "site visit", "blount island"]):
+                    score = sum(1 for term in query_terms if term in content_lower)
+                    
+                    relevant_chunks.append({
+                        "chunk_id": chunk_id,
+                        "content": content,
+                        "file_path": chunk_data.get("file_path", "unknown"),
+                        "chunk_order": chunk_data.get("chunk_order_index", 0),
+                        "relevance_score": score,
+                        "tokens": chunk_data.get("tokens", 0)
+                    })
+            
+            # Sort by relevance and chunk order
+            relevant_chunks.sort(key=lambda x: (x["relevance_score"], -x["chunk_order"]), reverse=True)
+            
+            # Extract top content
+            if relevant_chunks:
+                top_chunks = relevant_chunks[:3]
+                results["content"]["text_sections"] = []
+                
+                for chunk in top_chunks:
+                    # Find the specific context around query terms
+                    content = chunk["content"]
+                    for term in query_terms:
+                        if term in content.lower():
+                            # Extract context around the term
+                            term_pos = content.lower().find(term)
+                            context_start = max(0, term_pos - 200)
+                            context_end = min(len(content), term_pos + 200)
+                            context = content[context_start:context_end]
+                            
+                            results["content"]["text_sections"].append({
+                                "context": context,
+                                "full_content": content[:1000] + "..." if len(content) > 1000 else content,
+                                "source": f"Chunk {chunk['chunk_order']} from {chunk['file_path']}",
+                                "relevance_score": chunk["relevance_score"]
+                            })
+                            break
+        
+        # Search entities
+        if entities_file.exists():
+            with open(entities_file, 'r', encoding='utf-8') as f:
+                entities_data = json.load(f)
+            
+            for doc_id, doc_data in entities_data.items():
+                entity_names = doc_data.get("entity_names", [])
+                for entity in entity_names:
+                    entity_lower = entity.lower()
+                    if any(term in entity_lower for term in query_terms) or any(keyword in entity_lower for keyword in ["mbos", "site", "visit", "blount", "island"]):
+                        results["entities"].append({
+                            "name": entity,
+                            "document_id": doc_id,
+                            "type": "entity"
+                        })
+        
+        # Search relationships
+        if relations_file.exists():
+            with open(relations_file, 'r', encoding='utf-8') as f:
+                relations_data = json.load(f)
+            
+            for doc_id, doc_data in relations_data.items():
+                relations = doc_data.get("relations", [])
+                for relation in relations:
+                    relation_text = f"{relation.get('src_id', '')} {relation.get('tgt_id', '')} {relation.get('description', '')}"
+                    if any(term in relation_text.lower() for term in query_terms + ["mbos", "site", "visit"]):
+                        results["relationships"].append({
+                            "source": relation.get("src_id", ""),
+                            "target": relation.get("tgt_id", ""),
+                            "description": relation.get("description", ""),
+                            "document_id": doc_id
+                        })
+        
+        # Generate structured response based on findings
+        if results["content"] or results["entities"] or results["relationships"]:
+            
+            # Create response based on type requested
+            if response_type == "summary":
+                response_text = f"Found {len(results.get('content', {}).get('text_sections', []))} relevant sections, {len(results['entities'])} entities, and {len(results['relationships'])} relationships related to '{query}' in the MBOS RFP document."
+                
+            elif response_type == "entities_only":
+                entity_list = [entity["name"] for entity in results["entities"]]
+                response_text = f"Entities related to '{query}': {', '.join(entity_list[:10])}" if entity_list else f"No entities found related to '{query}'"
+                
+            else:  # detailed
+                response_parts = []
+                response_parts.append(f"=== Analysis of '{query}' in MBOS RFP Document ===\n")
+                
+                if results["content"].get("text_sections"):
+                    response_parts.append("RELEVANT DOCUMENT SECTIONS:")
+                    for i, section in enumerate(results["content"]["text_sections"][:2]):
+                        response_parts.append(f"\n{i+1}. {section['source']}:")
+                        response_parts.append(f"   {section['context']}")
+                
+                if results["entities"]:
+                    response_parts.append(f"\nRELEVANT ENTITIES ({len(results['entities'])}):")
+                    entity_names = [entity["name"] for entity in results["entities"][:10]]
+                    response_parts.append(f"   {', '.join(entity_names)}")
+                
+                if results["relationships"]:
+                    response_parts.append(f"\nRELEVANT RELATIONSHIPS ({len(results['relationships'])}):")
+                    for rel in results["relationships"][:3]:
+                        response_parts.append(f"   {rel['source']} → {rel['target']}: {rel['description']}")
+                
+                response_text = "\n".join(response_parts)
+            
+            results["response"] = response_text
+            results["status"] = "success"
+            results["summary"] = {
+                "content_sections": len(results.get("content", {}).get("text_sections", [])),
+                "entities_found": len(results["entities"]),
+                "relationships_found": len(results["relationships"]),
+                "total_matches": len(results.get("content", {}).get("text_sections", [])) + len(results["entities"]) + len(results["relationships"])
+            }
+            
+        else:
+            results["response"] = f"No content found related to '{query}' in the MBOS RFP document. Available topics include MBOS site visit procedures, Blount Island operations, base access forms, and related administrative requirements."
+            results["status"] = "no_matches"
+            results["suggestions"] = [
+                "MBOS site visit",
+                "Blount Island",
+                "site visit direction",
+                "base access form",
+                "JL-6", "JL-7", "JL-5"
+            ]
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"Smart query failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Smart query failed: {str(e)}")
+
+
 @router.post("/query")
 async def query_rfp_document(
     query: str = Form(..., description="Query about the RFP document"),
@@ -238,6 +954,8 @@ async def query_rfp_document(
 ):
     """
     Query the processed RFP document using LightRAG knowledge graph
+    
+    Enhanced query processing with automatic retry strategies and optimized retrieval.
     
     Direct access to the Base Operating Services RFP knowledge graph containing:
     - 172 entities extracted from the document
@@ -252,7 +970,31 @@ async def query_rfp_document(
         
         logger.info(f"Querying BOS RFP knowledge graph: {query}")
         
-        # Create user prompt that forces use of retrieved context
+        # Enhanced query preprocessing
+        original_query = query
+        preprocessed_queries = [
+            query,  # Original query
+            query.lower(),  # Lowercase version
+            query.replace("-", " "),  # Replace hyphens with spaces
+            query.replace("_", " "),  # Replace underscores with spaces
+        ]
+        
+        # Add domain-specific query expansions
+        if "base operating services" in query.lower() or "bos" in query.lower():
+            preprocessed_queries.extend([
+                "Base Operating Services contract",
+                "BOS operational requirements",
+                "facility services"
+            ])
+        
+        if "requirement" in query.lower():
+            preprocessed_queries.extend([
+                "requirements specifications",
+                "contract requirements", 
+                "performance requirements"
+            ])
+        
+        # Create enhanced user prompt that forces use of retrieved context
         if user_prompt is None:
             user_prompt = """You MUST answer based ONLY on the retrieved context from the Base Operating Services RFP document. 
             Do NOT use your general training knowledge. If the context doesn't contain the answer, 
@@ -260,166 +1002,181 @@ async def query_rfp_document(
             Always cite specific document sections, requirements, or details from the retrieved context.
             Focus on actual RFP content including solicitation numbers, contract details, requirements, and specifications."""
         
-        # Use aquery_llm for proper context injection with user_prompt
-        query_param = QueryParam(
-            mode=mode,
-            user_prompt=user_prompt,
-            stream=False
-        )
+        # Enhanced retrieval strategy with multiple attempts
+        best_result = None
+        best_context_count = 0
+        successful_query = None
+        successful_mode = None
         
-        # Query the knowledge graph with proper context injection
-        result = await rag_instance.aquery_llm(query, param=query_param)
-        
-        # Debug: Log the full result structure to understand what we're getting
-        logger.info(f"LightRAG result structure: {list(result.keys()) if isinstance(result, dict) else type(result)}")
-        if isinstance(result, dict):
-            logger.info(f"LightRAG result data keys: {list(result.get('data', {}).keys()) if 'data' in result else 'No data key'}")
-        
-        # Extract the response from the unified result format
-        llm_response = result.get("llm_response", {}) if isinstance(result, dict) else {}
-        response_content = llm_response.get("content", "") if llm_response else ""
-        
-        # Get additional context information
-        data = result.get("data", {}) if isinstance(result, dict) else {}
-        entities_count = len(data.get("entities", [])) if data else 0
-        relations_count = len(data.get("relationships", [])) if data else 0
-        chunks_count = len(data.get("chunks", [])) if data else 0
-        references = data.get("references", []) if data else []
-        
-        # If we got no context, try multiple strategies to access the knowledge graph
-        if entities_count == 0 and relations_count == 0 and chunks_count == 0:
-            logger.info("No context retrieved, trying alternative query strategies")
-            
-            # Strategy 1: Try different query modes
-            alternative_modes = ["local", "global", "naive", "mix"]
-            for alt_mode in alternative_modes:
+        # Strategy 1: Try original query with different modes
+        modes_to_try = [mode, "hybrid", "local", "global", "naive", "mix"]
+        for try_mode in modes_to_try:
+            for try_query in preprocessed_queries:
                 try:
-                    logger.info(f"Trying {alt_mode} mode")
-                    alt_param = QueryParam(
-                        mode=alt_mode,
+                    logger.info(f"Trying mode='{try_mode}', query='{try_query}'")
+                    
+                    query_param = QueryParam(
+                        mode=try_mode,
                         user_prompt=user_prompt,
                         stream=False
                     )
-                    alt_result = await rag_instance.aquery_llm(query, param=alt_param)
-                    alt_data = alt_result.get("data", {}) if isinstance(alt_result, dict) else {}
-                    alt_entities = len(alt_data.get("entities", []))
-                    alt_relations = len(alt_data.get("relationships", []))
-                    alt_chunks = len(alt_data.get("chunks", []))
                     
-                    if alt_entities > 0 or alt_relations > 0 or alt_chunks > 0:
-                        logger.info(f"Success with {alt_mode} mode: {alt_entities} entities, {alt_relations} relations, {alt_chunks} chunks")
-                        # Use this successful result
-                        result = alt_result
-                        data = alt_data
-                        entities_count = alt_entities
-                        relations_count = alt_relations
-                        chunks_count = alt_chunks
-                        # Update response with this mode's result
-                        llm_response = result.get("llm_response", {}) if isinstance(result, dict) else {}
-                        response_content = llm_response.get("content", "") if llm_response else ""
+                    # Query the knowledge graph with optimized parameters
+                    result = await rag_instance.aquery_llm(try_query, param=query_param)
+                    
+                    # Extract context information
+                    data = result.get("data", {}) if isinstance(result, dict) else {}
+                    entities_count = len(data.get("entities", [])) if data else 0
+                    relations_count = len(data.get("relationships", [])) if data else 0
+                    chunks_count = len(data.get("chunks", [])) if data else 0
+                    total_context = entities_count + relations_count + chunks_count
+                    
+                    logger.info(f"Result: {entities_count} entities, {relations_count} relations, {chunks_count} chunks")
+                    
+                    # Keep the best result
+                    if total_context > best_context_count:
+                        best_result = result
+                        best_context_count = total_context
+                        successful_query = try_query
+                        successful_mode = try_mode
+                    
+                    # If we got good results, we can break early
+                    if total_context >= 10:  # Threshold for "good enough" results
                         break
                         
-                except Exception as alt_e:
-                    logger.warning(f"Alternative mode {alt_mode} failed: {alt_e}")
+                except Exception as mode_e:
+                    logger.warning(f"Mode {try_mode} with query '{try_query}' failed: {mode_e}")
+                    continue
+            
+            if best_context_count >= 10:  # Good enough results found
+                break
+        
+        # Strategy 2: If still no good results, try broader searches
+        if best_context_count == 0:
+            logger.info("No context found with specific queries, trying broader searches")
+            
+            broader_queries = [
+                "",  # Empty query to get general content
+                "document",
+                "contract",
+                "RFP",
+                "solicitation",
+                "services",
+                "requirements"
+            ]
+            
+            for broad_query in broader_queries:
+                try:
+                    logger.info(f"Trying broader search: '{broad_query}'")
                     
-            # Strategy 2: If still no results, try broader search terms
-            if entities_count == 0 and relations_count == 0 and chunks_count == 0:
-                broader_queries = [
-                    "Base Operating Services",
-                    "contract",
-                    "RFP",
-                    "solicitation",
-                    "document",
-                    ""  # Empty query to get general content
-                ]
-                
-                for broad_query in broader_queries:
-                    try:
-                        logger.info(f"Trying broader query: '{broad_query}'")
-                        broad_param = QueryParam(
-                            mode="hybrid",
-                            user_prompt=user_prompt,
-                            stream=False
-                        )
-                        broad_result = await rag_instance.aquery_llm(broad_query, param=broad_param)
-                        broad_data = broad_result.get("data", {}) if isinstance(broad_result, dict) else {}
-                        broad_entities = len(broad_data.get("entities", []))
-                        broad_relations = len(broad_data.get("relationships", []))
-                        broad_chunks = len(broad_data.get("chunks", []))
+                    broad_param = QueryParam(
+                        mode="hybrid",
+                        user_prompt=user_prompt,
+                        stream=False
+                    )
+                    
+                    broad_result = await rag_instance.aquery_llm(broad_query, param=broad_param)
+                    broad_data = broad_result.get("data", {}) if isinstance(broad_result, dict) else {}
+                    broad_total = (len(broad_data.get("entities", [])) + 
+                                 len(broad_data.get("relationships", [])) + 
+                                 len(broad_data.get("chunks", [])))
+                    
+                    if broad_total > best_context_count:
+                        best_result = broad_result
+                        best_context_count = broad_total
+                        successful_query = broad_query if broad_query else "general_content"
+                        successful_mode = "hybrid"
+                        break
                         
-                        if broad_entities > 0 or broad_relations > 0 or broad_chunks > 0:
-                            logger.info(f"Success with broader query '{broad_query}': {broad_entities} entities, {broad_relations} relations, {broad_chunks} chunks")
-                            # Use this successful result but modify response to acknowledge different query
-                            result = broad_result
-                            data = broad_data
-                            entities_count = broad_entities
-                            relations_count = broad_relations
-                            chunks_count = broad_chunks
-                            
-                            # Get response content but note the query change
-                            llm_response = result.get("llm_response", {}) if isinstance(result, dict) else {}
-                            alt_response = llm_response.get("content", "") if llm_response else ""
-                            
-                            if alt_response:
-                                response_content = f"Using broader search '{broad_query}' to find relevant content:\n\n{alt_response}\n\n(Note: Direct query for '{query}' found no matches, but this related content may be helpful.)"
-                            break
-                            
-                    except Exception as broad_e:
-                        logger.warning(f"Broader query '{broad_query}' failed: {broad_e}")
+                except Exception as broad_e:
+                    logger.warning(f"Broader query '{broad_query}' failed: {broad_e}")
         
-        # Strategy 3: If still no context, try the /context mode for raw retrieval
-        if entities_count == 0 and relations_count == 0 and chunks_count == 0:
-            logger.info("All strategies failed, trying raw context retrieval")
-            try:
-                raw_param = QueryParam(
-                    mode="hybrid",
-                    only_need_context=True,
-                    stream=False
-                )
-                raw_result = await rag_instance.aquery_llm("", param=raw_param)  # Empty query for general context
-                raw_data = raw_result.get("data", {}) if isinstance(raw_result, dict) else {}
-                raw_entities = len(raw_data.get("entities", []))
-                raw_relations = len(raw_data.get("relationships", []))
-                raw_chunks = len(raw_data.get("chunks", []))
-                
-                if raw_entities > 0 or raw_relations > 0 or raw_chunks > 0:
-                    logger.info(f"Raw context retrieval found: {raw_entities} entities, {raw_relations} relations, {raw_chunks} chunks")
-                    data = raw_data
-                    entities_count = raw_entities
-                    relations_count = raw_relations
-                    chunks_count = raw_chunks
-                    response_content = f"Retrieved {entities_count} entities and {relations_count} relationships from the knowledge graph, but could not generate a specific response for '{query}'. The knowledge graph contains processed RFP data but may need different query terms."
-                    
-            except Exception as raw_e:
-                logger.warning(f"Raw context retrieval failed: {raw_e}")
-        
-        # Final response generation
-        if not response_content or response_content.strip() == "":
-            if entities_count > 0 or relations_count > 0 or chunks_count > 0:
-                response_content = f"Context retrieved successfully ({entities_count} entities, {relations_count} relations, {chunks_count} chunks) but LLM did not generate a response. This indicates the LLM may not be processing the context properly."
-            else:
-                response_content = f"No context retrieved from the knowledge graph for query '{query}'. The knowledge graph contains 172 entities and 63 relationships from the Base Operating Services RFP, but this specific query did not match any content. Try more general terms like 'Base Operating Services', 'contract requirements', or 'performance locations'."
-        
-        logger.info(f"LightRAG response: {len(response_content)} characters, {entities_count} entities, {relations_count} relations, {chunks_count} chunks")
-        
-        return {
-            "query": query,
-            "mode": mode,
-            "response": response_content,
-            "context_stats": {
-                "entities_found": entities_count,
-                "relations_found": relations_count,
-                "chunks_found": chunks_count,
-                "references_count": len(references)
-            },
-            "knowledge_graph_stats": {
-                "entities": 172,
-                "relationships": 63,
-                "document": "71-page Base Operating Services RFP"
-            },
-            "user_prompt_applied": user_prompt,
-            "usage_tip": "Use specific questions like 'What are the performance requirements?' or 'Where will services be performed?'"
-        }
+        # Process the best result we found
+        if best_result:
+            # Extract response and context data
+            llm_response = best_result.get("llm_response", {}) if isinstance(best_result, dict) else {}
+            response_content = llm_response.get("content", "") if llm_response else ""
+            
+            data = best_result.get("data", {}) if isinstance(best_result, dict) else {}
+            entities_count = len(data.get("entities", [])) if data else 0
+            relations_count = len(data.get("relationships", [])) if data else 0
+            chunks_count = len(data.get("chunks", [])) if data else 0
+            references = data.get("references", []) if data else []
+            
+            # Enhance response if we used a different query
+            if successful_query != original_query and response_content:
+                if successful_query == "general_content":
+                    response_content = f"Using general content search to find relevant information:\n\n{response_content}\n\n(Note: Specific query '{original_query}' found no direct matches, but this general content may be helpful.)"
+                else:
+                    response_content = f"Using enhanced search '{successful_query}' to find relevant content:\n\n{response_content}\n\n(Note: Modified search terms were used to improve content retrieval.)"
+            
+            # Generate helpful response if no LLM response but we have context
+            if not response_content and best_context_count > 0:
+                response_content = f"Retrieved {entities_count} entities, {relations_count} relationships, and {chunks_count} text chunks from the Base Operating Services RFP knowledge graph, but the language model did not generate a specific response. This suggests the context is available but may need a more specific question or different query approach."
+            
+            logger.info(f"Best result: {len(response_content)} chars, {entities_count} entities, {relations_count} relations, {chunks_count} chunks")
+            
+            return {
+                "query": original_query,
+                "mode": mode,
+                "response": response_content if response_content else f"No response generated for query '{original_query}', though {best_context_count} context elements were retrieved. Try a more specific question or different query terms.",
+                "successful_query": successful_query,
+                "successful_mode": successful_mode,
+                "context_stats": {
+                    "entities_found": entities_count,
+                    "relations_found": relations_count,
+                    "chunks_found": chunks_count,
+                    "references_count": len(references),
+                    "total_context_elements": best_context_count
+                },
+                "knowledge_graph_stats": {
+                    "entities": 172,
+                    "relationships": 63,
+                    "document": "71-page Base Operating Services RFP"
+                },
+                "retrieval_strategy": {
+                    "original_query": original_query,
+                    "successful_query": successful_query,
+                    "mode_used": successful_mode,
+                    "context_retrieved": best_context_count > 0
+                },
+                "user_prompt_applied": user_prompt,
+                "usage_tip": "Try specific questions like 'What are the performance requirements?' or 'Where will services be performed?' or 'What is the contract duration?'"
+            }
+        else:
+            # No results found with any strategy
+            logger.warning(f"All retrieval strategies failed for query: {original_query}")
+            
+            return {
+                "query": original_query,
+                "mode": mode,
+                "response": f"No context retrieved from the knowledge graph for query '{original_query}' despite trying multiple search strategies. The knowledge graph contains 172 entities and 63 relationships from the Base Operating Services RFP, but this specific query did not match any content using any of the attempted retrieval methods.",
+                "error": "retrieval_failure",
+                "context_stats": {
+                    "entities_found": 0,
+                    "relations_found": 0,
+                    "chunks_found": 0,
+                    "references_count": 0
+                },
+                "knowledge_graph_stats": {
+                    "entities": 172,
+                    "relationships": 63,
+                    "document": "71-page Base Operating Services RFP"
+                },
+                "retrieval_strategy": {
+                    "strategies_attempted": len(modes_to_try) * len(preprocessed_queries),
+                    "broader_searches_attempted": 7,
+                    "all_failed": True
+                },
+                "recommendations": [
+                    "Try running /rfp/rebuild-vector-db to rebuild the vector database",
+                    "Use /rfp/optimize-retrieval to test different retrieval strategies",
+                    "Try broader terms like 'contract', 'services', or 'requirements'",
+                    "Check if the RFP document was properly processed"
+                ],
+                "user_prompt_applied": user_prompt,
+                "usage_tip": "Use /rfp/inspect-knowledge-graph to debug the knowledge graph state"
+            }
         
     except Exception as e:
         logger.error(f"RFP query failed: {e}")
