@@ -898,7 +898,7 @@ curl -X POST "http://localhost:9621/query" \
 
 ### **Successfully Processed Content**
 
-- **Document**: Navy Solicitation N6945025R0003 
+- **Document**: Navy Solicitation N6945025R0003
 - **Type**: MBOS (Multiple-Award Base Operating Services)
 - **File**: `_N6945025R0003.pdf`
 - **Entities**: 172 extracted (including MBOS Site Visit Direction, MBOS Site Visit Route, Blount Island Base Access Form)
