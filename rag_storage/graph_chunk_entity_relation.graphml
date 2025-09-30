@@ -1,0 +1,1894 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d11" for="edge" attr.name="created_at" attr.type="long"/>
+<key id="d10" for="edge" attr.name="file_path" attr.type="string"/>
+<key id="d9" for="edge" attr.name="source_id" attr.type="string"/>
+<key id="d8" for="edge" attr.name="keywords" attr.type="string"/>
+<key id="d7" for="edge" attr.name="description" attr.type="string"/>
+<key id="d6" for="edge" attr.name="weight" attr.type="double"/>
+<key id="d5" for="node" attr.name="created_at" attr.type="long"/>
+<key id="d4" for="node" attr.name="file_path" attr.type="string"/>
+<key id="d3" for="node" attr.name="source_id" attr.type="string"/>
+<key id="d2" for="node" attr.name="description" attr.type="string"/>
+<key id="d1" for="node" attr.name="entity_type" attr.type="string"/>
+<key id="d0" for="node" attr.name="entity_id" attr.type="string"/>
+<graph edgedefault="undirected"><node id="ELINS">
+  <data key="d0">ELINS</data>
+  <data key="d1">elinlist</data>
+  <data key="d2">List of ELINs for ordering via FedMall</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244762</data>
+</node>
+<node id="Contractor">
+  <data key="d0">Contractor</data>
+  <data key="d1">serviceprovider</data>
+  <data key="d2">Responsible for delivering supplies and services</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244762</data>
+</node>
+<node id="Courtney J. Peterson">
+  <data key="d0">Courtney J. Peterson</data>
+  <data key="d1">person</data>
+  <data key="d2">US Navy</data>
+  <data key="d3">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244767</data>
+</node>
+<node id="Cari L. Fiebach">
+  <data key="d0">Cari L. Fiebach</data>
+  <data key="d1">person</data>
+  <data key="d2">US Navy</data>
+  <data key="d3">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244767</data>
+</node>
+<node id="Past Performance Questionnaire (PPQ)">
+  <data key="d0">Past Performance Questionnaire (PPQ)</data>
+  <data key="d1">content</data>
+  <data key="d2">Solicitation document</data>
+  <data key="d3">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244768</data>
+</node>
+<node id="FAPIIS (Federal Awardee Performance and Integrity Information System)">
+  <data key="d0">FAPIIS (Federal Awardee Performance and Integrity Information System)</data>
+  <data key="d1">system</data>
+  <data key="d2">Government database</data>
+  <data key="d3">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244768</data>
+</node>
+<node id="Electronic Subcontract Reporting System (eSRS)">
+  <data key="d0">Electronic Subcontract Reporting System (eSRS)</data>
+  <data key="d1">system</data>
+  <data key="d2">Government database</data>
+  <data key="d3">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244769</data>
+</node>
+<node id="Factor 1, Corporate Experience">
+  <data key="d0">Factor 1, Corporate Experience</data>
+  <data key="d1">evaluationcriterion</data>
+  <data key="d2">Proposal assessment</data>
+  <data key="d3">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244769</data>
+</node>
+<node id="Number">
+  <data key="d0">Number</data>
+  <data key="d1">type</data>
+  <data key="d2">Description</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244769</data>
+</node>
+<node id="JL-1">
+  <data key="d0">JL-1</data>
+  <data key="d1">laborhoursspreadsheet</data>
+  <data key="d2">Provided as file name JL-1_N6945025R0003_Labor_Hours_Spreadsheet.xlsx.</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244770</data>
+</node>
+<node id="JL-3">
+  <data key="d0">JL-3</data>
+  <data key="d1">sitevisititinerary</data>
+  <data key="d2">Provided as file names JL-3_N6945025R0003_MBOS_Site_Visit_Itinerary.ppt and JL-3_N6945025R0003_MCSF-BI_Site_Visit_Itinerary.docx.</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244770</data>
+</node>
+<node id="JL-5">
+  <data key="d0">JL-5</data>
+  <data key="d1">blountislandbaseaccessform</data>
+  <data key="d2">Provided as file name JL-5_N6945025R0003_BI_Base_Access_Form.xlsx.</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244770</data>
+</node>
+<node id="JL-6">
+  <data key="d0">JL-6</data>
+  <data key="d1">mbossitevisitdirection</data>
+  <data key="d2">Provided as file name JL-6_N6945025R0003_MBOS_SITE_VISIT_Directions.pdf.</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244771</data>
+</node>
+<node id="JL-7">
+  <data key="d0">JL-7</data>
+  <data key="d1">mbossitevisitroute</data>
+  <data key="d2">Provided as file name JL-7_N6945025R0003_MBOS_SITE_VISIT_ROUTE.pdf.</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244771</data>
+</node>
+<node id="JL-8">
+  <data key="d0">JL-8</data>
+  <data key="d1">smallbusinesssubcontractingplantemplate</data>
+  <data key="d2">Provided as file name  JL-8_N6945025R0003_Small_Business_Subcontracting_Plan_(SBSP)_Template.docx.</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244772</data>
+</node>
+<node id="JM-1">
+  <data key="d0">JM-1</data>
+  <data key="d1">corporateexperienceprojectdatasheet</data>
+  <data key="d2">Provided as file name JM-1_N6945025R0003_Corporate_Experience.docx.</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244772</data>
+</node>
+<node id="JM-2">
+  <data key="d0">JM-2</data>
+  <data key="d1">historicalsmallbusinessutilization</data>
+  <data key="d2">Provided as file name JM-2_N6945025R0003_Historical_Small_Business_Utilization.docx.</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244773</data>
+</node>
+<node id="Person">
+  <data key="d0">Person</data>
+  <data key="d1">woman-ownedsmallbusiness</data>
+  <data key="d2">Unspecified&lt;SEP&gt;[MISSING]&lt;SEP&gt;WOSB</data>
+  <data key="d3">chunk-ce59df938c13615832f97546747a6de5&lt;SEP&gt;chunk-fb51eafe17d13b3384be33257f424ab7&lt;SEP&gt;chunk-c8546354e16a2d7f6a68cbb0fcb5d5ee</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244773</data>
+</node>
+<node id="Concept">
+  <data key="d0">Concept</data>
+  <data key="d1">service-disabledveteran-ownedsmallbusiness</data>
+  <data key="d2">SDVOSB&lt;SEP&gt;A system for managing safety in the workplace</data>
+  <data key="d3">chunk-cc33b7d57d832edfa3201846ac71e470&lt;SEP&gt;chunk-fb51eafe17d13b3384be33257f424ab7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244774</data>
+</node>
+<node id="EntityName">
+  <data key="d0">EntityName</data>
+  <data key="d1">entitytype</data>
+  <data key="d2">Description</data>
+  <data key="d3">chunk-b37a0f6b94299524e95ad0cbeca67635</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244774</data>
+</node>
+<node id="Page">
+  <data key="d0">Page</data>
+  <data key="d1">referencepage</data>
+  <data key="d2">Identifies the page number of a document</data>
+  <data key="d3">chunk-b37a0f6b94299524e95ad0cbeca67635</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244775</data>
+</node>
+<node id="Section">
+  <data key="d0">Section</data>
+  <data key="d1">contractadministrationdata</data>
+  <data key="d2">Contains details about contract administration</data>
+  <data key="d3">chunk-b37a0f6b94299524e95ad0cbeca67635</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244775</data>
+</node>
+<node id="Payment Instructions">
+  <data key="d0">Payment Instructions</data>
+  <data key="d1">paymentinstructions</data>
+  <data key="d2">Details on payment instructions for government use</data>
+  <data key="d3">chunk-b37a0f6b94299524e95ad0cbeca67635</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244775</data>
+</node>
+<node id="includes">
+  <data key="d0">includes</data>
+  <data key="d1">g.5paymentinstructions</data>
+  <data key="d2">Contains payment instructions within section</data>
+  <data key="d3">chunk-b37a0f6b94299524e95ad0cbeca67635</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244775</data>
+</node>
+<node id="contains">
+  <data key="d0">contains</data>
+  <data key="d1">sectiong-contractadministrationdata</data>
+  <data key="d2">Reference page includes details about contract administration</data>
+  <data key="d3">chunk-b37a0f6b94299524e95ad0cbeca67635</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244776</data>
+</node>
+<node id="file_type">
+  <data key="d0">file_type</data>
+  <data key="d1">pdf</data>
+  <data key="d2">format</data>
+  <data key="d3">chunk-deba2fd9b935410a201523a01e8d10bd</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244776</data>
+</node>
+<node id="Organization">
+  <data key="d0">Organization</data>
+  <data key="d1">dfarsclausesincorporatedbyfulltext</data>
+  <data key="d2">Department of Defense&lt;SEP&gt;Financial Services&lt;SEP&gt;Banking Services&lt;SEP&gt;52.252-3 Alterations in Solicitation.&lt;SEP&gt;Occupational Safety and Health Administration</data>
+  <data key="d3">chunk-cc33b7d57d832edfa3201846ac71e470&lt;SEP&gt;chunk-20108db2833629d67bd99390151702b2&lt;SEP&gt;chunk-408a02d0528e9051e0e40c6d05c26d53&lt;SEP&gt;chunk-c8546354e16a2d7f6a68cbb0fcb5d5ee</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244777</data>
+</node>
+<node id="Contracting Officer">
+  <data key="d0">Contracting Officer</data>
+  <data key="d1">person</data>
+  <data key="d2">Responsible for contract administration&lt;SEP&gt;In charge of issuing orders under a multiple-award contract&lt;SEP&gt;Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7&lt;SEP&gt;chunk-a34383e580e91204bf9afa0cc1303eba&lt;SEP&gt;chunk-40a95bbf0b73f11a8999fd864cb10a41</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244777</data>
+</node>
+<node id="Location">
+  <data key="d0">Location</data>
+  <data key="d1">navalstationmayport,jacksonville,florida</data>
+  <data key="d2">Florida, United States&lt;SEP&gt;The physical location where work is performed</data>
+  <data key="d3">chunk-cc33b7d57d832edfa3201846ac71e470&lt;SEP&gt;chunk-c8546354e16a2d7f6a68cbb0fcb5d5ee</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244778</data>
+</node>
+<node id="FAR">
+  <data key="d0">FAR</data>
+  <data key="d1">fixedacquisitionandrelevantinformationforreligiousorganization</data>
+  <data key="d2">Government&lt;|COMPLETE||&lt;SEP&gt;Primary Entity</data>
+  <data key="d3">chunk-da3cb62f8793b2418c00ed2b2aaa44a4&lt;SEP&gt;chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244778</data>
+</node>
+<node id="WIDE AREA WORKFLOW PAYMENT INSTRUCTIONS">
+  <data key="d0">WIDE AREA WORKFLOW PAYMENT INSTRUCTIONS</data>
+  <data key="d1">2023</data>
+  <data key="d2">document</data>
+  <data key="d3">chunk-4fc6d99a72d99f0ca42338cf0190b39e</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244779</data>
+</node>
+<node id="J-1503020">
+  <data key="d0">J-1503020</data>
+  <data key="d1">pestcontrol</data>
+  <data key="d2">File</data>
+  <data key="d3">chunk-ea0168ebf2e7e17e59ff452fbe365ff5</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244779</data>
+</node>
+<node id="N6945025R0003">
+  <data key="d0">N6945025R0003</data>
+  <data key="d1">sectionk-representations,certification,&amp;otherstatements</data>
+  <data key="d2">FAR Clauses Incorporated by Reference</data>
+  <data key="d3">chunk-ea0168ebf2e7e17e59ff452fbe365ff5</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244779</data>
+</node>
+<node id="Government">
+  <data key="d0">Government</data>
+  <data key="d1">organization</data>
+  <data key="d2">Primary Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244780</data>
+</node>
+<node id="Offeror">
+  <data key="d0">Offeror</data>
+  <data key="d1">party</data>
+  <data key="d2">Secondary Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244780</data>
+</node>
+<node id="Joint Venture (JV)">
+  <data key="d0">Joint Venture (JV)</data>
+  <data key="d1">businessstructure</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244781</data>
+</node>
+<node id="Corporate Experience Project Data Sheet">
+  <data key="d0">Corporate Experience Project Data Sheet</data>
+  <data key="d1">document</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244781</data>
+</node>
+<node id="Performance Work Statement/Specifications">
+  <data key="d0">Performance Work Statement/Specifications</data>
+  <data key="d1">document</data>
+  <data key="d2">Primary Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244782</data>
+</node>
+<node id="Base Operations Support (BOS) services">
+  <data key="d0">Base Operations Support (BOS) services</data>
+  <data key="d1">servicetype</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244782</data>
+</node>
+<node id="Port Operations">
+  <data key="d0">Port Operations</data>
+  <data key="d1">servicecategory</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244782</data>
+</node>
+<node id="Transmission &amp; Distributions operations, maintenance and repairs">
+  <data key="d0">Transmission &amp; Distributions operations, maintenance and repairs</data>
+  <data key="d1">electricalsystemoperation</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244783</data>
+</node>
+<node id="Civil Engineering Support Equipment (CESE)">
+  <data key="d0">Civil Engineering Support Equipment (CESE)</data>
+  <data key="d1">equipmentcategory</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244783</data>
+</node>
+<node id="Preventive Maintenance (PM) Program">
+  <data key="d0">Preventive Maintenance (PM) Program</data>
+  <data key="d1">maintenancestrategy</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244784</data>
+</node>
+<node id="FAR 52.217-5">
+  <data key="d0">FAR 52.217-5</data>
+  <data key="d1">regulation</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244784</data>
+</node>
+<node id="JM-1 Corporate Experience Project Data Sheet">
+  <data key="d0">JM-1 Corporate Experience Project Data Sheet</data>
+  <data key="d1">documenttemplate</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244785</data>
+</node>
+<node id="FAR 15.404-1">
+  <data key="d0">FAR 15.404-1</data>
+  <data key="d1">regulation</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244785</data>
+</node>
+<node id="General Information (Annex 0100000)">
+  <data key="d0">General Information (Annex 0100000)</data>
+  <data key="d1">informationcategory</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244786</data>
+</node>
+<node id="Service Orders">
+  <data key="d0">Service Orders</data>
+  <data key="d1">workordertype</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244786</data>
+</node>
+<node id="RFP">
+  <data key="d0">RFP</data>
+  <data key="d1">documenttype</data>
+  <data key="d2">Primary Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244787</data>
+</node>
+<node id="Section B">
+  <data key="d0">Section B</data>
+  <data key="d1">documentsection</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244787</data>
+</node>
+<node id="Section J ELIN attachment">
+  <data key="d0">Section J ELIN attachment</data>
+  <data key="d1">documentsection</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244787</data>
+</node>
+<node id="Section M.3">
+  <data key="d0">Section M.3</data>
+  <data key="d1">documentsection</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244788</data>
+</node>
+<node id="Past Performance">
+  <data key="d0">Past Performance</data>
+  <data key="d1">evaluationfactor</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244788</data>
+</node>
+<node id="Joint Venture entity">
+  <data key="d0">Joint Venture entity</data>
+  <data key="d1">businessstructure</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244789</data>
+</node>
+<node id="Attention!">
+  <data key="d0">Attention!</data>
+  <data key="d1">exclamationmark</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244789</data>
+</node>
+<node id="Joint Venture partners">
+  <data key="d0">Joint Venture partners</data>
+  <data key="d1">businesspartners</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244790</data>
+</node>
+<node id="Offer submission requirements">
+  <data key="d0">Offer submission requirements</data>
+  <data key="d1">compliancefactor</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244790</data>
+</node>
+<node id="Bid protest process">
+  <data key="d0">Bid protest process</data>
+  <data key="d1">procedurecategory</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244790</data>
+</node>
+<node id="FAR 15.404-1 methodology">
+  <data key="d0">FAR 15.404-1 methodology</data>
+  <data key="d1">methodologycategory</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244791</data>
+</node>
+<node id="Integrated Maintenance Program (IMP)">
+  <data key="d0">Integrated Maintenance Program (IMP)</data>
+  <data key="d1">maintenancestrategy</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244791</data>
+</node>
+<node id="Two other facility investment spec items identified in the RFP">
+  <data key="d0">Two other facility investment spec items identified in the RFP</data>
+  <data key="d1">facilityinvestmentcategory</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244792</data>
+</node>
+<node id="RFP description">
+  <data key="d0">RFP description</data>
+  <data key="d1">documentcontent</data>
+  <data key="d2">Supporting Entity&lt;SEP&gt;Primary Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244792</data>
+</node>
+<node id="FAR 52.217-5 evaluation technique">
+  <data key="d0">FAR 52.217-5 evaluation technique</data>
+  <data key="d1">techniquecategory</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244793</data>
+</node>
+<node id="Corporate Experience Demonstration">
+  <data key="d0">Corporate Experience Demonstration</data>
+  <data key="d1">demonstrationcategory</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244793</data>
+</node>
+<node id="Relevant Projects Definition">
+  <data key="d0">Relevant Projects Definition</data>
+  <data key="d1">definitioncategory</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244794</data>
+</node>
+<node id="Evaluation of Options Technique">
+  <data key="d0">Evaluation of Options Technique</data>
+  <data key="d1">techniquecategory</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244794</data>
+</node>
+<node id="Non-Obligation Clause">
+  <data key="d0">Non-Obligation Clause</data>
+  <data key="d1">clausecategory</data>
+  <data key="d2">Supporting Entity</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244795</data>
+</node>
+<node id="PWD Mayport">
+  <data key="d0">PWD Mayport</data>
+  <data key="d1">organization</data>
+  <data key="d2">FL&lt;SEP&gt;NAVFAC SOUTHEAST PWD MAYPORT</data>
+  <data key="d3">chunk-919779bd73d5179066fbf71160d50763&lt;SEP&gt;chunk-4e16a2eebdd487c7cbc9b4ec13640f07</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244795</data>
+</node>
+<node id="Navy">
+  <data key="d0">Navy</data>
+  <data key="d1">organization</data>
+  <data key="d2">Military Branch</data>
+  <data key="d3">chunk-0784c0112b9857ba7ffac0fed71c23a7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244796</data>
+</node>
+<node id="Mayport">
+  <data key="d0">Mayport</data>
+  <data key="d1">location</data>
+  <data key="d2">Florida</data>
+  <data key="d3">chunk-0784c0112b9857ba7ffac0fed71c23a7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244796</data>
+</node>
+<node id="Jacksonville">
+  <data key="d0">Jacksonville</data>
+  <data key="d1">location</data>
+  <data key="d2">Florida</data>
+  <data key="d3">chunk-0784c0112b9857ba7ffac0fed71c23a7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244796</data>
+</node>
+<node id="Blount Island">
+  <data key="d0">Blount Island</data>
+  <data key="d1">location</data>
+  <data key="d2">Florida</data>
+  <data key="d3">chunk-0784c0112b9857ba7ffac0fed71c23a7</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244797</data>
+</node>
+<node id="Relevant Project Definition">
+  <data key="d0">Relevant Project Definition</data>
+  <data key="d1">event</data>
+  <data key="d2">Identifies specific projects required for evaluation</data>
+  <data key="d3">chunk-f568f13dd6c2a346130a96a7e7a79d0a</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244797</data>
+</node>
+<node id="Small Business Administration">
+  <data key="d0">Small Business Administration</data>
+  <data key="d1">organization</data>
+  <data key="d2">Government agency approving Mentor-Protege Agreements</data>
+  <data key="d3">chunk-f568f13dd6c2a346130a96a7e7a79d0a</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244797</data>
+</node>
+<node id="FAR Clauses">
+  <data key="d0">FAR Clauses</data>
+  <data key="d1">contract</data>
+  <data key="d2">Full Text Incorporated</data>
+  <data key="d3">chunk-0394ec187048c30fe24f03a84e99ec40</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244798</data>
+</node>
+<node id="252.223-7006">
+  <data key="d0">252.223-7006</data>
+  <data key="d1">prohibition</data>
+  <data key="d2">Contract Clause</data>
+  <data key="d3">chunk-0394ec187048c30fe24f03a84e99ec40</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244798</data>
+</node>
+<node id="52.211-11">
+  <data key="d0">52.211-11</data>
+  <data key="d1">liquidateddamages</data>
+  <data key="d2">Clause</data>
+  <data key="d3">chunk-0394ec187048c30fe24f03a84e99ec40</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244799</data>
+</node>
+<node id="52.204-17, Ownership or Control of Offeror.">
+  <data key="d0">52.204-17, Ownership or Control of Offeror.</data>
+  <data key="d1">provision.</data>
+  <data key="d2">Applies to solicitations when contracting officer has applied part 19 in accordance with 19.000(b)(1)(ii).</data>
+  <data key="d3">chunk-24236706dbd2f426925e0a7fa1c01a8e</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244799</data>
+</node>
+<node id="52.222-18, Certification Regarding Knowledge of Child Labor for Listed End Products.">
+  <data key="d0">52.222-18, Certification Regarding Knowledge of Child Labor for Listed End Products.</data>
+  <data key="d1">provision.</data>
+  <data key="d2">Applies to solicitations when the solicitation includes certain end products as listed in FAR 52.222-18(a).</data>
+  <data key="d3">chunk-24236706dbd2f426925e0a7fa1c01a8e</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244800</data>
+</node>
+<node id="52.222-52, Exemption from Application of the Service Contract Labor Standards to Contracts for Certain Services-Certification.">
+  <data key="d0">52.222-52, Exemption from Application of the Service Contract Labor Standards to Contracts for Certain Services-Certification.</data>
+  <data key="d1">provision.</data>
+  <data key="d2">Applies to solicitations when it is anticipated that the contract award will result in a contract for services exempted under FAR 22.1008.</data>
+  <data key="d3">chunk-24236706dbd2f426925e0a7fa1c01a8e</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244800</data>
+</node>
+<node id="Entity_Type">
+  <data key="d0">Entity_Type</data>
+  <data key="d1">name</data>
+  <data key="d2">Description</data>
+  <data key="d3">chunk-62537388aaeda9ccb4e9ffbe0895fc45</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244801</data>
+</node>
+<node id="NAVSTA Mayport">
+  <data key="d0">NAVSTA Mayport</data>
+  <data key="d1">location</data>
+  <data key="d2">Military base in Florida&lt;SEP&gt;Military base</data>
+  <data key="d3">chunk-2dcf6f2c23386a813e2787d46a0fb575</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244801</data>
+</node>
+<node id="MCSF-BI">
+  <data key="d0">MCSF-BI</data>
+  <data key="d1">organization</data>
+  <data key="d2">Military Construction and Services Facility - Bethesda</data>
+  <data key="d3">chunk-2dcf6f2c23386a813e2787d46a0fb575</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244802</data>
+</node>
+<node id="Unit Price Labor (UPL)">
+  <data key="d0">Unit Price Labor (UPL)</data>
+  <data key="d1">method</data>
+  <data key="d2">Labor cost calculation</data>
+  <data key="d3">chunk-2dcf6f2c23386a813e2787d46a0fb575</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244802</data>
+</node>
+<node id="Small business concern">
+  <data key="d0">Small business concern</data>
+  <data key="d1">definition</data>
+  <data key="d2">13 CFR part 121</data>
+  <data key="d3">chunk-f03cd534209f3dae2729d910747664f6</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244802</data>
+</node>
+<node id="Multiple-Award Contract">
+  <data key="d0">Multiple-Award Contract</data>
+  <data key="d1">concept</data>
+  <data key="d2">A type of contract where two or more contractors are awarded a single contract to provide identical products or services.</data>
+  <data key="d3">chunk-40a95bbf0b73f11a8999fd864cb10a41</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244803</data>
+</node>
+<node id="Option Line Item">
+  <data key="d0">Option Line Item</data>
+  <data key="d1">0012optionperiod3recurring-waterannex</data>
+  <data key="d2">Option</data>
+  <data key="d3">chunk-2237c7721f7046be538ef3e049506681</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244803</data>
+</node>
+<node id="Bon Homme Richard St">
+  <data key="d0">Bon Homme Richard St</data>
+  <data key="d1">location</data>
+  <data key="d2">Mayport, FL 32228-0073</data>
+  <data key="d3">chunk-4e16a2eebdd487c7cbc9b4ec13640f07</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244804</data>
+</node>
+<node id="NAVFAC Southeast PWD Mayport">
+  <data key="d0">NAVFAC Southeast PWD Mayport</data>
+  <data key="d1">organization</data>
+  <data key="d2">FL</data>
+  <data key="d3">chunk-4e16a2eebdd487c7cbc9b4ec13640f07</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244804</data>
+</node>
+<node id="NAICS Code Small business concern (yes/no)">
+  <data key="d0">NAICS Code Small business concern (yes/no)</data>
+  <data key="d1">naics</data>
+  <data key="d2">52.219-28 Postaward Small Business Program Rerepresentation.</data>
+  <data key="d3">chunk-6fb6d0a81335e540304aeeda474b6fdf</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244804</data>
+</node>
+<node id="Type">
+  <data key="d0">Type</data>
+  <data key="d1">name</data>
+  <data key="d2">Description</data>
+  <data key="d3">chunk-cc33b7d57d832edfa3201846ac71e470</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244805</data>
+</node>
+<node id="name">
+  <data key="d0">name</data>
+  <data key="d1">type</data>
+  <data key="d2">description</data>
+  <data key="d3">chunk-6605800e5819c93c058e5f8b6622bf9a</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244805</data>
+</node>
+<node id="48 CFR Chapter 1">
+  <data key="d0">48 CFR Chapter 1</data>
+  <data key="d1">regulation</data>
+  <data key="d2">Federal Acquisition Regulation chapter</data>
+  <data key="d3">chunk-6605800e5819c93c058e5f8b6622bf9a</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244806</data>
+</node>
+<node id="Missed Entity Type">
+  <data key="d0">Missed Entity Type</data>
+  <data key="d1">entityname</data>
+  <data key="d2">Entity Description</data>
+  <data key="d3">chunk-a7569c8d7ae6fe73fe1634c560459eb5</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244806</data>
+</node>
+<node id="Temporary HVAC 100 ton chiller">
+  <data key="d0">Temporary HVAC 100 ton chiller</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244807</data>
+</node>
+<node id="X711">
+  <data key="d0">X711</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244807</data>
+</node>
+<node id="Temporary HVAC 40 ton package unit">
+  <data key="d0">Temporary HVAC 40 ton package unit</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244807</data>
+</node>
+<node id="X712">
+  <data key="d0">X712</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244807</data>
+</node>
+<node id="Refrigerant Recovery">
+  <data key="d0">Refrigerant Recovery</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244810</data>
+</node>
+<node id="X713">
+  <data key="d0">X713</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244810</data>
+</node>
+<node id="Unscheduled Bus/Van Service">
+  <data key="d0">Unscheduled Bus/Van Service</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244810</data>
+</node>
+<node id="X714">
+  <data key="d0">X714</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244810</data>
+</node>
+<node id="Unscheduled Emergency Interstate Operator Service">
+  <data key="d0">Unscheduled Emergency Interstate Operator Service</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244812</data>
+</node>
+<node id="X715">
+  <data key="d0">X715</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244812</data>
+</node>
+<node id="Unscheduled Trucking Service">
+  <data key="d0">Unscheduled Trucking Service</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244812</data>
+</node>
+<node id="X716">
+  <data key="d0">X716</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244812</data>
+</node>
+<node id="Unscheduled Oily Wastewater/Rainwater Removal and Disposal">
+  <data key="d0">Unscheduled Oily Wastewater/Rainwater Removal and Disposal</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244815</data>
+</node>
+<node id="X717">
+  <data key="d0">X717</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244815</data>
+</node>
+<node id="Blount Island Shoreline Cleanup">
+  <data key="d0">Blount Island Shoreline Cleanup</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244815</data>
+</node>
+<node id="X718">
+  <data key="d0">X718</data>
+  <data key="d3">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d2">FedMall Ordering</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244815</data>
+</node>
+<node id="Contracting Officers">
+  <data key="d0">Contracting Officers</data>
+  <data key="d3">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d2">Past performance evaluation</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244819</data>
+</node>
+<node id="Task Managers">
+  <data key="d0">Task Managers</data>
+  <data key="d3">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d2">Past performance evaluation</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244820</data>
+</node>
+<node id="Past performance evaluation">
+  <data key="d0">Past performance evaluation</data>
+  <data key="d3">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d2">Contract award</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244820</data>
+</node>
+<node id="Government Pre-award Inquiry Form (GPIF) (JL-2)">
+  <data key="d0">Government Pre-award Inquiry Form (GPIF) (JL-2)</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Required For Participation In Site Visit</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244822</data>
+</node>
+<node id="Labor Hours Spreadsheet (JL-1)">
+  <data key="d0">Labor Hours Spreadsheet (JL-1)</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Required For Participation In Site Visit</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244822</data>
+</node>
+<node id="AMAG Form to Obtain Visitor's Pass (JL-4)">
+  <data key="d0">AMAG Form to Obtain Visitor's Pass (JL-4)</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Provides Guidance On</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244823</data>
+</node>
+<node id="Site Visit Itinerary (JL-3)">
+  <data key="d0">Site Visit Itinerary (JL-3)</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Provides Guidance On</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244823</data>
+</node>
+<node id="Blount Island Base Access Form (JL-5)">
+  <data key="d0">Blount Island Base Access Form (JL-5)</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Helps In Navigation During Site Visit</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244825</data>
+</node>
+<node id="MBOS Site Visit Direction (JL-6)">
+  <data key="d0">MBOS Site Visit Direction (JL-6)</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Helps In Navigation During Site Visit</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244825</data>
+</node>
+<node id="MBOS Site Visit Route (JL-7)">
+  <data key="d0">MBOS Site Visit Route (JL-7)</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Planning Of Site Visit Route</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244825</data>
+</node>
+<node id="Small Business Subcontracting Plan Template (JL-8)">
+  <data key="d0">Small Business Subcontracting Plan Template (JL-8)</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Planning Of Site Visit Route</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244825</data>
+</node>
+<node id="Corporate Experience Project Data Sheet (JM-1)">
+  <data key="d0">Corporate Experience Project Data Sheet (JM-1)</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Provides Context For Past Performance Evaluation</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244827</data>
+</node>
+<node id="Historical Small Business Utilization (JM-2)">
+  <data key="d0">Historical Small Business Utilization (JM-2)</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Provides Context For Past Performance Evaluation</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244827</data>
+</node>
+<node id="Past Performance Questionnaire (PPQ) (JM-4)">
+  <data key="d0">Past Performance Questionnaire (PPQ) (JM-4)</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Used In Assessment Of Past Performance</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244828</data>
+</node>
+<node id="Small Business Participation and Commitment Strategy Document (SBPCD) (JM-3)">
+  <data key="d0">Small Business Participation and Commitment Strategy Document (SBPCD) (JM-3)</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Used In Assessment Of Past Performance</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244828</data>
+</node>
+<node id="Wage Determinations">
+  <data key="d0">Wage Determinations</data>
+  <data key="d3">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d2">Compliance With Labor Standards</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244830</data>
+</node>
+<node id="Entity1">
+  <data key="d0">Entity1</data>
+  <data key="d3">chunk-b37a0f6b94299524e95ad0cbeca67635</data>
+  <data key="d2">Description</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244830</data>
+</node>
+<node id="RelationType">
+  <data key="d0">RelationType</data>
+  <data key="d3">chunk-b37a0f6b94299524e95ad0cbeca67635</data>
+  <data key="d2">Description</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244830</data>
+</node>
+<node id="Makes Decision On">
+  <data key="d0">Makes Decision On</data>
+  <data key="d3">chunk-20108db2833629d67bd99390151702b2</data>
+  <data key="d2">necessary.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244831</data>
+</node>
+<node id="conduct discussions">
+  <data key="d0">conduct discussions</data>
+  <data key="d3">chunk-20108db2833629d67bd99390151702b2</data>
+  <data key="d2">necessary.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244831</data>
+</node>
+<node id="Evaluation of Options (JUL 1990)">
+  <data key="d0">Evaluation of Options (JUL 1990)</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d2">Price Evaluation</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244834</data>
+</node>
+<node id="Facility Investment Maintenance and Repairs">
+  <data key="d0">Facility Investment Maintenance and Repairs</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d2">Two Other Facility Investment Spec Items Identified in the RFP</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244834</data>
+</node>
+<node id="Raw Water Supply">
+  <data key="d0">Raw Water Supply</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d2">Laboratory and Testing Processes Maintenance and Repairs</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244836</data>
+</node>
+<node id="Weight Handling Equipment (WHE) Operations, Maintenance and Repair">
+  <data key="d0">Weight Handling Equipment (WHE) Operations, Maintenance and Repair</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d2">Relevant Project Demonstration</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244836</data>
+</node>
+<node id="E/U/R Work Orders or Service Orders">
+  <data key="d0">E/U/R Work Orders or Service Orders</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d2">Other Recurring Services</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244837</data>
+</node>
+<node id="Information Requested (Expanded Form)">
+  <data key="d0">Information Requested (Expanded Form)</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d2">Completion of Form</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244838</data>
+</node>
+<node id="Methodology Deemed Appropriate">
+  <data key="d0">Methodology Deemed Appropriate</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d2">Contract Officer Discretion</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244839</data>
+</node>
+<node id="Management and Administration (Annex 0200000)">
+  <data key="d0">Management and Administration (Annex 0200000)</data>
+  <data key="d3">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d2">Relevant Project Demonstration</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244840</data>
+</node>
+<node id="NAVFAC SOUTHEAST PWD MAYPORT">
+  <data key="d0">NAVFAC SOUTHEAST PWD MAYPORT</data>
+  <data key="d3">chunk-919779bd73d5179066fbf71160d50763</data>
+  <data key="d2">Location</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244841</data>
+</node>
+<node id="located in">
+  <data key="d0">located in</data>
+  <data key="d3">chunk-919779bd73d5179066fbf71160d50763</data>
+  <data key="d2">Location</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244841</data>
+</node>
+<node id="52.219-1">
+  <data key="d0">52.219-1</data>
+  <data key="d3">chunk-274668de0e49d42e5ad075efb1334f6e</data>
+  <data key="d2">Government regulation</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244843</data>
+</node>
+<node id="Small Business Program">
+  <data key="d0">Small Business Program</data>
+  <data key="d3">chunk-274668de0e49d42e5ad075efb1334f6e</data>
+  <data key="d2">Government regulation</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244843</data>
+</node>
+<node id="Port Operations Annex">
+  <data key="d0">Port Operations Annex</data>
+  <data key="d3">chunk-f568f13dd6c2a346130a96a7e7a79d0a</data>
+  <data key="d2">Required for evaluation under this RFP</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244846</data>
+</node>
+<node id="Facility Investment Sub-annex">
+  <data key="d0">Facility Investment Sub-annex</data>
+  <data key="d3">chunk-f568f13dd6c2a346130a96a7e7a79d0a</data>
+  <data key="d2">Required, including E/U/R work orders and HVAC/Fire Protection Systems maintenance</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244848</data>
+</node>
+<node id="Electrical Annex">
+  <data key="d0">Electrical Annex</data>
+  <data key="d3">chunk-f568f13dd6c2a346130a96a7e7a79d0a</data>
+  <data key="d2">Required, with Transmission &amp; Distribution operations, maintenance, and repairs</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244850</data>
+</node>
+<node id="Water Annex">
+  <data key="d0">Water Annex</data>
+  <data key="d3">chunk-f568f13dd6c2a346130a96a7e7a79d0a</data>
+  <data key="d2">Required, including Raw Water Supply, Treatment Plant, Distribution System, Lab processes, maintenance, and repairs</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244851</data>
+</node>
+<node id="Record">
+  <data key="d0">Record</data>
+  <data key="d3">chunk-fc6ff2ce028cf81daef069e23076ead4</data>
+  <data key="d2">The record is associated with PWD Mayport.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244851</data>
+</node>
+<node id="Delivery Schedule">
+  <data key="d0">Delivery Schedule</data>
+  <data key="d3">chunk-fc6ff2ce028cf81daef069e23076ead4</data>
+  <data key="d2">The contractor will deliver according to the specified schedule.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244853</data>
+</node>
+<node id="Estimated Quantity">
+  <data key="d0">Estimated Quantity</data>
+  <data key="d3">chunk-fc6ff2ce028cf81daef069e23076ead4</data>
+  <data key="d2">Each line item has an estimated quantity.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244853</data>
+</node>
+<node id="Line Item">
+  <data key="d0">Line Item</data>
+  <data key="d3">chunk-fc6ff2ce028cf81daef069e23076ead4</data>
+  <data key="d2">Each line item has an estimated quantity.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244853</data>
+</node>
+<node id="52.204-20, Predecessor of Offeror.">
+  <data key="d0">52.204-20, Predecessor of Offeror.</data>
+  <data key="d3">chunk-24236706dbd2f426925e0a7fa1c01a8e</data>
+  <data key="d2">This provision applies to solicitations that include the clause at 52.222-52.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244856</data>
+</node>
+<node id="Relationship_Type">
+  <data key="d0">Relationship_Type</data>
+  <data key="d3">chunk-62537388aaeda9ccb4e9ffbe0895fc45</data>
+  <data key="d2">Description</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244857</data>
+</node>
+<node id="Source_Entity">
+  <data key="d0">Source_Entity</data>
+  <data key="d3">chunk-62537388aaeda9ccb4e9ffbe0895fc45</data>
+  <data key="d2">Description</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244857</data>
+</node>
+<node id="BLDG 1966, BON HOMME RICHARD ST">
+  <data key="d0">BLDG 1966, BON HOMME RICHARD ST</data>
+  <data key="d3">chunk-eefe86e586679ef56890af8a0422985e</data>
+  <data key="d2">Inspector of Record&lt;SEP&gt;Contains</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244858</data>
+</node>
+<node id="Defines">
+  <data key="d0">Defines</data>
+  <data key="d3">chunk-f03cd534209f3dae2729d910747664f6</data>
+  <data key="d2">This clause</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244859</data>
+</node>
+<node id="Size standard">
+  <data key="d0">Size standard</data>
+  <data key="d3">chunk-f03cd534209f3dae2729d910747664f6</data>
+  <data key="d2">This clause</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244859</data>
+</node>
+<node id="Explicit Requirement">
+  <data key="d0">Explicit Requirement</data>
+  <data key="d3">chunk-40a95bbf0b73f11a8999fd864cb10a41</data>
+  <data key="d2">When explicitly required by the Contracting Officer, an order can be issued under a multiple-award contract.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244859</data>
+</node>
+<node id="Partial Set Aside">
+  <data key="d0">Partial Set Aside</data>
+  <data key="d3">chunk-40a95bbf0b73f11a8999fd864cb10a41</data>
+  <data key="d2">Under the part that is partially set aside for small businesses.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244861</data>
+</node>
+<node id="Inspection and Acceptance Location">
+  <data key="d0">Inspection and Acceptance Location</data>
+  <data key="d3">chunk-4e16a2eebdd487c7cbc9b4ec13640f07</data>
+  <data key="d2">Page 14 of 71&lt;SEP&gt;Page 16 of 71</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244862</data>
+</node>
+<node id="52.219-28 Postaward Small Business Program Rerepresentation.">
+  <data key="d0">52.219-28 Postaward Small Business Program Rerepresentation.</data>
+  <data key="d3">chunk-6fb6d0a81335e540304aeeda474b6fdf</data>
+  <data key="d2">Yes</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244864</data>
+</node>
+<node id="561210">
+  <data key="d0">561210</data>
+  <data key="d3">chunk-6fb6d0a81335e540304aeeda474b6fdf</data>
+  <data key="d2">Yes</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244864</data>
+</node>
+<node id="Implements">
+  <data key="d0">Implements</data>
+  <data key="d3">chunk-cc33b7d57d832edfa3201846ac71e470</data>
+  <data key="d2">The offeror's approach includes implementing a Safety Management System</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244865</data>
+</node>
+<node id="Offeror's Approach">
+  <data key="d0">Offeror's Approach</data>
+  <data key="d3">chunk-cc33b7d57d832edfa3201846ac71e470</data>
+  <data key="d2">The offeror's approach includes implementing a Safety Management System</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244865</data>
+</node>
+<node id="Oversees">
+  <data key="d0">Oversees</data>
+  <data key="d3">chunk-cc33b7d57d832edfa3201846ac71e470</data>
+  <data key="d2">The offeror will oversee safety compliance of subcontractors at all levels throughout performance of the contract</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244866</data>
+</node>
+<node id="252.232-7007 Limitation of Government's Obligation (Apr 2014)">
+  <data key="d0">252.232-7007 Limitation of Government's Obligation (Apr 2014)</data>
+  <data key="d3">chunk-6605800e5819c93c058e5f8b6622bf9a</data>
+  <data key="d2">The Defense Federal Acquisition Regulation Supplement clause is incorporated by full text into the contract.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244867</data>
+</node>
+<node id="DFARS Clauses Incorporated by Full Text">
+  <data key="d0">DFARS Clauses Incorporated by Full Text</data>
+  <data key="d3">chunk-6605800e5819c93c058e5f8b6622bf9a</data>
+  <data key="d2">The Defense Federal Acquisition Regulation Supplement clause is incorporated by full text into the contract.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244867</data>
+</node>
+<node id="REQUIRES">
+  <data key="d0">REQUIRES</data>
+  <data key="d3">chunk-408a02d0528e9051e0e40c6d05c26d53</data>
+  <data key="d2">Financial Requirements</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244868</data>
+</node>
+<node id="offeror">
+  <data key="d0">offeror</data>
+  <data key="d3">chunk-408a02d0528e9051e0e40c6d05c26d53</data>
+  <data key="d2">Financial Requirements</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244868</data>
+</node>
+<node id="HAS">
+  <data key="d0">HAS</data>
+  <data key="d3">chunk-408a02d0528e9051e0e40c6d05c26d53</data>
+  <data key="d2">Independent Verification</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244870</data>
+</node>
+<node id="accounting firm">
+  <data key="d0">accounting firm</data>
+  <data key="d3">chunk-408a02d0528e9051e0e40c6d05c26d53</data>
+  <data key="d2">Independent Verification</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244870</data>
+</node>
+<node id="Entity 1">
+  <data key="d0">Entity 1</data>
+  <data key="d3">chunk-a7569c8d7ae6fe73fe1634c560459eb5</data>
+  <data key="d2">Relationship Description</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244870</data>
+</node>
+<node id="Relationship Label">
+  <data key="d0">Relationship Label</data>
+  <data key="d3">chunk-a7569c8d7ae6fe73fe1634c560459eb5</data>
+  <data key="d2">Relationship Description</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">_N6945025R0003.pdf</data>
+  <data key="d5">1759244870</data>
+</node>
+<edge source="Contractor" target="Contracting Officer">
+  <data key="d6">1.0</data>
+  <data key="d7">Administration of contract terms</data>
+  <data key="d8">Administer</data>
+  <data key="d9">chunk-a34383e580e91204bf9afa0cc1303eba</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244833</data>
+</edge>
+<edge source="Contractor" target="Delivery Schedule">
+  <data key="d6">1.0</data>
+  <data key="d7">The contractor will deliver according to the specified schedule.</data>
+  <data key="d8">contract details,performance schedule</data>
+  <data key="d9">chunk-fc6ff2ce028cf81daef069e23076ead4</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244853</data>
+</edge>
+<edge source="Contractor" target="PWD Mayport">
+  <data key="d6">1.0</data>
+  <data key="d7">PWD Mayport hires the contractor for services.</data>
+  <data key="d8">client,service provider</data>
+  <data key="d9">chunk-fc6ff2ce028cf81daef069e23076ead4</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244855</data>
+</edge>
+<edge source="Courtney J. Peterson" target="Cari L. Fiebach">
+  <data key="d6">2.0</data>
+  <data key="d7">US Navy</data>
+  <data key="d8">work relationship</data>
+  <data key="d9">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244817</data>
+</edge>
+<edge source="Past Performance Questionnaire (PPQ)" target="Offeror">
+  <data key="d6">1.0</data>
+  <data key="d7">Proposal evaluation</data>
+  <data key="d8">submission requirement</data>
+  <data key="d9">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244818</data>
+</edge>
+<edge source="Factor 1, Corporate Experience" target="Offeror">
+  <data key="d6">1.0</data>
+  <data key="d7">Past performance evaluation</data>
+  <data key="d8">assessment basis</data>
+  <data key="d9">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244822</data>
+</edge>
+<edge source="Contracting Officer" target="Explicit Requirement">
+  <data key="d6">1.0</data>
+  <data key="d7">When explicitly required by the Contracting Officer, an order can be issued under a multiple-award contract.</data>
+  <data key="d8">Order Issuance</data>
+  <data key="d9">chunk-40a95bbf0b73f11a8999fd864cb10a41</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244859</data>
+</edge>
+<edge source="Offeror" target="Contracting Officers">
+  <data key="d6">1.0</data>
+  <data key="d7">Past performance evaluation</data>
+  <data key="d8">cooperation expectation</data>
+  <data key="d9">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244819</data>
+</edge>
+<edge source="Offeror" target="Task Managers">
+  <data key="d6">1.0</data>
+  <data key="d7">Past performance evaluation</data>
+  <data key="d8">cooperation expectation</data>
+  <data key="d9">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244820</data>
+</edge>
+<edge source="Offeror" target="Oversees">
+  <data key="d6">1.0</data>
+  <data key="d7">The offeror will oversee safety compliance of subcontractors at all levels throughout performance of the contract</data>
+  <data key="d8">Subcontractors</data>
+  <data key="d9">chunk-cc33b7d57d832edfa3201846ac71e470</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244866</data>
+</edge>
+<edge source="Port Operations" target="Facility Investment Maintenance and Repairs">
+  <data key="d6">1.0</data>
+  <data key="d7">Two Other Facility Investment Spec Items Identified in the RFP</data>
+  <data key="d8">HVAC Systems Maintenance and Repairs</data>
+  <data key="d9">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244834</data>
+</edge>
+<edge source="Transmission &amp; Distributions operations, maintenance and repairs" target="Raw Water Supply">
+  <data key="d6">1.0</data>
+  <data key="d7">Laboratory and Testing Processes Maintenance and Repairs</data>
+  <data key="d8">Water Treatment Plant and Distribution System Operation</data>
+  <data key="d9">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244836</data>
+</edge>
+<edge source="Civil Engineering Support Equipment (CESE)" target="Weight Handling Equipment (WHE) Operations, Maintenance and Repair">
+  <data key="d6">1.0</data>
+  <data key="d7">Relevant Project Demonstration</data>
+  <data key="d8">Similar Requirements to the RFP</data>
+  <data key="d9">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244836</data>
+</edge>
+<edge source="Preventive Maintenance (PM) Program" target="E/U/R Work Orders or Service Orders">
+  <data key="d6">1.0</data>
+  <data key="d7">Other Recurring Services</data>
+  <data key="d8">Integrated Maintenance Program (IMP)</data>
+  <data key="d9">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244837</data>
+</edge>
+<edge source="FAR 52.217-5" target="Evaluation of Options (JUL 1990)">
+  <data key="d6">1.0</data>
+  <data key="d7">Price Evaluation</data>
+  <data key="d8">Technique</data>
+  <data key="d9">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244834</data>
+</edge>
+<edge source="FAR 52.217-5" target="Evaluation of Options Technique">
+  <data key="d6">1.0</data>
+  <data key="d7">Non-Obligation Clause</data>
+  <data key="d8">Price Evaluation</data>
+  <data key="d9">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244837</data>
+</edge>
+<edge source="JM-1 Corporate Experience Project Data Sheet" target="Information Requested (Expanded Form)">
+  <data key="d6">1.0</data>
+  <data key="d7">Completion of Form</data>
+  <data key="d8">Not Limited to Two Pages</data>
+  <data key="d9">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244838</data>
+</edge>
+<edge source="FAR 15.404-1" target="Methodology Deemed Appropriate">
+  <data key="d6">1.0</data>
+  <data key="d7">Contract Officer Discretion</data>
+  <data key="d8">Consistency with Other Regulations</data>
+  <data key="d9">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244839</data>
+</edge>
+<edge source="General Information (Annex 0100000)" target="Management and Administration (Annex 0200000)">
+  <data key="d6">1.0</data>
+  <data key="d7">Relevant Project Demonstration</data>
+  <data key="d8">Not Considered Towards Minimum Requirement</data>
+  <data key="d9">chunk-2e032d13ee0e46fcce1fc3ec007080b7</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244840</data>
+</edge>
+<edge source="PWD Mayport" target="located in">
+  <data key="d6">1.0</data>
+  <data key="d7">Location</data>
+  <data key="d8">Mayport</data>
+  <data key="d9">chunk-919779bd73d5179066fbf71160d50763</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244843</data>
+</edge>
+<edge source="PWD Mayport" target="Record">
+  <data key="d6">1.0</data>
+  <data key="d7">The record is associated with PWD Mayport.</data>
+  <data key="d8">data source,location</data>
+  <data key="d9">chunk-fc6ff2ce028cf81daef069e23076ead4</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244851</data>
+</edge>
+<edge source="PWD Mayport" target="Inspection and Acceptance Location">
+  <data key="d6">2.0</data>
+  <data key="d7">Page 14 of 71&lt;SEP&gt;Page 16 of 71</data>
+  <data key="d8">Both</data>
+  <data key="d9">chunk-4e16a2eebdd487c7cbc9b4ec13640f07</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244862</data>
+</edge>
+<edge source="Navy" target="Mayport">
+  <data key="d6">1.0</data>
+  <data key="d7">Naval Station</data>
+  <data key="d8">BOS,Base Operations Support</data>
+  <data key="d9">chunk-0784c0112b9857ba7ffac0fed71c23a7</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244844</data>
+</edge>
+<edge source="Navy" target="Jacksonville">
+  <data key="d6">1.0</data>
+  <data key="d7">Marine Corps Support Facility</data>
+  <data key="d8">BOS,Base Operations Support</data>
+  <data key="d9">chunk-0784c0112b9857ba7ffac0fed71c23a7</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244845</data>
+</edge>
+<edge source="Navy" target="Blount Island">
+  <data key="d6">1.0</data>
+  <data key="d7">Outlying Areas</data>
+  <data key="d8">BOS,Base Operations Support</data>
+  <data key="d9">chunk-0784c0112b9857ba7ffac0fed71c23a7</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244846</data>
+</edge>
+<edge source="Relevant Project Definition" target="Port Operations Annex">
+  <data key="d6">1.0</data>
+  <data key="d7">Required for evaluation under this RFP</data>
+  <data key="d8">0600000</data>
+  <data key="d9">chunk-f568f13dd6c2a346130a96a7e7a79d0a</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244846</data>
+</edge>
+<edge source="Relevant Project Definition" target="Facility Investment Sub-annex">
+  <data key="d6">1.0</data>
+  <data key="d7">Required, including E/U/R work orders and HVAC/Fire Protection Systems maintenance</data>
+  <data key="d8">1502000</data>
+  <data key="d9">chunk-f568f13dd6c2a346130a96a7e7a79d0a</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244848</data>
+</edge>
+<edge source="Relevant Project Definition" target="Electrical Annex">
+  <data key="d6">1.0</data>
+  <data key="d7">Required, with Transmission &amp; Distribution operations, maintenance, and repairs</data>
+  <data key="d8">1602000</data>
+  <data key="d9">chunk-f568f13dd6c2a346130a96a7e7a79d0a</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244850</data>
+</edge>
+<edge source="Relevant Project Definition" target="Water Annex">
+  <data key="d6">1.0</data>
+  <data key="d7">Required, including Raw Water Supply, Treatment Plant, Distribution System, Lab processes, maintenance, and repairs</data>
+  <data key="d8">1606000</data>
+  <data key="d9">chunk-f568f13dd6c2a346130a96a7e7a79d0a</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244851</data>
+</edge>
+<edge source="FAR Clauses" target="Past performance evaluation">
+  <data key="d6">2.0</data>
+  <data key="d7">Contract award</data>
+  <data key="d8">government regulation reference</data>
+  <data key="d9">chunk-1bffe97658445d94dc0b55d821b62be3</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244820</data>
+</edge>
+<edge source="52.204-17, Ownership or Control of Offeror." target="52.222-18, Certification Regarding Knowledge of Child Labor for Listed End Products.">
+  <data key="d6">1.0</data>
+  <data key="d7">This provision applies to solicitations that include the clause at 52.222-18.</data>
+  <data key="d8">provision relationship</data>
+  <data key="d9">chunk-24236706dbd2f426925e0a7fa1c01a8e</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244856</data>
+</edge>
+<edge source="52.222-52, Exemption from Application of the Service Contract Labor Standards to Contracts for Certain Services-Certification." target="52.204-20, Predecessor of Offeror.">
+  <data key="d6">1.0</data>
+  <data key="d7">This provision applies to solicitations that include the clause at 52.222-52.</data>
+  <data key="d8">provision relationship</data>
+  <data key="d9">chunk-24236706dbd2f426925e0a7fa1c01a8e</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244856</data>
+</edge>
+<edge source="Multiple-Award Contract" target="Partial Set Aside">
+  <data key="d6">1.0</data>
+  <data key="d7">Under the part that is partially set aside for small businesses.</data>
+  <data key="d8">Small Business Concern</data>
+  <data key="d9">chunk-40a95bbf0b73f11a8999fd864cb10a41</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244861</data>
+</edge>
+<edge source="NAVFAC Southeast PWD Mayport" target="Inspection and Acceptance Location">
+  <data key="d6">1.0</data>
+  <data key="d7">Page 15 of 71</data>
+  <data key="d8">Both</data>
+  <data key="d9">chunk-4e16a2eebdd487c7cbc9b4ec13640f07</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244864</data>
+</edge>
+<edge source="Temporary HVAC 100 ton chiller" target="X711">
+  <data key="d6">1.0</data>
+  <data key="d7">FedMall Ordering</data>
+  <data key="d8">Orderable via FedMall</data>
+  <data key="d9">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244807</data>
+</edge>
+<edge source="Temporary HVAC 40 ton package unit" target="X712">
+  <data key="d6">1.0</data>
+  <data key="d7">FedMall Ordering</data>
+  <data key="d8">Orderable via FedMall</data>
+  <data key="d9">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244807</data>
+</edge>
+<edge source="Refrigerant Recovery" target="X713">
+  <data key="d6">1.0</data>
+  <data key="d7">FedMall Ordering</data>
+  <data key="d8">Orderable via FedMall</data>
+  <data key="d9">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244810</data>
+</edge>
+<edge source="Unscheduled Bus/Van Service" target="X714">
+  <data key="d6">1.0</data>
+  <data key="d7">FedMall Ordering</data>
+  <data key="d8">Orderable via FedMall</data>
+  <data key="d9">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244810</data>
+</edge>
+<edge source="Unscheduled Emergency Interstate Operator Service" target="X715">
+  <data key="d6">1.0</data>
+  <data key="d7">FedMall Ordering</data>
+  <data key="d8">Orderable via FedMall</data>
+  <data key="d9">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244812</data>
+</edge>
+<edge source="Unscheduled Trucking Service" target="X716">
+  <data key="d6">1.0</data>
+  <data key="d7">FedMall Ordering</data>
+  <data key="d8">Orderable via FedMall</data>
+  <data key="d9">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244812</data>
+</edge>
+<edge source="Unscheduled Oily Wastewater/Rainwater Removal and Disposal" target="X717">
+  <data key="d6">1.0</data>
+  <data key="d7">FedMall Ordering</data>
+  <data key="d8">Orderable via FedMall</data>
+  <data key="d9">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244815</data>
+</edge>
+<edge source="Blount Island Shoreline Cleanup" target="X718">
+  <data key="d6">1.0</data>
+  <data key="d7">FedMall Ordering</data>
+  <data key="d8">Orderable via FedMall</data>
+  <data key="d9">chunk-615d2fa2d5012d47515181a590df83de</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244815</data>
+</edge>
+<edge source="Government Pre-award Inquiry Form (GPIF) (JL-2)" target="Labor Hours Spreadsheet (JL-1)">
+  <data key="d6">1.0</data>
+  <data key="d7">Required For Participation In Site Visit</data>
+  <data key="d8">Dependent On</data>
+  <data key="d9">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244822</data>
+</edge>
+<edge source="Labor Hours Spreadsheet (JL-1)" target="Wage Determinations">
+  <data key="d6">1.0</data>
+  <data key="d7">Compliance With Labor Standards</data>
+  <data key="d8">Required For</data>
+  <data key="d9">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244830</data>
+</edge>
+<edge source="AMAG Form to Obtain Visitor's Pass (JL-4)" target="Site Visit Itinerary (JL-3)">
+  <data key="d6">1.0</data>
+  <data key="d7">Provides Guidance On</data>
+  <data key="d8">Related To</data>
+  <data key="d9">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244823</data>
+</edge>
+<edge source="Blount Island Base Access Form (JL-5)" target="MBOS Site Visit Direction (JL-6)">
+  <data key="d6">1.0</data>
+  <data key="d7">Helps In Navigation During Site Visit</data>
+  <data key="d8">Leads To</data>
+  <data key="d9">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244825</data>
+</edge>
+<edge source="MBOS Site Visit Route (JL-7)" target="Small Business Subcontracting Plan Template (JL-8)">
+  <data key="d6">1.0</data>
+  <data key="d7">Planning Of Site Visit Route</data>
+  <data key="d8">Enables</data>
+  <data key="d9">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244825</data>
+</edge>
+<edge source="Corporate Experience Project Data Sheet (JM-1)" target="Historical Small Business Utilization (JM-2)">
+  <data key="d6">1.0</data>
+  <data key="d7">Provides Context For Past Performance Evaluation</data>
+  <data key="d8">Supports</data>
+  <data key="d9">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244827</data>
+</edge>
+<edge source="Past Performance Questionnaire (PPQ) (JM-4)" target="Small Business Participation and Commitment Strategy Document (SBPCD) (JM-3)">
+  <data key="d6">1.0</data>
+  <data key="d7">Used In Assessment Of Past Performance</data>
+  <data key="d8">Guides</data>
+  <data key="d9">chunk-96a94fae60daae3ac6dc76739c020c34</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244828</data>
+</edge>
+<edge source="Entity1" target="RelationType">
+  <data key="d6">1.0</data>
+  <data key="d7">Description</data>
+  <data key="d8">Entity2</data>
+  <data key="d9">chunk-b37a0f6b94299524e95ad0cbeca67635</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244830</data>
+</edge>
+<edge source="Makes Decision On" target="conduct discussions">
+  <data key="d6">1.0</data>
+  <data key="d7">necessary.</data>
+  <data key="d8">Contracting Officer</data>
+  <data key="d9">chunk-20108db2833629d67bd99390151702b2</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244831</data>
+</edge>
+<edge source="NAVFAC SOUTHEAST PWD MAYPORT" target="located in">
+  <data key="d6">1.0</data>
+  <data key="d7">Location</data>
+  <data key="d8">Mayport</data>
+  <data key="d9">chunk-919779bd73d5179066fbf71160d50763</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244841</data>
+</edge>
+<edge source="NAVFAC SOUTHEAST PWD MAYPORT" target="BLDG 1966, BON HOMME RICHARD ST">
+  <data key="d6">2.0</data>
+  <data key="d7">Inspector of Record&lt;SEP&gt;Contains</data>
+  <data key="d8">Location,Organization</data>
+  <data key="d9">chunk-eefe86e586679ef56890af8a0422985e</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244858</data>
+</edge>
+<edge source="52.219-1" target="Small Business Program">
+  <data key="d6">1.0</data>
+  <data key="d7">Government regulation</data>
+  <data key="d8">Compliance requirement</data>
+  <data key="d9">chunk-274668de0e49d42e5ad075efb1334f6e</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244843</data>
+</edge>
+<edge source="Estimated Quantity" target="Line Item">
+  <data key="d6">1.0</data>
+  <data key="d7">Each line item has an estimated quantity.</data>
+  <data key="d8">contract terms,quantity</data>
+  <data key="d9">chunk-fc6ff2ce028cf81daef069e23076ead4</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244853</data>
+</edge>
+<edge source="Relationship_Type" target="Source_Entity">
+  <data key="d6">1.0</data>
+  <data key="d7">Description</data>
+  <data key="d8">Destination_Entity</data>
+  <data key="d9">chunk-62537388aaeda9ccb4e9ffbe0895fc45</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244857</data>
+</edge>
+<edge source="Defines" target="Size standard">
+  <data key="d6">1.0</data>
+  <data key="d7">This clause</data>
+  <data key="d8">Paragraph (d)</data>
+  <data key="d9">chunk-f03cd534209f3dae2729d910747664f6</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244859</data>
+</edge>
+<edge source="52.219-28 Postaward Small Business Program Rerepresentation." target="561210">
+  <data key="d6">1.0</data>
+  <data key="d7">Yes</data>
+  <data key="d8">NAICS Code Small business concern (yes/no)</data>
+  <data key="d9">chunk-6fb6d0a81335e540304aeeda474b6fdf</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244864</data>
+</edge>
+<edge source="Implements" target="Offeror's Approach">
+  <data key="d6">1.0</data>
+  <data key="d7">The offeror's approach includes implementing a Safety Management System</data>
+  <data key="d8">Safety Management System</data>
+  <data key="d9">chunk-cc33b7d57d832edfa3201846ac71e470</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244865</data>
+</edge>
+<edge source="252.232-7007 Limitation of Government's Obligation (Apr 2014)" target="DFARS Clauses Incorporated by Full Text">
+  <data key="d6">1.0</data>
+  <data key="d7">The Defense Federal Acquisition Regulation Supplement clause is incorporated by full text into the contract.</data>
+  <data key="d8">clause_inclusion</data>
+  <data key="d9">chunk-6605800e5819c93c058e5f8b6622bf9a</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244867</data>
+</edge>
+<edge source="REQUIRES" target="offeror">
+  <data key="d6">1.0</data>
+  <data key="d7">Financial Requirements</data>
+  <data key="d8">submit evidence of availability of working/operating capital from an independent financial institution,which will be used for the performance of the resultant contract.</data>
+  <data key="d9">chunk-408a02d0528e9051e0e40c6d05c26d53</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244868</data>
+</edge>
+<edge source="HAS" target="accounting firm">
+  <data key="d6">1.0</data>
+  <data key="d7">Independent Verification</data>
+  <data key="d8">certifies financial statements</data>
+  <data key="d9">chunk-408a02d0528e9051e0e40c6d05c26d53</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244870</data>
+</edge>
+<edge source="Entity 1" target="Relationship Label">
+  <data key="d6">1.0</data>
+  <data key="d7">Relationship Description</data>
+  <data key="d8">Entity 2</data>
+  <data key="d9">chunk-a7569c8d7ae6fe73fe1634c560459eb5</data>
+  <data key="d10">_N6945025R0003.pdf</data>
+  <data key="d11">1759244870</data>
+</edge>
+</graph></graphml>
