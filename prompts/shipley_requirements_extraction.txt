@@ -1,0 +1,124 @@
+"""
+Shipley Methodology Requirements Extraction Prompt
+
+This prompt applies Shipley Proposal Guide standards for systematic RFP analysis.
+References: Shipley Proposal Guide p.45-55 (Requirements Analysis Framework)
+
+Instructions:
+- Extract ALL requirements from RFP documents using Shipley methodology
+- Classify requirements per Shipley standards
+- Maintain traceability to original RFP sections
+- Support compliance matrix development
+"""
+
+Extract all requirements from the uploaded RFP documents using Shipley Proposal Guide methodology.
+
+For each requirement identified, provide:
+
+1. **Unique Identifier**: REQ-XXX format (sequential numbering)
+
+2. **Original Text**: Exact verbatim text from the RFP document
+
+3. **RFP Section**: 
+   - A-M sections (A: Solicitation/Contract Form, B: Supplies/Services, C: Statement of Work, etc.)
+   - J attachments (J-1, J-2, etc.)
+   - Specific subsection if applicable (e.g., "Section C.3.1.2")
+
+4. **Requirement Type** (per Shipley classification):
+   - Functional: What the system must do
+   - Performance: How well the system must perform
+   - Interface: How the system connects/communicates
+   - Design: Specific design constraints or standards
+   - Security: Security and compliance requirements
+   - Technical: Technical specifications and standards
+   - Management: Project management and reporting requirements
+   - Quality: Quality assurance and testing requirements
+
+5. **Compliance Level** (Shipley criticality assessment):
+   - Must/Shall: Mandatory requirements (non-negotiable)
+   - Should: Important requirements (strong preference)
+   - May: Optional requirements (desirable but not required)
+   - Will: Government commitments (not contractor requirements)
+
+6. **Source Context**:
+   - Page number (if available)
+   - Paragraph or section reference
+   - Any parent requirement relationships
+
+7. **Keywords**: Extract 3-5 key terms for searchability
+
+**Classification Guidelines** (per Shipley Proposal Guide p.50-52):
+- Focus on contractor obligations, not government commitments
+- Distinguish between requirements and background information
+- Identify measurable/verifiable criteria where possible
+- Note any conflicting or ambiguous requirements
+- Flag requirements that may need clarification
+
+**Output Format**: 
+Provide results as structured data that can support:
+- Compliance matrix development (Shipley Guide p.53-55)
+- Requirements traceability matrices
+- Gap analysis preparation
+- Proposal response planning
+
+**Quality Checks**:
+- Ensure no requirements are missed or duplicated
+- Verify all mandatory ("shall/must") requirements are captured
+- Confirm proper section attribution
+- Validate requirement classifications against Shipley standards
+
+Apply Shipley Proposal Guide principles for systematic, thorough requirements analysis that supports winning proposal development.
+
+---
+
+**SHIPLEY COMPLIANCE MATRIX GENERATION**
+
+Generate a comprehensive compliance matrix following Shipley Proposal Guide methodology (p.53-55).
+
+For each requirement in the RFP, assess and document:
+
+**1. Requirement Information**:
+   - Requirement ID and full text
+   - RFP section reference
+   - Requirement type and criticality level
+   - Any dependencies or related requirements
+
+**2. Compliance Assessment** (Shipley 4-level scale):
+   - **Compliant**: Fully meets requirement with proven capability
+   - **Partial**: Meets most aspects but has minor gaps or needs enhancement
+   - **Non-Compliant**: Cannot meet requirement without significant changes
+   - **Not Addressed**: Requirement not covered in current proposal approach
+
+**3. Proposal Response Mapping**:
+   - Specific proposal section(s) where requirement is addressed
+   - Page references for easy navigation
+   - Cross-references to supporting materials (past performance, technical data, etc.)
+
+**4. Gap Analysis** (per Shipley Capture Guide p.85-90):
+   - Detailed description of any capability gaps
+   - Root cause analysis of non-compliance
+   - Impact assessment on proposal competitiveness
+   - Relationship to competitor capabilities (if known)
+
+**5. Risk Assessment** (Shipley risk framework):
+   - **Risk Level**: High/Medium/Low based on:
+     * Criticality to government mission
+     * Evaluation weight/importance
+     * Difficulty of compliance demonstration
+     * Competitive differentiation potential
+   - **Risk Factors**: Technical, schedule, cost, or compliance risks
+   - **Mitigation Strategies**: Specific actions to address risks
+
+**6. Action Planning**:
+   - **Immediate Actions**: Required to achieve compliance
+   - **Resource Requirements**: Personnel, time, budget needs
+   - **Timeline**: When actions must be completed
+   - **Responsibility**: Who owns each action item
+
+**7. Win Theme Opportunities** (per Shipley methodology):
+   - How compliance supports key win themes
+   - Competitive advantages to highlight
+   - Customer hot buttons addressed
+   - Proof points and discriminators
+
+Apply Shipley Proposal Guide standards to ensure the compliance matrix supports development of a compliant, competitive, and compelling proposal response.

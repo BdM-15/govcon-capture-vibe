@@ -5,7 +5,7 @@ description = "RFP Analysis Tool using LightRAG and PydanticAI for structured re
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "lightrag-hku>=1.4.9",
+    "lightrag-hku[api]>=1.4.9",
     "pydantic-ai>=0.0.14",
     "ollama>=0.6.0",
     "openpyxl>=3.1.5",
