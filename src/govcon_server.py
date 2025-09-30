@@ -31,7 +31,7 @@ import uvicorn
 from dotenv import load_dotenv
 
 # Import our custom RFP routes
-from api.rfp_routes import router as rfp_router
+from api.rfp_routes import router as rfp_router, set_rag_instance
 
 # Load environment variables
 load_dotenv()
@@ -59,6 +59,57 @@ async def main():
     
     # Use LightRAG's create_app function with global_args
     app = create_app(global_args)
+    
+    # The LightRAG instance is created inside create_app but not accessible.
+    # We need to create our own instance with the same configuration to pass to RFP routes
+    try:
+        # Import LightRAG and create an instance with the same config as the server
+        from lightrag import LightRAG
+        from lightrag.llm.ollama import ollama_model_complete, ollama_embed
+        from lightrag.utils import EmbeddingFunc
+        from lightrag.kg.shared_storage import initialize_pipeline_status
+        
+        # Create LightRAG instance with same config as the server
+        rag_instance = LightRAG(
+            working_dir=global_args.working_dir,
+            workspace=global_args.workspace,
+            llm_model_func=ollama_model_complete,
+            llm_model_name=global_args.llm_model,
+            llm_model_max_async=global_args.max_async,
+            summary_max_tokens=global_args.summary_max_tokens,
+            summary_context_size=global_args.summary_context_size,
+            chunk_token_size=int(global_args.chunk_size),
+            chunk_overlap_token_size=int(global_args.chunk_overlap_size),
+            llm_model_kwargs={
+                "host": global_args.llm_binding_host,
+                "timeout": int(os.getenv("LLM_TIMEOUT", "600")),
+                "options": {"num_ctx": int(os.getenv("NUM_CTX", "65536"))},
+                "api_key": global_args.llm_binding_api_key,
+            },
+            embedding_func=EmbeddingFunc(
+                embedding_dim=int(global_args.embedding_dim),
+                max_token_size=int(os.getenv("MAX_EMBED_TOKENS", "8192")),
+                func=lambda texts: ollama_embed(
+                    texts,
+                    embed_model=global_args.embedding_model,
+                    host=global_args.embedding_binding_host,
+                    timeout=int(os.getenv("EMBEDDING_TIMEOUT", "300")),
+                ),
+            ),
+            default_llm_timeout=int(os.getenv("LLM_TIMEOUT", "600")),
+            default_embedding_timeout=int(os.getenv("EMBEDDING_TIMEOUT", "300")),
+            addon_params={
+                "language": global_args.summary_language,
+                "entity_types": global_args.entity_types,
+            },
+        )
+        
+        # Pass the LightRAG instance to RFP routes
+        set_rag_instance(rag_instance)
+        print("   ✅ LightRAG instance created and connected to RFP analysis routes")
+        
+    except Exception as e:
+        print(f"   ⚠️  Warning: Failed to create LightRAG instance for RFP routes: {e}")
     
     # Add our custom RFP analysis routes to the existing app
     app.include_router(rfp_router)
