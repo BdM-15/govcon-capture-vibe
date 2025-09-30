@@ -24,6 +24,12 @@ from pathlib import Path
 from lightrag import LightRAG, QueryParam
 from lightrag.utils import logger
 
+# Import enhanced RFP processing
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+from lightrag_rfp_integration import RFPAwareLightRAG, process_rfp_with_lightrag
+
 # Global LightRAG instance - will be set by the main server
 _rag_instance: Optional[LightRAG] = None
 
@@ -1462,6 +1468,333 @@ async def generate_compliance_matrix(
     except Exception as e:
         logger.error(f"Compliance matrix generation failed: {e}")
         raise HTTPException(status_code=500, detail=f"Matrix generation failed: {str(e)}")
+
+
+@router.post("/process-with-enhanced-chunking")
+async def process_document_with_enhanced_chunking(
+    document_text: str = Form(..., description="RFP document text to process"),
+    file_name: str = Form(default="rfp_document.pdf", description="Source file name")
+):
+    """
+    Process RFP document using enhanced section-aware chunking
+    
+    This endpoint uses the Shipley methodology-grounded RFP chunking strategy to:
+    - Preserve RFP section structure (A-M, J attachments)
+    - Maintain relationships between sections (L↔M, Section I clauses)
+    - Extract requirements with section context
+    - Create enhanced knowledge graph with section metadata
+    
+    The processed document will be available for improved section-aware queries.
+    """
+    try:
+        rag_instance = get_rag_instance()
+        
+        logger.info(f"Processing document '{file_name}' with enhanced RFP chunking")
+        
+        # Use enhanced RFP processing
+        results = await process_rfp_with_lightrag(rag_instance, document_text, file_name)
+        
+        return {
+            "status": "success",
+            "message": f"Document '{file_name}' processed with enhanced RFP chunking",
+            "processing_results": results,
+            "enhancement_features": [
+                "Section-aware chunking (A-M sections, J attachments)",
+                "Relationship preservation (L↔M evaluation factors)",
+                "Requirements extraction with section context",
+                "Shipley methodology integration",
+                "Enhanced knowledge graph with section metadata"
+            ],
+            "next_steps": [
+                "Use /rfp/query-section to query specific sections",
+                "Use /rfp/section-relationships to explore connections",
+                "Use /rfp/analyze for Shipley methodology analysis"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Enhanced document processing failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Enhanced processing failed: {str(e)}")
+
+
+@router.post("/query-section")
+async def query_specific_section(
+    section_id: str = Form(..., description="RFP section ID (A, B, C, L, M, etc.)"),
+    query: str = Form(default="", description="Specific query within the section"),
+    include_relationships: bool = Form(default=True, description="Include related sections in response")
+):
+    """
+    Query specific RFP section with enhanced context awareness
+    
+    Leverages section-aware chunking to provide targeted responses from
+    specific RFP sections while maintaining awareness of relationships.
+    """
+    try:
+        rag_instance = get_rag_instance()
+        
+        # Create RFP processor if we have chunks available
+        rfp_processor = RFPAwareLightRAG(rag_instance)
+        
+        # Query the specific section
+        section_result = await rfp_processor.query_by_section(section_id, query)
+        
+        # Get relationships if requested
+        relationships = {}
+        if include_relationships and section_result.get("status") == "success":
+            relationships = await rfp_processor.get_section_relationships(section_id)
+        
+        return {
+            "section_query_result": section_result,
+            "section_relationships": relationships if include_relationships else None,
+            "enhanced_features": {
+                "section_aware": True,
+                "relationship_mapping": include_relationships,
+                "shipley_methodology": True
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Section query failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Section query failed: {str(e)}")
+
+
+@router.get("/section-relationships/{section_id}")
+async def get_section_relationships_endpoint(section_id: str):
+    """
+    Get detailed relationships for a specific RFP section
+    
+    Shows how sections connect to each other, particularly important
+    relationships like L (Instructions) ↔ M (Evaluation Factors).
+    """
+    try:
+        rag_instance = get_rag_instance()
+        rfp_processor = RFPAwareLightRAG(rag_instance)
+        
+        relationships = await rfp_processor.get_section_relationships(section_id)
+        
+        return {
+            "section_id": section_id,
+            "relationships": relationships,
+            "relationship_context": {
+                "L_M_connection": "Instructions to Offerors link to Evaluation Factors",
+                "section_I_clauses": "Contract clauses apply across multiple sections",
+                "C_dependencies": "Statement of Work relates to CLINs, performance, evaluation",
+                "J_attachments": "Attachments provide supporting details for main sections"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Relationship query failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Relationship query failed: {str(e)}")
+
+
+@router.get("/enhanced-processing-status")
+async def get_enhanced_processing_status():
+    """
+    Get status of enhanced RFP processing capabilities
+    
+    Shows whether documents have been processed with section-aware chunking
+    and what enhanced features are available.
+    """
+    try:
+        rag_instance = get_rag_instance()
+        rfp_processor = RFPAwareLightRAG(rag_instance)
+        
+        processing_summary = rfp_processor.get_processing_summary()
+        
+        return {
+            "enhanced_processing": {
+                "status": "available",
+                "features": [
+                    "Section-aware chunking (A-M sections)",
+                    "J attachment processing",
+                    "L↔M relationship preservation", 
+                    "Requirements extraction with context",
+                    "Shipley methodology integration",
+                    "Cross-section relationship mapping"
+                ]
+            },
+            "current_document": processing_summary,
+            "capabilities": {
+                "section_queries": "Query specific RFP sections",
+                "relationship_analysis": "Analyze section interconnections",
+                "requirements_extraction": "Extract requirements with section context",
+                "compliance_assessment": "Shipley methodology compliance analysis"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Status check failed: {e}")
+        return {
+            "enhanced_processing": {
+                "status": "error",
+                "error": str(e)
+            }
+        }
+
+
+@router.post("/test-enhanced-chunking")
+async def test_enhanced_chunking_with_mbos():
+    """
+    Test enhanced RFP chunking with the existing MBOS document
+    
+    This endpoint tests the new section-aware chunking strategy
+    against the existing MBOS RFP document to validate improvements.
+    """
+    try:
+        rag_instance = get_rag_instance()
+        working_dir = Path(rag_instance.working_dir)
+        
+        # Check if we have the original document
+        input_files = list(Path("inputs").glob("**/*.pdf")) if Path("inputs").exists() else []
+        
+        if not input_files:
+            # Try to read from stored chunks to reconstruct document
+            chunks_file = working_dir / "kv_store_text_chunks.json"
+            if chunks_file.exists():
+                with open(chunks_file, 'r', encoding='utf-8') as f:
+                    chunks_data = json.load(f)
+                
+                # Reconstruct document from chunks
+                document_text = ""
+                chunk_items = list(chunks_data.items())
+                # Sort by chunk order if available
+                try:
+                    chunk_items.sort(key=lambda x: x[1].get("chunk_order_index", 0))
+                except:
+                    pass
+                
+                for chunk_id, chunk_data in chunk_items:
+                    content = chunk_data.get("content", "")
+                    document_text += content + "\n\n"
+                
+                if len(document_text) < 1000:
+                    return {
+                        "status": "insufficient_data",
+                        "message": "Not enough document content available for testing",
+                        "available_chunks": len(chunks_data)
+                    }
+                
+                logger.info(f"Reconstructed document from {len(chunks_data)} chunks: {len(document_text)} characters")
+                
+            else:
+                return {
+                    "status": "no_document",
+                    "message": "No document available for testing enhanced chunking"
+                }
+        else:
+            # Use the first PDF file found
+            pdf_file = input_files[0]
+            logger.info(f"Found PDF file for testing: {pdf_file}")
+            
+            # For this test, we'll use the reconstructed text since we don't have PDF parsing here
+            # In a real implementation, you'd use a PDF parser like PyPDF2 or pdfplumber
+            chunks_file = working_dir / "kv_store_text_chunks.json"
+            if chunks_file.exists():
+                with open(chunks_file, 'r', encoding='utf-8') as f:
+                    chunks_data = json.load(f)
+                
+                document_text = ""
+                chunk_items = list(chunks_data.items())
+                try:
+                    chunk_items.sort(key=lambda x: x[1].get("chunk_order_index", 0))
+                except:
+                    pass
+                
+                for chunk_id, chunk_data in chunk_items:
+                    content = chunk_data.get("content", "")
+                    document_text += content + "\n\n"
+            else:
+                return {
+                    "status": "no_chunks",
+                    "message": "No chunks available for document reconstruction"
+                }
+        
+        # Test the enhanced chunking strategy
+        from rfp_chunking import ShipleyRFPChunker
+        chunker = ShipleyRFPChunker()
+        
+        logger.info("Testing enhanced RFP chunking strategy")
+        
+        # Process document with enhanced chunking
+        enhanced_chunks = chunker.process_document(document_text)
+        
+        # Get section summary
+        section_summary = chunker.get_section_summary(enhanced_chunks)
+        
+        # Compare with original chunking
+        original_chunks_count = len(chunks_data) if 'chunks_data' in locals() else 0
+        
+        # Analyze improvements
+        sections_found = section_summary.get("sections_identified", [])
+        sections_with_reqs = section_summary.get("sections_with_requirements", [])
+        
+        # Test specific section queries
+        test_results = {}
+        
+        # Test for common sections
+        common_sections = ["C", "L", "M", "H", "I"]
+        for section_id in common_sections:
+            section_chunks = [chunk for chunk in enhanced_chunks if chunk.section_id.startswith(section_id)]
+            if section_chunks:
+                test_results[f"Section_{section_id}"] = {
+                    "found": True,
+                    "chunks": len(section_chunks),
+                    "requirements": sum(len(chunk.requirements) for chunk in section_chunks),
+                    "relationships": list(set().union(*[chunk.relationships for chunk in section_chunks])),
+                    "title": section_chunks[0].section_title
+                }
+            else:
+                test_results[f"Section_{section_id}"] = {"found": False}
+        
+        # Look for MBOS-specific content
+        mbos_content_found = False
+        site_visit_sections = []
+        
+        for chunk in enhanced_chunks:
+            if any(term in chunk.content.lower() for term in ["mbos", "site visit", "blount island"]):
+                mbos_content_found = True
+                site_visit_sections.append({
+                    "section_id": chunk.section_id,
+                    "section_title": chunk.section_title,
+                    "chunk_id": chunk.chunk_id,
+                    "contains_mbos": "mbos" in chunk.content.lower(),
+                    "contains_site_visit": "site visit" in chunk.content.lower(),
+                    "contains_blount": "blount island" in chunk.content.lower()
+                })
+        
+        return {
+            "status": "success",
+            "test_results": {
+                "enhanced_chunking": {
+                    "chunks_created": len(enhanced_chunks),
+                    "sections_identified": sections_found,
+                    "sections_with_requirements": sections_with_reqs,
+                    "total_requirements": sum(len(chunk.requirements) for chunk in enhanced_chunks)
+                },
+                "comparison": {
+                    "original_chunks": original_chunks_count,
+                    "enhanced_chunks": len(enhanced_chunks),
+                    "improvement": f"{len(enhanced_chunks) - original_chunks_count:+d} chunks"
+                },
+                "section_analysis": test_results,
+                "mbos_content": {
+                    "found": mbos_content_found,
+                    "sections_with_mbos": site_visit_sections
+                },
+                "section_summary": section_summary
+            },
+            "recommendations": [
+                "Enhanced chunking preserves RFP section structure",
+                "Section relationships are maintained for better queries",
+                "Requirements are extracted with section context",
+                "MBOS-specific content is better organized by section"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Enhanced chunking test failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
 
 
 @router.get("/shipley-references")

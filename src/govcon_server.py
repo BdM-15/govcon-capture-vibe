@@ -30,8 +30,11 @@ from lightrag.api.lightrag_server import create_app
 import uvicorn
 from dotenv import load_dotenv
 
-# Import our custom RFP routes
+# Import our custom RFP routes and enhanced processing
 from api.rfp_routes import router as rfp_router, set_rag_instance
+import sys
+sys.path.append(str(Path(__file__).parent))
+from lightrag_rfp_integration import RFPAwareLightRAG
 
 # Load environment variables
 load_dotenv()
@@ -106,7 +109,15 @@ async def main():
         
         # Pass the LightRAG instance to RFP routes
         set_rag_instance(rag_instance)
+        
+        # Initialize RFP-aware processor for enhanced document processing
+        rfp_processor = RFPAwareLightRAG(rag_instance)
+        
+        # Store reference to enhanced processor for potential future use
+        app.state.rfp_processor = rfp_processor
+        
         print("   ✅ LightRAG instance created and connected to RFP analysis routes")
+        print("   ✅ RFP-aware document processor initialized with Shipley methodology")
         
     except Exception as e:
         print(f"   ⚠️  Warning: Failed to create LightRAG instance for RFP routes: {e}")
