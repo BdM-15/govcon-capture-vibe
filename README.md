@@ -819,6 +819,7 @@ MIT License. This project implements Shipley methodology for educational and res
 ### **v2.1.0 - September 30, 2025 - Model Optimization Success**
 
 **Major Achievements:**
+
 - ✅ **Resolved LightRAG Processing Issues**: Fixed systematic chunk processing failures by switching from qwen2.5-coder:7b to mistral-nemo:latest
 - ✅ **Large Document Processing**: Successfully processed 71-page Base Operating Services RFP completely (all 48 chunks)
 - ✅ **Knowledge Graph Construction**: Extracted 172 entities and 63 relationships from real government RFP
@@ -826,6 +827,7 @@ MIT License. This project implements Shipley methodology for educational and res
 - ✅ **Model Compatibility**: Identified and resolved model compatibility issues for entity extraction pipeline
 
 **Technical Improvements:**
+
 - **LLM Upgrade**: mistral-nemo:latest (12B parameters, 128K context) vs qwen2.5-coder:7b (7B parameters, 32K context)
 - **Context Expansion**: Increased NUM_CTX from 32768 to 65536 tokens for better large document handling
 - **Timeout Optimization**: Increased LLM_TIMEOUT from 300 to 600 seconds for complex entity extraction
@@ -833,6 +835,7 @@ MIT License. This project implements Shipley methodology for educational and res
 - **Configuration**: Updated `.env` for optimal performance with larger, more capable model
 
 **Validation Results:**
+
 - **Document Processing**: 71-page BOS RFP processed completely without failures
 - **Entity Extraction**: 172 entities successfully identified and classified
 - **Relationship Mapping**: 63 relationships extracted for knowledge graph construction
@@ -840,6 +843,7 @@ MIT License. This project implements Shipley methodology for educational and res
 - **API Functionality**: RFP analysis endpoints returning structured Shipley methodology responses
 
 **Next Phase Ready:**
+
 - **Phase 3 Preparation**: Core processing pipeline validated and stable
 - **API Integration**: Ready to connect RFP analysis routes to actual document knowledge graph
 - **User Interface**: WebUI functional and ready for enhanced RFP-specific components
