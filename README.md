@@ -15,6 +15,103 @@ This project is a lightweight, zero-cost, open-source tool to reduce capture and
 
 Inspired by Shipley Proposal/Capture Guides and examples like Proposal Development Worksheets/Capture Plans (see `/docs` for PDFs). Built with LightRAG foundation plus custom RFP analysis extensions.
 
+## 🏛️ **Government Contracting Domain Ontology**
+
+Our system implements a comprehensive **Government Contracting Ontology** that formally models the complex relationships in federal procurement. This ontological approach transforms generic document processing into domain-aware RFP intelligence.
+
+### **Core Entity Hierarchy**
+
+```
+Federal Agency
+├── Solicitation (RFP/RFQ/IFB)
+│   ├── RFP Sections (A-M structure)
+│   │   ├── Section A: Solicitation/Contract Form
+│   │   ├── Section B: Supplies/Services & Prices (CLINs)
+│   │   ├── Section C: Statement of Work (SOW)
+│   │   ├── Section F: Performance Work Statement (PWS)
+│   │   ├── Section I: Contract Clauses (FAR/DFARS)
+│   │   ├── Section L: Instructions to Offerors
+│   │   ├── Section M: Evaluation Factors
+│   │   └── Section J: Attachments
+│   ├── Requirements (extracted from sections)
+│   │   ├── Functional Requirements
+│   │   ├── Performance Requirements
+│   │   ├── Technical Requirements
+│   │   └── Compliance Requirements
+│   └── Evaluation Structure
+│       ├── Technical Factors
+│       ├── Management Factors
+│       ├── Cost/Price Factors
+│       └── Past Performance Factors
+└── Awards & Contracts
+```
+
+### **Shipley Methodology Integration**
+
+```
+Requirements Classification (Shipley Guide p.50-55):
+├── Must/Shall (Mandatory - non-negotiable)
+├── Should/Will (Important - strong preference)
+├── May/Could (Optional - desirable)
+└── Informational (Background context)
+
+Compliance Assessment (Shipley Guide p.53-55):
+├── Compliant (Fully meets requirement)
+├── Partial (Minor gaps, enhancement needed)
+├── Non-Compliant (Significant changes required)
+└── Not Addressed (Requirement not covered)
+
+Risk Assessment (Capture Guide p.85-90):
+├── High (Critical to mission, difficult to address)
+├── Medium (Important, manageable impact)
+└── Low (Minor impact, easily mitigated)
+```
+
+### **Critical Domain Relationships**
+
+**L↔M Relationship (Most Critical):**
+
+- Section L Instructions ↔ Section M Evaluation Factors
+- Submission requirements ↔ Assessment criteria
+- Page limits ↔ Evaluation weights
+- Format requirements ↔ Scoring methodology
+
+**Section I Applications:**
+
+- Contract clauses → Applicable technical sections
+- FAR/DFARS references → Compliance requirements
+- Regulatory mandates → Performance specifications
+
+**SOW Dependencies:**
+
+- Section C SOW → Section B CLINs (work breakdown)
+- Technical requirements → Section F Performance
+- Deliverables → Section M Evaluation criteria
+
+**J Attachment Support:**
+
+- Technical attachments → SOW requirements
+- Forms and templates → Submission instructions
+- Reference documents → Evaluation standards
+
+### **Knowledge Graph Enhancement**
+
+Our ontology enhances LightRAG's knowledge graph by:
+
+1. **Section-Aware Chunking**: Preserves RFP structure (A-M sections, J attachments)
+2. **Relationship Preservation**: Maintains critical L↔M and dependency mappings
+3. **Requirements Extraction**: Identifies and classifies contractor obligations
+4. **Compliance Mapping**: Links requirements to evaluation criteria
+5. **Risk Assessment**: Analyzes proposal gaps using Shipley methodology
+
+This ontological approach enables sophisticated government contracting queries like:
+
+- _"What are the mandatory technical requirements in Section C that will be evaluated under Factor 1 in Section M?"_
+- _"Which Section I clauses apply to cybersecurity requirements and how do they impact the technical approach?"_
+- _"What L↔M relationships exist between page limits and evaluation weights?"_
+
+---
+
 ## 🎯 Key Goals (Plain English)
 
 - **Cut 70–80% of the manual grind** of reading and tracing requirements

@@ -3,11 +3,15 @@ LightRAG Integration for RFP-Aware Chunking
 
 Integrates ShipleyRFPChunker with LightRAG's document processing pipeline
 to maintain RFP section structure and relationships in the knowledge graph.
+
+This module provides seamless integration with LightRAG's WebUI by automatically
+detecting and processing RFP documents with enhanced section-aware chunking.
 """
 
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional
+import re
+from typing import List, Dict, Any, Optional, Union
 from pathlib import Path
 
 from lightrag import LightRAG
@@ -15,18 +19,17 @@ from lightrag.base import BaseKVStorage
 from lightrag.utils import logger as lightrag_logger
 
 # Import RFP chunking components
-import sys
-sys.path.append(str(Path(__file__).parent))
-from rfp_chunking import ShipleyRFPChunker, ContextualChunk
+from src.core.chunking import ShipleyRFPChunker, ContextualChunk
 
 logger = logging.getLogger(__name__)
 
 class RFPAwareLightRAG:
     """
-    Enhanced LightRAG processor with RFP-aware chunking capabilities
+    Enhanced LightRAG processor with automatic RFP detection and enhanced chunking
     
-    Wraps standard LightRAG functionality while using custom RFP chunking
-    that preserves section structure and relationships.
+    This class wraps LightRAG functionality while automatically detecting RFP documents
+    and applying enhanced section-aware processing. It maintains full compatibility
+    with the LightRAG WebUI while providing superior RFP analysis capabilities.
     """
     
     def __init__(self, lightrag_instance: LightRAG):
@@ -35,6 +38,206 @@ class RFPAwareLightRAG:
         self.chunker = ShipleyRFPChunker()
         self.rfp_chunks: List[ContextualChunk] = []
         self.section_summary: Dict[str, Any] = {}
+        self.processed_documents: Dict[str, Dict[str, Any]] = {}
+        
+        # RFP detection patterns
+        self.rfp_patterns = [
+            r'solicitation\s+(?:number|no\.?|#)?\s*:?\s*([A-Z0-9\-_]+)',
+            r'rfp\s+(?:number|no\.?|#)?\s*:?\s*([A-Z0-9\-_]+)',
+            r'request\s+for\s+proposal',
+            r'section\s+[A-M]\s*[:\.]',
+            r'instructions\s+to\s+offerors',
+            r'evaluation\s+factors?\s+for\s+award',
+            r'statement\s+of\s+work',
+            r'performance\s+work\s+statement',
+            r'attachment\s+j-?[0-9]+',
+            r'solicitation\s+provisions',
+            r'contract\s+clauses',
+        ]
+        
+        lightrag_logger.info("🎯 RFP-Aware LightRAG initialized - enhanced processing ready")
+    
+    def detect_rfp_document(self, document_text: str, file_path: Optional[str] = None) -> bool:
+        """
+        Detect if a document is likely an RFP based on content and filename patterns
+        
+        Args:
+            document_text: Document content to analyze
+            file_path: Optional path to the document file
+            
+        Returns:
+            bool: True if document appears to be an RFP
+        """
+        pattern_matches = 0
+        content_lower = document_text.lower()
+        
+        # Check filename for RFP indicators
+        if file_path:
+            filename = Path(file_path).name.lower()
+            rfp_filename_patterns = [
+                r'rfp', r'solicitation', r'proposal', r'sow', r'pws',
+                r'n\d+', r'w\d+', r'gs\d+', r'sp\d+'  # Common govt solicitation numbers
+            ]
+            
+            for pattern in rfp_filename_patterns:
+                if re.search(pattern, filename):
+                    lightrag_logger.info(f"📄 RFP detected by filename pattern: {pattern}")
+                    return True
+        
+        # Check content for RFP patterns
+        for pattern in self.rfp_patterns:
+            if re.search(pattern, content_lower):
+                pattern_matches += 1
+                lightrag_logger.debug(f"🔍 RFP pattern match: {pattern}")
+        
+        # Check for section structure (strong indicator)
+        section_pattern = r'section\s+[a-m]\s*[\.\:]'
+        if re.search(section_pattern, content_lower):
+            pattern_matches += 2  # Weight section patterns more heavily
+        
+        # Check for multiple sections
+        sections_found = len(re.findall(r'section\s+[a-m]', content_lower))
+        if sections_found >= 3:
+            pattern_matches += 3  # Strong indicator of RFP structure
+        
+        # Require multiple pattern matches for content-based detection
+        is_rfp = pattern_matches >= 3
+        
+        if is_rfp:
+            lightrag_logger.info(f"📋 RFP document detected with {pattern_matches} pattern matches, {sections_found} sections")
+        else:
+            lightrag_logger.info(f"📄 Document does not appear to be an RFP ({pattern_matches} pattern matches)")
+        
+        return is_rfp
+    
+    async def ainsert(self, content: Union[str, List[str]], **kwargs) -> Any:
+        """
+        Enhanced insert method that automatically applies RFP processing when detected
+        
+        This method maintains compatibility with LightRAG's ainsert while adding
+        automatic RFP detection and enhanced processing.
+        
+        Args:
+            content: Document content (string or list of strings)
+            **kwargs: Additional parameters for LightRAG processing
+            
+        Returns:
+            LightRAG processing results with enhanced metadata
+        """
+        # Handle list input
+        if isinstance(content, list):
+            results = []
+            for doc in content:
+                result = await self.ainsert(doc, **kwargs)
+                results.append(result)
+            return results
+        
+        # Process single document
+        document_text = str(content)
+        file_path = kwargs.get('file_path', 'unknown_document')
+        
+        try:
+            # Detect if this is an RFP document
+            is_rfp = self.detect_rfp_document(document_text, file_path)
+            
+            if is_rfp:
+                lightrag_logger.info("🎯 Processing document with enhanced RFP analysis")
+                return await self._process_as_rfp(document_text, file_path, **kwargs)
+            else:
+                lightrag_logger.info("📄 Processing document with standard LightRAG")
+                return await self.lightrag.ainsert(document_text, **kwargs)
+                
+        except Exception as e:
+            lightrag_logger.error(f"❌ Error in enhanced processing, falling back to standard: {e}")
+            # Fallback to standard LightRAG processing
+            return await self.lightrag.ainsert(document_text, **kwargs)
+    
+    async def _process_as_rfp(self, document_text: str, file_path: str, **kwargs) -> Dict[str, Any]:
+        """Internal method to process document as RFP using enhanced chunking"""
+        try:
+            # Process with enhanced RFP chunking
+            processing_result = await self.process_rfp_document(document_text, file_path)
+            
+            # Store metadata about this processing
+            self.processed_documents[file_path] = {
+                "processing_type": "enhanced_rfp",
+                "timestamp": asyncio.get_event_loop().time(),
+                "status": processing_result.get("status", "unknown"),
+                "sections_found": processing_result.get("sections_identified", []),
+                "chunks_created": processing_result.get("chunks_processed", 0)
+            }
+            
+            lightrag_logger.info(f"✅ Enhanced RFP processing complete for {file_path}")
+            
+            # Return result in LightRAG-compatible format
+            return {
+                "status": "success",
+                "enhanced_processing": True,
+                "rfp_analysis": processing_result,
+                "file_path": file_path
+            }
+            
+        except Exception as e:
+            lightrag_logger.error(f"❌ Enhanced RFP processing failed for {file_path}: {e}")
+            # Record the failure and fallback
+            self.processed_documents[file_path] = {
+                "processing_type": "fallback_standard",
+                "timestamp": asyncio.get_event_loop().time(),
+                "status": "enhanced_failed",
+                "error": str(e)
+            }
+            
+            # Fallback to standard processing
+            return await self.lightrag.ainsert(document_text, **kwargs)
+    
+    async def aquery(self, query: str, **kwargs) -> Any:
+        """
+        Enhanced query method with RFP awareness
+        
+        Automatically enhances queries for RFP content when RFP documents
+        have been processed, while maintaining full LightRAG compatibility.
+        
+        Args:
+            query: Search query
+            **kwargs: Additional parameters for LightRAG query
+            
+        Returns:
+            Enhanced query results with RFP context when applicable
+        """
+        try:
+            # Check if we have processed RFP documents
+            has_rfp_content = any(
+                doc_info.get("processing_type") == "enhanced_rfp" 
+                for doc_info in self.processed_documents.values()
+            )
+            
+            if has_rfp_content:
+                # Detect if query is RFP-related
+                rfp_query_patterns = [
+                    r'section\s+[a-m]', r'requirement', r'compliance', r'evaluation',
+                    r'proposal', r'offeror', r'solicitation', r'attachment',
+                    r'instructions', r'factors', r'award', r'clause'
+                ]
+                
+                is_rfp_query = any(re.search(pattern, query.lower()) for pattern in rfp_query_patterns)
+                
+                if is_rfp_query:
+                    # Enhance query with RFP context
+                    enhanced_query = f"""
+{query}
+
+[ANALYSIS CONTEXT: This query relates to RFP analysis. Focus on section-specific content, requirements, compliance factors, and relationships between sections. Pay special attention to L-M section relationships (Instructions to Offerors ↔ Evaluation Factors).]
+"""
+                    lightrag_logger.info("🎯 Enhanced RFP-aware query with section context")
+                    return await self.lightrag.aquery(enhanced_query, **kwargs)
+            
+            # Standard query processing
+            return await self.lightrag.aquery(query, **kwargs)
+            
+        except Exception as e:
+            lightrag_logger.error(f"❌ Error in enhanced query: {e}")
+            # Fallback to standard query
+            return await self.lightrag.aquery(query, **kwargs)
         
     async def process_rfp_document(self, document_text: str, file_path: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -315,23 +518,28 @@ class RFPAwareLightRAG:
             "chunk_count": len(section_chunks)
         }
     
-    def get_processing_summary(self) -> Dict[str, Any]:
-        """Get summary of RFP processing results"""
+    def get_processing_status(self) -> Dict[str, Any]:
+        """Get status of all processed documents"""
+        rfp_count = sum(1 for doc in self.processed_documents.values() 
+                       if doc.get("processing_type") == "enhanced_rfp")
+        
         return {
-            "chunks_created": len(self.rfp_chunks),
-            "section_summary": self.section_summary,
-            "sections_with_requirements": [
-                section_id for section_id in self.section_summary.get("sections_identified", [])
-                if any(chunk.requirements for chunk in self.rfp_chunks if chunk.section_id == section_id)
-            ],
-            "total_requirements": sum(len(chunk.requirements) for chunk in self.rfp_chunks),
-            "processing_metadata": {
-                "chunker_used": "ShipleyRFPChunker",
-                "lightrag_integration": "enabled",
-                "section_awareness": "enabled",
-                "relationship_mapping": "enabled"
-            }
+            "total_documents": len(self.processed_documents),
+            "rfp_documents": rfp_count,
+            "standard_documents": len(self.processed_documents) - rfp_count,
+            "enhanced_processing_available": True,
+            "processed_documents": self.processed_documents.copy()
         }
+    
+    def is_rfp_processed(self, file_path: str) -> bool:
+        """Check if a specific file was processed as an RFP"""
+        doc_info = self.processed_documents.get(file_path, {})
+        return doc_info.get("processing_type") == "enhanced_rfp"
+    
+    # Delegate all other LightRAG methods
+    def __getattr__(self, name):
+        """Delegate unknown methods to the underlying LightRAG instance"""
+        return getattr(self.lightrag, name)
 
 # Convenience function for easy integration
 async def process_rfp_with_lightrag(lightrag_instance: LightRAG, document_text: str, file_path: Optional[str] = None) -> Dict[str, Any]:

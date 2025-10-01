@@ -1,0 +1,162 @@
+2025-10-01 06:17:39 | INFO     | src.logging_config   | setup_logging   | 🚀 GovCon Capture Vibe Logging Initialized
+   📁 Log Directory: C:\Users\benma\govcon-capture-vibe\logs
+   📊 Main Log: govcon_server.log
+   ⚡ Performance Log: performance.log
+   🔴 Error Log: errors.log
+   🔧 LightRAG Log: lightrag.log
+   📏 Max File Size: 10.0MB
+   🗂️ Backup Count: 5
+   📺 Console Output: True
+   🎯 Log Level: INFO
+2025-10-01 06:17:39 | INFO     | src.logging_config   | setup_logging   | 🚀 GovCon Capture Vibe Logging Initialized
+   📁 Log Directory: C:\Users\benma\govcon-capture-vibe\logs
+   📊 Main Log: govcon_server.log
+   ⚡ Performance Log: performance.log
+   🔴 Error Log: errors.log
+   🔧 LightRAG Log: lightrag.log
+   📏 Max File Size: 10.0MB
+   🗂️ Backup Count: 5
+   📺 Console Output: True
+   🎯 Log Level: INFO
+2025-10-01 06:17:45 | INFO     | src.logging_config   | setup_logging   | 🚀 GovCon Capture Vibe Logging Initialized
+   📁 Log Directory: C:\Users\benma\govcon-capture-vibe\logs
+   📊 Main Log: govcon_server.log
+   ⚡ Performance Log: performance.log
+   🔴 Error Log: errors.log
+   🔧 LightRAG Log: lightrag.log
+   📏 Max File Size: 10.0MB
+   🗂️ Backup Count: 5
+   📺 Console Output: True
+   🎯 Log Level: INFO
+2025-10-01 06:17:45 | INFO     | src.logging_config   | setup_logging   | 🚀 GovCon Capture Vibe Logging Initialized
+   📁 Log Directory: C:\Users\benma\govcon-capture-vibe\logs
+   📊 Main Log: govcon_server.log
+   ⚡ Performance Log: performance.log
+   🔴 Error Log: errors.log
+   🔧 LightRAG Log: lightrag.log
+   📏 Max File Size: 10.0MB
+   🗂️ Backup Count: 5
+   📺 Console Output: True
+   🎯 Log Level: INFO
+2025-10-01 06:17:46 | INFO     | govcon_server        | main            | 🚀 GovCon Capture Vibe Server initialization started
+2025-10-01 06:17:46 | INFO     | govcon_server        | main            | 📁 Log files configured: {'log_dir': 'C:\\Users\\benma\\govcon-capture-vibe\\logs', 'main_log': 'logs\\govcon_server.log', 'performance_log': 'logs\\performance.log', 'error_log': 'logs\\errors.log', 'lightrag_log': 'logs\\lightrag.log'}
+2025-10-01 06:17:47 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_entities.json'} 0 data
+2025-10-01 06:17:47 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_relationships.json'} 0 data
+2025-10-01 06:17:47 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_chunks.json'} 0 data
+2025-10-01 06:17:47 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_entities.json'} 0 data
+2025-10-01 06:17:47 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_relationships.json'} 0 data
+2025-10-01 06:17:47 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_chunks.json'} 0 data
+2025-10-01 06:19:35 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_entities.json'} 0 data
+2025-10-01 06:19:35 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_relationships.json'} 0 data
+2025-10-01 06:19:35 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_chunks.json'} 0 data
+2025-10-01 06:51:38 | INFO     | src.logging_config   | setup_logging   | 🚀 GovCon Capture Vibe Logging Initialized
+   📁 Log Directory: C:\Users\benma\govcon-capture-vibe\logs
+   📊 Main Log: govcon_server.log
+   ⚡ Performance Log: performance.log
+   🔴 Error Log: errors.log
+   🔧 LightRAG Log: lightrag.log
+   📏 Max File Size: 10.0MB
+   🗂️ Backup Count: 5
+   📺 Console Output: True
+   🎯 Log Level: INFO
+2025-10-01 06:51:38 | INFO     | src.logging_config   | setup_logging   | 🚀 GovCon Capture Vibe Logging Initialized
+   📁 Log Directory: C:\Users\benma\govcon-capture-vibe\logs
+   📊 Main Log: govcon_server.log
+   ⚡ Performance Log: performance.log
+   🔴 Error Log: errors.log
+   🔧 LightRAG Log: lightrag.log
+   📏 Max File Size: 10.0MB
+   🗂️ Backup Count: 5
+   📺 Console Output: True
+   🎯 Log Level: INFO
+2025-10-01 06:51:47 | INFO     | src.logging_config   | setup_logging   | 🚀 GovCon Capture Vibe Logging Initialized
+   📁 Log Directory: C:\Users\benma\govcon-capture-vibe\logs
+   📊 Main Log: govcon_server.log
+   ⚡ Performance Log: performance.log
+   🔴 Error Log: errors.log
+   🔧 LightRAG Log: lightrag.log
+   📏 Max File Size: 10.0MB
+   🗂️ Backup Count: 5
+   📺 Console Output: True
+   🎯 Log Level: INFO
+2025-10-01 06:51:47 | INFO     | src.logging_config   | setup_logging   | 🚀 GovCon Capture Vibe Logging Initialized
+   📁 Log Directory: C:\Users\benma\govcon-capture-vibe\logs
+   📊 Main Log: govcon_server.log
+   ⚡ Performance Log: performance.log
+   🔴 Error Log: errors.log
+   🔧 LightRAG Log: lightrag.log
+   📏 Max File Size: 10.0MB
+   🗂️ Backup Count: 5
+   📺 Console Output: True
+   🎯 Log Level: INFO
+2025-10-01 06:51:48 | INFO     | govcon_server        | main            | 🚀 GovCon Capture Vibe Server initialization started
+2025-10-01 06:51:48 | INFO     | govcon_server        | main            | 📁 Log files configured: {'log_dir': 'C:\\Users\\benma\\govcon-capture-vibe\\logs', 'main_log': 'logs\\govcon_server.log', 'performance_log': 'logs\\performance.log', 'error_log': 'logs\\errors.log', 'lightrag_log': 'logs\\lightrag.log'}
+2025-10-01 06:51:48 | INFO     | govcon_server        | prewarm_ollama_models | 🔥 Pre-warming Ollama models for optimal performance...
+2025-10-01 06:51:48 | INFO     | govcon_server        | prewarm_ollama_models |    ├─ Pre-warming LLM model: mistral-nemo:latest
+2025-10-01 06:51:48 | WARNING  | govcon_server        | prewarm_ollama_models |    ⚠️ Model pre-warming failed: 'hashing_kv'
+2025-10-01 06:51:48 | WARNING  | govcon_server        | prewarm_ollama_models |    ⚠️ Continuing startup - expect cold start delays on first processing
+2025-10-01 06:51:49 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_entities.json'} 0 data
+2025-10-01 06:51:49 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_relationships.json'} 0 data
+2025-10-01 06:51:49 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_chunks.json'} 0 data
+2025-10-01 06:51:49 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_entities.json'} 0 data
+2025-10-01 06:51:49 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_relationships.json'} 0 data
+2025-10-01 06:51:49 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_chunks.json'} 0 data
+2025-10-01 07:13:19 | INFO     | src.utils.logging_config | setup_logging   | 🚀 GovCon Capture Vibe Logging Initialized
+   📁 Log Directory: C:\Users\benma\govcon-capture-vibe\logs
+   📊 Main Log: govcon_server.log
+   ⚡ Performance Log: performance.log
+   🔴 Error Log: errors.log
+   🔧 LightRAG Log: lightrag.log
+   📏 Max File Size: 10.0MB
+   🗂️ Backup Count: 5
+   📺 Console Output: True
+   🎯 Log Level: INFO
+2025-10-01 07:13:19 | INFO     | src.utils.logging_config | setup_logging   | 🚀 GovCon Capture Vibe Logging Initialized
+   📁 Log Directory: C:\Users\benma\govcon-capture-vibe\logs
+   📊 Main Log: govcon_server.log
+   ⚡ Performance Log: performance.log
+   🔴 Error Log: errors.log
+   🔧 LightRAG Log: lightrag.log
+   📏 Max File Size: 10.0MB
+   🗂️ Backup Count: 5
+   📺 Console Output: True
+   🎯 Log Level: INFO
+2025-10-01 07:13:19 | INFO     | server               | main            | 🚀 GovCon Capture Vibe Server initialization started
+2025-10-01 07:13:19 | INFO     | server               | main            | 📁 Log files configured: {'log_dir': 'C:\\Users\\benma\\govcon-capture-vibe\\logs', 'main_log': 'logs\\govcon_server.log', 'performance_log': 'logs\\performance.log', 'error_log': 'logs\\errors.log', 'lightrag_log': 'logs\\lightrag.log'}
+2025-10-01 07:13:19 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_entities.json'} 0 data
+2025-10-01 07:13:19 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_relationships.json'} 0 data
+2025-10-01 07:13:19 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_chunks.json'} 0 data
+2025-10-01 07:13:20 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_entities.json'} 0 data
+2025-10-01 07:13:20 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_relationships.json'} 0 data
+2025-10-01 07:13:20 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_chunks.json'} 0 data
+2025-10-01 07:14:04 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_entities.json'} 0 data
+2025-10-01 07:14:04 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_relationships.json'} 0 data
+2025-10-01 07:14:04 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_chunks.json'} 0 data
+2025-10-01 07:15:01 | INFO     | src.utils.logging_config | setup_logging   | 🚀 GovCon Capture Vibe Logging Initialized
+   📁 Log Directory: C:\Users\benma\govcon-capture-vibe\logs
+   📊 Main Log: govcon_server.log
+   ⚡ Performance Log: performance.log
+   🔴 Error Log: errors.log
+   🔧 LightRAG Log: lightrag.log
+   📏 Max File Size: 10.0MB
+   🗂️ Backup Count: 5
+   📺 Console Output: True
+   🎯 Log Level: INFO
+2025-10-01 07:15:01 | INFO     | src.utils.logging_config | setup_logging   | 🚀 GovCon Capture Vibe Logging Initialized
+   📁 Log Directory: C:\Users\benma\govcon-capture-vibe\logs
+   📊 Main Log: govcon_server.log
+   ⚡ Performance Log: performance.log
+   🔴 Error Log: errors.log
+   🔧 LightRAG Log: lightrag.log
+   📏 Max File Size: 10.0MB
+   🗂️ Backup Count: 5
+   📺 Console Output: True
+   🎯 Log Level: INFO
+2025-10-01 07:15:01 | INFO     | server               | main            | 🚀 GovCon Capture Vibe Server initialization started
+2025-10-01 07:15:01 | INFO     | server               | main            | 📁 Log files configured: {'log_dir': 'C:\\Users\\benma\\govcon-capture-vibe\\logs', 'main_log': 'logs\\govcon_server.log', 'performance_log': 'logs\\performance.log', 'error_log': 'logs\\errors.log', 'lightrag_log': 'logs\\lightrag.log'}
+2025-10-01 07:15:01 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_entities.json'} 0 data
+2025-10-01 07:15:01 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_relationships.json'} 0 data
+2025-10-01 07:15:01 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_chunks.json'} 0 data
+2025-10-01 07:15:01 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_entities.json'} 0 data
+2025-10-01 07:15:01 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_relationships.json'} 0 data
+2025-10-01 07:15:01 | INFO     | nano-vectordb        | __post_init__   | Init {'embedding_dim': 1024, 'metric': 'cosine', 'storage_file': 'C:\\Users\\benma\\govcon-capture-vibe\\rag_storage\\vdb_chunks.json'} 0 data

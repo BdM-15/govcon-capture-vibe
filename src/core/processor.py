@@ -21,9 +21,9 @@ from lightrag import LightRAG
 from lightrag.utils import logger as lightrag_logger
 
 # Import our components
-from rfp_chunking import ShipleyRFPChunker, ContextualChunk
-from pydantic_agents import RFPAnalysisAgents, RequirementsExtractionOutput, RFPContext
-from rfp_models import (
+from src.core.chunking import ShipleyRFPChunker, ContextualChunk
+from src.agents.rfp_agents import RFPAnalysisAgents, RequirementsExtractionOutput, RFPContext
+from src.models.rfp_models import (
     RFPRequirement, ComplianceAssessment, SectionRelationship, RFPSection,
     RFPAnalysisResult, ValidationResult, ProcessingMetadata,
     ComplianceLevel, RequirementType

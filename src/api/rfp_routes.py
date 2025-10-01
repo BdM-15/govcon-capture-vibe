@@ -26,12 +26,9 @@ from lightrag import LightRAG, QueryParam
 from lightrag.utils import logger
 
 # Import enhanced RFP processing
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent))
-from lightrag_rfp_integration import RFPAwareLightRAG, process_rfp_with_lightrag
-from enhanced_rfp_processor import EnhancedRFPProcessor
-from rfp_models import RFPAnalysisResult, ComplianceLevel, RequirementType
+from src.core.lightrag_integration import RFPAwareLightRAG, process_rfp_with_lightrag
+from src.core.processor import EnhancedRFPProcessor
+from src.models.rfp_models import RFPAnalysisResult, ComplianceLevel, RequirementType
 
 # Global LightRAG instance - will be set by the main server
 _rag_instance: Optional[LightRAG] = None
@@ -1594,45 +1591,65 @@ async def get_section_relationships_endpoint(section_id: str):
 @router.get("/enhanced-processing-status")
 async def get_enhanced_processing_status():
     """
-    Get status of enhanced RFP processing capabilities
+    Get status of enhanced RFP processing integration
     
-    Shows whether documents have been processed with section-aware chunking
-    and what enhanced features are available.
+    Shows whether the LightRAG WebUI is using enhanced RFP processing
+    and provides statistics about processed documents.
     """
     try:
-        rag_instance = get_rag_instance()
-        rfp_processor = RFPAwareLightRAG(rag_instance)
-        
-        processing_summary = rfp_processor.get_processing_summary()
-        
-        return {
-            "enhanced_processing": {
-                "status": "available",
-                "features": [
-                    "Section-aware chunking (A-M sections)",
-                    "J attachment processing",
-                    "L↔M relationship preservation", 
-                    "Requirements extraction with context",
-                    "Shipley methodology integration",
-                    "Cross-section relationship mapping"
-                ]
-            },
-            "current_document": processing_summary,
-            "capabilities": {
-                "section_queries": "Query specific RFP sections",
-                "relationship_analysis": "Analyze section interconnections",
-                "requirements_extraction": "Extract requirements with section context",
-                "compliance_assessment": "Shipley methodology compliance analysis"
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"Status check failed: {e}")
-        return {
-            "enhanced_processing": {
+        current_rag_instance = get_rag_instance()
+        if not current_rag_instance:
+            return {
                 "status": "error",
-                "error": str(e)
+                "message": "RAG instance not available",
+                "enhanced_processing": False
             }
+        
+        # Check if this is our enhanced RFP-aware instance
+        is_enhanced = hasattr(current_rag_instance, 'detect_rfp_document')
+        
+        if is_enhanced:
+            # Get processing status from RFP-aware instance
+            processing_status = current_rag_instance.get_processing_status()
+            
+            return {
+                "integration_status": "active",
+                "lightrag_webui_enhanced": True,
+                "automatic_rfp_detection": True,
+                "enhanced_features": [
+                    "Automatic RFP document detection",
+                    "Section-aware chunking (A-M sections + J attachments)",
+                    "L↔M relationship preservation", 
+                    "Requirements extraction with section context",
+                    "Shipley methodology integration",
+                    "Enhanced RFP-aware queries"
+                ],
+                "processing_statistics": processing_status,
+                "webui_compatibility": {
+                    "document_upload": "Enhanced processing applied automatically",
+                    "query_interface": "RFP-aware query enhancement",
+                    "graph_visualization": "Section relationships preserved",
+                    "fallback_behavior": "Standard processing if RFP detection fails"
+                }
+            }
+        else:
+            return {
+                "integration_status": "standard",
+                "lightrag_webui_enhanced": False,
+                "message": "Using standard LightRAG processing",
+                "features": [
+                    "Standard document chunking",
+                    "Generic text processing",
+                    "Basic query functionality"
+                ]
+            }
+            
+    except Exception as e:
+        logger.error(f"Error getting enhanced processing status: {e}")
+        return {
+            "integration_status": "error", 
+            "error": str(e),
+            "lightrag_webui_enhanced": False
         }
 
 
@@ -1714,7 +1731,7 @@ async def test_enhanced_chunking_with_mbos():
                 }
         
         # Test the enhanced chunking strategy
-        from rfp_chunking import ShipleyRFPChunker
+        from src.core.chunking import ShipleyRFPChunker
         chunker = ShipleyRFPChunker()
         
         logger.info("Testing enhanced RFP chunking strategy")
@@ -1977,7 +1994,7 @@ async def assess_compliance_with_pydantic(
         processor = EnhancedRFPProcessor(rag_instance)
         
         # Create requirement object for assessment
-        from rfp_models import RFPRequirement
+        from src.models.rfp_models import RFPRequirement
         
         requirement = RFPRequirement(
             requirement_id=requirement_id,

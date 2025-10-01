@@ -1,0 +1,586 @@
+2025-10-01 06:17:46 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 120000}
+2025-10-01 06:17:46 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 120000}
+2025-10-01 06:17:46 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
+2025-10-01 06:17:46 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
+2025-10-01 06:17:46 | INFO     | lightrag             | create_app      | Reranking is disabled
+2025-10-01 06:17:46 | INFO     | lightrag             | create_app      | Reranking is disabled
+2025-10-01 06:17:47 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 06:17:47 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 06:17:47 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 06:17:47 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 06:17:47 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 06:17:47 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 06:17:47 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 06:17:47 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 06:17:47 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 06:17:47 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load full_docs with 1 records
+2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load full_docs with 1 records
+2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load text_chunks with 0 records
+2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load text_chunks with 0 records
+2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load full_entities with 0 records
+2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load full_entities with 0 records
+2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load full_relations with 0 records
+2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load full_relations with 0 records
+2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load llm_response_cache with 11 records
+2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load llm_response_cache with 11 records
+2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 doc status load doc_status with 1 records
+2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 doc status load doc_status with 1 records
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop text_chunks
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop text_chunks
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop full_docs
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop full_docs
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop full_entities
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop full_entities
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop full_relations
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop full_relations
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop entities(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_entities.json)
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop entities(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_entities.json)
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop relationships(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_relationships.json)
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop relationships(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_relationships.json)
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop chunks(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_chunks.json)
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop chunks(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_chunks.json)
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop graph file:C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop graph file:C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop doc_status
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop doc_status
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/text_chunks
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/text_chunks
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_docs
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_docs
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_entities
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_entities
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_relations
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_relations
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/entities
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/entities
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/relationships
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/relationships
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/chunks
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/chunks
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NetworkXStorage: _/chunk_entity_relation
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NetworkXStorage: _/chunk_entity_relation
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonDocStatusStorage: _/doc_status
+2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonDocStatusStorage: _/doc_status
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop llm_response_cache
+2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop llm_response_cache
+2025-10-01 06:19:35 | INFO     | lightrag             | aclear_cache    | Cleared all cache
+2025-10-01 06:19:35 | INFO     | lightrag             | aclear_cache    | Cleared all cache
+2025-10-01 06:19:49 | INFO     | lightrag             | pipeline_enqueue_file | Successfully extracted and enqueued file: _N6945025R0003.pdf
+2025-10-01 06:19:49 | INFO     | lightrag             | pipeline_enqueue_file | Successfully extracted and enqueued file: _N6945025R0003.pdf
+2025-10-01 06:19:49 | INFO     | lightrag             | apipeline_process_enqueue_documents | Processing 1 document(s)
+2025-10-01 06:19:49 | INFO     | lightrag             | apipeline_process_enqueue_documents | Processing 1 document(s)
+2025-10-01 06:19:49 | INFO     | lightrag             | process_document | Extracting stage 1/1: _N6945025R0003.pdf
+2025-10-01 06:19:49 | INFO     | lightrag             | process_document | Extracting stage 1/1: _N6945025R0003.pdf
+2025-10-01 06:19:49 | INFO     | lightrag             | process_document | Processing d-id: doc-7169852945d0fa1af6ee1a5bbe5640fc
+2025-10-01 06:19:49 | INFO     | lightrag             | process_document | Processing d-id: doc-7169852945d0fa1af6ee1a5bbe5640fc
+2025-10-01 06:19:49 | INFO     | lightrag             | ensure_workers  | Embedding func: 8 new workers initialized (Timeouts: Func: 300s, Worker: 600s, Health Check: 615s)
+2025-10-01 06:19:49 | INFO     | lightrag             | ensure_workers  | Embedding func: 8 new workers initialized (Timeouts: Func: 300s, Worker: 600s, Health Check: 615s)
+2025-10-01 06:19:57 | INFO     | lightrag             | ensure_workers  | LLM func: 2 new workers initialized (Timeouts: Func: 600s, Worker: 1200s, Health Check: 1215s)
+2025-10-01 06:19:57 | INFO     | lightrag             | ensure_workers  | LLM func: 2 new workers initialized (Timeouts: Func: 600s, Worker: 1200s, Health Check: 1215s)
+2025-10-01 06:22:11 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:8af2ca959d4a5f62203b8cffcab110b6
+2025-10-01 06:22:11 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:8af2ca959d4a5f62203b8cffcab110b6
+2025-10-01 06:23:03 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:00cfb9bb36eecc14ff5f115a4b943baf
+2025-10-01 06:23:03 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:00cfb9bb36eecc14ff5f115a4b943baf
+2025-10-01 06:24:23 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:fc084b186f5a450d7ecf83514ec82b4b
+2025-10-01 06:24:23 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:fc084b186f5a450d7ecf83514ec82b4b
+2025-10-01 06:24:23 | INFO     | lightrag             | _process_single_content | Chunk 1 of 15 extracted 6 Ent + 4 Rel chunk-9b8e6b71314e5dc1399a2f47c0f27cb0
+2025-10-01 06:24:23 | INFO     | lightrag             | _process_single_content | Chunk 1 of 15 extracted 6 Ent + 4 Rel chunk-9b8e6b71314e5dc1399a2f47c0f27cb0
+2025-10-01 06:27:09 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:c418115ec5a4fcc0221f259725cbe437
+2025-10-01 06:27:09 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:c418115ec5a4fcc0221f259725cbe437
+2025-10-01 06:27:09 | INFO     | lightrag             | _process_single_content | Chunk 2 of 15 extracted 3 Ent + 3 Rel chunk-fc6267ae173a34c8cb001fa6c6711e84
+2025-10-01 06:27:09 | INFO     | lightrag             | _process_single_content | Chunk 2 of 15 extracted 3 Ent + 3 Rel chunk-fc6267ae173a34c8cb001fa6c6711e84
+2025-10-01 06:30:03 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:3c9329201c29dd41c8bbb56dcb22cccd
+2025-10-01 06:30:03 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:3c9329201c29dd41c8bbb56dcb22cccd
+2025-10-01 06:32:34 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:d35ce065e2b3754711e70c23000bd924
+2025-10-01 06:32:34 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:d35ce065e2b3754711e70c23000bd924
+2025-10-01 06:34:48 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:afa975a65fa349965446b71391288fab
+2025-10-01 06:34:48 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:afa975a65fa349965446b71391288fab
+2025-10-01 06:34:48 | INFO     | lightrag             | _process_single_content | Chunk 3 of 15 extracted 3 Ent + 3 Rel chunk-eaebd0a01bb98c84256a990d0a33ba2c
+2025-10-01 06:34:48 | INFO     | lightrag             | _process_single_content | Chunk 3 of 15 extracted 3 Ent + 3 Rel chunk-eaebd0a01bb98c84256a990d0a33ba2c
+2025-10-01 06:37:02 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:f2221cb3789d982ff54ab6c7ee2ef806
+2025-10-01 06:37:02 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:f2221cb3789d982ff54ab6c7ee2ef806
+2025-10-01 06:37:02 | INFO     | lightrag             | _process_single_content | Chunk 4 of 15 extracted 5 Ent + 3 Rel chunk-97c0897fcd9204bff2b8f7de5570c562
+2025-10-01 06:37:02 | INFO     | lightrag             | _process_single_content | Chunk 4 of 15 extracted 5 Ent + 3 Rel chunk-97c0897fcd9204bff2b8f7de5570c562
+2025-10-01 06:44:48 | ERROR    | lightrag             | worker          | LLM func: Error in decorated function for task 2322957388448_25432.5678706: 
+2025-10-01 06:44:48 | ERROR    | lightrag             | worker          | LLM func: Error in decorated function for task 2322957388448_25432.5678706: 
+2025-10-01 06:44:48 | ERROR    | lightrag             | _process_extract_entities | Failed to extract entities and relationships: C[5/15]: chunk-760e17dc94d6fdff3c70fd3e9f1e211c: 
+2025-10-01 06:44:48 | ERROR    | lightrag             | _process_extract_entities | Failed to extract entities and relationships: C[5/15]: chunk-760e17dc94d6fdff3c70fd3e9f1e211c: 
+2025-10-01 06:44:48 | ERROR    | lightrag             | process_document | Traceback (most recent call last):
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_transports\default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        pool_request.request
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\connection.py", line 103, in handle_async_request
+    return await self._connection.handle_async_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\http11.py", line 136, in handle_async_request
+    raise exc
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\http11.py", line 106, in handle_async_request
+    ) = await self._receive_response_headers(**kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\http11.py", line 177, in _receive_response_headers
+    event = await self._receive_event(timeout=timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\http11.py", line 217, in _receive_event
+    data = await self._network_stream.read(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.READ_NUM_BYTES, timeout=timeout
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_backends\anyio.py", line 32, in read
+    with map_exceptions(exc_map):
+         ~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\benma\AppData\Roaming\uv\python\cpython-3.13.7-windows-x86_64-none\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ReadTimeout
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\operate.py", line 2186, in _process_with_semaphore
+    return await _process_single_content(chunk)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\operate.py", line 2079, in _process_single_content
+    final_result, timestamp = await use_llm_func_with_cache(
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\utils.py", line 1687, in use_llm_func_with_cache
+    res: str = await use_llm_func(
+               ^^^^^^^^^^^^^^^^^^^
+        safe_user_prompt, system_prompt=safe_system_prompt, **kwargs
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\utils.py", line 835, in wait_func
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\utils.py", line 539, in worker
+    result = await asyncio.wait_for(
+             ^^^^^^^^^^^^^^^^^^^^^^^
+        func(*args, **kwargs), timeout=max_execution_timeout
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\benma\AppData\Roaming\uv\python\cpython-3.13.7-windows-x86_64-none\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\llm\ollama.py", line 140, in ollama_model_complete
+    return await _ollama_model_if_cache(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 189, in async_wrapped
+    return await copy(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 111, in __call__
+    do = await self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 153, in iter
+    result = await action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\tenacity\_utils.py", line 99, in inner
+    return call(*args, **kwargs)
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\tenacity\__init__.py", line 400, in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\benma\AppData\Roaming\uv\python\cpython-3.13.7-windows-x86_64-none\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\benma\AppData\Roaming\uv\python\cpython-3.13.7-windows-x86_64-none\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 114, in __call__
+    result = await fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\llm\ollama.py", line 114, in _ollama_model_if_cache
+    raise e
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\llm\ollama.py", line 77, in _ollama_model_if_cache
+    response = await ollama_client.chat(model=model, messages=messages, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\ollama\_client.py", line 953, in chat
+    return await self._request(
+           ^^^^^^^^^^^^^^^^^^^^
+    ...<14 lines>...
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\ollama\_client.py", line 751, in _request
+    return cls(**(await self._request_raw(*args, **kwargs)).json())
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\ollama\_client.py", line 691, in _request_raw
+    r = await self._client.request(*args, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_transports\default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\benma\AppData\Roaming\uv\python\cpython-3.13.7-windows-x86_64-none\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_transports\default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ReadTimeout
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\operate.py", line 2190, in _process_with_semaphore
+    raise prefixed_exception from e
+httpx.ReadTimeout: chunk-760e17dc94d6fdff3c70fd3e9f1e211c: 
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\lightrag.py", line 1600, in process_document
+    await entity_relation_task
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\lightrag.py", line 1825, in _process_extract_entities
+    raise e
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\lightrag.py", line 1810, in _process_extract_entities
+    chunk_results = await extract_entities(
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\operate.py", line 2232, in extract_entities
+    raise prefixed_exception from first_exception
+httpx.ReadTimeout: C[5/15]: chunk-760e17dc94d6fdff3c70fd3e9f1e211c: 
+
+2025-10-01 06:44:48 | ERROR    | lightrag             | process_document | Traceback (most recent call last):
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_transports\default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        pool_request.request
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\connection.py", line 103, in handle_async_request
+    return await self._connection.handle_async_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\http11.py", line 136, in handle_async_request
+    raise exc
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\http11.py", line 106, in handle_async_request
+    ) = await self._receive_response_headers(**kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\http11.py", line 177, in _receive_response_headers
+    event = await self._receive_event(timeout=timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_async\http11.py", line 217, in _receive_event
+    data = await self._network_stream.read(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.READ_NUM_BYTES, timeout=timeout
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_backends\anyio.py", line 32, in read
+    with map_exceptions(exc_map):
+         ~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\benma\AppData\Roaming\uv\python\cpython-3.13.7-windows-x86_64-none\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ReadTimeout
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\operate.py", line 2186, in _process_with_semaphore
+    return await _process_single_content(chunk)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\operate.py", line 2079, in _process_single_content
+    final_result, timestamp = await use_llm_func_with_cache(
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\utils.py", line 1687, in use_llm_func_with_cache
+    res: str = await use_llm_func(
+               ^^^^^^^^^^^^^^^^^^^
+        safe_user_prompt, system_prompt=safe_system_prompt, **kwargs
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\utils.py", line 835, in wait_func
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\utils.py", line 539, in worker
+    result = await asyncio.wait_for(
+             ^^^^^^^^^^^^^^^^^^^^^^^
+        func(*args, **kwargs), timeout=max_execution_timeout
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\benma\AppData\Roaming\uv\python\cpython-3.13.7-windows-x86_64-none\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\llm\ollama.py", line 140, in ollama_model_complete
+    return await _ollama_model_if_cache(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 189, in async_wrapped
+    return await copy(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 111, in __call__
+    do = await self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 153, in iter
+    result = await action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\tenacity\_utils.py", line 99, in inner
+    return call(*args, **kwargs)
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\tenacity\__init__.py", line 400, in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\benma\AppData\Roaming\uv\python\cpython-3.13.7-windows-x86_64-none\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\benma\AppData\Roaming\uv\python\cpython-3.13.7-windows-x86_64-none\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 114, in __call__
+    result = await fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\llm\ollama.py", line 114, in _ollama_model_if_cache
+    raise e
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\llm\ollama.py", line 77, in _ollama_model_if_cache
+    response = await ollama_client.chat(model=model, messages=messages, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\ollama\_client.py", line 953, in chat
+    return await self._request(
+           ^^^^^^^^^^^^^^^^^^^^
+    ...<14 lines>...
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\ollama\_client.py", line 751, in _request
+    return cls(**(await self._request_raw(*args, **kwargs)).json())
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\ollama\_client.py", line 691, in _request_raw
+    r = await self._client.request(*args, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_transports\default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\benma\AppData\Roaming\uv\python\cpython-3.13.7-windows-x86_64-none\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_transports\default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ReadTimeout
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\operate.py", line 2190, in _process_with_semaphore
+    raise prefixed_exception from e
+httpx.ReadTimeout: chunk-760e17dc94d6fdff3c70fd3e9f1e211c: 
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\lightrag.py", line 1600, in process_document
+    await entity_relation_task
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\lightrag.py", line 1825, in _process_extract_entities
+    raise e
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\lightrag.py", line 1810, in _process_extract_entities
+    chunk_results = await extract_entities(
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\operate.py", line 2232, in extract_entities
+    raise prefixed_exception from first_exception
+httpx.ReadTimeout: C[5/15]: chunk-760e17dc94d6fdff3c70fd3e9f1e211c: 
+
+2025-10-01 06:44:48 | ERROR    | lightrag             | process_document | Failed to extract document 1/1: _N6945025R0003.pdf
+2025-10-01 06:44:48 | ERROR    | lightrag             | process_document | Failed to extract document 1/1: _N6945025R0003.pdf
+2025-10-01 06:44:48 | INFO     | lightrag             | apipeline_process_enqueue_documents | Enqueued document processing pipeline stoped
+2025-10-01 06:44:48 | INFO     | lightrag             | apipeline_process_enqueue_documents | Enqueued document processing pipeline stoped
+2025-10-01 06:51:48 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 32000}
+2025-10-01 06:51:48 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 32000}
+2025-10-01 06:51:48 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
+2025-10-01 06:51:48 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
+2025-10-01 06:51:48 | INFO     | lightrag             | create_app      | Reranking is disabled
+2025-10-01 06:51:48 | INFO     | lightrag             | create_app      | Reranking is disabled
+2025-10-01 06:51:49 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 06:51:49 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 06:51:49 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 06:51:49 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 06:51:49 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 06:51:49 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 06:51:49 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 06:51:49 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 06:51:49 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 06:51:49 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load full_docs with 1 records
+2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load full_docs with 1 records
+2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load text_chunks with 0 records
+2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load text_chunks with 0 records
+2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load full_entities with 0 records
+2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load full_entities with 0 records
+2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load full_relations with 0 records
+2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load full_relations with 0 records
+2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load llm_response_cache with 8 records
+2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load llm_response_cache with 8 records
+2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 doc status load doc_status with 1 records
+2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 doc status load doc_status with 1 records
+2025-10-01 07:13:19 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 64000}
+2025-10-01 07:13:19 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 64000}
+2025-10-01 07:13:19 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
+2025-10-01 07:13:19 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
+2025-10-01 07:13:19 | INFO     | lightrag             | create_app      | Reranking is disabled
+2025-10-01 07:13:19 | INFO     | lightrag             | create_app      | Reranking is disabled
+2025-10-01 07:13:19 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 07:13:19 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 07:13:19 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 07:13:19 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 07:13:20 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 07:13:20 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 07:13:20 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 07:13:20 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 07:13:20 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 07:13:20 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load full_docs with 1 records
+2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load full_docs with 1 records
+2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load text_chunks with 0 records
+2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load text_chunks with 0 records
+2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load full_entities with 0 records
+2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load full_entities with 0 records
+2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load full_relations with 0 records
+2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load full_relations with 0 records
+2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load llm_response_cache with 8 records
+2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load llm_response_cache with 8 records
+2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 doc status load doc_status with 1 records
+2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 doc status load doc_status with 1 records
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop text_chunks
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop text_chunks
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop full_docs
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop full_docs
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop full_entities
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop full_entities
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop full_relations
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop full_relations
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop entities(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_entities.json)
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop entities(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_entities.json)
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop relationships(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_relationships.json)
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop relationships(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_relationships.json)
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop chunks(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_chunks.json)
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop chunks(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_chunks.json)
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop graph file:C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop graph file:C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop doc_status
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop doc_status
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/text_chunks
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/text_chunks
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_docs
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_docs
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_entities
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_entities
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_relations
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_relations
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/entities
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/entities
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/relationships
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/relationships
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/chunks
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/chunks
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NetworkXStorage: _/chunk_entity_relation
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NetworkXStorage: _/chunk_entity_relation
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonDocStatusStorage: _/doc_status
+2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonDocStatusStorage: _/doc_status
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop llm_response_cache
+2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop llm_response_cache
+2025-10-01 07:14:04 | INFO     | lightrag             | aclear_cache    | Cleared all cache
+2025-10-01 07:14:04 | INFO     | lightrag             | aclear_cache    | Cleared all cache
+2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 64000}
+2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 64000}
+2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
+2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
+2025-10-01 07:15:01 | INFO     | lightrag             | create_app      | Reranking is disabled
+2025-10-01 07:15:01 | INFO     | lightrag             | create_app      | Reranking is disabled
+2025-10-01 07:15:01 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 07:15:01 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 07:15:01 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 07:15:01 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
+2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load full_docs with 0 records
+2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load full_docs with 0 records
+2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load text_chunks with 0 records
+2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load text_chunks with 0 records
+2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load full_entities with 0 records
+2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load full_entities with 0 records
+2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load full_relations with 0 records
+2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load full_relations with 0 records
+2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load llm_response_cache with 0 records
+2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load llm_response_cache with 0 records
+2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 doc status load doc_status with 0 records
+2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 doc status load doc_status with 0 records

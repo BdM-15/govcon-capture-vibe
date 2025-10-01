@@ -15,15 +15,20 @@ References:
 
 import asyncio
 import logging
+import os
 from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
 import re
 
 from pydantic_ai import Agent, RunContext
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Import our structured models
-from rfp_models import (
+from src.models.rfp_models import (
     RFPRequirement, ComplianceAssessment, SectionRelationship, RFPSection,
     RFPAnalysisResult, ComplianceLevel, ComplianceStatus, RequirementType,
     RiskLevel, ValidationResult, ProcessingMetadata
@@ -66,10 +71,13 @@ def create_requirements_extraction_agent() -> Agent[RFPContext, RequirementsExtr
     guaranteed structured output and validation.
     """
     
+    # Get model from environment, fallback to mistral-nemo
+    llm_model = os.getenv('LLM_MODEL', 'mistral-nemo:latest')
+    
     # Use OpenAI-compatible model configuration for Ollama
     # PydanticAI will automatically detect and use available models
     agent = Agent(
-        'ollama:qwen2.5-coder:7b',  # Direct model specification
+        f'ollama:{llm_model}',  # Use model from environment configuration
         result_type=RequirementsExtractionOutput,
         system_prompt="""
         You are an expert federal acquisition analyst specialized in RFP requirements extraction 
@@ -161,8 +169,11 @@ def create_compliance_assessment_agent() -> Agent[RFPContext, ComplianceAssessme
     Shipley 4-level compliance scale with gap analysis.
     """
     
+    # Get model from environment, fallback to mistral-nemo
+    llm_model = os.getenv('LLM_MODEL', 'mistral-nemo:latest')
+    
     agent = Agent(
-        'ollama:qwen2.5-coder:7b',
+        f'ollama:{llm_model}',  # Use model from environment configuration
         result_type=ComplianceAssessment,
         system_prompt="""
         You are a compliance assessment specialist using Shipley Proposal Guide methodology (p.53-55).
@@ -241,8 +252,11 @@ def create_section_relationship_agent() -> Agent[RFPContext, List[SectionRelatio
     and cross-section dependencies for comprehensive RFP understanding.
     """
     
+    # Get model from environment, fallback to mistral-nemo
+    llm_model = os.getenv('LLM_MODEL', 'mistral-nemo:latest')
+    
     agent = Agent(
-        'ollama:qwen2.5-coder:7b',
+        f'ollama:{llm_model}',  # Use model from environment configuration
         result_type=List[SectionRelationship],
         system_prompt="""
         You are an RFP structure analyst specialized in identifying section relationships 

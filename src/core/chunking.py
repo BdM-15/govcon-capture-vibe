@@ -18,6 +18,10 @@ from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
 import json
+import time
+
+# Performance monitoring
+from src.utils.performance_monitor import get_monitor
 
 logger = logging.getLogger(__name__)
 
@@ -531,18 +535,34 @@ class ShipleyRFPChunker:
         
         Returns list of ContextualChunk objects ready for LightRAG processing
         """
-        logger.info("Starting RFP-aware document chunking")
+        monitor = get_monitor()
+        start_time = time.time()
+        
+        logger.info("🎯 Starting RFP-aware document chunking")
+        logger.info(f"📄 Document size: {len(document_text):,} characters")
+        logger.info(f"📦 Target chunk size: {max_chunk_size} tokens")
         
         # Step 1: Identify RFP sections
+        logger.info("🔍 Identifying RFP sections...")
         sections = self.identify_sections(document_text)
+        logger.info(f"📋 Found {len(sections)} sections: {[s.section_id for s in sections]}")
         
         # Step 2: Create contextual chunks
+        logger.info("✂️ Creating contextual chunks...")
         chunks = self.create_contextual_chunks(sections, max_chunk_size)
+        logger.info(f"📦 Created {len(chunks)} contextual chunks")
         
         # Step 3: Enhance with cross-references
+        logger.info("🔗 Adding cross-references...")
         chunks = self._add_cross_references(chunks)
         
-        logger.info(f"RFP chunking complete: {len(chunks)} contextual chunks from {len(sections)} sections")
+        processing_time = time.time() - start_time
+        logger.info(f"✅ RFP chunking complete: {len(chunks)} contextual chunks from {len(sections)} sections")
+        logger.info(f"⏱️ Total processing time: {processing_time:.2f}s")
+        
+        # Log performance summary
+        section_summary = self.get_section_summary(chunks)
+        logger.info(f"📊 Section summary: {section_summary['total_sections']} sections processed")
         
         return chunks
     
