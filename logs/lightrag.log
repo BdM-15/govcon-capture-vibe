@@ -1,112 +1,92 @@
-2025-10-01 06:17:46 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 120000}
-2025-10-01 06:17:46 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 120000}
-2025-10-01 06:17:46 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
-2025-10-01 06:17:46 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
-2025-10-01 06:17:46 | INFO     | lightrag             | create_app      | Reranking is disabled
-2025-10-01 06:17:46 | INFO     | lightrag             | create_app      | Reranking is disabled
-2025-10-01 06:17:47 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 06:17:47 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 06:17:47 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 06:17:47 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 06:17:47 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 06:17:47 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 06:17:47 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 06:17:47 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 06:17:47 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 06:17:47 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load full_docs with 1 records
-2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load full_docs with 1 records
-2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load text_chunks with 0 records
-2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load text_chunks with 0 records
-2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load full_entities with 0 records
-2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load full_entities with 0 records
-2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load full_relations with 0 records
-2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load full_relations with 0 records
-2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load llm_response_cache with 11 records
-2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 KV load llm_response_cache with 11 records
-2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 doc status load doc_status with 1 records
-2025-10-01 06:17:47 | INFO     | lightrag             | initialize      | [_] Process 21340 doc status load doc_status with 1 records
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop text_chunks
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop text_chunks
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop full_docs
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop full_docs
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop full_entities
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop full_entities
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop full_relations
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop full_relations
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop entities(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_entities.json)
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop entities(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_entities.json)
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop relationships(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_relationships.json)
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop relationships(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_relationships.json)
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop chunks(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_chunks.json)
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop chunks(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_chunks.json)
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop graph file:C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop graph file:C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop doc_status
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop doc_status
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/text_chunks
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/text_chunks
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_docs
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_docs
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_entities
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_entities
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_relations
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_relations
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/entities
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/entities
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/relationships
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/relationships
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/chunks
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/chunks
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NetworkXStorage: _/chunk_entity_relation
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped NetworkXStorage: _/chunk_entity_relation
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonDocStatusStorage: _/doc_status
-2025-10-01 06:19:35 | INFO     | lightrag             | clear_documents | Successfully dropped JsonDocStatusStorage: _/doc_status
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop llm_response_cache
-2025-10-01 06:19:35 | INFO     | lightrag             | drop            | [_] Process 21340 drop llm_response_cache
-2025-10-01 06:19:35 | INFO     | lightrag             | aclear_cache    | Cleared all cache
-2025-10-01 06:19:35 | INFO     | lightrag             | aclear_cache    | Cleared all cache
-2025-10-01 06:19:49 | INFO     | lightrag             | pipeline_enqueue_file | Successfully extracted and enqueued file: _N6945025R0003.pdf
-2025-10-01 06:19:49 | INFO     | lightrag             | pipeline_enqueue_file | Successfully extracted and enqueued file: _N6945025R0003.pdf
-2025-10-01 06:19:49 | INFO     | lightrag             | apipeline_process_enqueue_documents | Processing 1 document(s)
-2025-10-01 06:19:49 | INFO     | lightrag             | apipeline_process_enqueue_documents | Processing 1 document(s)
-2025-10-01 06:19:49 | INFO     | lightrag             | process_document | Extracting stage 1/1: _N6945025R0003.pdf
-2025-10-01 06:19:49 | INFO     | lightrag             | process_document | Extracting stage 1/1: _N6945025R0003.pdf
-2025-10-01 06:19:49 | INFO     | lightrag             | process_document | Processing d-id: doc-7169852945d0fa1af6ee1a5bbe5640fc
-2025-10-01 06:19:49 | INFO     | lightrag             | process_document | Processing d-id: doc-7169852945d0fa1af6ee1a5bbe5640fc
-2025-10-01 06:19:49 | INFO     | lightrag             | ensure_workers  | Embedding func: 8 new workers initialized (Timeouts: Func: 300s, Worker: 600s, Health Check: 615s)
-2025-10-01 06:19:49 | INFO     | lightrag             | ensure_workers  | Embedding func: 8 new workers initialized (Timeouts: Func: 300s, Worker: 600s, Health Check: 615s)
-2025-10-01 06:19:57 | INFO     | lightrag             | ensure_workers  | LLM func: 2 new workers initialized (Timeouts: Func: 600s, Worker: 1200s, Health Check: 1215s)
-2025-10-01 06:19:57 | INFO     | lightrag             | ensure_workers  | LLM func: 2 new workers initialized (Timeouts: Func: 600s, Worker: 1200s, Health Check: 1215s)
-2025-10-01 06:22:11 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:8af2ca959d4a5f62203b8cffcab110b6
-2025-10-01 06:22:11 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:8af2ca959d4a5f62203b8cffcab110b6
-2025-10-01 06:23:03 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:00cfb9bb36eecc14ff5f115a4b943baf
-2025-10-01 06:23:03 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:00cfb9bb36eecc14ff5f115a4b943baf
-2025-10-01 06:24:23 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:fc084b186f5a450d7ecf83514ec82b4b
-2025-10-01 06:24:23 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:fc084b186f5a450d7ecf83514ec82b4b
-2025-10-01 06:24:23 | INFO     | lightrag             | _process_single_content | Chunk 1 of 15 extracted 6 Ent + 4 Rel chunk-9b8e6b71314e5dc1399a2f47c0f27cb0
-2025-10-01 06:24:23 | INFO     | lightrag             | _process_single_content | Chunk 1 of 15 extracted 6 Ent + 4 Rel chunk-9b8e6b71314e5dc1399a2f47c0f27cb0
-2025-10-01 06:27:09 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:c418115ec5a4fcc0221f259725cbe437
-2025-10-01 06:27:09 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:c418115ec5a4fcc0221f259725cbe437
-2025-10-01 06:27:09 | INFO     | lightrag             | _process_single_content | Chunk 2 of 15 extracted 3 Ent + 3 Rel chunk-fc6267ae173a34c8cb001fa6c6711e84
-2025-10-01 06:27:09 | INFO     | lightrag             | _process_single_content | Chunk 2 of 15 extracted 3 Ent + 3 Rel chunk-fc6267ae173a34c8cb001fa6c6711e84
-2025-10-01 06:30:03 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:3c9329201c29dd41c8bbb56dcb22cccd
-2025-10-01 06:30:03 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:3c9329201c29dd41c8bbb56dcb22cccd
-2025-10-01 06:32:34 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:d35ce065e2b3754711e70c23000bd924
-2025-10-01 06:32:34 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:d35ce065e2b3754711e70c23000bd924
-2025-10-01 06:34:48 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:afa975a65fa349965446b71391288fab
-2025-10-01 06:34:48 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:afa975a65fa349965446b71391288fab
-2025-10-01 06:34:48 | INFO     | lightrag             | _process_single_content | Chunk 3 of 15 extracted 3 Ent + 3 Rel chunk-eaebd0a01bb98c84256a990d0a33ba2c
-2025-10-01 06:34:48 | INFO     | lightrag             | _process_single_content | Chunk 3 of 15 extracted 3 Ent + 3 Rel chunk-eaebd0a01bb98c84256a990d0a33ba2c
-2025-10-01 06:37:02 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:f2221cb3789d982ff54ab6c7ee2ef806
-2025-10-01 06:37:02 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:f2221cb3789d982ff54ab6c7ee2ef806
-2025-10-01 06:37:02 | INFO     | lightrag             | _process_single_content | Chunk 4 of 15 extracted 5 Ent + 3 Rel chunk-97c0897fcd9204bff2b8f7de5570c562
-2025-10-01 06:37:02 | INFO     | lightrag             | _process_single_content | Chunk 4 of 15 extracted 5 Ent + 3 Rel chunk-97c0897fcd9204bff2b8f7de5570c562
-2025-10-01 06:44:48 | ERROR    | lightrag             | worker          | LLM func: Error in decorated function for task 2322957388448_25432.5678706: 
-2025-10-01 06:44:48 | ERROR    | lightrag             | worker          | LLM func: Error in decorated function for task 2322957388448_25432.5678706: 
-2025-10-01 06:44:48 | ERROR    | lightrag             | _process_extract_entities | Failed to extract entities and relationships: C[5/15]: chunk-760e17dc94d6fdff3c70fd3e9f1e211c: 
-2025-10-01 06:44:48 | ERROR    | lightrag             | _process_extract_entities | Failed to extract entities and relationships: C[5/15]: chunk-760e17dc94d6fdff3c70fd3e9f1e211c: 
-2025-10-01 06:44:48 | ERROR    | lightrag             | process_document | Traceback (most recent call last):
+2025-10-01 07:16:57 | INFO     | lightrag             | pipeline_enqueue_file | Successfully extracted and enqueued file: _N6945025R0003.pdf
+2025-10-01 07:16:57 | INFO     | lightrag             | pipeline_enqueue_file | Successfully extracted and enqueued file: _N6945025R0003.pdf
+2025-10-01 07:16:57 | INFO     | lightrag             | apipeline_process_enqueue_documents | Processing 1 document(s)
+2025-10-01 07:16:57 | INFO     | lightrag             | apipeline_process_enqueue_documents | Processing 1 document(s)
+2025-10-01 07:16:57 | INFO     | lightrag             | process_document | Extracting stage 1/1: _N6945025R0003.pdf
+2025-10-01 07:16:57 | INFO     | lightrag             | process_document | Extracting stage 1/1: _N6945025R0003.pdf
+2025-10-01 07:16:57 | INFO     | lightrag             | process_document | Processing d-id: doc-7169852945d0fa1af6ee1a5bbe5640fc
+2025-10-01 07:16:57 | INFO     | lightrag             | process_document | Processing d-id: doc-7169852945d0fa1af6ee1a5bbe5640fc
+2025-10-01 07:16:57 | INFO     | lightrag             | ensure_workers  | Embedding func: 8 new workers initialized (Timeouts: Func: 300s, Worker: 600s, Health Check: 615s)
+2025-10-01 07:16:57 | INFO     | lightrag             | ensure_workers  | Embedding func: 8 new workers initialized (Timeouts: Func: 300s, Worker: 600s, Health Check: 615s)
+2025-10-01 07:17:06 | INFO     | lightrag             | ensure_workers  | LLM func: 2 new workers initialized (Timeouts: Func: 600s, Worker: 1200s, Health Check: 1215s)
+2025-10-01 07:17:06 | INFO     | lightrag             | ensure_workers  | LLM func: 2 new workers initialized (Timeouts: Func: 600s, Worker: 1200s, Health Check: 1215s)
+2025-10-01 07:19:04 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:8daa0f6ba6c8fd36d23ae06c8041cea5
+2025-10-01 07:19:04 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:8daa0f6ba6c8fd36d23ae06c8041cea5
+2025-10-01 07:23:05 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:fc732c12f188196f280a8971de21d0d9
+2025-10-01 07:23:05 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:fc732c12f188196f280a8971de21d0d9
+2025-10-01 07:23:31 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:7fbf395b4f7db35c2787c6164e6c2bb1
+2025-10-01 07:23:31 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:7fbf395b4f7db35c2787c6164e6c2bb1
+2025-10-01 07:23:31 | INFO     | lightrag             | _process_single_content | Chunk 1 of 30 extracted 6 Ent + 4 Rel chunk-5b282094d356721b95c603166e3583fb
+2025-10-01 07:23:31 | INFO     | lightrag             | _process_single_content | Chunk 1 of 30 extracted 6 Ent + 4 Rel chunk-5b282094d356721b95c603166e3583fb
+2025-10-01 07:28:25 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:d5fb481fdd4c4e43b2bedd6f24553632
+2025-10-01 07:28:25 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:d5fb481fdd4c4e43b2bedd6f24553632
+2025-10-01 07:28:25 | INFO     | lightrag             | _process_single_content | Chunk 2 of 30 extracted 11 Ent + 10 Rel chunk-4eaa6afaa103828aaa0533cf6f9d56d4
+2025-10-01 07:28:25 | INFO     | lightrag             | _process_single_content | Chunk 2 of 30 extracted 11 Ent + 10 Rel chunk-4eaa6afaa103828aaa0533cf6f9d56d4
+2025-10-01 07:30:25 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:1880081b536412a741d540c45d642b6d
+2025-10-01 07:30:25 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:1880081b536412a741d540c45d642b6d
+2025-10-01 07:33:21 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:b319a2fe5effed29beb321e06ca977b7
+2025-10-01 07:33:21 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:b319a2fe5effed29beb321e06ca977b7
+2025-10-01 07:33:56 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:7ad4a309b9273482433c2b0536affeae
+2025-10-01 07:33:56 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:7ad4a309b9273482433c2b0536affeae
+2025-10-01 07:33:56 | INFO     | lightrag             | _process_single_content | Chunk 3 of 30 extracted 7 Ent + 5 Rel chunk-38b8ffb6f0b2f888ca46c5aba0db5265
+2025-10-01 07:33:56 | INFO     | lightrag             | _process_single_content | Chunk 3 of 30 extracted 7 Ent + 5 Rel chunk-38b8ffb6f0b2f888ca46c5aba0db5265
+2025-10-01 07:36:10 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:d07cb513297509f8012eb0f6e18b2343
+2025-10-01 07:36:10 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:d07cb513297509f8012eb0f6e18b2343
+2025-10-01 07:36:10 | INFO     | lightrag             | _process_single_content | Chunk 4 of 30 extracted 7 Ent + 6 Rel chunk-475623c6b7f5423ab79f9d2fcb8fb794
+2025-10-01 07:36:10 | INFO     | lightrag             | _process_single_content | Chunk 4 of 30 extracted 7 Ent + 6 Rel chunk-475623c6b7f5423ab79f9d2fcb8fb794
+2025-10-01 07:41:20 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:09a7ae771237aff73aaa9ecf8137c7ba
+2025-10-01 07:41:20 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:09a7ae771237aff73aaa9ecf8137c7ba
+2025-10-01 07:43:16 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:dac7f68e92a04cde21ab1971fa7f6a96
+2025-10-01 07:43:16 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:dac7f68e92a04cde21ab1971fa7f6a96
+2025-10-01 07:43:49 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:5ad5b4a2e48f314f5261e4dbb8ab2399
+2025-10-01 07:43:49 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:5ad5b4a2e48f314f5261e4dbb8ab2399
+2025-10-01 07:43:49 | INFO     | lightrag             | _process_single_content | Chunk 5 of 30 extracted 17 Ent + 8 Rel chunk-29595669123cbf3f223d3c0d60983e4a
+2025-10-01 07:43:49 | INFO     | lightrag             | _process_single_content | Chunk 5 of 30 extracted 17 Ent + 8 Rel chunk-29595669123cbf3f223d3c0d60983e4a
+2025-10-01 07:45:15 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:971df301141d8a89970525f8ba03b13b
+2025-10-01 07:45:15 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:971df301141d8a89970525f8ba03b13b
+2025-10-01 07:45:15 | INFO     | lightrag             | _process_single_content | Chunk 6 of 30 extracted 5 Ent + 3 Rel chunk-f0d2f87c8cb1b7f1072ee94b9c671118
+2025-10-01 07:45:15 | INFO     | lightrag             | _process_single_content | Chunk 6 of 30 extracted 5 Ent + 3 Rel chunk-f0d2f87c8cb1b7f1072ee94b9c671118
+2025-10-01 07:46:24 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:6d232bd1550333495692bc7e1d8efb1b
+2025-10-01 07:46:24 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:6d232bd1550333495692bc7e1d8efb1b
+2025-10-01 07:48:43 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:c448103dc4bb210a55bccc2f472b7abb
+2025-10-01 07:48:43 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:c448103dc4bb210a55bccc2f472b7abb
+2025-10-01 07:49:08 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:e47d67a5861cf1db2e4eccd7fc316c39
+2025-10-01 07:49:08 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:e47d67a5861cf1db2e4eccd7fc316c39
+2025-10-01 07:49:08 | INFO     | lightrag             | _process_single_content | Chunk 7 of 30 extracted 4 Ent + 1 Rel chunk-ce6f76000f585c396b8ac30d287cf6aa
+2025-10-01 07:49:08 | INFO     | lightrag             | _process_single_content | Chunk 7 of 30 extracted 4 Ent + 1 Rel chunk-ce6f76000f585c396b8ac30d287cf6aa
+2025-10-01 07:50:07 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:d267f53b4ed84fbf25882d822da0f272
+2025-10-01 07:50:07 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:d267f53b4ed84fbf25882d822da0f272
+2025-10-01 07:50:07 | INFO     | lightrag             | _process_single_content | Chunk 8 of 30 extracted 11 Ent + 5 Rel chunk-5a3fb53442d76aa6ace4a1becef27ca0
+2025-10-01 07:50:07 | INFO     | lightrag             | _process_single_content | Chunk 8 of 30 extracted 11 Ent + 5 Rel chunk-5a3fb53442d76aa6ace4a1becef27ca0
+2025-10-01 07:51:40 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:f85af21190a16fcde0d8230d573a2899
+2025-10-01 07:51:40 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:f85af21190a16fcde0d8230d573a2899
+2025-10-01 07:56:16 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:bd3f93ed7088e07188ff2e3c3a0cd246
+2025-10-01 07:56:16 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:bd3f93ed7088e07188ff2e3c3a0cd246
+2025-10-01 07:57:52 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:b6919c4319abe73533f8797c1aec2a59
+2025-10-01 07:57:52 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:b6919c4319abe73533f8797c1aec2a59
+2025-10-01 07:57:52 | INFO     | lightrag             | _process_single_content | Chunk 9 of 30 extracted 10 Ent + 7 Rel chunk-63afa8be068148175620b826f9ecf42e
+2025-10-01 07:57:52 | INFO     | lightrag             | _process_single_content | Chunk 9 of 30 extracted 10 Ent + 7 Rel chunk-63afa8be068148175620b826f9ecf42e
+2025-10-01 08:04:14 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:50d34867cd81ffd42fd70224aadadc83
+2025-10-01 08:04:14 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:50d34867cd81ffd42fd70224aadadc83
+2025-10-01 08:04:14 | INFO     | lightrag             | _process_single_content | Chunk 10 of 30 extracted 20 Ent + 15 Rel chunk-3a0c5a7d590fd922704bfcfd1ecb513e
+2025-10-01 08:04:14 | INFO     | lightrag             | _process_single_content | Chunk 10 of 30 extracted 20 Ent + 15 Rel chunk-3a0c5a7d590fd922704bfcfd1ecb513e
+2025-10-01 08:04:56 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:0f485d95e15c7bb0f92397928464346e
+2025-10-01 08:04:56 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:0f485d95e15c7bb0f92397928464346e
+2025-10-01 08:10:46 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:1e63c21a7ba5045f2335250f72d22062
+2025-10-01 08:10:46 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:1e63c21a7ba5045f2335250f72d22062
+2025-10-01 08:11:33 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:c53e7271af1e360c1f825e8f6138aecc
+2025-10-01 08:11:33 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:c53e7271af1e360c1f825e8f6138aecc
+2025-10-01 08:11:33 | INFO     | lightrag             | _process_single_content | Chunk 11 of 30 extracted 2 Ent + 1 Rel chunk-9b1871c031d18a5c0e2e721b290ddace
+2025-10-01 08:11:33 | INFO     | lightrag             | _process_single_content | Chunk 11 of 30 extracted 2 Ent + 1 Rel chunk-9b1871c031d18a5c0e2e721b290ddace
+2025-10-01 08:12:24 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:ac0eec7e2b9ac0ec7016742574d56750
+2025-10-01 08:12:24 | INFO     | lightrag             | save_to_cache   |  == LLM cache == saving: default:extract:ac0eec7e2b9ac0ec7016742574d56750
+2025-10-01 08:12:24 | INFO     | lightrag             | _process_single_content | Chunk 12 of 30 extracted 22 Ent + 8 Rel chunk-cad48b3a30c8b7aeef1982a137b0cce0
+2025-10-01 08:12:24 | INFO     | lightrag             | _process_single_content | Chunk 12 of 30 extracted 22 Ent + 8 Rel chunk-cad48b3a30c8b7aeef1982a137b0cce0
+2025-10-01 08:21:33 | ERROR    | lightrag             | worker          | LLM func: Error in decorated function for task 1531793245296_31237.4600018: 
+2025-10-01 08:21:33 | ERROR    | lightrag             | worker          | LLM func: Error in decorated function for task 1531793245296_31237.4600018: 
+2025-10-01 08:21:33 | ERROR    | lightrag             | _process_extract_entities | Failed to extract entities and relationships: C[13/30]: chunk-6fb4049a5fd6bd5b62ce891dfac97cd9: 
+2025-10-01 08:21:33 | ERROR    | lightrag             | _process_extract_entities | Failed to extract entities and relationships: C[13/30]: chunk-6fb4049a5fd6bd5b62ce891dfac97cd9: 
+2025-10-01 08:21:33 | ERROR    | lightrag             | process_document | Traceback (most recent call last):
   File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
     yield
   File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_transports\default.py", line 394, in handle_async_request
@@ -262,7 +242,7 @@ The above exception was the direct cause of the following exception:
 Traceback (most recent call last):
   File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\operate.py", line 2190, in _process_with_semaphore
     raise prefixed_exception from e
-httpx.ReadTimeout: chunk-760e17dc94d6fdff3c70fd3e9f1e211c: 
+httpx.ReadTimeout: chunk-6fb4049a5fd6bd5b62ce891dfac97cd9: 
 
 The above exception was the direct cause of the following exception:
 
@@ -279,9 +259,9 @@ Traceback (most recent call last):
     ^
   File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\operate.py", line 2232, in extract_entities
     raise prefixed_exception from first_exception
-httpx.ReadTimeout: C[5/15]: chunk-760e17dc94d6fdff3c70fd3e9f1e211c: 
+httpx.ReadTimeout: C[13/30]: chunk-6fb4049a5fd6bd5b62ce891dfac97cd9: 
 
-2025-10-01 06:44:48 | ERROR    | lightrag             | process_document | Traceback (most recent call last):
+2025-10-01 08:21:33 | ERROR    | lightrag             | process_document | Traceback (most recent call last):
   File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
     yield
   File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\httpx\_transports\default.py", line 394, in handle_async_request
@@ -437,7 +417,7 @@ The above exception was the direct cause of the following exception:
 Traceback (most recent call last):
   File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\operate.py", line 2190, in _process_with_semaphore
     raise prefixed_exception from e
-httpx.ReadTimeout: chunk-760e17dc94d6fdff3c70fd3e9f1e211c: 
+httpx.ReadTimeout: chunk-6fb4049a5fd6bd5b62ce891dfac97cd9: 
 
 The above exception was the direct cause of the following exception:
 
@@ -454,133 +434,53 @@ Traceback (most recent call last):
     ^
   File "C:\Users\benma\govcon-capture-vibe\.venv\Lib\site-packages\lightrag\operate.py", line 2232, in extract_entities
     raise prefixed_exception from first_exception
-httpx.ReadTimeout: C[5/15]: chunk-760e17dc94d6fdff3c70fd3e9f1e211c: 
+httpx.ReadTimeout: C[13/30]: chunk-6fb4049a5fd6bd5b62ce891dfac97cd9: 
 
-2025-10-01 06:44:48 | ERROR    | lightrag             | process_document | Failed to extract document 1/1: _N6945025R0003.pdf
-2025-10-01 06:44:48 | ERROR    | lightrag             | process_document | Failed to extract document 1/1: _N6945025R0003.pdf
-2025-10-01 06:44:48 | INFO     | lightrag             | apipeline_process_enqueue_documents | Enqueued document processing pipeline stoped
-2025-10-01 06:44:48 | INFO     | lightrag             | apipeline_process_enqueue_documents | Enqueued document processing pipeline stoped
-2025-10-01 06:51:48 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 32000}
-2025-10-01 06:51:48 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 32000}
-2025-10-01 06:51:48 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
-2025-10-01 06:51:48 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
-2025-10-01 06:51:48 | INFO     | lightrag             | create_app      | Reranking is disabled
-2025-10-01 06:51:48 | INFO     | lightrag             | create_app      | Reranking is disabled
-2025-10-01 06:51:49 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 06:51:49 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 06:51:49 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 06:51:49 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 06:51:49 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 06:51:49 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 06:51:49 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 06:51:49 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 06:51:49 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 06:51:49 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load full_docs with 1 records
-2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load full_docs with 1 records
-2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load text_chunks with 0 records
-2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load text_chunks with 0 records
-2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load full_entities with 0 records
-2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load full_entities with 0 records
-2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load full_relations with 0 records
-2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load full_relations with 0 records
-2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load llm_response_cache with 8 records
-2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 KV load llm_response_cache with 8 records
-2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 doc status load doc_status with 1 records
-2025-10-01 06:51:49 | INFO     | lightrag             | initialize      | [_] Process 27212 doc status load doc_status with 1 records
-2025-10-01 07:13:19 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 64000}
-2025-10-01 07:13:19 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 64000}
-2025-10-01 07:13:19 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
-2025-10-01 07:13:19 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
-2025-10-01 07:13:19 | INFO     | lightrag             | create_app      | Reranking is disabled
-2025-10-01 07:13:19 | INFO     | lightrag             | create_app      | Reranking is disabled
-2025-10-01 07:13:19 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 07:13:19 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 07:13:19 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 07:13:19 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 07:13:20 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 07:13:20 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 07:13:20 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 07:13:20 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 07:13:20 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 07:13:20 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load full_docs with 1 records
-2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load full_docs with 1 records
-2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load text_chunks with 0 records
-2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load text_chunks with 0 records
-2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load full_entities with 0 records
-2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load full_entities with 0 records
-2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load full_relations with 0 records
-2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load full_relations with 0 records
-2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load llm_response_cache with 8 records
-2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 KV load llm_response_cache with 8 records
-2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 doc status load doc_status with 1 records
-2025-10-01 07:13:20 | INFO     | lightrag             | initialize      | [_] Process 11160 doc status load doc_status with 1 records
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop text_chunks
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop text_chunks
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop full_docs
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop full_docs
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop full_entities
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop full_entities
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop full_relations
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop full_relations
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop entities(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_entities.json)
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop entities(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_entities.json)
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop relationships(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_relationships.json)
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop relationships(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_relationships.json)
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop chunks(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_chunks.json)
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop chunks(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_chunks.json)
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop graph file:C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop graph file:C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop doc_status
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop doc_status
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/text_chunks
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/text_chunks
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_docs
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_docs
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_entities
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_entities
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_relations
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_relations
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/entities
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/entities
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/relationships
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/relationships
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/chunks
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/chunks
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NetworkXStorage: _/chunk_entity_relation
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped NetworkXStorage: _/chunk_entity_relation
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonDocStatusStorage: _/doc_status
-2025-10-01 07:14:04 | INFO     | lightrag             | clear_documents | Successfully dropped JsonDocStatusStorage: _/doc_status
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop llm_response_cache
-2025-10-01 07:14:04 | INFO     | lightrag             | drop            | [_] Process 11160 drop llm_response_cache
-2025-10-01 07:14:04 | INFO     | lightrag             | aclear_cache    | Cleared all cache
-2025-10-01 07:14:04 | INFO     | lightrag             | aclear_cache    | Cleared all cache
-2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 64000}
-2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | Ollama LLM Options: {'num_ctx': 64000}
-2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
-2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | Ollama Embedding Options: {}
-2025-10-01 07:15:01 | INFO     | lightrag             | create_app      | Reranking is disabled
-2025-10-01 07:15:01 | INFO     | lightrag             | create_app      | Reranking is disabled
-2025-10-01 07:15:01 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 07:15:01 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 07:15:01 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 07:15:01 | INFO     | lightrag             | __post_init__   | [_] Created new empty graph fiel: C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
-2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 07:15:01 | INFO     | lightrag             | __init__        | 🎯 RFP-Aware LightRAG initialized - enhanced processing ready
-2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load full_docs with 0 records
-2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load full_docs with 0 records
-2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load text_chunks with 0 records
-2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load text_chunks with 0 records
-2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load full_entities with 0 records
-2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load full_entities with 0 records
-2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load full_relations with 0 records
-2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load full_relations with 0 records
-2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load llm_response_cache with 0 records
-2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 KV load llm_response_cache with 0 records
-2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 doc status load doc_status with 0 records
-2025-10-01 07:15:02 | INFO     | lightrag             | initialize      | [_] Process 28932 doc status load doc_status with 0 records
+2025-10-01 08:21:33 | ERROR    | lightrag             | process_document | Failed to extract document 1/1: _N6945025R0003.pdf
+2025-10-01 08:21:33 | ERROR    | lightrag             | process_document | Failed to extract document 1/1: _N6945025R0003.pdf
+2025-10-01 08:21:33 | INFO     | lightrag             | apipeline_process_enqueue_documents | Enqueued document processing pipeline stoped
+2025-10-01 08:21:33 | INFO     | lightrag             | apipeline_process_enqueue_documents | Enqueued document processing pipeline stoped
+2025-10-01 08:22:24 | ERROR    | lightrag             | worker          | LLM func: Error in decorated function for task 1531793245472_31288.7109114: 
+2025-10-01 08:22:24 | ERROR    | lightrag             | worker          | LLM func: Error in decorated function for task 1531793245472_31288.7109114: 
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop text_chunks
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop text_chunks
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop full_docs
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop full_docs
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop full_entities
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop full_entities
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop full_relations
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop full_relations
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop entities(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_entities.json)
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop entities(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_entities.json)
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop relationships(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_relationships.json)
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop relationships(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_relationships.json)
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop chunks(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_chunks.json)
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop chunks(file:C:\Users\benma\govcon-capture-vibe\rag_storage\vdb_chunks.json)
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop graph file:C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop graph file:C:\Users\benma\govcon-capture-vibe\rag_storage\graph_chunk_entity_relation.graphml
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop doc_status
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop doc_status
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/text_chunks
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/text_chunks
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_docs
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_docs
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_entities
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_entities
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_relations
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped JsonKVStorage: _/full_relations
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/entities
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/entities
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/relationships
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/relationships
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/chunks
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped NanoVectorDBStorage: _/chunks
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped NetworkXStorage: _/chunk_entity_relation
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped NetworkXStorage: _/chunk_entity_relation
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped JsonDocStatusStorage: _/doc_status
+2025-10-01 08:24:17 | INFO     | lightrag             | clear_documents | Successfully dropped JsonDocStatusStorage: _/doc_status
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop llm_response_cache
+2025-10-01 08:24:17 | INFO     | lightrag             | drop            | [_] Process 28932 drop llm_response_cache
+2025-10-01 08:24:17 | INFO     | lightrag             | aclear_cache    | Cleared all cache
+2025-10-01 08:24:17 | INFO     | lightrag             | aclear_cache    | Cleared all cache
+2025-10-01 08:24:27 | INFO     | lightrag             | finalize_storages | Successfully finalized 10 storages
+2025-10-01 08:24:27 | INFO     | lightrag             | finalize_storages | Successfully finalized 10 storages
