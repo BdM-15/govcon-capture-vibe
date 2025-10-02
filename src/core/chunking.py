@@ -206,6 +206,7 @@ class ShipleyRFPChunker:
         
         Returns list of RFPSection objects with content and metadata
         """
+        logger.info(f"🔍 Scanning document for RFP sections ({len(document_text):,} chars)...")
         sections = []
         text_length = len(document_text)
         
@@ -216,6 +217,8 @@ class ShipleyRFPChunker:
         for section_id, patterns in self.section_patterns.items():
             if section_id == "J_ATTACHMENT":
                 continue  # Handle J attachments separately
+            
+            logger.info(f"   Searching for Section {section_id}...")
                 
             # Try main pattern first
             main_pattern = patterns["pattern"]

@@ -17,7 +17,7 @@ AI agents (PydanticAI) to provide comprehensive RFP analysis capabilities.
 
 # Core LightRAG integration
 from .core import (
-    RFPAwareLightRAG, ShipleyRFPChunker, EnhancedRFPProcessor,
+    ShipleyRFPChunker, rfp_aware_chunking_func,
     ContextualChunk, RFPSection, RFPSubsection
 )
 
