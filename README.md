@@ -7,18 +7,21 @@
 An **Ontology-Based RAG system** that enhances LightRAG's knowledge graph framework with government contracting intelligence. Rather than replacing LightRAG, we **extend it from within** using domain-specific chunking, entity recognition, and relationship mapping to transform generic document processing into sophisticated RFP analysis.
 
 **Current Approach: LightRAG Enhancement, Not Replacement**
+
 - **Leverages LightRAG's proven framework** for speed and reliability
-- **Enhances document processing** with RFP-aware chunking (Shipley methodology)  
+- **Enhances document processing** with RFP-aware chunking (Shipley methodology)
 - **Preserves standard LightRAG interface** while adding government contracting intelligence
 - **Uses existing WebUI and query endpoints** with enhanced results
 
 **Core Value Delivered Through Enhanced LightRAG:**
-- **37.5% processing optimization** (30 chunks vs 48) for reliable completion
+
+- **Processing optimization** - 800-token chunks with 30-minute timeout for reliability
 - **Cross-section relationship preservation** (C-H-J-L-M interdependencies)
 - **Government contracting entity recognition** vs generic text extraction
 - **Zero external dependencies** - fully local processing with Ollama
+- **Production speed roadmap** - 3-5x faster processing via fine-tuning (see [FINE_TUNING_ROADMAP.md](FINE_TUNING_ROADMAP.md))
 
-This approach allows us to deliver immediate value through LightRAG's established framework while building the foundation for future specialized features.
+This approach delivers immediate value through LightRAG's established framework while building toward production-speed performance through domain-specialized fine-tuning.
 
 ## 🏗️ **System Architecture**
 
@@ -372,20 +375,44 @@ JSON array where each item looks like:
 
 ### **Phase 1-4: Foundation & Optimization** ✅ **COMPLETED**
 
+> **📋 Detailed Fine-Tuning Roadmap**: See [FINE_TUNING_ROADMAP.md](FINE_TUNING_ROADMAP.md) for comprehensive model optimization strategy and timeline
+
 - ✅ **LightRAG Integration**: Enhanced server with RFP-aware processing
 - ✅ **Shipley Methodology**: Must/Should/May classification with domain validation
 - ✅ **Structured Architecture**: Modular codebase with clean separation of concerns
-- ✅ **Processing Optimization**: 37.5% efficiency improvement with reliable completion
+- ✅ **Processing Optimization**: Chunk size optimization (800 tokens) with 30-minute timeout
 - ✅ **Cross-Section Analysis**: Automatic relationship mapping across RFP sections
+- ✅ **Baseline Benchmarking**: Performance metrics captured for fine-tuning foundation
 
 **Key Milestones:**
 
-- **71-page Base Operating Services RFP** successfully processed (172 entities, 63 relationships)
-- **Model Optimization**: Mistral Nemo 12B with 64K context window for reliability
+- **Navy MBOS RFP Processing**: 71-page Base Operating Services solicitation (172 entities, 63 relationships)
+- **Model Configuration**: Mistral Nemo 12B (64K context) provides quality baseline for fine-tuning
 - **Architecture Refactoring**: Clean modular design with core/, agents/, models/, api/, utils/
-- **Performance Validation**: 30 chunks processed without timeout errors
+- **Golden Dataset Pipeline**: Training data export established (15% complete - 75/500 examples)
 
-### **Phase 5: Advanced Analysis** 🔄 **IN PROGRESS**
+### **Phase 5: Model Fine-Tuning for Production Speed** 🔄 **IN PROGRESS**
+
+**Status**: Data collection phase (75/500 examples collected)  
+**Timeline**: October 2025 - April 2026  
+**Goal**: 3-5x faster processing with 90%+ accuracy retention
+
+**Current Activities:**
+
+- 📊 **Golden Dataset Creation**: Collecting 500-1000 validated RFP chunk-entity-relationship examples
+- 🎯 **Baseline Benchmarking**: Mistral Nemo 12B performance metrics documented
+- 🔬 **Model Evaluation**: Testing Qwen 2.5 7B, Mistral 7B, Llama 3.1 8B candidates
+
+**Expected Outcomes:**
+
+- ⏱️ **Processing Speed**: 500-page RFP in 60-90 minutes (vs 2-4 hours currently)
+- 📊 **Reliability**: < 2% timeout rate (vs 10-15% currently)
+- 💾 **Efficiency**: 4-5GB model size (vs 7.1GB currently)
+- 🎯 **Accuracy**: Maintain 90%+ entity extraction quality
+
+📖 **Complete Strategy**: See [FINE_TUNING_ROADMAP.md](FINE_TUNING_ROADMAP.md) for detailed plan, milestones, and technical specifications
+
+### **Phase 6: Advanced Analysis** � **NEXT**
 
 - **Enhanced Cross-Section Mapping**: Complex dependency analysis across C-H-J-L-M sections
 - **Conflict Detection**: Automated identification of inconsistencies between main RFP and PWS attachments
@@ -813,6 +840,7 @@ govcon-capture-vibe/
 ├── inputs/                         # RFP document inputs
 ├── .env                           # Environment configuration
 ├── pyproject.toml                 # Python dependencies
+├── FINE_TUNING_ROADMAP.md         # Model optimization strategy & timeline
 └── README.md                      # This documentation
 ```
 
