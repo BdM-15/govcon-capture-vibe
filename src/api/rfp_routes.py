@@ -26,7 +26,7 @@ from lightrag import LightRAG, QueryParam
 from lightrag.utils import logger
 
 # Import enhanced RFP processing
-from src.core.lightrag_integration import RFPAwareLightRAG, process_rfp_with_lightrag
+from src.core.lightrag_chunking import rfp_aware_chunking_func
 from src.core.processor import EnhancedRFPProcessor
 from src.models.rfp_models import RFPAnalysisResult, ComplianceLevel, RequirementType
 
@@ -1491,8 +1491,8 @@ async def process_document_with_enhanced_chunking(
         
         logger.info(f"Processing document '{file_name}' with enhanced RFP chunking")
         
-        # Use enhanced RFP processing
-        results = await process_rfp_with_lightrag(rag_instance, document_text, file_name)
+        # Use the native RFP-aware LightRAG instance (chunking is already enhanced)
+        results = await rag_instance.ainsert(document_text, file_path=file_name)
         
         return {
             "status": "success",
@@ -1532,16 +1532,34 @@ async def query_specific_section(
     try:
         rag_instance = get_rag_instance()
         
-        # Create RFP processor if we have chunks available
-        rfp_processor = RFPAwareLightRAG(rag_instance)
-        
-        # Query the specific section
-        section_result = await rfp_processor.query_by_section(section_id, query)
-        
-        # Get relationships if requested
+        # Use native RFP-aware LightRAG instance for section queries
+        # Section information is embedded in chunk metadata from RFP-aware chunking
+        enhanced_query = f"""
+        Query about RFP Section {section_id}: {query}
+
+        [CONTEXT: This query is specifically about Section {section_id} of an RFP document.
+        Focus on content from this section, including requirements, instructions, and relationships.
+        Section {section_id} context: {'Instructions to Offerors' if section_id == 'L' else 'Evaluation Factors' if section_id == 'M' else f'Section {section_id} content'}]
+        """
+
+        section_result = await rag_instance.aquery(enhanced_query)
+
+        # Get relationships if requested (simplified for native approach)
         relationships = {}
-        if include_relationships and section_result.get("status") == "success":
-            relationships = await rfp_processor.get_section_relationships(section_id)
+        if include_relationships:
+            # Query for relationships using the knowledge graph
+            relationship_query = f"What are the key relationships involving RFP Section {section_id}?"
+            relationship_result = await rag_instance.aquery(relationship_query)
+            relationships = {
+                "section_id": section_id,
+                "relationship_summary": relationship_result,
+                "known_relationships": {
+                    "L": ["M (Evaluation Factors)", "C (Statement of Work)"],
+                    "M": ["L (Instructions)", "C (Requirements)"],
+                    "C": ["J (Attachments)", "B (CLINs)", "M (Evaluation)"],
+                    "J": ["C (Main requirements)", "L (Submission instructions)"]
+                }.get(section_id, [])
+            }
         
         return {
             "section_query_result": section_result,
@@ -1568,9 +1586,26 @@ async def get_section_relationships_endpoint(section_id: str):
     """
     try:
         rag_instance = get_rag_instance()
-        rfp_processor = RFPAwareLightRAG(rag_instance)
-        
-        relationships = await rfp_processor.get_section_relationships(section_id)
+        # Use native RFP-aware LightRAG for relationship queries
+        relationship_query = f"What are the relationships and connections for RFP Section {section_id}?"
+        relationship_result = await rag_instance.aquery(relationship_query)
+
+        relationships = {
+            "section_id": section_id,
+            "relationship_analysis": relationship_result,
+            "relationship_context": {
+                "L_M_connection": "Instructions to Offerors link to Evaluation Factors",
+                "section_I_clauses": "Contract clauses apply across multiple sections",
+                "C_dependencies": "Statement of Work relates to CLINs, performance, evaluation",
+                "J_attachments": "Attachments provide supporting details for main sections"
+            },
+            "known_relationships": {
+                "L": ["M (Evaluation Factors - page limits, submission requirements)"],
+                "M": ["L (Instructions - evaluation criteria mapping)"],
+                "C": ["J (PWS attachments)", "B (CLIN structure)", "M (evaluation criteria)"],
+                "J": ["C (main SOW)", "L (submission requirements)"]
+            }.get(section_id, [])
+        }
         
         return {
             "section_id": section_id,
@@ -1605,12 +1640,46 @@ async def get_enhanced_processing_status():
                 "enhanced_processing": False
             }
         
-        # Check if this is our enhanced RFP-aware instance
-        is_enhanced = hasattr(current_rag_instance, 'detect_rfp_document')
-        
+        # Check if this LightRAG instance uses RFP-aware chunking
+        # With native integration, RFP processing is built into the chunking function
+        is_enhanced = hasattr(current_rag_instance, 'chunking_func') and \
+                     current_rag_instance.chunking_func.__name__ == 'rfp_aware_chunking_func'
+
         if is_enhanced:
-            # Get processing status from RFP-aware instance
-            processing_status = current_rag_instance.get_processing_status()
+            # Get basic processing status (simplified for native approach)
+            processing_status = {
+                "integration_type": "native_rfp_chunking",
+                "chunking_function": "rfp_aware_chunking_func",
+                "automatic_detection": True,
+                "fallback_behavior": "Standard LightRAG chunking for non-RFP documents"
+            }
+
+            return {
+                "integration_status": "active",
+                "lightrag_webui_enhanced": True,
+                "automatic_rfp_detection": True,
+                "enhanced_features": [
+                    "Native RFP-aware chunking (LightRAG extension point)",
+                    "Section-aware chunking (A-M sections + J attachments)",
+                    "L↔M relationship preservation in chunks",
+                    "Requirements extraction with section context",
+                    "Shipley methodology integration",
+                    "Enhanced RFP-aware queries"
+                ],
+                "processing_statistics": processing_status,
+                "webui_compatibility": {
+                    "document_upload": "RFP-aware chunking applied automatically",
+                    "query_interface": "Section-aware query enhancement",
+                    "graph_visualization": "Section relationships in knowledge graph",
+                    "fallback_behavior": "Standard processing if RFP detection fails"
+                },
+                "architecture_benefits": [
+                    "Future-proof (uses LightRAG's official extension points)",
+                    "Cleaner integration (no monkey-patching)",
+                    "Better maintainability (modular chunking function)",
+                    "Native WebUI support (automatic graph enhancement)"
+                ]
+            }
             
             return {
                 "integration_status": "active",
