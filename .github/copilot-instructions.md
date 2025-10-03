@@ -21,6 +21,7 @@
 **ALWAYS prioritize workspace tools over PowerShell commands for file operations:**
 
 **DO** (Use Workspace Tools):
+
 - ✅ **Read files**: Use `read_file` tool, NOT `Get-Content` or `cat` in PowerShell
 - ✅ **Create files**: Use `create_file` tool, NOT `New-Item` or `echo` in PowerShell
 - ✅ **Edit files**: Use `replace_string_in_file` tool, NOT `(Get-Content).Replace()` in PowerShell
@@ -28,18 +29,21 @@
 - ✅ **List directories**: Use `list_dir` tool, NOT `Get-ChildItem` in PowerShell
 
 **ONLY use PowerShell when**:
+
 - Running Python scripts or applications (`python app.py`)
 - Using `uv` commands (`uv pip list`, `uv sync`)
 - Git operations (`git status`, `git commit`)
 - System commands that have no workspace equivalent
 
 **Why This Matters**:
+
 - Workspace tools provide better context to the agent
 - Reduces unnecessary terminal command calls
 - Prevents context loss from truncated terminal output
 - More reliable for file operations in the conversation history
 
 **Example - CORRECT**:
+
 ```python
 # ✅ Read a file directly
 read_file("src/core/ontology.py")
@@ -52,6 +56,7 @@ create_file(filePath="src/new_module.py", content="# New module")
 ```
 
 **Example - WRONG**:
+
 ```powershell
 # ❌ Don't use PowerShell for file operations
 Get-Content "src/core/ontology.py"
@@ -520,6 +525,7 @@ MAX_PARALLEL_INSERT=2
 When brainstorming enhancements or refining ontology, leverage these key resources alongside project artifacts:
 
 **Project Artifacts** (Primary References):
+
 - `/examples/` - Sample outputs (requirements, compliance matrices, QFG)
 - `/prompts/` - Shipley methodology prompt templates
 - `/docs/` - Shipley guides, capture plans, reference documentation
@@ -528,12 +534,14 @@ When brainstorming enhancements or refining ontology, leverage these key resourc
 - `/src/core/` - Ontology configuration bridging models to LightRAG
 
 **External Repositories** (Ontology & Architecture Inspiration):
+
 - **[LightRAG GitHub](https://github.com/HKUDS/LightRAG)** - Foundation codebase for all ontology modifications
 - **[AI RFP Simulator](https://github.com/felixlkw/ai-rfp-simulator)** - Entity types, relationship patterns (Chinese, use translation)
 - **[RFP Generation LangChain](https://github.com/abh2050/RFP_generation_langchain_agent_RAG)** - Automated clarification questions (Phase 6 inspiration)
 - **[Awesome Procurement Data](https://github.com/makegov/awesome-procurement-data)** - Government data sources, terminology validation
 
 **Architecture Note**: `/src/models/` and `/src/agents/` are NOT redundant:
+
 - `models/` = Data structures (Pydantic models, enums)
 - `agents/` = AI agents that USE those models for extraction
 - `core/` = Bridges models to LightRAG with ontology validation
