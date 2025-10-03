@@ -1,14 +1,25 @@
 [project]
 name = "govcon-capture-vibe"
 version = "0.1.0"
-description = "Add your description here"
+description = "RFP Analysis Tool using LightRAG and PydanticAI for structured requirement extraction"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "lightrag-hku>=1.4.9",
+    "lightrag-hku[api]>=1.4.9",
+    "pydantic-ai>=0.0.14",
     "ollama>=0.6.0",
     "openpyxl>=3.1.5",
+    "pypdf2>=3.0.0",
     "pypdf>=4.0.0",
     "python-docx>=1.2.0",
+    "python-pptx>=0.6.0",
     "streamlit>=1.50.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.0.0",
+    "pandas>=2.3.2",
+    "nest-asyncio>=1.6.0",
+    "tiktoken>=0.11.0",
+    "regex>=2025.9.18",
+    "fastapi>=0.118.0",
+    "uvicorn>=0.37.0",
 ]

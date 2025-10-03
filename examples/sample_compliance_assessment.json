@@ -1,113 +1,386 @@
-[
-  {
-    "req_id": "A001",
-    "rfp_ref": "A.3 / Page 2",
-    "description": "Competition limited to EAGLE BOA holders under NAICS 561210 by the RFP close date.",
-    "proposal_evidence": "Intro Section 1.1 states: 'We are an approved EAGLE BOA holder under NAICS 561210.'",
-    "coverage_score": 100,
-    "gaps": [],
-    "suggestion": "N/A"
+{
+  "assessment_metadata": {
+    "generated_at": "2025-09-29T14:30:00Z",
+    "rfp_title": "APS-4 Equipment Maintenance Support",
+    "total_requirements_analyzed": 11,
+    "shipley_methodology_version": "2024",
+    "analysis_scope": ["A", "B", "C", "H", "J", "L", "M"]
   },
-  {
-    "req_id": "A002",
-    "rfp_ref": "A.7 / Page 2",
-    "description": "Incumbent is KBRwyle under contract W52P1J-12-G-0061-0001.",
-    "proposal_evidence": "Capture Strategy subsection discusses incumbent KBRwyle history and differentiators.",
-    "coverage_score": 95,
-    "gaps": ["No explicit contract number in executive summary"],
-    "suggestion": "Add contract number in Executive Summary to show awareness."
-  },
-  {
-    "req_id": "A003",
-    "rfp_ref": "A.9 / Page 3",
-    "description": "Questions due 2025-10-14 1400 EST; proposals due 2025-10-28 1400 EST.",
-    "proposal_evidence": "Proposal Schedule table lists both deadlines correctly.",
-    "coverage_score": 100,
-    "gaps": [],
-    "suggestion": "N/A"
-  },
-  {
-    "req_id": "L001",
-    "rfp_ref": "L.3.1 / Page 45",
-    "description": "Technical Volume limited to 25 pages, 11 pt font, 1 inch margins; PDF only.",
-    "proposal_evidence": "Draft PDF is 27 pages including cover and TOC.",
-    "coverage_score": 70,
-    "gaps": ["Two pages over limit"],
-    "suggestion": "Condense staffing narrative and remove redundant graphics to reach 25 pages."
-  },
-  {
-    "req_id": "L002",
-    "rfp_ref": "L.4.2 / Page 47",
-    "description": "Offer shall remain valid for 180 days from proposal due date.",
-    "proposal_evidence": "No explicit validity statement found in Volume I.",
-    "coverage_score": 0,
-    "gaps": ["Missing 180-day validity attestation"],
-    "suggestion": "Insert a sentence in the transmittal letter confirming 180-day proposal validity."
-  },
-  {
-    "req_id": "M001",
-    "rfp_ref": "M.1 / Page 77",
-    "description": "Best Value tradeoff among Technical, Past Performance, and Cost/Price.",
-    "proposal_evidence": "Executive Summary mentions best value approach aligning people, performance history, and price discipline.",
-    "coverage_score": 90,
-    "gaps": ["Could explicitly restate factor order"],
-    "suggestion": "Add explicit sentence: 'We recognize Technical outweighs Past Performance; combined they outweigh Cost/Price.'"
-  },
-  {
-    "req_id": "M002",
-    "rfp_ref": "M.2.1 / Page 78",
-    "description": "Technical Factor sub-factors: Staffing Approach, Maintenance Execution, Supply Chain Resilience.",
-    "proposal_evidence": "Sections 3, 4, and 5 map to the three sub-factors with labeled headers.",
-    "coverage_score": 95,
-    "gaps": ["Supply Chain section lacks resilience metric table"],
-    "suggestion": "Add a resilience KPI table (MTTR, parts availability %) referencing Attachment 0014 assets."
-  },
-  {
-    "req_id": "J001",
-    "rfp_ref": "J - Attachment 0014 / Injected",
-    "description": "Government Furnished Facilities and Equipment (GFFE) provided per PWS tasks.",
-    "proposal_evidence": "Maintenance Plan references GFFE qualitatively but no inventory table.",
-    "coverage_score": 60,
-    "gaps": [
-      "Missing crosswalk of GFFE to tasks",
-      "No condition acceptance process"
-    ],
-    "suggestion": "Insert table mapping each GFFE item to preventive maintenance task and acceptance criteria."
-  },
-  {
-    "req_id": "C001",
-    "rfp_ref": "C.5.4 / Page 32",
-    "description": "Provide preventive maintenance for APS-4 equipment within 24 hours of notification.",
-    "proposal_evidence": "Section 4.2 states 24-hour response but lacks clock start definition.",
-    "coverage_score": 85,
-    "gaps": ["Does not define trigger event for 24-hour window"],
-    "suggestion": "Clarify response time starts at Government email acknowledgment; include escalation ladder."
-  },
-  {
-    "req_id": "B001",
-    "rfp_ref": "B.1 / Page 10",
-    "description": "CLIN 0001: Firm-Fixed-Price base operations support for a 366-day base period including 60-day transition.",
-    "proposal_evidence": "Pricing Volume shows CLIN 0001 single FFP line but transition tasks listed separately in narrative.",
-    "coverage_score": 80,
-    "gaps": ["Narrative separation may imply separate billing"],
-    "suggestion": "Explicitly state transition tasks are included within CLIN 0001 fixed price."
-  },
-  {
-    "req_id": "H001",
-    "rfp_ref": "H.7 / Page 59",
-    "description": "Key Personnel changes prohibited first 180 days without CO approval.",
-    "proposal_evidence": "Key Personnel matrix lists commitments but no replacement protocol during restriction window.",
-    "coverage_score": 75,
-    "gaps": ["Lacks contingency plan for unexpected departure"],
-    "suggestion": "Add rapid replacement procedure and pre-vetted alternates in Appendix."
-  },
-  {
-    "summary": {
-      "total_reqs": 11,
-      "compliance_rate": 86,
-      "critical_gaps": 2,
-      "a_section_coverage": 98,
-      "high_risk_reqs": ["L002", "J001"]
+  "overall_compliance": {
+    "total_requirements": 11,
+    "compliance_rate": 86.2,
+    "critical_gaps": 2,
+    "high_risk_requirements": ["L002", "J001"],
+    "section_coverage": {
+      "A": 98.3,
+      "B": 80.0,
+      "C": 85.0,
+      "H": 75.0,
+      "J": 60.0,
+      "L": 85.0,
+      "M": 91.7
+    },
+    "compliance_by_type": {
+      "mandatory": 84.5,
+      "desired": 90.0,
+      "informational": 95.0
     }
+  },
+  "requirement_assessments": [
+    {
+      "requirement_id": "A001",
+      "requirement_text": "Competition limited to EAGLE BOA holders under NAICS 561210 by the RFP close date.",
+      "requirement_type": "eligibility",
+      "compliance_level": "mandatory",
+      "section": "A",
+      "source_reference": "A.3 / Page 2",
+      "proposal_evidence": "Intro Section 1.1 states: 'We are an approved EAGLE BOA holder under NAICS 561210 as of September 2024.'",
+      "coverage_score": 100,
+      "coverage_quality": "excellent",
+      "gaps": [],
+      "strengths": [
+        "Clear eligibility statement",
+        "Current certification status provided"
+      ],
+      "improvement_suggestions": [],
+      "risk_assessment": {
+        "risk_level": "low",
+        "impact_if_missed": "disqualification",
+        "mitigation_priority": "N/A"
+      },
+      "shipley_reference": "Proposal Guide p.15 - Eligibility verification checklist",
+      "traceability_score": 100
+    },
+    {
+      "requirement_id": "A002",
+      "requirement_text": "Incumbent is KBRwyle under contract W52P1J-12-G-0061-0001.",
+      "requirement_type": "background",
+      "compliance_level": "informational",
+      "section": "A",
+      "source_reference": "A.7 / Page 2",
+      "proposal_evidence": "Capture Strategy subsection discusses incumbent KBRwyle history and competitive differentiators from our approach.",
+      "coverage_score": 95,
+      "coverage_quality": "very_good",
+      "gaps": ["No explicit contract number reference in executive summary"],
+      "strengths": [
+        "Demonstrates incumbent awareness",
+        "Competitive differentiation strategy"
+      ],
+      "improvement_suggestions": [
+        "Add contract number W52P1J-12-G-0061-0001 in Executive Summary for completeness"
+      ],
+      "risk_assessment": {
+        "risk_level": "low",
+        "impact_if_missed": "minor_deduction",
+        "mitigation_priority": "low"
+      },
+      "shipley_reference": "Capture Guide p.35 - Competitive intelligence gathering",
+      "traceability_score": 90
+    },
+    {
+      "requirement_id": "A003",
+      "requirement_text": "Questions due 2025-10-14 1400 EST; proposals due 2025-10-28 1400 EST.",
+      "requirement_type": "schedule",
+      "compliance_level": "mandatory",
+      "section": "A",
+      "source_reference": "A.9 / Page 3",
+      "proposal_evidence": "Proposal Schedule table in Section 1.2 lists both deadlines correctly with internal milestone tracking.",
+      "coverage_score": 100,
+      "coverage_quality": "excellent",
+      "gaps": [],
+      "strengths": [
+        "Accurate deadline tracking",
+        "Internal milestone integration"
+      ],
+      "improvement_suggestions": [],
+      "risk_assessment": {
+        "risk_level": "critical",
+        "impact_if_missed": "late_submission_rejection",
+        "mitigation_priority": "N/A"
+      },
+      "shipley_reference": "Proposal Guide p.25 - Schedule management critical path",
+      "traceability_score": 100
+    },
+    {
+      "requirement_id": "L001",
+      "requirement_text": "Technical Volume limited to 25 pages, 11 pt font, 1 inch margins; PDF only.",
+      "requirement_type": "format",
+      "compliance_level": "mandatory",
+      "section": "L",
+      "source_reference": "L.3.1 / Page 45",
+      "proposal_evidence": "Current draft PDF is 27 pages including cover page and table of contents.",
+      "coverage_score": 70,
+      "coverage_quality": "needs_improvement",
+      "gaps": [
+        "Two pages over the 25-page limit",
+        "Risk of non-compliance disqualification"
+      ],
+      "strengths": [
+        "Correct font and margin formatting",
+        "PDF format compliance"
+      ],
+      "improvement_suggestions": [
+        "Condense staffing narrative section by 1 page",
+        "Remove redundant graphics in maintenance execution section",
+        "Consider appendix for detailed technical specifications"
+      ],
+      "risk_assessment": {
+        "risk_level": "high",
+        "impact_if_missed": "potential_disqualification",
+        "mitigation_priority": "immediate"
+      },
+      "shipley_reference": "Proposal Guide p.45 - Format compliance checklist",
+      "traceability_score": 85
+    },
+    {
+      "requirement_id": "L002",
+      "requirement_text": "Offer shall remain valid for 180 days from proposal due date.",
+      "requirement_type": "contractual",
+      "compliance_level": "mandatory",
+      "section": "L",
+      "source_reference": "L.4.2 / Page 47",
+      "proposal_evidence": "NOT FOUND - No explicit validity statement located in any volume.",
+      "coverage_score": 0,
+      "coverage_quality": "missing",
+      "gaps": [
+        "Missing 180-day validity attestation",
+        "No contractual commitment statement"
+      ],
+      "strengths": [],
+      "improvement_suggestions": [
+        "Insert validity statement in transmittal letter: 'This proposal remains valid for 180 days from October 28, 2025'",
+        "Add to Executive Summary for prominence",
+        "Reference Shipley p.30 contractual commitments tracking"
+      ],
+      "risk_assessment": {
+        "risk_level": "critical",
+        "impact_if_missed": "potential_disqualification",
+        "mitigation_priority": "immediate"
+      },
+      "shipley_reference": "Proposal Guide p.30 - Contractual commitments tracking",
+      "traceability_score": 0
+    },
+    {
+      "requirement_id": "M001",
+      "requirement_text": "Best Value tradeoff among Technical, Past Performance, and Cost/Price.",
+      "requirement_type": "evaluation_method",
+      "compliance_level": "mandatory",
+      "section": "M",
+      "source_reference": "M.1 / Page 77",
+      "proposal_evidence": "Executive Summary mentions best value approach aligning technical excellence, performance history, and competitive pricing.",
+      "coverage_score": 90,
+      "coverage_quality": "very_good",
+      "gaps": ["Could explicitly restate evaluation factor hierarchy"],
+      "strengths": [
+        "Best value understanding demonstrated",
+        "Factor alignment strategy"
+      ],
+      "improvement_suggestions": [
+        "Add explicit sentence: 'We recognize Technical outweighs Past Performance; combined non-price factors significantly outweigh Cost/Price'",
+        "Reference specific evaluation methodology from M.1"
+      ],
+      "risk_assessment": {
+        "risk_level": "medium",
+        "impact_if_missed": "evaluation_disadvantage",
+        "mitigation_priority": "medium"
+      },
+      "shipley_reference": "Capture Guide p.25 - Source selection strategy analysis",
+      "traceability_score": 90
+    },
+    {
+      "requirement_id": "M002",
+      "requirement_text": "Technical Factor sub-factors: Staffing Approach, Maintenance Execution, Supply Chain Resilience.",
+      "requirement_type": "evaluation_criteria",
+      "compliance_level": "mandatory",
+      "section": "M",
+      "source_reference": "M.2.1 / Page 78",
+      "proposal_evidence": "Sections 3, 4, and 5 map directly to the three sub-factors with clearly labeled headers and comprehensive coverage.",
+      "coverage_score": 95,
+      "coverage_quality": "excellent",
+      "gaps": [
+        "Supply Chain Resilience section lacks quantitative resilience metrics"
+      ],
+      "strengths": [
+        "Perfect structural alignment",
+        "Comprehensive sub-factor coverage",
+        "Clear section mapping"
+      ],
+      "improvement_suggestions": [
+        "Add resilience KPI table (MTTR, parts availability %) in Section 5",
+        "Reference Attachment 0014 GFFE assets in resilience planning"
+      ],
+      "risk_assessment": {
+        "risk_level": "low",
+        "impact_if_missed": "minor_scoring_impact",
+        "mitigation_priority": "low"
+      },
+      "shipley_reference": "Proposal Guide p.50 - Technical factor decomposition matrix",
+      "traceability_score": 95
+    },
+    {
+      "requirement_id": "J001",
+      "requirement_text": "Government Furnished Facilities and Equipment (GFFE) provided per PWS tasks.",
+      "requirement_type": "resources",
+      "compliance_level": "mandatory",
+      "section": "J",
+      "source_reference": "J - Attachment 0014",
+      "proposal_evidence": "Maintenance Plan references GFFE qualitatively but lacks comprehensive inventory integration.",
+      "coverage_score": 60,
+      "coverage_quality": "needs_improvement",
+      "gaps": [
+        "Missing detailed crosswalk of GFFE items to specific maintenance tasks",
+        "No condition assessment and acceptance process defined",
+        "Lacks integration with 24-hour response requirement"
+      ],
+      "strengths": [
+        "Basic GFFE awareness",
+        "Qualitative integration mentioned"
+      ],
+      "improvement_suggestions": [
+        "Create detailed table mapping each GFFE item to preventive maintenance tasks",
+        "Define condition acceptance criteria and handover process",
+        "Link GFFE status to 24-hour maintenance response capability",
+        "Reference Shipley p.65 for government furnished property management"
+      ],
+      "risk_assessment": {
+        "risk_level": "high",
+        "impact_if_missed": "significant_scoring_impact",
+        "mitigation_priority": "high"
+      },
+      "shipley_reference": "Proposal Guide p.65 - Government furnished property management",
+      "traceability_score": 60
+    },
+    {
+      "requirement_id": "C001",
+      "requirement_text": "Provide preventive maintenance for APS-4 equipment within 24 hours of notification.",
+      "requirement_type": "performance",
+      "compliance_level": "mandatory",
+      "section": "C",
+      "source_reference": "C.5.4 / Page 32",
+      "proposal_evidence": "Section 4.2 commits to 24-hour response but lacks clear trigger event definition and escalation procedures.",
+      "coverage_score": 85,
+      "coverage_quality": "good",
+      "gaps": [
+        "Does not define specific trigger event for 24-hour clock start"
+      ],
+      "strengths": ["Clear 24-hour commitment", "Maintenance process outlined"],
+      "improvement_suggestions": [
+        "Clarify that response time starts upon Government email acknowledgment receipt",
+        "Include escalation procedures for equipment access delays",
+        "Add performance tracking and reporting methodology"
+      ],
+      "risk_assessment": {
+        "risk_level": "medium",
+        "impact_if_missed": "performance_concerns",
+        "mitigation_priority": "medium"
+      },
+      "shipley_reference": "Proposal Guide p.55 - Performance standard tracking matrix",
+      "traceability_score": 85
+    },
+    {
+      "requirement_id": "B001",
+      "requirement_text": "CLIN 0001: Firm-Fixed-Price base operations support for a 366-day base period including 60-day transition.",
+      "requirement_type": "contractual",
+      "compliance_level": "mandatory",
+      "section": "B",
+      "source_reference": "B.1 / Page 10",
+      "proposal_evidence": "Pricing Volume shows CLIN 0001 as single FFP line item, but transition tasks are described separately in technical narrative.",
+      "coverage_score": 80,
+      "coverage_quality": "good",
+      "gaps": [
+        "Narrative separation of transition tasks may imply separate billing structure"
+      ],
+      "strengths": ["Correct FFP structure", "366-day period acknowledged"],
+      "improvement_suggestions": [
+        "Explicitly state that all transition tasks are fully included within CLIN 0001 fixed price",
+        "Clarify no additional charges for transition period activities"
+      ],
+      "risk_assessment": {
+        "risk_level": "medium",
+        "impact_if_missed": "pricing_confusion",
+        "mitigation_priority": "medium"
+      },
+      "shipley_reference": "Proposal Guide p.40 - Contract structure and pricing strategy",
+      "traceability_score": 80
+    },
+    {
+      "requirement_id": "H001",
+      "requirement_text": "Key Personnel changes prohibited first 180 days without CO approval.",
+      "requirement_type": "personnel",
+      "compliance_level": "mandatory",
+      "section": "H",
+      "source_reference": "H.7 / Page 59",
+      "proposal_evidence": "Key Personnel matrix lists firm commitments but lacks contingency planning for unexpected departures during restriction period.",
+      "coverage_score": 75,
+      "coverage_quality": "good",
+      "gaps": [
+        "No contingency plan for unexpected Key Personnel departure",
+        "Missing backup personnel identification"
+      ],
+      "strengths": [
+        "Clear Key Personnel commitments",
+        "180-day restriction acknowledged"
+      ],
+      "improvement_suggestions": [
+        "Add rapid replacement procedure for emergency situations",
+        "Pre-identify and pre-qualify alternate Key Personnel",
+        "Include in staffing appendix for government awareness"
+      ],
+      "risk_assessment": {
+        "risk_level": "medium",
+        "impact_if_missed": "staffing_concerns",
+        "mitigation_priority": "medium"
+      },
+      "shipley_reference": "Proposal Guide p.35 - Key personnel commitment tracking",
+      "traceability_score": 75
+    }
+  ],
+  "critical_themes_analysis": {
+    "high_priority_themes": [
+      {
+        "theme": "Maintenance Execution Excellence",
+        "average_coverage": 80.0,
+        "related_requirements": ["C001", "J001", "M002"],
+        "risk_level": "medium",
+        "improvement_focus": "GFFE integration and response time clarity"
+      },
+      {
+        "theme": "Format and Administrative Compliance",
+        "average_coverage": 85.0,
+        "related_requirements": ["L001", "L002", "A003"],
+        "risk_level": "high",
+        "improvement_focus": "Page limit compliance and validity statement"
+      },
+      {
+        "theme": "Evaluation Factor Alignment",
+        "average_coverage": 92.5,
+        "related_requirements": ["M001", "M002"],
+        "risk_level": "low",
+        "improvement_focus": "Minor enhancements for competitive advantage"
+      }
+    ]
+  },
+  "recommendations": {
+    "immediate_actions": [
+      "Add 180-day validity statement to transmittal letter (L002)",
+      "Reduce Technical Volume to 25 pages (L001)",
+      "Create detailed GFFE-to-task mapping table (J001)"
+    ],
+    "medium_priority_actions": [
+      "Clarify 24-hour response trigger event (C001)",
+      "Add transition cost clarification (B001)",
+      "Develop Key Personnel contingency plan (H001)"
+    ],
+    "competitive_enhancements": [
+      "Explicit evaluation factor hierarchy statement (M001)",
+      "Quantitative resilience metrics (M002)",
+      "Contract number reference for completeness (A002)"
+    ]
+  },
+  "shipley_methodology_compliance": {
+    "proposal_guide_references": 8,
+    "capture_guide_references": 3,
+    "methodology_alignment_score": 92,
+    "traceability_completeness": 85
   }
-]
+}
