@@ -2,7 +2,103 @@
 
 ## Project Overview
 
-**Enhanced LightRAG Server** for federal RFP compliance automation. Professional React-based WebUI with custom RFP analysis capabilities grounded in Shipley methodology. Replaces traditional Streamlit interfaces with LightRAG's official server architecture plus custom government contracting extensions.
+**LightRAG-Based RFP Analysis System** with ontology-guided knowledge graph construction for federal proposal development. Integrates government contracting domain ontology with LightRAG's semantic extraction framework, grounded in Shipley methodology.
+
+## ⚠️ CRITICAL: LightRAG Framework Boundaries
+
+### Primary Library
+**Package**: `lightrag-hku==1.4.9` (installed in `.venv/Lib/site-packages/lightrag/`)
+
+**DO NOT**:
+- Create custom preprocessing that bypasses LightRAG's semantic understanding
+- Build parallel extraction mechanisms outside the framework
+- Use deterministic regex for entity/section identification
+- Modify LightRAG source files directly
+
+**DO**:
+- Customize LightRAG's `addon_params` for ontology integration
+- Use LightRAG's prompt customization via `PROMPTS` dictionary  
+- Leverage `.venv/Lib/site-packages/lightrag/prompt.py` for understanding prompt structure
+- Post-process LightRAG's extracted entities/relationships with ontology validation
+- Work WITH LightRAG's semantic extraction, not around it
+
+### Key LightRAG Integration Points
+
+**1. Prompt Customization** (`.venv/Lib/site-packages/lightrag/prompt.py`):
+```python
+# LightRAG uses PROMPTS dictionary for all extraction
+PROMPTS["entity_extraction_system_prompt"]  # Main entity extraction prompt
+PROMPTS["entity_extraction_user_prompt"]     # User-facing extraction prompt
+PROMPTS["entity_extraction_examples"]        # Few-shot examples
+```
+
+**2. Addon Parameters** (`.venv/Lib/site-packages/lightrag/lightrag.py` line 362):
+```python
+addon_params: dict[str, Any] = field(
+    default_factory=lambda: {
+        "language": "English",
+        "entity_types": ["organization", "person", "location", ...]  # ← Customize here!
+    }
+)
+```
+
+**3. Extraction Process** (`.venv/Lib/site-packages/lightrag/operate.py` line 2028+):
+- Entity types passed via `addon_params["entity_types"]`
+- Prompts formatted with `entity_types`, `language`, `examples`
+- Post-processing happens in `_process_extraction_result()` function
+
+### How to Modify LightRAG Correctly
+
+**✅ CORRECT: Extend via Configuration**
+```python
+# In your code (e.g., src/core/lightrag_integration.py)
+from lightrag import LightRAG
+from src.core.ontology import EntityType
+
+# Customize addon_params with ontology types
+rag = LightRAG(
+    working_dir="./rag_storage",
+    addon_params={
+        "language": "English",
+        "entity_types": [e.value for e in EntityType],  # Use ontology!
+    }
+)
+```
+
+**✅ CORRECT: Post-Process Extracted Entities**
+```python
+# After LightRAG extraction, validate with ontology
+from src.core.ontology import validate_entity_type, is_valid_relationship
+
+# Hook into extraction results
+validated_entities = [e for e in extracted_entities if validate_entity_type(e)]
+validated_relations = [r for r in extracted_relations if is_valid_relationship(r)]
+```
+
+**❌ WRONG: Custom Preprocessing**
+```python
+# DON'T DO THIS - bypasses LightRAG's semantic understanding
+def custom_regex_chunker(text):
+    sections = re.findall(r"Section ([A-M])", text)  # ← Deterministic, brittle
+    return structured_chunks  # ← LightRAG can't learn from this
+```
+
+### Referencing LightRAG Source
+
+When implementing ontology integration, always reference the installed library:
+- **Prompt structure**: `.venv/Lib/site-packages/lightrag/prompt.py`
+- **Entity extraction**: `.venv/Lib/site-packages/lightrag/operate.py` (lines 2020-2170)
+- **LightRAG class**: `.venv/Lib/site-packages/lightrag/lightrag.py` (lines 100-450)
+- **Constants**: `.venv/Lib/site-packages/lightrag/constants.py`
+
+Use `uv pip list` to verify package version, not `pip list`.
+
+## Path B Architecture (Ontology-Guided Framework Integration)
+
+### Architectural Philosophy
+**Guide LightRAG's semantic extraction with ontology, don't replace it with deterministic preprocessing.**
+
+Previous Path A (archived) built custom `ShipleyRFPChunker` with regex-based section parsing that corrupted LightRAG's input, creating fictitious entities like "RFP Section J-L" (doesn't exist in Uniform Contract Format). Path B integrates ontology WITH LightRAG's framework.
 
 ## Current Architecture (Phase 2 - Production Implementation)
 
