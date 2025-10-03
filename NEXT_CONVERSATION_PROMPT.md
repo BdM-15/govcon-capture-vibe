@@ -1,4 +1,5 @@
 # Next Conversatio**Path B Approach (CORRECT - Ontology-Modified LightRAG)**:
+
 - MODIFY LightRAG's extraction engine by injecting government contracting ontology into addon_params["entity_types"]
 - TEACH LightRAG domain concepts it would never extract using generic entity types ("person", "location")
 - Replace generic entity types with domain-specific types (CLIN, FAR_CLAUSE, EVALUATION_FACTOR, REQUIREMENT)
@@ -7,6 +8,7 @@
 - Post-process to ensure extractions match ontology and domain accuracy
 
 **Critical Understanding**:
+
 - Generic LightRAG CANNOT understand government contracting concepts without ontology injection
 - "RFP Section J-L" DOES NOT EXIST in Uniform Contract Format (sections J, K, L are INDIVIDUAL)
 - Path A's regex preprocessing created fictitious entities and corrupted the knowledge graph

@@ -17,6 +17,7 @@
 ### Why Generic LightRAG Fails for Government Contracting
 
 **Generic LightRAG cannot**:
+
 - Distinguish CLIN (Contract Line Item Number) from generic line items
 - Recognize Section L↔M evaluation relationships
 - Identify "shall" vs "should" requirement classifications (Shipley methodology)
@@ -25,6 +26,7 @@
 - Understand Uniform Contract Format (A-M sections, J attachments)
 
 **Our Ontology-Modified Approach**:
+
 - **Injects government contracting entity types** into LightRAG's extraction prompts
 - **Constrains relationships** to valid government contracting patterns (L↔M, requirement→evaluation)
 - **Teaches domain terminology** through custom examples (PWS, SOW, CLIN, Section M factors)
@@ -64,6 +66,7 @@ addon_params: dict[str, Any] = field(
 ```
 
 **This injection happens at** `.venv/Lib/site-packages/lightrag/operate.py` line 2024:
+
 ```python
 entity_types = global_config["addon_params"].get("entity_types", DEFAULT_ENTITY_TYPES)
 # ↑ Our ontology types get injected into extraction prompt here
@@ -78,12 +81,13 @@ PROMPTS["entity_extraction_examples"]        # Replace generic examples with RFP
 ```
 
 **Example modification**:
+
 ```python
 # Generic LightRAG example (won't work for RFPs):
 ("Alice manages the TechCorp project", "PERSON|ORGANIZATION|PROJECT")
 
 # Government contracting example (what we need):
-("Section L.3.2 requires proposal submission by 2:00 PM EST", 
+("Section L.3.2 requires proposal submission by 2:00 PM EST",
  "SECTION|REQUIREMENT|DEADLINE")
 ```
 
@@ -112,7 +116,7 @@ rag = LightRAG(
 )
 
 # This modifies how LightRAG extracts entities internally:
-# - Generic: "person", "location", "organization" 
+# - Generic: "person", "location", "organization"
 # - Modified: "REQUIREMENT", "CLIN", "EVALUATION_FACTOR", "FAR_CLAUSE"
 ```
 

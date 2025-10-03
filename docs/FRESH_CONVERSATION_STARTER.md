@@ -33,8 +33,9 @@
 - Post-process to ensure extractions match ontology
 
 **Why Generic LightRAG Fails**:
+
 - Can't distinguish CLINs from generic line items
-- Won't recognize Section L↔M evaluation relationships  
+- Won't recognize Section L↔M evaluation relationships
 - Doesn't know "shall" vs "should" requirement classifications
 - Can't extract FAR/DFARS clause applicability
 - Doesn't understand Uniform Contract Format (A-M sections, J attachments)

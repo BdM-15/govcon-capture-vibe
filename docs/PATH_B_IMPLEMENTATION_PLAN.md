@@ -35,6 +35,7 @@ In our exploratory Phase 1 work (Path A), we built custom preprocessing outside 
 **Modify LightRAG's extraction engine by injecting government contracting ontology, teaching it domain-specific concepts it would never learn from generic processing.**
 
 Key modifications:
+
 1. **Inject ontology entity types** into LightRAG's extraction prompts
 2. **Add government contracting examples** (CLINs, Section M factors, FAR clauses)
 3. **Constrain relationships** to valid patterns (L↔M, requirement→evaluation)
@@ -47,6 +48,7 @@ Key modifications:
 **Modify LightRAG's extraction capabilities with government contracting ontology** to transform generic document processing into specialized federal procurement intelligence. We inject domain knowledge into LightRAG's prompts to teach it concepts it would never extract using generic entity types.
 
 **Critical**: This is NOT about using LightRAG "as-is" and hoping. We **actively modify** what LightRAG extracts by:
+
 - Replacing generic entity types ("person", "location") with domain types ("CLIN", "REQUIREMENT", "EVALUATION_FACTOR")
 - Adding government contracting examples to teach Section L↔M relationships
 - Constraining relationships to valid patterns (SOW→Deliverable, Section M→Evaluation Criteria)
