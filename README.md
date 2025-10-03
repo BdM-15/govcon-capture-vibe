@@ -1425,14 +1425,50 @@ Fork and PR. Focus on GovCon-specific enhancements (e.g., FAR/DFARS checks).
 
 MIT License. This project implements Shipley methodology for educational and research purposes. Shipley methodology references are used under fair use for government contracting education.
 
-## 🔗 Related Resources
+## 🔗 Critical Resources & References
 
-- [LightRAG Documentation](https://github.com/HKUDS/LightRAG)
-- [RAG-Anything Multimodal](https://github.com/HKUDS/RAG-Anything)
-- [Ollama Model Library](https://ollama.ai/library)
-- [Shipley Associates](https://shipley.com/) (Official methodology source)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [Unsloth Fine-tuning](https://github.com/unslothai/unsloth)
+### **Foundation & Core Technologies**
+
+- **[LightRAG GitHub](https://github.com/HKUDS/LightRAG)** - Primary knowledge graph foundation; all ontology modifications build on this codebase
+- **[RAG-Anything Multimodal](https://github.com/HKUDS/RAG-Anything)** - Phase 4-6 enhancement for complex document processing
+- **[Ollama Model Library](https://ollama.ai/library)** - Local LLM inference models
+- **[FastAPI Documentation](https://fastapi.tiangolo.com/)** - API framework reference
+- **[Unsloth Fine-tuning](https://github.com/unslothai/unsloth)** - Phase 7 domain specialization
+
+### **Domain Ontology & Architecture Inspiration**
+
+These repositories inform our ontology design, entity/relationship modeling, and future feature development:
+
+- **[AI RFP Simulator](https://github.com/felixlkw/ai-rfp-simulator)** ⭐ **Critical for ontology refinement**
+  - **Use for**: Government contracting entity types, relationship patterns, RFP structure modeling
+  - **Note**: Content in Chinese - use translation tools when referencing
+  - **Relevance**: Real-world RFP entity extraction patterns that complement our Shipley methodology
+  
+- **[RFP Generation with LangChain](https://github.com/abh2050/RFP_generation_langchain_agent_RAG)** ⭐ **Future Phase 6 planning**
+  - **Use for**: Automated question generation for RFP ambiguities, conflicts, and clarifications
+  - **Relevance**: Aligns with Phase 6 "Questions for Government" (QFG) automation goals
+  - **Integration**: Complements our Shipley-based requirements extraction with proactive clarification workflows
+  
+- **[Awesome Procurement Data](https://github.com/makegov/awesome-procurement-data)** ⭐ **Strategic intelligence source**
+  - **Use for**: Government contracting data sources, terminology standards, real-time procurement data feeds
+  - **Relevance**: Validates our entity taxonomy against real government data, informs future feature roadmap
+  - **Application**: Enhances institutional knowledge base (Phase 7-8) with authoritative procurement datasets
+
+### **Methodology & Compliance**
+
+- **[Shipley Associates](https://shipley.com/)** - Official Shipley Proposal & Capture Guide methodology
+- **[Federal Acquisition Regulation (FAR)](https://www.acquisition.gov/far/)** - Government contracting regulations
+
+### **How These Resources Inform Our Architecture**
+
+Our ontology-modified LightRAG approach integrates insights from these projects:
+
+1. **Entity Taxonomy**: AI RFP Simulator's entity patterns validate our `EntityType` enum in `src/core/ontology.py`
+2. **Relationship Constraints**: Real-world RFP relationships inform our `VALID_RELATIONSHIPS` schema
+3. **Clarification Workflow**: RFP Generation with LangChain inspires our Phase 6 QFG automation
+4. **Data Validation**: Awesome Procurement Data ensures our terminology aligns with government standards
+
+**Development Practice**: When enhancing ontology or planning new features, cross-reference these repositories alongside our `/examples`, `/prompts`, `/docs`, and source code (`/src/models`, `/src/agents`, `/src/core`).
 
 ---
 

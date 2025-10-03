@@ -515,17 +515,43 @@ MAX_PARALLEL_INSERT=2
 
 ## Development Workflow
 
+### **Critical Reference Artifacts**
+
+When brainstorming enhancements or refining ontology, leverage these key resources alongside project artifacts:
+
+**Project Artifacts** (Primary References):
+- `/examples/` - Sample outputs (requirements, compliance matrices, QFG)
+- `/prompts/` - Shipley methodology prompt templates
+- `/docs/` - Shipley guides, capture plans, reference documentation
+- `/src/models/` - Core Pydantic data models (RFPRequirement, ComplianceAssessment, etc.)
+- `/src/agents/` - PydanticAI agents using models for structured extraction
+- `/src/core/` - Ontology configuration bridging models to LightRAG
+
+**External Repositories** (Ontology & Architecture Inspiration):
+- **[LightRAG GitHub](https://github.com/HKUDS/LightRAG)** - Foundation codebase for all ontology modifications
+- **[AI RFP Simulator](https://github.com/felixlkw/ai-rfp-simulator)** - Entity types, relationship patterns (Chinese, use translation)
+- **[RFP Generation LangChain](https://github.com/abh2050/RFP_generation_langchain_agent_RAG)** - Automated clarification questions (Phase 6 inspiration)
+- **[Awesome Procurement Data](https://github.com/makegov/awesome-procurement-data)** - Government data sources, terminology validation
+
+**Architecture Note**: `/src/models/` and `/src/agents/` are NOT redundant:
+- `models/` = Data structures (Pydantic models, enums)
+- `agents/` = AI agents that USE those models for extraction
+- `core/` = Bridges models to LightRAG with ontology validation
+
 ### **Extending RFP Analysis**
 
 1. **Study Shipley Methodology**: Reference specific guide sections (p.X-Y)
-2. **Create Prompt Templates**: Store in `/prompts/` with methodology citations
-3. **Add API Routes**: Extend `src/api/rfp_routes.py` with new endpoints
-4. **Document Endpoints**: Include Shipley references in OpenAPI docs
-5. **Test with Examples**: Validate against known RFP analysis patterns
+2. **Cross-reference External Repos**: Check AI RFP Simulator for entity patterns, Awesome Procurement Data for terminology
+3. **Create Prompt Templates**: Store in `/prompts/` with methodology citations
+4. **Update Ontology if Needed**: Extend `src/core/ontology.py` entity types or relationships
+5. **Add API Routes**: Extend `src/api/rfp_routes.py` with new endpoints
+6. **Document Endpoints**: Include Shipley references in OpenAPI docs
+7. **Test with Examples**: Validate against known RFP analysis patterns
 
 ### **LightRAG Integration**
 
 - **Leverage Core**: Use LightRAG's document processing, knowledge graphs, search
+- **Reference Foundation**: Always check [LightRAG GitHub](https://github.com/HKUDS/LightRAG) for implementation patterns
 - **Extend Cleanly**: Add custom routes without modifying LightRAG core
 - **Follow Patterns**: Use LightRAG's established architecture and conventions
 - **Maintain Compatibility**: Ensure custom features don't break LightRAG functionality

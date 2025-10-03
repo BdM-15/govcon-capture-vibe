@@ -39,7 +39,7 @@ I need to implement Path B for ontology-guided LightRAG integration. Here's the 
 - Path A's regex preprocessing created these fictitious entities and corrupted the knowledge graph
 - We actively MODIFY LightRAG's prompts and entity types, not just use it "as-is"
 
-**Key Files**:
+**Key Files & Resources**:
 - Implementation plan: docs/PATH_B_IMPLEMENTATION_PLAN.md
 - Framework guidelines: .github/copilot-instructions.md
 - Fresh conversation context: docs/FRESH_CONVERSATION_STARTER.md
@@ -47,6 +47,12 @@ I need to implement Path B for ontology-guided LightRAG integration. Here's the 
   - prompt.py (PROMPTS dictionary)
   - operate.py (extraction pipeline, lines 2020-2170)
   - lightrag.py (addon_params field, line 362)
+
+**Critical External References** (for ontology refinement and feature ideas):
+- LightRAG GitHub: https://github.com/HKUDS/LightRAG (foundation for all modifications)
+- AI RFP Simulator: https://github.com/felixlkw/ai-rfp-simulator (entity/relationship patterns, Chinese)
+- RFP Generation LangChain: https://github.com/abh2050/RFP_generation_langchain_agent_RAG (Phase 6 QFG automation)
+- Awesome Procurement Data: https://github.com/makegov/awesome-procurement-data (terminology validation)
 
 **Immediate Next Steps** (Phase 1 - ~30 minutes):
 1. Create archive/path_a_exploratory_work/ directory

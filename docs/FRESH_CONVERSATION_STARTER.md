@@ -355,6 +355,25 @@ Implement ontology integration with LightRAG prompts following Phase 2 tasks.
 
 ---
 
+## 📚 **Critical Reference Resources**
+
+### **External Repositories for Ontology Refinement**
+
+When enhancing ontology or planning new features, cross-reference these alongside project artifacts:
+
+- **[LightRAG GitHub](https://github.com/HKUDS/LightRAG)** - Foundation codebase; all modifications build on this
+- **[AI RFP Simulator](https://github.com/felixlkw/ai-rfp-simulator)** - Entity types, relationship patterns (Chinese, use translation)
+- **[RFP Generation LangChain](https://github.com/abh2050/RFP_generation_langchain_agent_RAG)** - Phase 6 automated clarification questions
+- **[Awesome Procurement Data](https://github.com/makegov/awesome-procurement-data)** - Government terminology validation, data sources
+
+### **Project Artifact Hierarchy**
+
+- **Primary**: `/examples`, `/prompts`, `/docs`
+- **Code Structure**: `/src/models` (data structures), `/src/agents` (AI agents using models), `/src/core` (ontology bridging)
+- **Note**: `models/` and `agents/` are NOT redundant - clear separation of concerns
+
+---
+
 ## ⚠️ **Critical Reminders**
 
 ### **DO**
@@ -362,6 +381,7 @@ Implement ontology integration with LightRAG prompts following Phase 2 tasks.
 - ✅ Customize `addon_params["entity_types"]` with ontology
 - ✅ Post-process extracted entities with validation
 - ✅ Reference `.venv/Lib/site-packages/lightrag/` for understanding
+- ✅ Cross-reference external repos for entity/relationship patterns
 - ✅ Use `uv pip list` to verify package version
 - ✅ Work WITH LightRAG's semantic extraction
 
