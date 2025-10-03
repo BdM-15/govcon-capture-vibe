@@ -156,10 +156,19 @@ class ShipleyRFPChunker:
             },
             
             # J Attachments (common patterns)
+            # Universal pattern: Match legitimate attachment designations, not random text fragments
+            # Examples: "Attachment J-1", "Exhibit J.2", "Attachment JL-1", but NOT "Attachment Line Item"
             "J_ATTACHMENT": {
-                "pattern": r"(?i)(?:attachment|exhibit)\s+(?:j[\-\s]?)?(\d+|[a-z]+)[\s\-:]+(.+?)(?:\n|\r|$)",
+                # Primary: "Attachment/Exhibit" followed by "J" + delimiter + alphanumeric designation
+                # Requires explicit delimiter (hyphen, period, or space) to avoid matching random words
+                "pattern": r"(?i)(?:attachment|exhibit)\s+j[\-\.\s]([a-z0-9]+(?:[\-\.][a-z0-9]+)*)(?:\s+[\-:]\s*(.+?))?(?:\n|\r|$)",
                 "title": "J Attachment",
-                "alt_patterns": [r"(?i)j[\-\s](\d+)[\s\-:]+(.+)", r"(?i)appendix\s+([a-z\d]+)"]
+                "alt_patterns": [
+                    # Alt 1: "Section J Attachment" with designation
+                    r"(?i)section\s+j\s+attachment\s+([a-z0-9]+(?:[\-\.][a-z0-9]+)*)(?:\s+[\-:]\s*(.+?))?(?:\n|\r|$)",
+                    # Alt 2: Standalone "J-" with multi-char designation (prevents matching "J-Line" fragments)
+                    r"(?i)\bj[\-]([a-z0-9]{2,}(?:[\-\.][a-z0-9]+)*)(?:\s+[\-:]\s*(.+?))?(?:\n|\r|$)"
+                ]
             }
         }
     
@@ -347,7 +356,8 @@ class ShipleyRFPChunker:
         """
         Create contextual chunks from identified RFP sections
         
-        Preserves section context while maintaining optimal chunk sizes for LightRAG
+        Preserves section context while maintaining optimal chunk sizes for LightRAG.
+        Uses requirement-based splitting for sections with high requirement density.
         """
         chunks = []
         chunk_counter = 0
@@ -356,7 +366,36 @@ class ShipleyRFPChunker:
             # Determine relationships for this section
             relationships = self.relationship_mappings.get(section.section_id.split('-')[0], [])
             
-            # Handle large sections by splitting content while preserving context
+            # Check if section has high requirement density (>5 requirements)
+            requirements = self._extract_requirements(section.content)
+            use_requirement_splitting = len(requirements) > 5
+            
+            if use_requirement_splitting:
+                # Use requirement-based splitting for high-density sections
+                logger.info(
+                    f"🔍 Section {section.section_id} has {len(requirements)} requirements - "
+                    f"using requirement-based splitting"
+                )
+                
+                req_chunks = self.split_by_requirements(
+                    content=section.content,
+                    section_id=section.section_id,
+                    section_title=section.section_title,
+                    subsection_id=None,
+                    max_requirements_per_chunk=3
+                )
+                
+                # Assign chunk IDs and add to main chunks list
+                for req_chunk in req_chunks:
+                    req_chunk.chunk_id = f"chunk_{chunk_counter:04d}"
+                    req_chunk.chunk_order = chunk_counter
+                    req_chunk.page_number = section.page_number
+                    chunks.append(req_chunk)
+                    chunk_counter += 1
+                
+                continue  # Skip normal processing for this section
+            
+            # Handle sections by size (existing logic)
             if len(section.content) <= max_chunk_size:
                 # Small section - single chunk
                 chunk = ContextualChunk(
@@ -375,7 +414,7 @@ class ShipleyRFPChunker:
                 )
                 
                 # Identify requirements in this chunk
-                chunk.requirements = self._extract_requirements(section.content)
+                chunk.requirements = requirements
                 
                 chunks.append(chunk)
                 chunk_counter += 1
@@ -531,6 +570,128 @@ class ShipleyRFPChunker:
                     break
         
         return requirements[:10]  # Limit to top 10 requirements per chunk
+    
+    def split_by_requirements(
+        self, 
+        content: str, 
+        section_id: str,
+        section_title: str,
+        subsection_id: Optional[str] = None,
+        max_requirements_per_chunk: int = 3
+    ) -> List[ContextualChunk]:
+        """
+        Split content by requirements to prevent timeout and truncation issues.
+        
+        When a section contains >5 requirements, split it into smaller chunks
+        with max 3 requirements each. Maintains section context across splits.
+        
+        This prevents:
+        - LLM timeout on requirement-heavy sections
+        - Token truncation losing critical requirements
+        - O(n²) relationship explosion from large requirement sets
+        
+        Args:
+            content: Section content to split
+            section_id: Section identifier
+            section_title: Section title
+            subsection_id: Optional subsection identifier
+            max_requirements_per_chunk: Maximum requirements per chunk (default: 3)
+        
+        Returns:
+            List of ContextualChunk objects with balanced requirement distribution
+        """
+        # Extract all requirements from content
+        all_requirements = self._extract_requirements(content)
+        
+        # If 5 or fewer requirements, return single chunk (no splitting needed)
+        if len(all_requirements) <= 5:
+            return []  # Caller will handle as normal chunk
+        
+        logger.info(
+            f"⚠️ Section {section_id} has {len(all_requirements)} requirements - "
+            f"splitting into chunks with max {max_requirements_per_chunk} requirements each"
+        )
+        
+        # Split content by locating requirement positions
+        chunks = []
+        requirement_positions = []
+        
+        # Find position of each requirement in content
+        for req in all_requirements:
+            # Find first occurrence of requirement text
+            pos = content.find(req[:50])  # Match on first 50 chars for safety
+            if pos != -1:
+                requirement_positions.append((pos, req))
+        
+        # Sort by position
+        requirement_positions.sort(key=lambda x: x[0])
+        
+        # Group requirements into chunks
+        req_groups = []
+        current_group = []
+        
+        for pos, req in requirement_positions:
+            current_group.append((pos, req))
+            
+            if len(current_group) >= max_requirements_per_chunk:
+                req_groups.append(current_group)
+                current_group = []
+        
+        # Add remaining requirements
+        if current_group:
+            req_groups.append(current_group)
+        
+        # Create chunks based on requirement groups
+        for group_idx, req_group in enumerate(req_groups, start=1):
+            # Determine chunk boundaries
+            start_pos = req_group[0][0]  # Start of first requirement
+            
+            # Find end position (start of next group or end of content)
+            if group_idx < len(req_groups):
+                end_pos = req_groups[group_idx][0][0]  # Start of next group's first req
+            else:
+                end_pos = len(content)  # End of content
+            
+            # Extract chunk content with some context before first requirement
+            context_before = max(0, start_pos - 200)  # Include 200 chars before for context
+            chunk_content = content[context_before:end_pos].strip()
+            
+            # Create chunk
+            chunk = ContextualChunk(
+                chunk_id="",  # Will be set by caller
+                content=chunk_content,
+                section_id=section_id,
+                section_title=section_title,
+                subsection_id=subsection_id,
+                chunk_order=0,  # Will be set by caller
+                relationships=self.relationship_mappings.get(section_id.split('-')[0], []),
+                page_number=None,  # Page estimation handled by caller
+                metadata={
+                    "section_type": "requirement_split",
+                    "split_reason": "high_requirement_density",
+                    "requirements_in_chunk": len(req_group),
+                    "total_requirements_in_section": len(all_requirements),
+                    "chunk_part": f"{group_idx}/{len(req_groups)}",
+                    "has_requirements": True
+                }
+            )
+            
+            # Add requirements for this chunk
+            chunk.requirements = [req for pos, req in req_group]
+            
+            chunks.append(chunk)
+            
+            logger.info(
+                f"   Created requirement chunk {group_idx}/{len(req_groups)}: "
+                f"{len(req_group)} requirements, {len(chunk_content)} chars"
+            )
+        
+        logger.info(
+            f"✅ Split section {section_id} into {len(chunks)} requirement-based chunks "
+            f"({len(all_requirements)} total requirements)"
+        )
+        
+        return chunks
     
     def process_document(self, document_text: str, max_chunk_size: int = 2000) -> List[ContextualChunk]:
         """

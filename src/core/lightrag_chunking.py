@@ -112,9 +112,15 @@ def rfp_aware_chunking_func(
                 section_info = f"Section {chunk.section_id} - {chunk.section_title}"
                 if chunk.subsection_id:
                     section_info += f" ({chunk.subsection_id})"
+                
+                # Add indicator if this is a requirement-split chunk
+                split_indicator = ""
+                if chunk.metadata.get('section_type') == 'requirement_split':
+                    split_indicator = f" [REQ-SPLIT {chunk.metadata.get('chunk_part', 'N/A')}]"
+                
                 logger.info(
                     f"📝 Chunk {idx}/{len(rfp_chunks)}: {section_info}, "
-                    f"Page {chunk.page_number}, {len(chunk.requirements)} reqs"
+                    f"Page {chunk.page_number}, {len(chunk.requirements)} reqs{split_indicator}"
                 )
 
                 chunk_dict = {
@@ -124,17 +130,35 @@ def rfp_aware_chunking_func(
                 lightrag_chunks.append(chunk_dict)
 
             logger.info(f"✅ Enhanced chunking: {len(lightrag_chunks)} RFP-aware chunks created")
-            logger.info(f"📊 Section distribution:")
             
-            # Log section summary
+            # Log section summary with requirement-split statistics
             section_counts = {}
+            requirement_split_count = 0
+            total_requirements = 0
+            
             for chunk in rfp_chunks:
                 section_id = chunk.section_id
                 section_counts[section_id] = section_counts.get(section_id, 0) + 1
+                total_requirements += len(chunk.requirements)
+                
+                if chunk.metadata.get('section_type') == 'requirement_split':
+                    requirement_split_count += 1
             
+            logger.info(f"📊 Section distribution:")
             for section_id in sorted(section_counts.keys()):
                 count = section_counts[section_id]
                 logger.info(f"   Section {section_id}: {count} chunks")
+            
+            # Log requirement statistics
+            logger.info(f"📋 Requirement processing:")
+            logger.info(f"   Total requirements extracted: {total_requirements}")
+            logger.info(f"   Requirement-split chunks: {requirement_split_count}/{len(rfp_chunks)}")
+            
+            if requirement_split_count > 0:
+                logger.info(
+                    f"   ✅ Requirement splitting active - prevents timeout and truncation on "
+                    f"high-density sections"
+                )
             
             return lightrag_chunks
 
@@ -230,7 +254,9 @@ def _create_enhanced_chunk_content(chunk) -> str:
     
     # Safety: Truncate extremely long chunks to prevent timeout
     # This shouldn't happen with proper chunk_size settings, but provides safety
-    MAX_CHUNK_LENGTH = 8000  # characters, not tokens
+    # With qwen2.5-coder:7b's 32K token context (~128K chars), we can safely use 16K chars
+    # This leaves plenty of room for entity extraction prompt + chunk content
+    MAX_CHUNK_LENGTH = 16000  # characters, not tokens (~4K tokens)
     content = chunk.content
     if len(content) > MAX_CHUNK_LENGTH:
         logger.warning(f"⚠️ Chunk {chunk.chunk_id} exceeds {MAX_CHUNK_LENGTH} chars, truncating")
