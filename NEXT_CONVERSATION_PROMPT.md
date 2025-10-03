@@ -1,18 +1,4 @@
-# Next Conversatio**Path B Approach (CORRECT - Ontology-Modified LightRAG)**:
-
-- MODIFY LightRAG's extraction engine by injecting government contracting ontology into addon_params["entity_types"]
-- TEACH LightRAG domain concepts it would never extract using generic entity types ("person", "location")
-- Replace generic entity types with domain-specific types (CLIN, FAR_CLAUSE, EVALUATION_FACTOR, REQUIREMENT)
-- Add government contracting examples to teach Section L↔M relationships and requirement patterns
-- Constrain relationships to valid government contracting patterns (SOW→Deliverable, not random connections)
-- Post-process to ensure extractions match ontology and domain accuracy
-
-**Critical Understanding**:
-
-- Generic LightRAG CANNOT understand government contracting concepts without ontology injection
-- "RFP Section J-L" DOES NOT EXIST in Uniform Contract Format (sections J, K, L are INDIVIDUAL)
-- Path A's regex preprocessing created fictitious entities and corrupted the knowledge graph
-- We actively MODIFY LightRAG's prompts and entity types, not just use it "as-is"- Quick Reference
+# Next Conversation Starter - Quick Reference
 
 **Use this prompt to start your next conversation with complete context:**
 
@@ -23,6 +9,12 @@
 ```
 I need to implement Path B for ontology-guided LightRAG integration. Here's the complete context:
 
+**⚠️ ABSOLUTE REQUIREMENT - Virtual Environment Activation**:
+- EVERY terminal command using Python/uv/dependencies MUST start with: .venv\Scripts\Activate.ps1; <command>
+- NO EXCEPTIONS - The agent's run_in_terminal does NOT auto-activate venv
+- Example: .venv\Scripts\Activate.ps1; uv pip list
+- See copilot-instructions.md "CRITICAL: Virtual Environment Activation" section for full details
+
 **Current Status**:
 - Using lightrag-hku==1.4.9 (installed via uv in .venv/Lib/site-packages/lightrag/)
 - Path A (custom chunking with regex) has been ARCHIVED - it created fictitious entities like "RFP Section J-L" that don't exist in Uniform Contract Format
@@ -31,15 +23,19 @@ I need to implement Path B for ontology-guided LightRAG integration. Here's the 
 - Ready to start Phase 1: Codebase cleanup
 
 **Path B Approach (CORRECT)**:
-- Customize LightRAG's addon_params["entity_types"] with government contracting ontology
-- Post-process extracted entities with ontology validation
-- NO custom preprocessing or regex section identification
-- Work WITH LightRAG's semantic extraction framework, not around it
+- MODIFY LightRAG's extraction engine by injecting government contracting ontology into addon_params["entity_types"]
+- TEACH LightRAG domain concepts it would never extract using generic entity types
+- Replace generic types with domain types (CLIN, FAR_CLAUSE, EVALUATION_FACTOR, REQUIREMENT)
+- Add government contracting examples to teach Section L↔M relationships
+- Constrain relationships to valid patterns (SOW→Deliverable, not random)
+- Post-process to ensure extractions match ontology
 
 **Critical Understanding**:
+- Generic LightRAG CANNOT understand government contracting without ontology injection
 - "RFP Section J-L" DOES NOT EXIST in Uniform Contract Format
 - All Sections are INDIVIDUAL sections, not merged
 - Path A's regex preprocessing created these fictitious entities and corrupted the knowledge graph
+- We actively MODIFY LightRAG's prompts and entity types, not just use it "as-is"
 
 **Key Files**:
 - Implementation plan: docs/PATH_B_IMPLEMENTATION_PLAN.md
@@ -82,20 +78,22 @@ Let's start with Phase 1 to clean up the codebase and archive Path A artifacts.
 ## ⚡ **Quick Commands**
 
 ```powershell
-# Verify environment
-uv pip list | Select-String -Pattern "lightrag"
+# ⚠️ CRITICAL: ALL Python/uv commands MUST activate venv first!
+
+# Verify environment (WITH VENV ACTIVATION)
+.venv\Scripts\Activate.ps1; uv pip list | Select-String -Pattern "lightrag"
 # Expected: lightrag-hku                             1.4.9
 
-# Verify branch
+# Verify branch (git doesn't need venv)
 git branch --show-current
 # Expected: 002-lighRAG-govcon-ontology
 
-# Open key documents
+# Open key documents (doesn't need venv)
 code docs/FRESH_CONVERSATION_STARTER.md
 code docs/PATH_B_IMPLEMENTATION_PLAN.md
 code .github/copilot-instructions.md
 
-# Start Phase 1
+# Start Phase 1 (file operations don't need venv)
 New-Item -ItemType Directory -Path "archive/path_a_exploratory_work"
 Move-Item "src/core/chunking.py" "archive/path_a_exploratory_work/"
 Move-Item "test_phase1_optimizations.py" "archive/path_a_exploratory_work/"

@@ -1,5 +1,62 @@
 # Copilot Instructions for GovCon-Capture-Vibe Project
 
+## ⚠️ ABSOLUTE REQUIREMENT: Virtual Environment Activation
+
+**BEFORE running ANY terminal command that uses Python, uv, or project dependencies, you MUST activate the virtual environment:**
+
+```powershell
+.venv\Scripts\Activate.ps1; <your command here>
+```
+
+**NO EXCEPTIONS.** See "CRITICAL: Virtual Environment Activation" section below for details.
+
+---
+
+## ⚠️ ABSOLUTE REQUIREMENT: Use Workspace Tools, Not PowerShell
+
+**ALWAYS prioritize workspace tools over PowerShell commands for file operations:**
+
+**DO** (Use Workspace Tools):
+- ✅ **Read files**: Use `read_file` tool, NOT `Get-Content` or `cat` in PowerShell
+- ✅ **Create files**: Use `create_file` tool, NOT `New-Item` or `echo` in PowerShell
+- ✅ **Edit files**: Use `replace_string_in_file` tool, NOT `(Get-Content).Replace()` in PowerShell
+- ✅ **Search content**: Use `grep_search` or `semantic_search` tools, NOT `Select-String` in PowerShell
+- ✅ **List directories**: Use `list_dir` tool, NOT `Get-ChildItem` in PowerShell
+
+**ONLY use PowerShell when**:
+- Running Python scripts or applications (`python app.py`)
+- Using `uv` commands (`uv pip list`, `uv sync`)
+- Git operations (`git status`, `git commit`)
+- System commands that have no workspace equivalent
+
+**Why This Matters**:
+- Workspace tools provide better context to the agent
+- Reduces unnecessary terminal command calls
+- Prevents context loss from truncated terminal output
+- More reliable for file operations in the conversation history
+
+**Example - CORRECT**:
+```python
+# ✅ Read a file directly
+read_file("src/core/ontology.py")
+
+# ✅ Search for a pattern
+grep_search(query="EntityType", isRegexp=False, includePattern="**/*.py")
+
+# ✅ Create a new file
+create_file(filePath="src/new_module.py", content="# New module")
+```
+
+**Example - WRONG**:
+```powershell
+# ❌ Don't use PowerShell for file operations
+Get-Content "src/core/ontology.py"
+Select-String -Path "**/*.py" -Pattern "EntityType"
+New-Item -Path "src/new_module.py" -ItemType File
+```
+
+---
+
 ## Project Overview
 
 **Ontology-Modified LightRAG System** for government contracting RFP analysis. We **actively modify LightRAG's extraction capabilities** by injecting domain-specific government contracting ontology into its processing pipeline, transforming generic document processing into specialized federal procurement intelligence.
@@ -175,6 +232,153 @@ When implementing ontology integration, always reference the installed library:
 - **Constants**: `.venv/Lib/site-packages/lightrag/constants.py`
 
 Use `uv pip list` to verify package version, not `pip list`.
+
+---
+
+## ⚠️ CRITICAL: Virtual Environment Activation (ABSOLUTE REQUIREMENT)
+
+### **MANDATORY RULE: ALWAYS ACTIVATE VENV FIRST**
+
+**BEFORE running ANY terminal command, you MUST activate the virtual environment. NO EXCEPTIONS.**
+
+### **The Problem**
+
+When the AI agent opens a new terminal with `run_in_terminal`, it does NOT automatically activate the Python virtual environment (even though VS Code settings are configured for it). This causes:
+
+- ❌ Commands fail because dependencies aren't found
+- ❌ Wrong Python interpreter used (global instead of `.venv`)
+- ❌ `uv`, `lightrag`, and project dependencies not available
+- ❌ Confusion and wasted time debugging environment issues
+
+### **The Solution**
+
+**EVERY `run_in_terminal` command MUST start with venv activation:**
+
+```powershell
+# ✅ CORRECT: Activate venv first, THEN run command
+.venv\Scripts\Activate.ps1; uv pip list
+
+# ✅ CORRECT: Chain commands with semicolon after activation
+.venv\Scripts\Activate.ps1; python app.py
+
+# ✅ CORRECT: Complex multi-line operations
+.venv\Scripts\Activate.ps1; `
+uv pip list | Select-String -Pattern "lightrag"
+
+# ❌ WRONG: Running command without venv activation
+uv pip list  # ← Will fail! uv not in global PATH
+```
+
+### **VS Code Terminal Settings**
+
+The workspace has a custom PowerShell profile configured in `.vscode/settings.json`:
+
+```json
+{
+  "terminal.integrated.defaultProfile.windows": "PowerShell (govcon-capture-vibe)",
+  "terminal.integrated.profiles.windows": {
+    "PowerShell (govcon-capture-vibe)": {
+      "source": "PowerShell",
+      "args": ["-NoExit", "-Command", "& '.venv/Scripts/Activate.ps1'"]
+    }
+  }
+}
+```
+
+**However**: The AI agent's `run_in_terminal` tool does NOT automatically use this profile. You MUST explicitly activate venv in every command.
+
+### **Standard Command Patterns**
+
+**Package Management**:
+
+```powershell
+.venv\Scripts\Activate.ps1; uv pip list
+.venv\Scripts\Activate.ps1; uv pip install <package>
+.venv\Scripts\Activate.ps1; uv sync
+```
+
+**Python Execution**:
+
+```powershell
+.venv\Scripts\Activate.ps1; python app.py
+.venv\Scripts\Activate.ps1; python -c "import lightrag; print(lightrag.__file__)"
+.venv\Scripts\Activate.ps1; python -m pytest
+```
+
+**LightRAG Source Inspection**:
+
+```powershell
+.venv\Scripts\Activate.ps1; python -c "import lightrag; print(lightrag.__file__)"
+```
+
+**Git Operations** (don't need venv):
+
+```powershell
+# Git commands don't need venv activation
+git status
+git add .
+git commit -m "message"
+```
+
+**File Operations** (don't use PowerShell at all):
+
+```python
+# ✅ CORRECT: Use workspace tools directly
+read_file("src/core/ontology.py")
+grep_search(query="EntityType", isRegexp=False)
+list_dir("src/core")
+
+# ❌ WRONG: Don't use PowerShell for file operations
+# Get-Content "src/core/ontology.py"  # ← Use read_file instead
+# Select-String -Pattern "EntityType"  # ← Use grep_search instead
+```
+
+### **Verification Before Every Command**
+
+**Before issuing ANY command:**
+
+1. ✅ Ask: "Is this a file operation (read/create/edit/search)?"
+   - If YES: Use workspace tools (`read_file`, `create_file`, `grep_search`) - NOT PowerShell
+2. ✅ Ask: "Does this command need Python/uv/project dependencies?"
+   - If YES: Prepend `.venv\Scripts\Activate.ps1;` to the command
+3. ✅ Ask: "Is this git or a system command?"
+   - If YES: Run command directly (no venv needed)
+
+### **Common Mistakes to Avoid**
+
+```powershell
+# ❌ WRONG: Forgetting venv activation
+uv pip list  # Fails - uv not found
+
+# ❌ WRONG: Assuming terminal has venv active
+python app.py  # Uses wrong interpreter
+
+# ❌ WRONG: Activating in separate command
+.venv\Scripts\Activate.ps1  # First command
+uv pip list  # Second command ← venv NOT active in this command!
+
+# ❌ WRONG: Using PowerShell for file operations
+Get-Content "src/core/ontology.py"  # Use read_file instead
+Select-String -Path "*.py" -Pattern "EntityType"  # Use grep_search instead
+
+# ✅ CORRECT: Chain with semicolon for Python/uv commands
+.venv\Scripts\Activate.ps1; uv pip list
+
+# ✅ CORRECT: Use workspace tools for file operations
+read_file("src/core/ontology.py")
+grep_search(query="EntityType", isRegexp=False)
+```
+
+### **Why This Is Critical**
+
+- **Package location**: `lightrag-hku==1.4.9` is installed in `.venv/Lib/site-packages/`, NOT globally
+- **Tool availability**: `uv` is only available in the venv PATH
+- **Import paths**: Project modules (`src.core.ontology`) only work with venv Python
+- **Consistency**: Ensures agent uses same environment as user
+
+**REMEMBER**: When in doubt, activate venv. It's always safe to activate even if already active.
+
+---
 
 ## Path B Architecture (Ontology-Guided Framework Integration)
 
