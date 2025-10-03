@@ -10,7 +10,9 @@
 
 ### **What We're Building**
 
-**Ontology-Guided LightRAG Integration** for government contracting RFP analysis. We're extending LightRAG's semantic extraction framework with domain-specific ontology, NOT replacing it with custom preprocessing.
+**Ontology-Modified LightRAG System** for government contracting RFP analysis. We **actively modify LightRAG's extraction capabilities** by injecting domain-specific government contracting ontology into its processing pipeline, transforming generic document processing into specialized federal procurement intelligence.
+
+**Critical Distinction**: This is NOT generic LightRAG hoping to understand government contracting. We **modify LightRAG's internal extraction prompts** with our ontology to teach it government-specific entities, relationships, and structures that generic processing would miss.
 
 ### **Critical Understanding**
 
@@ -23,10 +25,19 @@
 
 **Path B (CURRENT)** is **CORRECT**:
 
-- Guide LightRAG's semantic extraction with ontology
-- Customize `addon_params["entity_types"]` with government contracting types
-- Post-process extracted entities with ontology validation
-- Work **WITH** LightRAG's framework, not around it
+- **Modify LightRAG's extraction engine** by injecting government contracting ontology
+- **Teach LightRAG domain concepts** it would never extract using generic entity types
+- Replace generic types ("person", "location") with domain types ("CLIN", "FAR_CLAUSE")
+- Add government contracting examples to teach Section L↔M relationships
+- Constrain relationships to valid patterns (SOW→Deliverable, not random connections)
+- Post-process to ensure extractions match ontology
+
+**Why Generic LightRAG Fails**:
+- Can't distinguish CLINs from generic line items
+- Won't recognize Section L↔M evaluation relationships  
+- Doesn't know "shall" vs "should" requirement classifications
+- Can't extract FAR/DFARS clause applicability
+- Doesn't understand Uniform Contract Format (A-M sections, J attachments)
 
 ---
 
@@ -92,17 +103,20 @@
 **Key Files** (`.venv/Lib/site-packages/lightrag/`):
 
 1. **prompt.py**: Contains `PROMPTS` dictionary
+
    - `PROMPTS["entity_extraction_system_prompt"]`: Main extraction instructions
    - `PROMPTS["entity_extraction_user_prompt"]`: User-facing task prompt
    - `PROMPTS["entity_extraction_examples"]`: Three complete examples
    - Placeholders: `{entity_types}`, `{language}`, `{examples}`
 
 2. **operate.py**: Entity extraction pipeline (lines 2020-2170)
+
    - Line 2023: `language = global_config["addon_params"].get("language", ...)`
    - Line 2024: `entity_types = global_config["addon_params"].get("entity_types", ...)`
    - Line 2069-2072: Prompts formatted with entity_types, language, examples
 
 3. **lightrag.py**: LightRAG class definition (lines 100-450)
+
    - Line 362: `addon_params` field definition
    - Default factory: `{"language": "English", "entity_types": [...]}`
 
@@ -203,7 +217,7 @@ from src.core.ontology import EntityType, VALID_RELATIONSHIPS
 def get_entity_extraction_prompt() -> dict:
     """Generate entity extraction prompt with ontology types"""
     entity_types = [e.value for e in EntityType]
-    
+
     return {
         "entity_types": ", ".join(entity_types),
         "language": "English",
@@ -283,7 +297,7 @@ Select-String -Path "rag_storage/kv_store_full_entities.json" -Pattern "Section 
 **Prompt Template**:
 
 ```
-I need to implement Path B for ontology-guided LightRAG integration. 
+I need to implement Path B for ontology-guided LightRAG integration.
 Here's the complete context:
 
 **Current Status**:

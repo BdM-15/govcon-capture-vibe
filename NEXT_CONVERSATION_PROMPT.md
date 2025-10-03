@@ -1,4 +1,16 @@
-# Next Conversation Starter - Quick Reference
+# Next Conversatio**Path B Approach (CORRECT - Ontology-Modified LightRAG)**:
+- MODIFY LightRAG's extraction engine by injecting government contracting ontology into addon_params["entity_types"]
+- TEACH LightRAG domain concepts it would never extract using generic entity types ("person", "location")
+- Replace generic entity types with domain-specific types (CLIN, FAR_CLAUSE, EVALUATION_FACTOR, REQUIREMENT)
+- Add government contracting examples to teach Section L↔M relationships and requirement patterns
+- Constrain relationships to valid government contracting patterns (SOW→Deliverable, not random connections)
+- Post-process to ensure extractions match ontology and domain accuracy
+
+**Critical Understanding**:
+- Generic LightRAG CANNOT understand government contracting concepts without ontology injection
+- "RFP Section J-L" DOES NOT EXIST in Uniform Contract Format (sections J, K, L are INDIVIDUAL)
+- Path A's regex preprocessing created fictitious entities and corrupted the knowledge graph
+- We actively MODIFY LightRAG's prompts and entity types, not just use it "as-is"- Quick Reference
 
 **Use this prompt to start your next conversation with complete context:**
 
@@ -24,7 +36,7 @@ I need to implement Path B for ontology-guided LightRAG integration. Here's the 
 
 **Critical Understanding**:
 - "RFP Section J-L" DOES NOT EXIST in Uniform Contract Format
-- Sections J, K, L are INDIVIDUAL sections, not merged
+- All Sections are INDIVIDUAL sections, not merged
 - Path A's regex preprocessing created these fictitious entities and corrupted the knowledge graph
 
 **Key Files**:

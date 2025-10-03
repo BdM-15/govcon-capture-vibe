@@ -2,90 +2,169 @@
 
 ## Project Overview
 
-**LightRAG-Based RFP Analysis System** with ontology-guided knowledge graph construction for federal proposal development. Integrates government contracting domain ontology with LightRAG's semantic extraction framework, grounded in Shipley methodology.
+**Ontology-Modified LightRAG System** for government contracting RFP analysis. We **actively modify LightRAG's extraction capabilities** by injecting domain-specific government contracting ontology into its processing pipeline, transforming generic document processing into specialized federal procurement intelligence.
 
-## ⚠️ CRITICAL: LightRAG Framework Boundaries
+**Critical Distinction**: This is NOT generic LightRAG hoping to understand government contracting. We **modify LightRAG's internal extraction prompts** with our ontology to teach it government-specific entities, relationships, and structures that generic processing would miss.
+
+## ⚠️ CRITICAL: Ontology-Modified LightRAG Approach
 
 ### Primary Library
+
 **Package**: `lightrag-hku==1.4.9` (installed in `.venv/Lib/site-packages/lightrag/`)
 
-**DO NOT**:
-- Create custom preprocessing that bypasses LightRAG's semantic understanding
-- Build parallel extraction mechanisms outside the framework
-- Use deterministic regex for entity/section identification
-- Modify LightRAG source files directly
+**Core Philosophy**: **Modify LightRAG's extraction engine with domain ontology, don't rely on generic processing.**
 
-**DO**:
-- Customize LightRAG's `addon_params` for ontology integration
-- Use LightRAG's prompt customization via `PROMPTS` dictionary  
-- Leverage `.venv/Lib/site-packages/lightrag/prompt.py` for understanding prompt structure
-- Post-process LightRAG's extracted entities/relationships with ontology validation
-- Work WITH LightRAG's semantic extraction, not around it
+### Why Generic LightRAG Fails for Government Contracting
 
-### Key LightRAG Integration Points
+**Generic LightRAG cannot**:
+- Distinguish CLIN (Contract Line Item Number) from generic line items
+- Recognize Section L↔M evaluation relationships
+- Identify "shall" vs "should" requirement classifications (Shipley methodology)
+- Extract FAR/DFARS clause applicability
+- Map SOW requirements to deliverables and evaluation criteria
+- Understand Uniform Contract Format (A-M sections, J attachments)
 
-**1. Prompt Customization** (`.venv/Lib/site-packages/lightrag/prompt.py`):
+**Our Ontology-Modified Approach**:
+- **Injects government contracting entity types** into LightRAG's extraction prompts
+- **Constrains relationships** to valid government contracting patterns (L↔M, requirement→evaluation)
+- **Teaches domain terminology** through custom examples (PWS, SOW, CLIN, Section M factors)
+- **Validates extractions** against ontology to ensure domain accuracy
+
+**DO** (Modify LightRAG's Processing):
+
+- ✅ **Inject ontology into `addon_params["entity_types"]`** - This modifies what LightRAG extracts
+- ✅ **Customize extraction prompts** via `PROMPTS` dictionary with government contracting examples
+- ✅ **Add domain-specific few-shot examples** showing RFP entity patterns
+- ✅ **Post-process with ontology validation** to ensure domain accuracy
+- ✅ **Constrain relationships** to valid government contracting patterns
+
+**DO NOT** (Don't Bypass the Framework):
+
+- ❌ Create custom preprocessing that bypasses LightRAG's semantic understanding
+- ❌ Build parallel extraction mechanisms outside the framework
+- ❌ Use deterministic regex for entity/section identification (Path A mistake)
+- ❌ Modify LightRAG source files directly
+- ❌ Assume generic LightRAG will "just figure out" government contracting concepts
+
+### Key LightRAG Modification Points
+
+**1. Entity Type Injection** (`.venv/Lib/site-packages/lightrag/lightrag.py` line 362):
+
 ```python
-# LightRAG uses PROMPTS dictionary for all extraction
-PROMPTS["entity_extraction_system_prompt"]  # Main entity extraction prompt
-PROMPTS["entity_extraction_user_prompt"]     # User-facing extraction prompt
-PROMPTS["entity_extraction_examples"]        # Few-shot examples
-```
-
-**2. Addon Parameters** (`.venv/Lib/site-packages/lightrag/lightrag.py` line 362):
-```python
+# MODIFY LightRAG's entity extraction by injecting ontology types
 addon_params: dict[str, Any] = field(
     default_factory=lambda: {
         "language": "English",
-        "entity_types": ["organization", "person", "location", ...]  # ← Customize here!
+        "entity_types": [
+            "ORGANIZATION", "REQUIREMENT", "DELIVERABLE", "CLIN",  # ← Government contracting ontology!
+            "SECTION", "EVALUATION_FACTOR", "FAR_CLAUSE", "SECURITY_REQUIREMENT"
+        ]  # Generic types like "person", "location" won't capture government contracting concepts
     }
 )
 ```
 
-**3. Extraction Process** (`.venv/Lib/site-packages/lightrag/operate.py` line 2028+):
-- Entity types passed via `addon_params["entity_types"]`
-- Prompts formatted with `entity_types`, `language`, `examples`
-- Post-processing happens in `_process_extraction_result()` function
+**This injection happens at** `.venv/Lib/site-packages/lightrag/operate.py` line 2024:
+```python
+entity_types = global_config["addon_params"].get("entity_types", DEFAULT_ENTITY_TYPES)
+# ↑ Our ontology types get injected into extraction prompt here
+```
+
+**2. Prompt Customization** (`.venv/Lib/site-packages/lightrag/prompt.py`):
+
+```python
+# MODIFY extraction prompts with government contracting examples
+PROMPTS["entity_extraction_system_prompt"]  # Inject ontology types here: {entity_types}
+PROMPTS["entity_extraction_examples"]        # Replace generic examples with RFP-specific ones
+```
+
+**Example modification**:
+```python
+# Generic LightRAG example (won't work for RFPs):
+("Alice manages the TechCorp project", "PERSON|ORGANIZATION|PROJECT")
+
+# Government contracting example (what we need):
+("Section L.3.2 requires proposal submission by 2:00 PM EST", 
+ "SECTION|REQUIREMENT|DEADLINE")
+```
+
+**3. Extraction Process Flow** (`.venv/Lib/site-packages/lightrag/operate.py` line 2028+):
+
+- Line 2024: **Our ontology entity types** injected from `addon_params`
+- Line 2069: Prompts formatted with **our government contracting entity types**
+- Line 2080: LLM called with **modified prompts** (not generic ones)
+- Post-processing: **Validate against ontology** to ensure domain accuracy
 
 ### How to Modify LightRAG Correctly
 
-**✅ CORRECT: Extend via Configuration**
+**✅ CORRECT: Inject Ontology into LightRAG**
+
 ```python
-# In your code (e.g., src/core/lightrag_integration.py)
+# MODIFY LightRAG's extraction by injecting government contracting ontology
 from lightrag import LightRAG
 from src.core.ontology import EntityType
 
-# Customize addon_params with ontology types
 rag = LightRAG(
     working_dir="./rag_storage",
     addon_params={
         "language": "English",
-        "entity_types": [e.value for e in EntityType],  # Use ontology!
+        "entity_types": [e.value for e in EntityType],  # ← Teaches LightRAG government contracting concepts
     }
 )
+
+# This modifies how LightRAG extracts entities internally:
+# - Generic: "person", "location", "organization" 
+# - Modified: "REQUIREMENT", "CLIN", "EVALUATION_FACTOR", "FAR_CLAUSE"
 ```
 
-**✅ CORRECT: Post-Process Extracted Entities**
+**✅ CORRECT: Post-Process with Ontology Validation**
+
 ```python
-# After LightRAG extraction, validate with ontology
+# After LightRAG extraction, validate results against ontology
 from src.core.ontology import validate_entity_type, is_valid_relationship
 
-# Hook into extraction results
+# Ensure extracted entities match government contracting domain
 validated_entities = [e for e in extracted_entities if validate_entity_type(e)]
+# Only keep relationships valid in government contracting (e.g., Section L ↔ Section M)
 validated_relations = [r for r in extracted_relations if is_valid_relationship(r)]
 ```
 
-**❌ WRONG: Custom Preprocessing**
+**✅ CORRECT: Add Domain-Specific Examples**
+
+```python
+# Replace LightRAG's generic examples with government contracting patterns
+RFP_EXTRACTION_EXAMPLES = [
+    ("Section C.3.1 states the contractor shall provide weekly status reports",
+     "SECTION|C.3.1->requires->REQUIREMENT|weekly status reports"),
+    ("CLIN 0001 covers base year services at $500,000",
+     "CLIN|0001->has_value->PRICE|$500,000->covers->SERVICE|base year services"),
+]
+```
+
+**❌ WRONG: Custom Preprocessing That Bypasses LightRAG**
+
 ```python
 # DON'T DO THIS - bypasses LightRAG's semantic understanding
 def custom_regex_chunker(text):
     sections = re.findall(r"Section ([A-M])", text)  # ← Deterministic, brittle
-    return structured_chunks  # ← LightRAG can't learn from this
+    return structured_chunks  # ← LightRAG can't learn from this, creates garbage entities
+```
+
+**❌ WRONG: Hoping Generic LightRAG Understands Government Contracting**
+
+```python
+# DON'T DO THIS - generic entity types won't capture domain concepts
+rag = LightRAG(
+    addon_params={
+        "entity_types": ["person", "organization", "location"]  # ← Won't extract CLINs, FAR clauses, etc.
+    }
+)
+# Generic LightRAG has never seen RFPs - it needs ontology injection to understand them!
 ```
 
 ### Referencing LightRAG Source
 
 When implementing ontology integration, always reference the installed library:
+
 - **Prompt structure**: `.venv/Lib/site-packages/lightrag/prompt.py`
 - **Entity extraction**: `.venv/Lib/site-packages/lightrag/operate.py` (lines 2020-2170)
 - **LightRAG class**: `.venv/Lib/site-packages/lightrag/lightrag.py` (lines 100-450)
@@ -96,6 +175,7 @@ Use `uv pip list` to verify package version, not `pip list`.
 ## Path B Architecture (Ontology-Guided Framework Integration)
 
 ### Architectural Philosophy
+
 **Guide LightRAG's semantic extraction with ontology, don't replace it with deterministic preprocessing.**
 
 Previous Path A (archived) built custom `ShipleyRFPChunker` with regex-based section parsing that corrupted LightRAG's input, creating fictitious entities like "RFP Section J-L" (doesn't exist in Uniform Contract Format). Path B integrates ontology WITH LightRAG's framework.
