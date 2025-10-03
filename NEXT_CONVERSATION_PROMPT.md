@@ -10,9 +10,11 @@
 I need to implement Path B for ontology-guided LightRAG integration. Here's the complete context:
 
 **⚠️ ABSOLUTE REQUIREMENT - Virtual Environment Activation**:
-- EVERY terminal command using Python/uv/dependencies MUST start with: .venv\Scripts\Activate.ps1; <command>
+- EVERY terminal command using Python/uv/dependencies MUST activate venv FIRST as standalone command
+- Activate venv: .venv\Scripts\Activate.ps1 (separate command)
+- THEN run your command: uv pip list (after activation confirms)
+- DO NOT chain with semicolons - activate separately!
 - NO EXCEPTIONS - The agent's run_in_terminal does NOT auto-activate venv
-- Example: .venv\Scripts\Activate.ps1; uv pip list
 - See copilot-instructions.md "CRITICAL: Virtual Environment Activation" section for full details
 
 **Current Status**:
@@ -78,10 +80,13 @@ Let's start with Phase 1 to clean up the codebase and archive Path A artifacts.
 ## ⚡ **Quick Commands**
 
 ```powershell
-# ⚠️ CRITICAL: ALL Python/uv commands MUST activate venv first!
+# ⚠️ CRITICAL: Activate venv as STANDALONE command, then run your command
 
-# Verify environment (WITH VENV ACTIVATION)
-.venv\Scripts\Activate.ps1; uv pip list | Select-String -Pattern "lightrag"
+# Verify environment (TWO STEPS)
+# Step 1: Activate venv
+.venv\Scripts\Activate.ps1
+# Step 2: Check packages (after activation)
+uv pip list | Select-String -Pattern "lightrag"
 # Expected: lightrag-hku                             1.4.9
 
 # Verify branch (git doesn't need venv)

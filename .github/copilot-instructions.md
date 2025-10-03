@@ -5,10 +5,14 @@
 **BEFORE running ANY terminal command that uses Python, uv, or project dependencies, you MUST activate the virtual environment:**
 
 ```powershell
-.venv\Scripts\Activate.ps1; <your command here>
+# FIRST: Activate venv as standalone command
+.venv\Scripts\Activate.ps1
+
+# THEN: Run your command in the activated environment
+<your command here>
 ```
 
-**NO EXCEPTIONS.** See "CRITICAL: Virtual Environment Activation" section below for details.
+**NO EXCEPTIONS.** Activate venv as a **separate command**, then run subsequent commands. Do NOT chain with semicolons. See "CRITICAL: Virtual Environment Activation" section below for details.
 
 ---
 
@@ -252,22 +256,29 @@ When the AI agent opens a new terminal with `run_in_terminal`, it does NOT autom
 
 ### **The Solution**
 
-**EVERY `run_in_terminal` command MUST start with venv activation:**
+**Activate venv as a STANDALONE command first, then run your actual command:**
 
 ```powershell
-# ✅ CORRECT: Activate venv first, THEN run command
-.venv\Scripts\Activate.ps1; uv pip list
+# ✅ CORRECT: Activate venv as standalone command
+.venv\Scripts\Activate.ps1
 
-# ✅ CORRECT: Chain commands with semicolon after activation
-.venv\Scripts\Activate.ps1; python app.py
+# THEN run your command (in next terminal call)
+uv pip list
 
-# ✅ CORRECT: Complex multi-line operations
-.venv\Scripts\Activate.ps1; `
-uv pip list | Select-String -Pattern "lightrag"
+# ✅ CORRECT: Two-step process
+# Step 1:
+.venv\Scripts\Activate.ps1
+# Step 2 (after activation confirms):
+python app.py
+
+# ❌ WRONG: Chaining with semicolon
+.venv\Scripts\Activate.ps1; uv pip list  # Don't do this!
 
 # ❌ WRONG: Running command without venv activation
 uv pip list  # ← Will fail! uv not in global PATH
 ```
+
+**Why Standalone**: This mimics VS Code's behavior where activation is a separate step that persists in the terminal session.
 
 ### **VS Code Terminal Settings**
 
@@ -292,23 +303,39 @@ The workspace has a custom PowerShell profile configured in `.vscode/settings.js
 **Package Management**:
 
 ```powershell
-.venv\Scripts\Activate.ps1; uv pip list
-.venv\Scripts\Activate.ps1; uv pip install <package>
-.venv\Scripts\Activate.ps1; uv sync
+# Step 1: Activate venv (standalone)
+.venv\Scripts\Activate.ps1
+
+# Step 2: Run your command (separate call)
+uv pip list
+# or
+uv pip install <package>
+# or
+uv sync
 ```
 
 **Python Execution**:
 
 ```powershell
-.venv\Scripts\Activate.ps1; python app.py
-.venv\Scripts\Activate.ps1; python -c "import lightrag; print(lightrag.__file__)"
-.venv\Scripts\Activate.ps1; python -m pytest
+# Step 1: Activate venv (standalone)
+.venv\Scripts\Activate.ps1
+
+# Step 2: Run your command (separate call)
+python app.py
+# or
+python -c "import lightrag; print(lightrag.__file__)"
+# or
+python -m pytest
 ```
 
 **LightRAG Source Inspection**:
 
 ```powershell
-.venv\Scripts\Activate.ps1; python -c "import lightrag; print(lightrag.__file__)"
+# Step 1: Activate venv (standalone)
+.venv\Scripts\Activate.ps1
+
+# Step 2: Inspect (separate call)
+python -c "import lightrag; print(lightrag.__file__)"
 ```
 
 **Git Operations** (don't need venv):
@@ -340,7 +367,7 @@ list_dir("src/core")
 1. ✅ Ask: "Is this a file operation (read/create/edit/search)?"
    - If YES: Use workspace tools (`read_file`, `create_file`, `grep_search`) - NOT PowerShell
 2. ✅ Ask: "Does this command need Python/uv/project dependencies?"
-   - If YES: Prepend `.venv\Scripts\Activate.ps1;` to the command
+   - If YES: Run `.venv\Scripts\Activate.ps1` as **standalone command** first, THEN run your command in a separate call
 3. ✅ Ask: "Is this git or a system command?"
    - If YES: Run command directly (no venv needed)
 
@@ -353,16 +380,18 @@ uv pip list  # Fails - uv not found
 # ❌ WRONG: Assuming terminal has venv active
 python app.py  # Uses wrong interpreter
 
-# ❌ WRONG: Activating in separate command
-.venv\Scripts\Activate.ps1  # First command
-uv pip list  # Second command ← venv NOT active in this command!
+# ❌ WRONG: Chaining venv activation with command
+.venv\Scripts\Activate.ps1; uv pip list  # Don't chain - activate separately!
 
 # ❌ WRONG: Using PowerShell for file operations
 Get-Content "src/core/ontology.py"  # Use read_file instead
 Select-String -Path "*.py" -Pattern "EntityType"  # Use grep_search instead
 
-# ✅ CORRECT: Chain with semicolon for Python/uv commands
-.venv\Scripts\Activate.ps1; uv pip list
+# ✅ CORRECT: Activate venv as standalone, THEN run command
+# Command 1:
+.venv\Scripts\Activate.ps1
+# Command 2 (after activation):
+uv pip list
 
 # ✅ CORRECT: Use workspace tools for file operations
 read_file("src/core/ontology.py")
