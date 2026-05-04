@@ -4,6 +4,10 @@ from pydantic import BaseModel, Field, model_validator, field_validator
 import logging
 
 from src.ontology.entity_catalog import get_default_catalog
+from src.ontology.schema_support import (
+    normalize_relationship_type as _normalize_relationship_type,
+    render_relationship_types_guidance as _render_relationship_types_guidance,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,35 +69,7 @@ def render_relationship_types_guidance() -> str:
     Returns a compact, human-readable reference grouped by whether the type is
     emitted by extraction or reserved for post-processing.
     """
-
-    extraction_time_groups = {
-        "Structural": ["CHILD_OF", "AMENDS", "SUPERSEDED_BY", "REFERENCES"],
-        "Evaluation & Proposal": ["GUIDES", "EVALUATED_BY", "MEASURED_BY", "EVIDENCES"],
-        "Work & Deliverables": [
-            "PRODUCES",
-            "SATISFIED_BY",
-            "TRACKED_BY",
-            "SUBMITTED_TO",
-            "STAFFED_BY",
-            "PRICED_UNDER",
-            "QUANTIFIES",
-        ],
-        "Authority & Governance": ["GOVERNED_BY", "CONSTRAINED_BY", "DEFINES", "APPLIES_TO"],
-        "Resource & Operational": ["HAS_EQUIPMENT", "PROVIDED_BY"],
-        "Strategic & Capture Intelligence": ["ADDRESSES", "RELATED_TO"],
-    }
-    inference_only = ["REQUIRES", "ENABLED_BY", "RESPONSIBLE_FOR"]
-
-    lines: list[str] = [
-        "VALID RELATIONSHIP TYPES",
-        "Extraction-time canonical types (23):",
-    ]
-    for group_name, rel_types in extraction_time_groups.items():
-        lines.append(f"- {group_name}: {', '.join(rel_types)}")
-
-    lines.append("Inference-only types (not emitted by the LLM):")
-    lines.append(f"- {', '.join(inference_only)}")
-    return "\n".join(lines)
+    return _render_relationship_types_guidance()
 
 
 def normalize_relationship_type(rel_type: str, fallback: str = "RELATED_TO") -> str:
@@ -103,53 +79,12 @@ def normalize_relationship_type(rel_type: str, fallback: str = "RELATED_TO") -> 
     GRACEFUL HANDLING: Never returns None - always maps to a valid type.
     Unknown types are mapped to fallback (default: RELATED_TO) and logged as WARNING.
     """
-    normalized = rel_type.strip().upper().replace(" ", "_")
-    if normalized in VALID_RELATIONSHIP_TYPES:
-        return normalized
-
-    # Common rogue type mappings (from old prompts / LLM drift)
-    _ROGUE_MAPPINGS = {
-        # Legacy / renamed
-        "MEASURES": "MEASURED_BY",
-        "PART_OF": "CHILD_OF",
-        "BELONGS_TO": "RELATED_TO",
-        "CONTAINED_IN": "RELATED_TO",
-        "HAS": "CHILD_OF",
-        "IS_A": "RELATED_TO",
-        "TYPE_OF": "RELATED_TO",
-        "MEMBER_OF": "CHILD_OF",
-        "ASSOCIATED_WITH": "RELATED_TO",
-        "LOCATED_AT": "RELATED_TO",
-        "SPECIFIES": "DEFINES",
-        "FIELD_IN": "CHILD_OF",
-        "INFERRED": "RELATED_TO",
-        # LLM-generated types not in canonical set
-        "IMPLEMENTED_BY": "SATISFIED_BY",    # requirement IMPLEMENTED_BY approach
-        "SUBJECT_TO": "GOVERNED_BY",          # entity SUBJECT_TO regulation
-        "REFERENCED_BY": "REFERENCES",        # inverse reference (direction approximated)
-        "REQUIRES_DELIVERABLE": "REQUIRES",   # more specific form of REQUIRES
-        "USED_FOR": "RELATED_TO",             # resource/tech USED_FOR purpose
-        # Types removed from extraction vocab in Phase 3 first-principles reduction
-        # (they produce phantom duplicate edges — canonical direction is kept)
-        "CONTAINS": "CHILD_OF",              # inverse of CHILD_OF; normalize to CHILD_OF
-        "ATTACHMENT_OF": "CHILD_OF",         # structural synonym of CHILD_OF for docs
-        "HAS_SUBFACTOR": "CHILD_OF",         # eval factor hierarchy is CHILD_OF
-        "FUNDS": "PRICED_UNDER",             # inverse of PRICED_UNDER
-        "MANDATES": "GOVERNED_BY",           # inverse of GOVERNED_BY
-        "RESOLVES": "ADDRESSES",             # semantically identical in this domain
-        "SUPPORTS": "RELATED_TO",            # too vague; use ADDRESSES or RELATED_TO
-        "COORDINATED_WITH": "RELATED_TO",    # no bid-team query needs this direction
-        "REPORTED_TO": "SUBMITTED_TO",       # semantically identical in this domain
-    }
-    if normalized in _ROGUE_MAPPINGS:
-        mapped = _ROGUE_MAPPINGS[normalized]
-        logger.info(f"Mapped rogue relationship type '{rel_type}' → '{mapped}'")
-        return mapped
-
-    logger.warning(
-        f"⚠️ Unknown relationship type '{rel_type}' → defaulting to '{fallback}'"
+    return _normalize_relationship_type(
+        rel_type,
+        valid_relationship_types=VALID_RELATIONSHIP_TYPES,
+        fallback=fallback,
+        logger=logger,
     )
-    return fallback
 
 
 # ==========================================
