@@ -42,6 +42,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+from src.skills.mcp_manifest import MCPManifest, discover_manifests, load_manifest
 from src.skills.settings import (
     mcp_handshake_timeout,
     mcp_shutdown_timeout,
@@ -61,107 +62,6 @@ _TOOL_NAME_MAX = 64
 # JSON-RPC protocol version used in the initialize request. The MCP spec
 # pins this to a date string; we stay current with the latest stable.
 _MCP_PROTOCOL_VERSION = "2025-06-18"
-
-
-# ---------------------------------------------------------------------------
-# Manifest
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class MCPManifest:
-    """Theseus-side description of a vendored MCP server.
-
-    Loaded from ``tools/mcps/<name>/theseus_manifest.json``. Stays separate
-    from the upstream MCP's own ``package.json`` / ``mcp.json`` so
-    re-vendoring (``git subtree pull`` or copy) doesn't require editing
-    upstream files.
-    """
-
-    name: str  # registry alias, e.g. "usaspending"
-    description: str
-    command: list[str]  # argv passed to subprocess
-    cwd: Path  # working dir for the subprocess (the manifest dir)
-    env_required: list[str] = field(default_factory=list)
-    env_optional: list[str] = field(default_factory=list)
-    vendored_from: str = ""
-    vendored_commit: str = ""
-    vendored_at: str = ""
-    license: str = ""
-
-    def missing_env(self, env: Optional[dict[str, str]] = None) -> list[str]:
-        """Return required env vars that are absent from ``env`` (defaults to os.environ)."""
-        scope = env if env is not None else os.environ
-        return [k for k in self.env_required if not scope.get(k)]
-
-
-def load_manifest(manifest_path: Path) -> MCPManifest:
-    """Parse ``theseus_manifest.json``.
-
-    Raises :class:`ValueError` on malformed manifests so the registry can
-    surface a clear startup error rather than crashing mid-spawn.
-    """
-    if not manifest_path.is_file():
-        raise FileNotFoundError(f"manifest not found: {manifest_path}")
-    try:
-        raw = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"manifest {manifest_path}: {exc}") from exc
-
-    if not isinstance(raw, dict):
-        raise ValueError(f"manifest {manifest_path}: top-level must be a JSON object")
-    name = str(raw.get("name") or "").strip()
-    if not name:
-        raise ValueError(f"manifest {manifest_path}: missing 'name'")
-    command = raw.get("command")
-    if not isinstance(command, list) or not command or not all(isinstance(c, str) for c in command):
-        raise ValueError(
-            f"manifest {manifest_path}: 'command' must be a non-empty list of strings"
-        )
-    return MCPManifest(
-        name=name,
-        description=str(raw.get("description") or ""),
-        command=list(command),
-        cwd=manifest_path.parent.resolve(),
-        env_required=[str(x) for x in (raw.get("env_required") or [])],
-        env_optional=[str(x) for x in (raw.get("env_optional") or [])],
-        vendored_from=str(raw.get("vendored_from") or ""),
-        vendored_commit=str(raw.get("vendored_commit") or ""),
-        vendored_at=str(raw.get("vendored_at") or ""),
-        license=str(raw.get("license") or ""),
-    )
-
-
-def discover_manifests(mcps_root: Path) -> dict[str, MCPManifest]:
-    """Scan ``tools/mcps/*/theseus_manifest.json`` and return a name → manifest dict.
-
-    Malformed manifests are logged and skipped — a single bad MCP must not
-    poison startup of the others.
-    """
-    found: dict[str, MCPManifest] = {}
-    if not mcps_root.is_dir():
-        logger.debug("MCP root %s does not exist; no manifests loaded", mcps_root)
-        return found
-    for child in sorted(mcps_root.iterdir()):
-        if not child.is_dir():
-            continue
-        manifest_path = child / "theseus_manifest.json"
-        if not manifest_path.is_file():
-            continue
-        try:
-            manifest = load_manifest(manifest_path)
-        except (ValueError, FileNotFoundError) as exc:
-            logger.warning("Skipping MCP at %s: %s", child, exc)
-            continue
-        if manifest.name in found:
-            logger.warning(
-                "Duplicate MCP name %r (second copy at %s) — keeping first",
-                manifest.name,
-                child,
-            )
-            continue
-        found[manifest.name] = manifest
-    return found
 
 
 # ---------------------------------------------------------------------------
