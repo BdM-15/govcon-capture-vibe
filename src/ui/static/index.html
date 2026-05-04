@@ -6148,6 +6148,8 @@
 
     <!-- ========================== APP LOGIC ========================== -->
     <script src="/ui/app/theseus-constants.js"></script>
+    <script src="/ui/app/theseus-state-helpers.js"></script>
+    <script src="/ui/app/theseus-core-helpers.js"></script>
     <script src="/ui/app/theseus-render-helpers.js"></script>
     <script src="/ui/app/theseus-preview-helpers.js"></script>
     <script src="/ui/app/theseus-skill-helpers.js"></script>
@@ -6163,269 +6165,7 @@
     <script>
       function theseus() {
         return {
-          // ----- state -----
-          navGroups: window.createTheseusNavGroups(),
-          active: "dashboard",
-          health: false,
-          stats: {},
-          documents: [],
-          uploads: [],
-          // Files queued via the Folder Watcher staging uploader. Saved to
-          // inputs/<workspace>/ via /documents/upload?stage_only=true and
-          // wait for the user to click "Scan now" before extraction starts.
-          stagedUploads: [],
-          // Documents page UI state — drives status strip, pipeline pill,
-          // per-row delete, and bulk reprocess. Polled lazily when the
-          // Documents tab is active (see startDocStatsPoll/stopDocStatsPoll).
-          docStats: {
-            counts: {}, // { processed, processing, pending, failed }
-            pipeline: { busy: false, latest_message: "", job_name: "" },
-            cancelling: false,
-            reprocessing: false,
-            scanning: false,
-            deletingId: null,
-          },
-          docFilter: { query: "", status: "" },
-          _docStatsTimer: null,
-          // Settings page server-control button states.
-          serverOps: { clearingCache: false, clearingDocs: false },
-          // Workspace activity log: live tail of the per-workspace processing
-          // log file. SSE source is opened lazily when Documents tab activates
-          // and torn down on tab change to avoid leaking sockets across
-          // navigations. The same log file feeds both ingestion and query
-          // audit views — the `category` selector decides which slice to show.
-          procLog: {
-            events: [],
-            category: "processing", // processing | query | all
-            filter: "all", // all | phase | errors
-            autoscroll: true,
-            streaming: false,
-            error: null,
-            es: null,
-          },
-          chats: [],
-          currentChat: null,
-          composer: "",
-          sending: false,
-          chatStatus: { phase: null, label: "", retrieve_ms: null },
-          chatAbort: null,
-          promptLibrary: [],
-          promptFilter: "",
-          promptPicker: { open: false, query: "" },
-          // Agent Skills page state
-          skills: {
-            items: [],
-            loading: false,
-            error: null,
-            loaded: false,
-            detailOpen: false,
-            current: null,
-            invokePrompt: "",
-            invoking: false,
-            invokeResult: "",
-            invokeMeta: null,
-            installModal: false,
-            installUrl: "",
-            installing: false,
-            runs: [],
-            runsLoading: false,
-            // Active run detail (transcript drawer)
-            run: null,
-            transcriptOpen: false,
-            transcriptExpanded: {},
-            // Phase 4j taxonomy filters (closed vocabularies — see docs/SKILL_TAXONOMY.md)
-            activePersonas: [],
-            activePhases: [],
-            activeCapabilities: [],
-            searchQuery: "",
-          },
-          // Phase 6a — Studio: cross-skill deliverables index. Walks
-          // /api/ui/studio (server walks rag_storage/<ws>/skill_runs/*/...)
-          // and lists every artifact every skill has ever written for the
-          // active workspace. No new on-disk schema; pure index.
-          studio: {
-            deliverables: [],
-            loading: false,
-            error: null,
-            loaded: false,
-            filterSkill: "",
-            filterFormat: "",
-            search: "",
-            // Phase 6a-2 — Pinned anchors (Theseus mythos: anchor the
-            // current bid set so it surfaces at the top regardless of
-            // recency). Persisted to localStorage by deliverable key.
-            pinned: {}, // { "<skill>/<run_id>/<filename>": true }
-          },
-          // Phase 6a-2 — Inline preview pane (right slide-in drawer).
-          // Streams the artifact bytes from the existing
-          // /api/ui/skills/{name}/runs/{run_id}/artifacts/{filename}
-          // endpoint and renders client-side: PDF iframe, video, image,
-          // text/MD/JSON/CSV pre, DOCX via Mammoth.js, XLSX via SheetJS.
-          studioPreview: {
-            open: false,
-            loading: false,
-            error: null,
-            deliverable: null, // the row {skill, run_id, filename, ext, ...}
-            kind: "", // "pdf" | "video" | "image" | "text" | "md" | "json" | "csv" | "docx" | "xlsx" | "unsupported"
-            href: "", // download URL (used by iframe / video / img / mammoth fetch)
-            // Text-format payload (md / json / csv / txt)
-            text: "",
-            // DOCX → Mammoth HTML
-            docxHtml: "",
-            // XLSX → SheetJS sheet list + active sheet HTML
-            sheets: [], // [{ name, html }]
-            sheetIdx: 0,
-            // JSON KG back-links — chunk_ids found in the envelope
-            jsonChunks: [],
-          },
-          // Phase 6b — Reasoning view ("Why this artifact?"). Renders the
-          // deterministic transcript timeline returned by
-          // /api/ui/skills/{name}/runs/{run_id}/reasoning. Pure renderer; no
-          // LLM call. Each step is expandable to its raw tool args + result.
-          reasoning: {
-            open: false,
-            loading: false,
-            error: null,
-            skill: "",
-            run_id: "",
-            title: "",
-            created_at: "",
-            steps: [],
-            summary: null,
-            artifacts: [],
-            expanded: {}, // {[stepIndex]: bool}
-          },
-          // Phase 6b.2 — Inline chunk preview. Citation chips in the
-          // reasoning drawer (and any other surface that shows chunk-<hex>
-          // ids) open this modal, which resolves the chunk via
-          // /api/ui/chunks/{chunk_id} and renders its source content.
-          chunkPreview: {
-            open: false,
-            loading: false,
-            error: null,
-            chunk_id: "",
-            file_path: null,
-            full_doc_id: null,
-            chunk_order_index: null,
-            tokens: null,
-            length: 0,
-            content: "",
-            // Cleaned multimodal display (mirrors chat references):
-            // - kind: 'text' | 'table' | 'image' | 'equation' | 'unknown'
-            // - badge: short label for the badge pill
-            // - caption: extracted Caption: line, when present
-            // - body: cleaned narrative (Image Path / Caption stripped)
-            // - tableSummary: "N rows x M cols" when kind === 'table'
-            view: {
-              kind: "text",
-              badge: "TEXT",
-              caption: "",
-              body: "",
-              tableSummary: "",
-            },
-            showRaw: false,
-          },
-          // Streaming UI helpers
-          streamLiveContent: "",
-          thinkStartedAt: null,
-          thinkElapsed: 0,
-          thinkTimer: null,
-          toasts: [],
-
-          // Command palette
-          palette: { open: false, query: "", cursor: 0 },
-
-          // Workspace modal + restart overlay
-          wsModal: { open: false, items: [], newName: "", switching: false },
-          restarting: false,
-          restartTarget: "",
-          restartStuck: false,
-
-          // Settings → Danger Zone (workspace deletion)
-          dangerZone: {
-            loaded: false,
-            loading: false,
-            workspaces: [],
-            neo4jAvailable: false,
-          },
-          deleteModal: {
-            open: false,
-            target: null,
-            scope: { neo4j: true, rag_storage: true, inputs: false },
-            confirmText: "",
-            busy: false,
-          },
-          wipeAllModal: {
-            open: false,
-            scope: { neo4j: true, rag_storage: true, inputs: false },
-            confirmText: "",
-            busy: false,
-          },
-
-          // Query parameter settings (per-workspace LightRAG tunables)
-          querySettings: {
-            loaded: false,
-            saving: false,
-            values: {},
-            defaults: {},
-          },
-
-          // Agent skill settings (per-workspace briefing-book + retrieval)
-          skillSettings: {
-            loaded: false,
-            saving: false,
-            values: {},
-            defaults: {},
-          },
-
-          // MCP Servers panel (Phase 4e) — vendored MCP inventory + key management
-          mcps: {
-            loaded: false,
-            loading: false,
-            items: [],
-            drafts: {}, // "<mcp>:<ENV_KEY>" → string
-            saving: {}, // mcpName → bool
-            testing: {}, // mcpName → bool
-            testResult: {}, // mcpName → { ok, tool_count, sample_tools, error }
-          },
-
-          // Knowledge graph state
-          cy: null,
-          graph: {
-            label: "*",
-            labelQuery: "",
-            labelOptions: [],
-            showLabelDropdown: false,
-            maxNodes: 2000,
-            maxDepth: 2,
-            minConfidence: 0,
-            layout: "fcose",
-            loading: false,
-            stats: {
-              nodes: 0,
-              edges: 0,
-              visibleNodes: 0,
-              visibleEdges: 0,
-              truncated: false,
-            },
-            typeCounts: [],
-            hiddenTypes: [],
-            selected: null,
-            selectedProps: [],
-            chunks: [],
-            chunksLoading: false,
-          },
-
-          // RFP Intelligence state
-          intel: {
-            tab: "lm",
-            tabs: window.createTheseusIntelTabs(),
-            data: null,
-            loading: false,
-            showCovered: true,
-            showGaps: true,
-            traceFilter: "",
-          },
+          ...window.createTheseusInitialState(),
 
           navTitle() {
             return window.theseusNavTitle(this.active);
@@ -6449,175 +6189,28 @@
 
           // ----- lifecycle -----
           async init() {
-            this.$watch("active", () =>
-              this.$nextTick(() => {
-                lucide.createIcons();
-                if (
-                  this.active === "graph" &&
-                  !this.graph.stats.nodes &&
-                  !this.graph.loading
-                )
-                  this.loadGraph();
-                if (
-                  this.active === "intel" &&
-                  !this.intel.data &&
-                  !this.intel.loading
-                )
-                  this.loadIntel();
-                if (this.active === "settings" && !this.querySettings.loaded)
-                  this.loadQuerySettings();
-                this.loadSkillSettings();
-                if (this.active === "settings" && !this.mcps.loaded)
-                  this.loadMcps();
-                if (this.active === "settings" && !this.dangerZone.loaded)
-                  this.loadWorkspaceInventory();
-                // visible so the status strip stays live without holding
-                // open a second SSE channel.
-                if (this.active === "documents") this.startDocStatsPoll();
-                else this.stopDocStatsPoll();
-                // Open/close the workspace-activity-log SSE based on tab
-                // visibility. Streams are bandwidth-cheap but each holds a
-                // server-side subscriber slot, so we tear it down when the
-                // user navigates away from the Activity Log page.
-                if (this.active === "activity") this.openProcLog();
-                else this.closeProcLog();
-                // Skills page: lazy-load on first visit, refresh on demand.
-                if (this.active === "skills" && !this.skills.loaded)
-                  this.loadSkills();
-                // Studio page: lazy-load on first visit; refresh button forces.
-                if (this.active === "studio" && !this.studio.loaded)
-                  this.loadStudio();
-              }),
-            );
-            this.$watch("documents", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("docStats.pipeline.busy", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("docStats.counts", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("uploads", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("chats", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("currentChat", () =>
-              this.$nextTick(() => {
-                lucide.createIcons();
-                this.scrollMsgs();
-              }),
-            );
-            this.$watch("graph.selected", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("palette.open", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("wsModal.open", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("wsModal.items", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("promptPicker.open", () =>
-              this.$nextTick(() => {
-                lucide.createIcons();
-                if (this.promptPicker.open && this.$refs.promptPickerSearch) {
-                  this.$refs.promptPickerSearch.focus();
-                }
-              }),
-            );
-            this.$watch("promptPicker.query", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("restarting", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("reasoning.open", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("reasoning.expanded", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("chunkPreview.open", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("studioPreview.open", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-            this.$watch("studioPreview.sheetIdx", () =>
-              this.$nextTick(() => lucide.createIcons()),
-            );
-
-            // Phase 6a-2 — restore pinned anchors from localStorage
-            this._loadStudioPinned();
-
-            await this.refreshAll();
-            lucide.createIcons();
-            // If the user lands directly on the Activity Log tab (e.g. via
-            // deep link or saved tab), the active-watcher above doesn't fire.
-            // Open the log stream eagerly so the panel populates without a
-            // tab toggle.
-            if (this.active === "activity") this.openProcLog();
-            if (this.active === "documents") this.startDocStatsPoll();
-            // background refresh
-            setInterval(() => {
-              this.loadStats();
-              this.checkHealth();
-            }, 15000);
+            return window.theseusInit(this);
           },
 
           async refreshAll() {
-            await Promise.all([
-              this.checkHealth(),
-              this.loadStats(),
-              this.loadDocuments(),
-              this.loadChats(),
-              this.loadPromptLibrary(),
-              this.loadWorkspaceList(),
-            ]);
+            return window.theseusRefreshAll(this);
           },
 
           // ----- API helpers -----
           async api(path, opts = {}) {
-            const r = await fetch(path, {
-              headers: {
-                "Content-Type": "application/json",
-                ...(opts.headers || {}),
-              },
-              ...opts,
-            });
-            if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-            const ct = r.headers.get("content-type") || "";
-            return ct.includes("application/json") ? r.json() : r.text();
+            return window.theseusApi(path, opts);
           },
 
           toast(msg, kind = "ok") {
-            const id = Math.random().toString(36).slice(2);
-            this.toasts.push({ id, msg, kind });
-            setTimeout(() => {
-              this.toasts = this.toasts.filter((t) => t.id !== id);
-            }, 3500);
+            return window.theseusToast(this, msg, kind);
           },
 
           async checkHealth() {
-            try {
-              await this.api("/health");
-              this.health = true;
-            } catch {
-              this.health = false;
-            }
+            return window.theseusCheckHealth(this);
           },
 
           async loadStats() {
-            try {
-              this.stats = await this.api("/api/ui/stats");
-            } catch (e) {
-              /* silent */
-            }
+            return window.theseusLoadStats(this);
           },
 
           // ----- Processing Log (SSE-backed live tail) -----
@@ -6823,10 +6416,6 @@
             return window.theseusCopyToClipboard(this, text);
           },
           // ===== Phase 6b.2 — Inline chunk preview =====
-          // Workspace-scoped cache so the same chunk fetched from multiple
-          // surfaces (chat sources card, reasoning drawer modal) only hits
-          // the API once. Reset whenever the active workspace changes.
-          _chunkCache: Object.create(null),
           async fetchChunk(chunkId) {
             return window.theseusFetchChunk(this, chunkId);
           },
