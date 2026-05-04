@@ -17,12 +17,19 @@ Integration: Called from semantic_post_processor.enhance_knowledge_graph()
 
 import logging
 from typing import List, Dict, Tuple, Callable, Awaitable
-from pathlib import Path
 from src.utils.logging_config import log_graceful_failure
 from src.utils.llm_parsing import extract_json_from_response
 
 from src.inference.batch_processor import BatchProcessor
 from src.inference.neo4j_graph_io import group_entities_by_type
+from src.inference.relationship_inference_support import (
+    apply_canonical_mapping,
+    apply_type_based_heuristics,
+    build_deduplication_prompt,
+    collect_existing_pairs,
+    find_entity_id,
+    find_potential_duplicate_pairs,
+)
 from src.core.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
@@ -53,90 +60,28 @@ async def deduplicate_entities(
     """
     # Group entities by type for efficient comparison
     grouped = group_entities_by_type(nodes)
-    
+
     canonical_mapping = {}  # old_name -> canonical_name
-    entities_to_merge = []  # List of (canonical_entity, [duplicate_entities])
-    
-    # Focus on types most prone to formatting variations
-    types_to_check = ['section', 'clause', 'deliverable', 'document']
-    
-    for entity_type in types_to_check:
-        if entity_type not in grouped or len(grouped[entity_type]) < 2:
-            continue
-        
-        entities = grouped[entity_type]
-        
-        # Build potential duplicate pairs using fuzzy matching
-        potential_duplicates = []
-        for i, entity1 in enumerate(entities):
-            for entity2 in entities[i+1:]:
-                name1 = entity1.get('entity_name', '').lower().strip()
-                name2 = entity2.get('entity_name', '').lower().strip()
-                
-                # Quick heuristic: check if normalized names are very similar
-                # Remove common variations: punctuation, case, "SECTION" vs "Section"
-                norm1 = name1.replace('section', '').replace('sec', '').replace('.', '').replace('-', '').replace(':', '').replace(' ', '')
-                norm2 = name2.replace('section', '').replace('sec', '').replace('.', '').replace('-', '').replace(':', '').replace(' ', '')
-                
-                # If normalized forms match or overlap significantly, flag for LLM review
-                if norm1 == norm2 or (len(norm1) > 3 and norm1 in norm2) or (len(norm2) > 3 and norm2 in norm1):
-                    potential_duplicates.append((entity1, entity2))
-        
-        # Batch LLM calls for efficiency (process up to 10 pairs at once)
+
+    for entity_type, potential_duplicates in find_potential_duplicate_pairs(grouped).items():
         if potential_duplicates:
             logger.info(f"    Found {len(potential_duplicates)} potential {entity_type} duplicates to verify...")
-            
+
             for i in range(0, len(potential_duplicates), 10):
                 batch = potential_duplicates[i:i+10]
-                
-                # Create prompt for batch deduplication
-                prompt = f"""You are analyzing a government RFP knowledge graph to identify duplicate entities caused by formatting variations.
+                prompt = build_deduplication_prompt(batch)
 
-TASK: Determine which entity pairs are duplicates (same concept, different formatting).
-
-ENTITY PAIRS TO EVALUATE:
-"""
-                for idx, (e1, e2) in enumerate(batch, 1):
-                    prompt += f"""
-Pair {idx}:
-  Entity A: "{e1.get('entity_name')}" (type: {e1.get('entity_type')})
-    Description: {e1.get('description', '')[:150]}...
-  Entity B: "{e2.get('entity_name')}" (type: {e2.get('entity_type')})
-    Description: {e2.get('description', '')[:150]}...
-"""
-                
-                prompt += """
-RULES FOR IDENTIFYING DUPLICATES:
-1. Case variations: "SECTION C.4" == "Section C.4" == "section c.4"
-2. Punctuation: "Section C.4" == "Section C-4" == "Section C4"
-3. Prefix/suffix variations: "FAR 52.212-1" == "FAR clause 52.212-1"
-4. Semantic equivalence: "Cost Proposal" == "Price Proposal" (if descriptions match)
-
-OUTPUT FORMAT (JSON):
-{
-  "duplicates": [
-    {
-      "canonical_name": "Section C.4 - Supply",
-      "duplicates": ["section c.4", "SECTION C.4"],
-      "reasoning": "Same section with case/punctuation variations"
-    }
-  ]
-}
-
-Only include pairs that are TRUE duplicates. If no duplicates found, return: {"duplicates": []}
-"""
-                
                 try:
                     response = await llm_func(prompt, "You are an expert at identifying duplicate entities in government RFP documents.")
                     result = extract_json_from_response(response)
-                    
+
                     for dup_group in result.get('duplicates', []):
                         canonical = dup_group.get('canonical_name')
                         duplicates = dup_group.get('duplicates', [])
-                        
+
                         for dup_name in duplicates:
                             canonical_mapping[dup_name] = canonical
-                
+
                 except Exception as e:
                     logger.warning(f"Failed to process deduplication batch: {e}")
                     continue
@@ -144,50 +89,8 @@ Only include pairs that are TRUE duplicates. If no duplicates found, return: {"d
     # If no duplicates found, return original data
     if not canonical_mapping:
         return nodes, edges, {}
-    
-    # Merge duplicate entities
-    canonical_entities = {}  # canonical_name -> merged_entity
-    
-    for entity in nodes:
-        name = entity.get('entity_name')
-        
-        # Check if this is a duplicate
-        if name in canonical_mapping:
-            canonical_name = canonical_mapping[name]
-            
-            # Merge into canonical entity
-            if canonical_name not in canonical_entities:
-                # Create canonical entity (use first occurrence as base)
-                canonical_entities[canonical_name] = {
-                    'id': entity.get('id'),  # Use first ID
-                    'entity_name': canonical_name,
-                    'entity_type': entity.get('entity_type'),
-                    'description': entity.get('description', ''),
-                    'source_id': entity.get('source_id', '')
-                }
-        else:
-            # Not a duplicate - keep as-is
-            canonical_entities[name] = entity
-    
-    # Update edges to use canonical names
-    updated_edges = []
-    for edge in edges:
-        source = edge.get('source')
-        target = edge.get('target')
-        
-        # Map to canonical names
-        source = canonical_mapping.get(source, source)
-        target = canonical_mapping.get(target, target)
-        
-        # Update edge
-        updated_edge = edge.copy()
-        updated_edge['source'] = source
-        updated_edge['target'] = target
-        updated_edges.append(updated_edge)
-    
-    # Convert canonical_entities back to list
-    deduplicated_nodes = list(canonical_entities.values())
-    
+
+    deduplicated_nodes, updated_edges = apply_canonical_mapping(nodes, edges, canonical_mapping)
     return deduplicated_nodes, updated_edges, canonical_mapping
 
 
@@ -241,8 +144,8 @@ async def infer_relationships_batch(
         new_relationships = []
         for rel in relationships:
             new_relationships.append({
-                'source_id': _find_entity_id(rel.get('source'), source_entities),
-                'target_id': _find_entity_id(rel.get('target'), target_entities),
+                'source_id': find_entity_id(rel.get('source'), source_entities),
+                'target_id': find_entity_id(rel.get('target'), target_entities),
                 'relationship_type': rel.get('type', 'RELATED_TO'),
                 'confidence': rel.get('confidence', 0.7),
                 'reasoning': rel.get('reasoning', '')
@@ -254,146 +157,6 @@ async def infer_relationships_batch(
         log_graceful_failure(logger, "Relationship inference", e)
         return []
 
-
-def _find_entity_id(entity_name: str, entities: List[Dict]) -> str:
-    """Helper to find entity ID by name."""
-    for entity in entities:
-        if entity.get('entity_name') == entity_name:
-            return entity.get('id')
-    return None
-
-
-def apply_type_based_heuristics(
-    grouped: Dict[str, List[Dict]],
-    existing_edges: List[Dict]
-) -> List[Dict]:
-    """
-    Apply deterministic type-based relationship rules based on government contracting patterns.
-    
-    These are high-confidence structural relationships that don't require LLM inference:
-    - DELIVERABLE entities → Section J (standard UCF location)
-    - CLAUSE entities → Section I (standard UCF location)
-    - EVALUATION_FACTOR entities → Section M (standard UCF location)
-    - SUBMISSION_INSTRUCTION entities → Section L (standard UCF location)
-    
-    Args:
-        grouped: Entity dictionary grouped by type
-        existing_edges: List of existing relationships (for deduplication)
-        
-    Returns:
-        List of new relationship dicts
-    """
-    new_relationships = []
-    
-    # Create deduplication set
-    existing_pairs = set()
-    for edge in existing_edges:
-        source = edge.get('source')
-        target = edge.get('target')
-        if source and target:
-            existing_pairs.add((source, target))
-            existing_pairs.add((target, source))
-    
-    # Helper function to find section by name pattern
-    def find_section(section_name_pattern: str) -> Dict:
-        """Find section entity by name pattern (case-insensitive)."""
-        if 'section' not in grouped:
-            return None
-        for section in grouped['section']:
-            name = section.get('entity_name', '').lower()
-            if section_name_pattern.lower() in name:
-                return section
-        return None
-    
-    # Pattern 1: DELIVERABLE → Section J
-    section_j = find_section('section j')
-    if section_j and 'deliverable' in grouped:
-        for deliverable in grouped['deliverable']:
-            source_id = deliverable.get('id')
-            target_id = section_j.get('id')
-            if source_id and target_id and (source_id, target_id) not in existing_pairs:
-                new_relationships.append({
-                    'source_id': source_id,
-                    'target_id': target_id,
-                    'relationship_type': 'CHILD_OF',
-                    'confidence': 0.90,
-                    'reasoning': 'Deliverables are typically listed in Section J attachments per UCF standard'
-                })
-    
-    # Pattern 2: CLAUSE → Section I
-    section_i = find_section('section i')
-    if section_i and 'clause' in grouped:
-        for clause in grouped['clause']:
-            source_id = clause.get('id')
-            target_id = section_i.get('id')
-            if source_id and target_id and (source_id, target_id) not in existing_pairs:
-                new_relationships.append({
-                    'source_id': source_id,
-                    'target_id': target_id,
-                    'relationship_type': 'CHILD_OF',
-                    'confidence': 0.95,
-                    'reasoning': 'FAR/DFARS clauses are incorporated in Section I per UCF standard'
-                })
-    
-    # Pattern 3: EVALUATION_FACTOR → Section M
-    section_m = find_section('section m')
-    if section_m and 'evaluation_factor' in grouped:
-        for factor in grouped['evaluation_factor']:
-            source_id = factor.get('id')
-            target_id = section_m.get('id')
-            if source_id and target_id and (source_id, target_id) not in existing_pairs:
-                new_relationships.append({
-                    'source_id': source_id,
-                    'target_id': target_id,
-                    'relationship_type': 'CHILD_OF',
-                    'confidence': 0.95,
-                    'reasoning': 'Evaluation factors are defined in Section M per UCF standard'
-                })
-    
-    # Pattern 4: SUBMISSION_INSTRUCTION → Section L
-    section_l = find_section('section l')
-    if section_l and 'submission_instruction' in grouped:
-        for instruction in grouped['submission_instruction']:
-            source_id = instruction.get('id')
-            target_id = section_l.get('id')
-            if source_id and target_id and (source_id, target_id) not in existing_pairs:
-                new_relationships.append({
-                    'source_id': source_id,
-                    'target_id': target_id,
-                    'relationship_type': 'CHILD_OF',
-                    'confidence': 0.95,
-                    'reasoning': 'Submission instructions are provided in Section L per UCF standard'
-                })
-    
-    # Pattern 5: STATEMENT_OF_WORK → Section C (or Section J if in attachments)
-    section_c = find_section('section c')
-    if section_c and 'statement_of_work' in grouped:
-        for sow in grouped['statement_of_work']:
-            # Check if SOW is in Section C or Section J (look for J- pattern in description)
-            description = sow.get('description', '').lower()
-            name = sow.get('entity_name', '').lower()
-            
-            # If name contains J- or attachment patterns, link to Section J
-            if 'j-' in name or 'attachment' in name.lower() or 'annex' in name.lower():
-                target_section = find_section('section j')
-                if not target_section:
-                    target_section = section_c  # Fallback to Section C
-            else:
-                target_section = section_c
-            
-            if target_section:
-                source_id = sow.get('id')
-                target_id = target_section.get('id')
-                if source_id and target_id and (source_id, target_id) not in existing_pairs:
-                    new_relationships.append({
-                        'source_id': source_id,
-                        'target_id': target_id,
-                        'relationship_type': 'CHILD_OF',
-                        'confidence': 0.85,
-                        'reasoning': 'Statement of Work typically in Section C or Section J attachments per UCF standard'
-                    })
-    
-    return new_relationships
 
 
 async def infer_relationships(
@@ -462,14 +225,7 @@ async def infer_relationships(
     processor = BatchProcessor(batch_size=batch_size)
     
     # Create set of existing relationships for deduplication
-    existing_pairs = set()
-    for edge in existing_relationships:
-        source = edge.get('source')
-        target = edge.get('target')
-        if source and target:
-            existing_pairs.add((source, target))
-            existing_pairs.add((target, source))  # Bidirectional
-    
+    existing_pairs = collect_existing_pairs(existing_relationships)
     logger.info(f"  Existing relationships: {len(existing_pairs) // 2}")
     
     # Algorithm 1: DOCUMENT → SECTION (Document Hierarchy)
