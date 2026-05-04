@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -15,6 +17,7 @@ from src.server.storage_counts import safe_count_json_keys
 from src.utils.time_utils import now_local_iso
 
 _STACK_CACHE: Optional[dict[str, Optional[str]]] = None
+_RELEASE_VERSION_CACHE: Optional[str] = None
 
 
 def stack_versions() -> dict[str, Optional[str]]:
@@ -42,6 +45,35 @@ def stack_versions() -> dict[str, Optional[str]]:
     return versions
 
 
+def release_version() -> str:
+        """Resolve the current Theseus release version for UI display."""
+        global _RELEASE_VERSION_CACHE  # noqa: PLW0603
+        if _RELEASE_VERSION_CACHE is not None:
+            return _RELEASE_VERSION_CACHE
+
+        env_version = os.getenv("THESEUS_RELEASE_VERSION", "").strip()
+        if env_version:
+            _RELEASE_VERSION_CACHE = env_version
+            return env_version
+
+        try:
+            completed = subprocess.run(
+                    ["git", "describe", "--tags", "--abbrev=0"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+            )
+            tag = completed.stdout.strip()
+            if tag:
+                    _RELEASE_VERSION_CACHE = tag
+                    return tag
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            pass
+
+        _RELEASE_VERSION_CACHE = "v0.0.0"
+        return _RELEASE_VERSION_CACHE
+
+
 def ui_chat_history_pairs() -> int:
     """Resolve the per-query conversation-history cap in user+assistant pairs."""
     return env_int("UI_CHAT_HISTORY_TURNS", 20, 0)
@@ -59,6 +91,7 @@ def gather_stats(
     graph_storage: Callable[[], str] = lambda: "NetworkXStorage",
     now: Callable[[], str] = _now_iso,
     stack_versions_func: Callable[[], dict[str, Optional[str]]] = stack_versions,
+    release_version_func: Callable[[], str] = release_version,
     count_json_keys: Callable[[Path], int] = safe_count_json_keys,
 ) -> dict[str, Any]:
     """Build dashboard rollup metrics for the active workspace."""
@@ -77,6 +110,7 @@ def gather_stats(
         "chat": {
             "history_pairs_cap": ui_chat_history_pairs(),
         },
+        "version": release_version_func(),
         "ontology": {
             "entity_type_count": len(VALID_ENTITY_TYPES),
             "relationship_type_count": len(VALID_RELATIONSHIP_TYPES),

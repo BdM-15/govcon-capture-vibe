@@ -57,6 +57,7 @@ def test_gather_stats_counts_workspace_and_shapes_payload(tmp_path, monkeypatch)
         graph_storage=lambda: "Neo4JStorage",
         now=lambda: "2026-05-03T12:00:00-05:00",
         stack_versions_func=lambda: {"lightrag": "test"},
+        release_version_func=lambda: "v1.4.0",
     )
 
     assert payload["workspace"] == "demo"
@@ -67,6 +68,7 @@ def test_gather_stats_counts_workspace_and_shapes_payload(tmp_path, monkeypatch)
     assert payload["chunks"] == 4
     assert payload["chats"] == 1
     assert payload["chat"] == {"history_pairs_cap": 3}
+    assert payload["version"] == "v1.4.0"
     assert payload["ontology"]["entity_type_count"] == len(VALID_ENTITY_TYPES)
     assert payload["ontology"]["relationship_type_count"] == len(VALID_RELATIONSHIP_TYPES)
     assert payload["models"]["rerank"] == "rerank-model"
