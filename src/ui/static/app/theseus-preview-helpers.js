@@ -84,9 +84,7 @@ window.theseusOpenStudioPreview = async function theseusOpenStudioPreview(
     app.studioPreview.loading = false;
   }
 
-  app.$nextTick(() => {
-    if (window.lucide) lucide.createIcons();
-  });
+  window.theseusAfterRender(app);
 };
 
 window.theseusCloseStudioPreview = function theseusCloseStudioPreview(app) {
@@ -132,9 +130,7 @@ window.theseusOpenReasoning = async function theseusOpenReasoning(
     app.reasoning.error = error?.message || String(error);
   } finally {
     app.reasoning.loading = false;
-    app.$nextTick(() => {
-      if (window.lucide) lucide.createIcons();
-    });
+    window.theseusAfterRender(app);
   }
 };
 
@@ -149,13 +145,15 @@ window.theseusToggleReasoningStep = function theseusToggleReasoningStep(
   app.reasoning.expanded[idx] = !app.reasoning.expanded[idx];
 };
 
-window.theseusCopyToClipboard = function theseusCopyToClipboard(app, text) {
-  try {
-    navigator.clipboard.writeText(text);
-    app.toast("Copied: " + text, "success");
-  } catch (error) {
-    app.toast("Copy failed", "error");
-  }
+window.theseusCopyToClipboard = async function theseusCopyToClipboard(
+  app,
+  text,
+) {
+  await window.theseusCopyText(app, text, {
+    success: "Copied: " + text,
+    error: "Copy failed",
+    kind: "success",
+  });
 };
 
 window.theseusFetchChunk = async function theseusFetchChunk(app, chunkId) {
@@ -216,9 +214,7 @@ window.theseusOpenChunkPreview = async function theseusOpenChunkPreview(
     app.chunkPreview.error = error?.message || String(error);
   } finally {
     app.chunkPreview.loading = false;
-    app.$nextTick(() => {
-      if (window.lucide) lucide.createIcons();
-    });
+    window.theseusAfterRender(app);
   }
 };
 
@@ -239,7 +235,7 @@ window.theseusLoadStudio = async function theseusLoadStudio(app) {
     app.studio.deliverables = [];
   } finally {
     app.studio.loading = false;
-    app.$nextTick(() => lucide.createIcons());
+    window.theseusAfterRender(app);
   }
 };
 

@@ -103,7 +103,7 @@ window.theseusLoadWorkspaceInventory =
       app.dangerZone.workspaces = response.workspaces || [];
       app.dangerZone.neo4jAvailable = !!response.neo4j_available;
       app.dangerZone.loaded = true;
-      app.$nextTick(() => lucide.createIcons());
+      window.theseusAfterRender(app);
     } catch (error) {
       app.toast("Inventory failed: " + error.message, "error");
     } finally {
@@ -128,7 +128,7 @@ window.theseusOpenDeleteModal = function theseusOpenDeleteModal(
   app.deleteModal.confirmText = "";
   app.deleteModal.busy = false;
   app.deleteModal.open = true;
-  app.$nextTick(() => lucide.createIcons());
+  window.theseusAfterRender(app);
 };
 
 window.theseusCloseDeleteModal = function theseusCloseDeleteModal(app) {
@@ -210,7 +210,7 @@ window.theseusOpenWipeAllModal = function theseusOpenWipeAllModal(app) {
   app.wipeAllModal.confirmText = "";
   app.wipeAllModal.busy = false;
   app.wipeAllModal.open = true;
-  app.$nextTick(() => lucide.createIcons());
+  window.theseusAfterRender(app);
 };
 
 window.theseusCloseWipeAllModal = function theseusCloseWipeAllModal(app) {

@@ -1,7 +1,7 @@
 window.theseusInit = async function theseusInit(app) {
   app.$watch("active", () =>
     app.$nextTick(() => {
-      lucide.createIcons();
+      window.theseusRefreshIcons();
       if (app.active === "graph" && !app.graph.stats.nodes && !app.graph.loading) {
         app.loadGraph();
       }
@@ -27,55 +27,47 @@ window.theseusInit = async function theseusInit(app) {
     }),
   );
 
-  app.$watch("documents", () => app.$nextTick(() => lucide.createIcons()));
-  app.$watch("docStats.pipeline.busy", () =>
-    app.$nextTick(() => lucide.createIcons()),
-  );
-  app.$watch("docStats.counts", () =>
-    app.$nextTick(() => lucide.createIcons()),
-  );
-  app.$watch("uploads", () => app.$nextTick(() => lucide.createIcons()));
-  app.$watch("chats", () => app.$nextTick(() => lucide.createIcons()));
+  app.$watch("documents", () => window.theseusAfterRender(app));
+  app.$watch("docStats.pipeline.busy", () => window.theseusAfterRender(app));
+  app.$watch("docStats.counts", () => window.theseusAfterRender(app));
+  app.$watch("uploads", () => window.theseusAfterRender(app));
+  app.$watch("chats", () => window.theseusAfterRender(app));
   app.$watch("currentChat", () =>
-    app.$nextTick(() => {
-      lucide.createIcons();
+    window.theseusAfterRender(
+      app,
+      () => {
       app.scrollMsgs();
-    }),
+      },
+      { iconsFirst: true },
+    ),
   );
-  app.$watch("graph.selected", () => app.$nextTick(() => lucide.createIcons()));
-  app.$watch("palette.open", () => app.$nextTick(() => lucide.createIcons()));
-  app.$watch("wsModal.open", () => app.$nextTick(() => lucide.createIcons()));
-  app.$watch("wsModal.items", () => app.$nextTick(() => lucide.createIcons()));
+  app.$watch("graph.selected", () => window.theseusAfterRender(app));
+  app.$watch("palette.open", () => window.theseusAfterRender(app));
+  app.$watch("wsModal.open", () => window.theseusAfterRender(app));
+  app.$watch("wsModal.items", () => window.theseusAfterRender(app));
   app.$watch("promptPicker.open", () =>
-    app.$nextTick(() => {
-      lucide.createIcons();
+    window.theseusAfterRender(
+      app,
+      () => {
       if (app.promptPicker.open && app.$refs.promptPickerSearch) {
         app.$refs.promptPickerSearch.focus();
       }
-    }),
+      },
+      { iconsFirst: true },
+    ),
   );
-  app.$watch("promptPicker.query", () =>
-    app.$nextTick(() => lucide.createIcons()),
-  );
-  app.$watch("restarting", () => app.$nextTick(() => lucide.createIcons()));
-  app.$watch("reasoning.open", () => app.$nextTick(() => lucide.createIcons()));
-  app.$watch("reasoning.expanded", () =>
-    app.$nextTick(() => lucide.createIcons()),
-  );
-  app.$watch("chunkPreview.open", () =>
-    app.$nextTick(() => lucide.createIcons()),
-  );
-  app.$watch("studioPreview.open", () =>
-    app.$nextTick(() => lucide.createIcons()),
-  );
-  app.$watch("studioPreview.sheetIdx", () =>
-    app.$nextTick(() => lucide.createIcons()),
-  );
+  app.$watch("promptPicker.query", () => window.theseusAfterRender(app));
+  app.$watch("restarting", () => window.theseusAfterRender(app));
+  app.$watch("reasoning.open", () => window.theseusAfterRender(app));
+  app.$watch("reasoning.expanded", () => window.theseusAfterRender(app));
+  app.$watch("chunkPreview.open", () => window.theseusAfterRender(app));
+  app.$watch("studioPreview.open", () => window.theseusAfterRender(app));
+  app.$watch("studioPreview.sheetIdx", () => window.theseusAfterRender(app));
 
   app._loadStudioPinned();
 
   await app.refreshAll();
-  lucide.createIcons();
+  window.theseusRefreshIcons();
   if (app.active === "activity") app.openProcLog();
   if (app.active === "documents") app.startDocStatsPoll();
   setInterval(() => {

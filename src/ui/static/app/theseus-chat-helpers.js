@@ -247,12 +247,11 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
 
 window.theseusCopyMessage = async function theseusCopyMessage(app, message) {
   if (!message || !message.content) return;
-  try {
-    await navigator.clipboard.writeText(message.content);
-    app.toast("Message copied to clipboard", "info");
-  } catch (error) {
-    app.toast("Copy failed: " + error.message, "error");
-  }
+  await window.theseusCopyText(app, message.content, {
+    success: "Message copied to clipboard",
+    error: "Copy failed",
+    kind: "info",
+  });
 };
 
 window.theseusEditMessage = function theseusEditMessage(app, message) {

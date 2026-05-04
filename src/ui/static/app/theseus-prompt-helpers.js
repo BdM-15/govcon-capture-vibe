@@ -77,12 +77,11 @@ window.theseusUsePrompt = function theseusUsePrompt(app, prompt) {
 };
 
 window.theseusCopyPrompt = async function theseusCopyPrompt(app, prompt) {
-  try {
-    await navigator.clipboard.writeText(prompt.prompt);
-    app.toast("Prompt copied to clipboard", "info");
-  } catch {
-    app.toast("Copy failed", "error");
-  }
+  await window.theseusCopyText(app, prompt.prompt, {
+    success: "Prompt copied to clipboard",
+    error: "Copy failed",
+    kind: "info",
+  });
 };
 
 window.theseusOpenPromptPicker = function theseusOpenPromptPicker(app) {

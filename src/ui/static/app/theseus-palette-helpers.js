@@ -3,9 +3,8 @@ window.theseusOpenPalette = function theseusOpenPalette(app) {
   app.palette.query = "";
   app.palette.cursor = 0;
   app.loadWorkspaceList();
-  app.$nextTick(() => {
+  window.theseusAfterRender(app, () => {
     app.$refs.paletteInput?.focus();
-    lucide.createIcons();
   });
 };
 

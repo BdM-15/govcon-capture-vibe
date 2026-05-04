@@ -102,7 +102,7 @@ window.theseusToggleSkillPersona = function theseusToggleSkillPersona(app, id) {
   const idx = arr.indexOf(id);
   if (idx >= 0) arr.splice(idx, 1);
   else arr.push(id);
-  app.$nextTick(() => lucide.createIcons());
+  window.theseusAfterRender(app);
 };
 
 window.theseusToggleSkillPhase = function theseusToggleSkillPhase(app, id) {
@@ -110,7 +110,7 @@ window.theseusToggleSkillPhase = function theseusToggleSkillPhase(app, id) {
   const idx = arr.indexOf(id);
   if (idx >= 0) arr.splice(idx, 1);
   else arr.push(id);
-  app.$nextTick(() => lucide.createIcons());
+  window.theseusAfterRender(app);
 };
 
 window.theseusToggleSkillCapability = function theseusToggleSkillCapability(
@@ -121,7 +121,7 @@ window.theseusToggleSkillCapability = function theseusToggleSkillCapability(
   const idx = arr.indexOf(id);
   if (idx >= 0) arr.splice(idx, 1);
   else arr.push(id);
-  app.$nextTick(() => lucide.createIcons());
+  window.theseusAfterRender(app);
 };
 
 window.theseusClearSkillFilters = function theseusClearSkillFilters(app) {
@@ -129,7 +129,7 @@ window.theseusClearSkillFilters = function theseusClearSkillFilters(app) {
   app.skills.activePhases = [];
   app.skills.activeCapabilities = [];
   app.skills.searchQuery = "";
-  app.$nextTick(() => lucide.createIcons());
+  window.theseusAfterRender(app);
 };
 
 window.theseusPersonaLabel = function theseusPersonaLabel(app, id) {
@@ -149,7 +149,7 @@ window.theseusLoadSkillRuns = async function theseusLoadSkillRuns(app, name) {
     app.skills.runs = [];
   } finally {
     app.skills.runsLoading = false;
-    app.$nextTick(() => lucide.createIcons());
+    window.theseusAfterRender(app);
   }
 };
 
@@ -178,7 +178,7 @@ window.theseusLoadSkillRun = async function theseusLoadSkillRun(
     app.skills.run = response;
     app.skills.transcriptExpanded = {};
     app.skills.transcriptOpen = (response.transcript || []).length > 0;
-    app.$nextTick(() => lucide.createIcons());
+    window.theseusAfterRender(app);
   } catch (error) {
     app.toast("Failed to load run: " + (error?.message || error), "error");
   }
@@ -262,7 +262,7 @@ window.theseusLoadSkills = async function theseusLoadSkills(
     app.skills.items = [];
   } finally {
     app.skills.loading = false;
-    app.$nextTick(() => lucide.createIcons());
+    window.theseusAfterRender(app);
   }
 };
 
@@ -275,7 +275,7 @@ window.theseusOpenSkill = async function theseusOpenSkill(app, name) {
     const detail = await app.api("/api/ui/skills/" + encodeURIComponent(name));
     app.skills.current = detail;
     app.skills.detailOpen = true;
-    app.$nextTick(() => lucide.createIcons());
+    window.theseusAfterRender(app);
     app.loadSkillRuns(name);
   } catch (error) {
     app.toast("Failed to load skill: " + (error?.message || error), "error");
@@ -322,6 +322,6 @@ window.theseusInvokeSkill = async function theseusInvokeSkill(app) {
     app.toast("Skill invocation failed: " + (error?.message || error), "error");
   } finally {
     app.skills.invoking = false;
-    app.$nextTick(() => lucide.createIcons());
+    window.theseusAfterRender(app);
   }
 };

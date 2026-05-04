@@ -191,7 +191,7 @@ window.theseusStageFiles = async function theseusStageFiles(app, fileList) {
       app.toast(`Stage failed: ${file.name}`, "error");
     }
   }
-  app.$nextTick(() => lucide.createIcons());
+  window.theseusAfterRender(app);
 };
 
 window.theseusScanRfp = async function theseusScanRfp(app) {

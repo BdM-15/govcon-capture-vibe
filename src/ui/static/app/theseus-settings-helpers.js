@@ -86,7 +86,7 @@ window.theseusLoadMcps = async function theseusLoadMcps(app) {
     const data = await app.api("/api/ui/mcps");
     app.mcps.items = data.mcps || [];
     app.mcps.loaded = true;
-    app.$nextTick(() => lucide.createIcons());
+    window.theseusAfterRender(app);
   } catch (error) {
     app.toast("Failed loading MCPs: " + error.message, "error");
   } finally {
