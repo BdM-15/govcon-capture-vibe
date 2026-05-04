@@ -13,11 +13,8 @@ Architecture:
 5. Auto-Enhancement → Semantic post-processing runs ONCE after last document
 """
 
-import os
 import asyncio
 import logging
-import tempfile
-import shutil
 import threading
 import uuid
 from datetime import datetime
@@ -31,6 +28,11 @@ from lightrag.utils import compute_mdhash_id
 from raganything.callbacks import ProcessingCallback
 
 from src.core import get_settings
+from src.server.upload_staging import (
+    list_scannable_files,
+    resolve_scan_folder,
+    save_upload_to_workspace,
+)
 from src.utils.time_utils import now_local_iso
 
 logger = logging.getLogger(__name__)
@@ -438,87 +440,6 @@ async def _ensure_doc_status_processed(
         )
 
 
-# ============================================================================
-# Per-workspace upload staging
-# ============================================================================
-# Both /insert and /documents/upload save originals to inputs/<workspace>/
-# (mirrors the /scan-rfp convention) so files persist for re-processing,
-# audit, and handoff. Identical filename + identical bytes is a no-op;
-# identical filename + different bytes appends a timestamp suffix.
-
-import hashlib
-
-
-def _sanitize_filename(name: str) -> str:
-    """Strip path separators and other unsafe chars from a filename."""
-    return name.replace("/", "_").replace("\\", "_").lstrip(".")
-
-
-def _hash_file(path: Path, chunk_size: int = 65536) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(chunk_size), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-async def _save_upload_to_workspace(
-    file: UploadFile, workspace: Optional[str] = None
-) -> Path:
-    """
-    Persist an uploaded file to inputs/<workspace>/<filename>.
-
-    Collision policy:
-      - Target missing → write directly.
-      - Target exists, identical content → reuse (no rewrite).
-      - Target exists, different content → append _YYYYMMDD_HHMMSS before ext.
-
-    Returns the final on-disk Path.
-    """
-    settings = get_settings()
-    ws = workspace or settings.workspace
-    folder = Path("./inputs") / ws
-    await asyncio.to_thread(folder.mkdir, parents=True, exist_ok=True)
-
-    safe_name = _sanitize_filename(file.filename)
-    target = folder / safe_name
-
-    # Stream to a temp file first so we can compare hashes without holding the
-    # whole upload in memory.
-    tmp_fd, tmp_path = tempfile.mkstemp(prefix="upload_", dir=str(folder))
-    os.close(tmp_fd)
-    tmp = Path(tmp_path)
-    try:
-        with open(tmp, "wb") as f:
-            await asyncio.to_thread(shutil.copyfileobj, file.file, f)
-
-        if target.exists():
-            existing_hash = await asyncio.to_thread(_hash_file, target)
-            new_hash = await asyncio.to_thread(_hash_file, tmp)
-            if existing_hash == new_hash:
-                logger.info(
-                    f"📎 Upload {safe_name} already present in inputs/{ws}/ "
-                    f"(identical content) — reusing existing file."
-                )
-                tmp.unlink(missing_ok=True)
-                return target
-            # Same name, different bytes — keep both with timestamp suffix.
-            stem = target.stem
-            suffix = target.suffix
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            target = folder / f"{stem}_{ts}{suffix}"
-            logger.info(
-                f"📎 Upload {safe_name} collides with existing file in inputs/{ws}/ "
-                f"with different content — saving as {target.name}."
-            )
-
-        await asyncio.to_thread(tmp.replace, target)
-        return target
-    except Exception:
-        tmp.unlink(missing_ok=True)
-        raise
-
-
 def create_insert_endpoint(app, rag_instance):
     """
     Create custom /insert endpoint with automatic semantic post-processing.
@@ -539,7 +460,7 @@ def create_insert_endpoint(app, rag_instance):
         await _callback.register_request_start(file.filename)
 
         try:
-            file_path = await _save_upload_to_workspace(file, workspace)
+            file_path = await save_upload_to_workspace(file, workspace)
             logger.info(
                 f"📄 Processing {file_path.name} via /insert "
                 f"(saved to {file_path.parent})"
@@ -606,7 +527,7 @@ def create_documents_upload_endpoint(app, rag_instance):
             await _callback.register_request_start(file.filename)
 
         try:
-            file_path = await _save_upload_to_workspace(file, workspace)
+            file_path = await save_upload_to_workspace(file, workspace)
 
             if stage_only:
                 logger.info(
@@ -671,38 +592,6 @@ def create_documents_upload_endpoint(app, rag_instance):
 # Idempotent: skips files whose filename already has status="processed"
 # in the workspace's doc_status KV store (mirrors upstream LightRAG /scan).
 
-# Default extensions match RAGAnythingConfig.supported_file_extensions
-_DEFAULT_SCAN_EXTENSIONS = (
-    ".pdf", ".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".gif", ".webp",
-    ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".txt", ".md",
-)
-
-
-def _resolve_scan_folder(workspace: Optional[str]) -> Path:
-    """Resolve the inputs folder for a workspace. Defaults to current settings.workspace."""
-    settings = get_settings()
-    ws = workspace or settings.workspace
-    folder = Path("./inputs") / ws
-    folder.mkdir(parents=True, exist_ok=True)
-    return folder
-
-
-def _list_scannable_files(folder: Path, extensions=_DEFAULT_SCAN_EXTENSIONS) -> list[Path]:
-    """List supported files directly in `folder` (non-recursive)."""
-    files: list[Path] = []
-    for ext in extensions:
-        files.extend(folder.glob(f"*{ext}"))
-        files.extend(folder.glob(f"*{ext.upper()}"))
-    # Dedupe (case-insensitive globs can overlap on case-insensitive filesystems)
-    seen = set()
-    unique: list[Path] = []
-    for p in files:
-        if p.resolve() not in seen:
-            seen.add(p.resolve())
-            unique.append(p)
-    return sorted(unique)
-
-
 async def _filter_already_processed(rag_instance, files: list[Path]) -> tuple[list[Path], list[str]]:
     """Split files into (to_process, already_processed_names) using doc_status."""
     to_process: list[Path] = []
@@ -723,7 +612,7 @@ async def _filter_already_processed(rag_instance, files: list[Path]) -> tuple[li
 async def _run_scan(rag_instance, folder: Path, track_id: str):
     """Background task: process all new files in `folder` sequentially."""
     try:
-        all_files = _list_scannable_files(folder)
+        all_files = list_scannable_files(folder)
         if not all_files:
             logger.info(f"📭 [scan {track_id}] No supported files in {folder}")
             return
@@ -779,8 +668,8 @@ def create_scan_endpoint(app, rag_instance):
         ),
     ):
         try:
-            folder = _resolve_scan_folder(workspace)
-            files = _list_scannable_files(folder)
+            folder = resolve_scan_folder(workspace)
+            files = list_scannable_files(folder)
             track_id = f"scan-{uuid.uuid4().hex[:8]}"
 
             if not files:
