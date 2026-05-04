@@ -32,9 +32,8 @@ from raganything import RAGAnything, RAGAnythingConfig
 # V3 unified prompt loaded directly from file - no prompt_loader needed
 from src.ontology.schema import VALID_ENTITY_TYPES
 from src.core import get_settings
-from src.server.doc_status_compat import apply_doc_status_compatibility_shim
 from src.server.llm_routing import build_role_llm_routing
-from src.server.multimodal_setup import configure_multimodal_stack
+from src.server.rag_post_init import finalize_rag_initialization
 from src.utils.time_utils import to_local_iso
 
 logger = logging.getLogger(__name__)
@@ -305,158 +304,14 @@ async def initialize_raganything():
         logger.error(f"Failed to initialize LightRAG: {error_msg}")
         raise RuntimeError(f"LightRAG initialization failed: {error_msg}")
 
-    effective_extract_kwargs = dict(getattr(_rag_anything.lightrag, "role_llm_kwargs", {}).get("extract") or {})
-    effective_response_format = effective_extract_kwargs.get("response_format") or {}
-    effective_schema = effective_response_format.get("json_schema") or {}
-    extract_role_state = getattr(_rag_anything.lightrag, "_role_llm_states", {}).get("extract")
-    extract_metadata = getattr(extract_role_state, "metadata", {}) if extract_role_state else {}
-    logger.info("=" * 88)
-    logger.info("🔎 EFFECTIVE EXTRACT ROLE AFTER LightRAG INIT")
-    logger.info("   response_format.type=%s", effective_response_format.get("type", "<none>"))
-    logger.info("   json_schema.name=%s", effective_schema.get("name", "<none>"))
-    logger.info("   strict=%s", effective_schema.get("strict", "<none>"))
-    logger.info("   extract_cache_identity_host=%s", extract_metadata.get("host", "<unknown>"))
-    if use_strict_schema and effective_response_format.get("type") != "json_schema":
-        logger.error("❌ STRICT SCHEMA EXPECTED BUT NOT EFFECTIVE — do not process documents until fixed")
-    logger.info("=" * 88)
-
-    # Verify the GovCon chunking_func actually landed on the LightRAG instance
-    active_chunker = getattr(_rag_anything.lightrag, "chunking_func", None)
-    chunker_name = getattr(active_chunker, "__name__", repr(active_chunker))
-    if chunker_name == "govcon_chunking_func":
-        logger.info("✅ GovCon chunking_func registered on LightRAG instance (banner injection active)")
-        logger.info("   Every classified document chunk will start with [GOVCON_DOC: type=...; note=...]")
-        logger.info("   Persisted chunks also carry govcon_doc_type metadata when classified")
-    else:
-        logger.warning(
-            "⚠️  Active chunking_func is '%s' (expected 'govcon_chunking_func'). "
-            "Doc-type banners will NOT be injected.",
-            chunker_name,
-        )
-    
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # Register GovConProcessingCallback with RAG-Anything's callback system
-    # ═══════════════════════════════════════════════════════════════════════════════
-    from src.server.routes import get_processing_callback
-    
-    processing_callback = get_processing_callback()
-    processing_callback.set_llm_func(llm_model_func_wrapped)
-    _rag_anything.callback_manager.register(processing_callback)
-    logger.info("✅ GovConProcessingCallback registered with RAG-Anything callback_manager")
-    
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # CRITICAL FIX: Extend VDB meta_fields to preserve entity_type and description
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # LightRAG 1.4.13 stores entity_type/description in VDB data (operate.py line 1153)
-    # but lightrag.py line 720 meta_fields = {entity_name, source_id, content, file_path}
-    # doesn't include them. nano_vector_db filters on meta_fields during upsert (line 112),
-    # so entity_type/description get stripped without this extension.
-    # TODO: Submit PR upstream to add entity_type/description to default meta_fields.
-    # ═══════════════════════════════════════════════════════════════════════════════
-    lightrag_instance = _rag_anything.lightrag
-    
-    # Extend entities VDB meta_fields
-    original_entity_meta = lightrag_instance.entities_vdb.meta_fields
-    extended_entity_meta = original_entity_meta | {"entity_type", "description"}
-    lightrag_instance.entities_vdb.meta_fields = extended_entity_meta
-    logger.info(f"✅ Extended entities_vdb.meta_fields: {extended_entity_meta}")
-    
-    # Extend relationships VDB meta_fields (for keywords and description)
-    original_rel_meta = lightrag_instance.relationships_vdb.meta_fields
-    extended_rel_meta = original_rel_meta | {"keywords", "description"}
-    lightrag_instance.relationships_vdb.meta_fields = extended_rel_meta
-    logger.info(f"✅ Extended relationships_vdb.meta_fields: {extended_rel_meta}")
-    
-    configure_multimodal_stack(
+    await finalize_rag_initialization(
         _rag_anything,
-        llm_model_func=llm_model_func_wrapped,
+        settings=settings,
+        working_dir=working_dir,
+        modal_llm_func=llm_model_func_wrapped,
         vision_model_func=vision_model_func,
+        use_strict_schema=use_strict_schema,
     )
-
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # CRITICAL: REPLACE LightRAG's ENTIRE prompt system with GovCon versions
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # LightRAG uses multiple prompts that work together:
-    # - entity_extraction_json_system_prompt: Extract entities/relationships
-    # - entity_extraction_json_examples: GovCon-specific extraction examples
-    # - summarize_entity_descriptions: Merge duplicate entities
-    # - rag_response: Answer queries using KG + documents
-    # - naive_rag_response: Answer queries using documents only
-    # - keywords_extraction: Parse user queries for retrieval
-    # - fail_response: When no context found
-    # 
-    # ALL prompts are customized for government contracting / Shipley methodology
-    # ═══════════════════════════════════════════════════════════════════════════════
-    from lightrag.prompt import PROMPTS
-    
-    # Import comprehensive GovCon prompts (govcon_prompt.py - Issue #54 architecture)
-    # This module contains all LightRAG-compatible prompts with GovCon domain intelligence
-    from prompts.govcon_prompt import GOVCON_PROMPTS
-    
-    # FULL REPLACEMENT: Apply ALL GovCon prompt overrides
-    # This replaces: extraction prompts, examples, summarization, RAG responses, keywords, fail_response
-    PROMPTS.update(GOVCON_PROMPTS)
-    
-    # Log full domain intelligence stats
-    extraction_prompt = GOVCON_PROMPTS.get('entity_extraction_json_system_prompt', '')
-    extraction_chars = len(extraction_prompt)
-    extraction_lines = extraction_prompt.count('\n')
-
-    logger.info("✅ REPLACED LightRAG prompt system with GovCon prompt overrides")
-    logger.info(f"   Extraction prompt: {extraction_chars:,} chars (~{extraction_chars//4:,} tokens), {extraction_lines:,} lines")
-    logger.info(f"   Source: V8 compact frame (govcon_prompt.py builder)")
-    logger.info(f"   Domain Intelligence:")
-    logger.info("     • Entity catalog rendered dynamically from govcon_entity_types.yaml")
-    logger.info("     • Relationship guidance rendered from schema.py 26-type canonical set")
-    logger.info("     • 7 annotated RFP examples injected from prompts/entity_type/govcon.yaml")
-    logger.info(f"     • Quantitative preservation rules for BOE development")
-    logger.info(f"     • Compact frame + quality checks (Parts A-H)")
-    logger.info(f"   Keywords examples: {len(GOVCON_PROMPTS.get('keywords_extraction_examples', []))} GovCon-specific")
-    
-    # Compat fix stays isolated in src/server/doc_status_compat.py.
-    apply_doc_status_compatibility_shim(_rag_anything.lightrag)
-    # ═════════════════════════════════════════════════════════════════════════════
-    
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # DOMAIN ONTOLOGY BOOTSTRAP (Issue #68)
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # Pre-load curated GovCon domain knowledge into the workspace. This provides:
-    # - Zero-document queries: "What is a Color Team review?" works immediately
-    # - Enhanced retrieval: Domain concepts (Shipley, FAR, BOE) connect to extracted entities
-    # - Evaluation grounding: Rating scales, compliance patterns available for analysis
-    #
-    # Bootstrap happens ONCE per workspace (marker file prevents re-run).
-    # Set AUTO_BOOTSTRAP_ONTOLOGY=False in .env to disable for testing.
-    # ═══════════════════════════════════════════════════════════════════════════════
-    if settings.auto_bootstrap_ontology:
-        try:
-            from src.ontology.bootstrap import bootstrap_govcon_ontology
-            
-            # CRITICAL: Use workspace-specific path, not base working_dir
-            # working_dir is ./rag_storage, but workspace data is in ./rag_storage/{workspace}
-            workspace_path = os.path.join(working_dir, settings.workspace)
-            
-            bootstrap_result = await bootstrap_govcon_ontology(
-                lightrag=_rag_anything.lightrag,
-                working_dir=workspace_path,
-                force=settings.ontology_bootstrap_force,
-            )
-            
-            if bootstrap_result["status"] == "success":
-                logger.info(f"✅ GovCon ontology bootstrapped into workspace '{settings.workspace}': "
-                          f"{bootstrap_result['entities_added']} entities, "
-                          f"{bootstrap_result['relationships_added']} relationships")
-            elif bootstrap_result["status"] == "already_bootstrapped":
-                logger.info(f"📚 GovCon ontology already bootstrapped into workspace "
-                          f"'{settings.workspace}' ({bootstrap_result['bootstrapped_at']})")
-            else:
-                logger.warning(f"⚠️ Ontology bootstrap: {bootstrap_result.get('error', 'unknown issue')}")
-                
-        except Exception as e:
-            # Non-fatal - ontology is enhancement, not required for core functionality
-            logger.warning(f"⚠️ Ontology bootstrap failed: {e} - continuing without domain knowledge")
-    else:
-        logger.info("📚 Ontology auto-bootstrap DISABLED (AUTO_BOOTSTRAP_ONTOLOGY=False)")
     
     return _rag_anything
 
