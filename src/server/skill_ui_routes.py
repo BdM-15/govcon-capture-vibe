@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from src.core import get_settings
+from src.server.skill_catalog_ui_routes import register_skill_catalog_ui_routes
 from src.server.skill_run_ui_routes import register_skill_run_ui_routes
 from src.server.skill_settings_ui_routes import register_skill_settings_ui_routes
 from src.skills import get_skill_manager
@@ -28,13 +29,6 @@ QueryDataFunc = Callable[
     Awaitable[dict],
 ]
 LlmFunc = Callable[[str], Awaitable[str]]
-
-class SkillInstallPayload(BaseModel):
-    """Body for POST /api/ui/skills/install."""
-
-    url: str = Field(..., description="https://github.com/<org>/<repo> URL")
-    name: Optional[str] = Field(None, description="Override target skill slug")
-
 
 def register_skill_ui_routes(
     app: FastAPI,
@@ -142,47 +136,7 @@ def register_skill_ui_routes(
         settings_store=settings_store,
         workspace_name=lambda: get_settings().workspace,
     )
-
-    @app.get("/api/ui/skills", tags=["theseus-ui"])
-    async def list_skills_route() -> JSONResponse:
-        mgr = get_skill_manager()
-        return JSONResponse({"skills": mgr.list_skills()})
-
-    @app.post("/api/ui/skills/refresh", tags=["theseus-ui"])
-    async def refresh_skills_route() -> JSONResponse:
-        mgr = get_skill_manager()
-        mgr.discover()
-        return JSONResponse({"skills": mgr.list_skills()})
-
-    @app.get("/api/ui/skills/{name}", tags=["theseus-ui"])
-    async def get_skill_route(name: str) -> JSONResponse:
-        mgr = get_skill_manager()
-        detail = mgr.get_skill_detail(name)
-        if detail is None:
-            raise HTTPException(404, f"Unknown skill: {name}")
-        return JSONResponse(detail)
-
-    @app.post("/api/ui/skills/install", tags=["theseus-ui"])
-    async def install_skill_route(payload: SkillInstallPayload) -> JSONResponse:
-        mgr = get_skill_manager()
-        try:
-            skill = await mgr.install_from_github(payload.url, name=payload.name)
-        except FileExistsError as exc:
-            raise HTTPException(409, str(exc)) from exc
-        except (ValueError, RuntimeError) as exc:
-            raise HTTPException(400, str(exc)) from exc
-        return JSONResponse({"skill": skill.to_summary()})
-
-    @app.delete("/api/ui/skills/{name}", tags=["theseus-ui"])
-    async def uninstall_skill_route(name: str) -> JSONResponse:
-        mgr = get_skill_manager()
-        try:
-            removed = await mgr.uninstall(name)
-        except PermissionError as exc:
-            raise HTTPException(403, str(exc)) from exc
-        if not removed:
-            raise HTTPException(404, f"Unknown skill: {name}")
-        return JSONResponse({"removed": name})
+    register_skill_catalog_ui_routes(app, manager_factory=get_skill_manager)
 
     @app.post("/api/ui/skills/{name}/invoke", tags=["theseus-ui"])
     async def invoke_skill_route(
