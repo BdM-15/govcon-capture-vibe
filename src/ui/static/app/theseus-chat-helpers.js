@@ -68,7 +68,10 @@ window.theseusEditMessage = function theseusEditMessage(app, message) {
   app.toast("Loaded into composer — edit and send", "info");
 };
 
-window.theseusRegenerateMessage = async function theseusRegenerateMessage(app, idx) {
+window.theseusRegenerateMessage = async function theseusRegenerateMessage(
+  app,
+  idx,
+) {
   if (app.sending || !app.currentChat) return;
   const messages = app.currentChat.messages;
   if (idx <= 0 || idx >= messages.length) return;

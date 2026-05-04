@@ -97,19 +97,20 @@ window.createTheseusIntelTabs = function createTheseusIntelTabs() {
   ];
 };
 
-window.createTheseusSkillPersonaConfig = function createTheseusSkillPersonaConfig() {
-  return [
-    { id: "capture_manager", label: "Capture Managers" },
-    { id: "proposal_manager", label: "Proposal Managers" },
-    { id: "proposal_writer", label: "Proposal Writers" },
-    { id: "cost_estimator", label: "Cost Estimators" },
-    { id: "contracts_manager", label: "Contracts Managers" },
-    { id: "technical_sme", label: "Technical SMEs" },
-    { id: "legal_compliance", label: "Legal / Compliance" },
-    { id: "program_manager", label: "Program Managers" },
-    { id: "none", label: "Utility & Meta" },
-  ];
-};
+window.createTheseusSkillPersonaConfig =
+  function createTheseusSkillPersonaConfig() {
+    return [
+      { id: "capture_manager", label: "Capture Managers" },
+      { id: "proposal_manager", label: "Proposal Managers" },
+      { id: "proposal_writer", label: "Proposal Writers" },
+      { id: "cost_estimator", label: "Cost Estimators" },
+      { id: "contracts_manager", label: "Contracts Managers" },
+      { id: "technical_sme", label: "Technical SMEs" },
+      { id: "legal_compliance", label: "Legal / Compliance" },
+      { id: "program_manager", label: "Program Managers" },
+      { id: "none", label: "Utility & Meta" },
+    ];
+  };
 
 window.createTheseusSkillPersonaFilterConfig =
   function createTheseusSkillPersonaFilterConfig() {
@@ -135,16 +136,17 @@ window.createTheseusSkillPersonaFilterConfig =
     ];
   };
 
-window.createTheseusSkillPhaseConfig = function createTheseusSkillPhaseConfig() {
-  return [
-    { id: "pursuit", label: "Pursuit" },
-    { id: "capture", label: "Capture" },
-    { id: "strategy", label: "Strategy" },
-    { id: "proposal_development", label: "Proposal Dev" },
-    { id: "negotiation", label: "Negotiation" },
-    { id: "post_award", label: "Post-Award" },
-  ];
-};
+window.createTheseusSkillPhaseConfig =
+  function createTheseusSkillPhaseConfig() {
+    return [
+      { id: "pursuit", label: "Pursuit" },
+      { id: "capture", label: "Capture" },
+      { id: "strategy", label: "Strategy" },
+      { id: "proposal_development", label: "Proposal Dev" },
+      { id: "negotiation", label: "Negotiation" },
+      { id: "post_award", label: "Post-Award" },
+    ];
+  };
 
 window.createTheseusSkillCapabilityConfig =
   function createTheseusSkillCapabilityConfig() {

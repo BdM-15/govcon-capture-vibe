@@ -42,9 +42,10 @@ window.theseusFormatSource = function theseusFormatSource(source) {
   }
   const head = raw.slice(0, 64).toLowerCase();
   const isTable = /\btable analysis\b|\bstructure:\s*<table/i.test(raw);
-  const isImage =
-    /\bimage analysis\b|\bimage path\s*:/i.test(raw) && !isTable;
-  const isEquation = /\bequation analysis\b|\\begin\{equation\}|\$\$/i.test(head);
+  const isImage = /\bimage analysis\b|\bimage path\s*:/i.test(raw) && !isTable;
+  const isEquation = /\bequation analysis\b|\\begin\{equation\}|\$\$/i.test(
+    head,
+  );
 
   const captionMatch = raw.match(/(?:^|\n)\s*Caption\s*:\s*([^\n]+)/i);
   if (captionMatch) {
@@ -264,7 +265,9 @@ window.theseusArtifactIcon = function theseusArtifactIcon(mime, name) {
   return "file";
 };
 
-window.theseusStudioDownloadHref = function theseusStudioDownloadHref(deliverable) {
+window.theseusStudioDownloadHref = function theseusStudioDownloadHref(
+  deliverable,
+) {
   return (
     "/api/ui/skills/" +
     encodeURIComponent(deliverable.skill) +
@@ -287,7 +290,11 @@ window.theseusScrollToRefList = function theseusScrollToRefList(app, idx, n) {
   el.classList.add("cite-flash");
 };
 
-window.theseusToggleSources = function theseusToggleSources(app, index, forceOpen) {
+window.theseusToggleSources = function theseusToggleSources(
+  app,
+  index,
+  forceOpen,
+) {
   const messages = app.currentChat?.messages;
   if (!messages || !messages[index]) return;
   const current = messages[index];
@@ -309,7 +316,9 @@ window.theseusHandleCiteClick = function theseusHandleCiteClick(app, ev) {
   const msg = app.currentChat?.messages?.[numericIndex];
   const hasSources =
     msg && msg.sources && Array.isArray(msg.sources.chunks)
-      ? msg.sources.chunks.some((chunk) => String(chunk.reference_id) === String(n))
+      ? msg.sources.chunks.some(
+          (chunk) => String(chunk.reference_id) === String(n),
+        )
       : false;
 
   if (hasSources) {

@@ -1,8 +1,13 @@
 window.theseusIsMetaSkill = function theseusIsMetaSkill(skill) {
-  return (skill.personas_primary || "none") === "none" || skill.capability === "meta";
+  return (
+    (skill.personas_primary || "none") === "none" || skill.capability === "meta"
+  );
 };
 
-window.theseusSkillMatchesFilters = function theseusSkillMatchesFilters(app, skill) {
+window.theseusSkillMatchesFilters = function theseusSkillMatchesFilters(
+  app,
+  skill,
+) {
   const activePersonas = app.skills.activePersonas;
   const activePhases = app.skills.activePhases;
   const activeCapabilities = app.skills.activeCapabilities;
@@ -26,13 +31,20 @@ window.theseusSkillMatchesFilters = function theseusSkillMatchesFilters(app, ski
     if (!phases.some((phase) => activePhases.includes(phase))) return false;
   }
 
-  if (activeCapabilities.length && !activeCapabilities.includes(skill.capability)) {
+  if (
+    activeCapabilities.length &&
+    !activeCapabilities.includes(skill.capability)
+  ) {
     return false;
   }
 
   const query = (app.skills.searchQuery || "").trim().toLowerCase();
   if (query) {
-    const haystack = ((skill.name || "") + " " + (skill.description || "")).toLowerCase();
+    const haystack = (
+      (skill.name || "") +
+      " " +
+      (skill.description || "")
+    ).toLowerCase();
     const tokens = query.split(/\s+/);
     if (!tokens.every((token) => haystack.includes(token))) return false;
   }
@@ -52,26 +64,38 @@ window.theseusSkillsFiltered = function theseusSkillsFiltered(app) {
   });
 };
 
-window.theseusSkillsCountForPersona = function theseusSkillsCountForPersona(app, id) {
-  const cfg = app.skillPersonaFilterConfig().find((persona) => persona.id === id);
+window.theseusSkillsCountForPersona = function theseusSkillsCountForPersona(
+  app,
+  id,
+) {
+  const cfg = app
+    .skillPersonaFilterConfig()
+    .find((persona) => persona.id === id);
   if (!cfg) return 0;
   const targets = new Set(cfg.personas);
   return (app.skills.items || []).filter((skill) => {
     const primary = skill.personas_primary || "none";
     const secondary = skill.personas_secondary || [];
-    return targets.has(primary) || secondary.some((persona) => targets.has(persona));
+    return (
+      targets.has(primary) || secondary.some((persona) => targets.has(persona))
+    );
   }).length;
 };
 
-window.theseusSkillsCountForPhase = function theseusSkillsCountForPhase(app, id) {
+window.theseusSkillsCountForPhase = function theseusSkillsCountForPhase(
+  app,
+  id,
+) {
   return (app.skills.items || []).filter((skill) =>
     (skill.shipley_phases || []).includes(id),
   ).length;
 };
 
-window.theseusSkillsCountForCapability = function theseusSkillsCountForCapability(app, id) {
-  return (app.skills.items || []).filter((skill) => skill.capability === id).length;
-};
+window.theseusSkillsCountForCapability =
+  function theseusSkillsCountForCapability(app, id) {
+    return (app.skills.items || []).filter((skill) => skill.capability === id)
+      .length;
+  };
 
 window.theseusToggleSkillPersona = function theseusToggleSkillPersona(app, id) {
   const arr = app.skills.activePersonas;
@@ -89,7 +113,10 @@ window.theseusToggleSkillPhase = function theseusToggleSkillPhase(app, id) {
   app.$nextTick(() => lucide.createIcons());
 };
 
-window.theseusToggleSkillCapability = function theseusToggleSkillCapability(app, id) {
+window.theseusToggleSkillCapability = function theseusToggleSkillCapability(
+  app,
+  id,
+) {
   const arr = app.skills.activeCapabilities;
   const idx = arr.indexOf(id);
   if (idx >= 0) arr.splice(idx, 1);
@@ -126,7 +153,11 @@ window.theseusLoadSkillRuns = async function theseusLoadSkillRuns(app, name) {
   }
 };
 
-window.theseusLoadSkillRun = async function theseusLoadSkillRun(app, name, runId) {
+window.theseusLoadSkillRun = async function theseusLoadSkillRun(
+  app,
+  name,
+  runId,
+) {
   if (!name || !runId) return;
   try {
     const response = await app.api(
@@ -153,7 +184,11 @@ window.theseusLoadSkillRun = async function theseusLoadSkillRun(app, name, runId
   }
 };
 
-window.theseusDeleteSkillRun = async function theseusDeleteSkillRun(app, name, runId) {
+window.theseusDeleteSkillRun = async function theseusDeleteSkillRun(
+  app,
+  name,
+  runId,
+) {
   if (!name || !runId) return;
   if (!confirm(`Delete run ${runId}? This removes the saved files on disk.`)) {
     return;
@@ -211,7 +246,10 @@ window.theseusUninstallSkill = async function theseusUninstallSkill(app) {
   }
 };
 
-window.theseusLoadSkills = async function theseusLoadSkills(app, force = false) {
+window.theseusLoadSkills = async function theseusLoadSkills(
+  app,
+  force = false,
+) {
   app.skills.loading = true;
   app.skills.error = null;
   try {
@@ -254,7 +292,9 @@ window.theseusInvokeSkill = async function theseusInvokeSkill(app) {
   app.skills.transcriptExpanded = {};
   try {
     const response = await app.api(
-      "/api/ui/skills/" + encodeURIComponent(app.skills.current.name) + "/invoke",
+      "/api/ui/skills/" +
+        encodeURIComponent(app.skills.current.name) +
+        "/invoke",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -6154,6 +6154,8 @@
     <script src="/ui/app/theseus-prompt-helpers.js"></script>
     <script src="/ui/app/theseus-chat-helpers.js"></script>
     <script src="/ui/app/theseus-graph-helpers.js"></script>
+    <script src="/ui/app/theseus-intel-helpers.js"></script>
+    <script src="/ui/app/theseus-settings-helpers.js"></script>
     <script src="/ui/app/theseus-workspace-helpers.js"></script>
     <script src="/ui/app/theseus-palette-helpers.js"></script>
     <script src="/ui/app/theseus-view-helpers.js"></script>
@@ -7865,172 +7867,41 @@
 
           // ----- Query parameter settings -----
           async loadQuerySettings() {
-            try {
-              const data = await this.api("/api/ui/settings/query");
-              this.querySettings.values = { ...data.settings };
-              this.querySettings.defaults = { ...data.defaults };
-              this.querySettings.loaded = true;
-            } catch (e) {
-              this.toast(
-                "Failed loading query settings: " + e.message,
-                "error",
-              );
-            }
+            return window.theseusLoadQuerySettings(this);
           },
 
           async saveQuerySettings() {
-            this.querySettings.saving = true;
-            try {
-              const data = await this.api("/api/ui/settings/query", {
-                method: "PUT",
-                body: JSON.stringify(this.querySettings.values),
-              });
-              this.querySettings.values = { ...data.settings };
-              this.toast("Query settings saved");
-            } catch (e) {
-              this.toast("Save failed: " + e.message, "error");
-            } finally {
-              this.querySettings.saving = false;
-            }
+            return window.theseusSaveQuerySettings(this);
           },
 
           async resetQuerySettings() {
-            if (
-              !confirm("Restore default query parameters for this workspace?")
-            )
-              return;
-            try {
-              const data = await this.api("/api/ui/settings/query/reset", {
-                method: "POST",
-              });
-              this.querySettings.values = { ...data.settings };
-              this.toast("Query settings reset to defaults");
-            } catch (e) {
-              this.toast("Reset failed: " + e.message, "error");
-            }
+            return window.theseusResetQuerySettings(this);
           },
 
           // ----- Agent skill settings -----
           async loadSkillSettings() {
-            try {
-              const data = await this.api("/api/ui/settings/skills");
-              this.skillSettings.values = { ...data.settings };
-              this.skillSettings.defaults = { ...data.defaults };
-              this.skillSettings.loaded = true;
-            } catch (e) {
-              this.toast(
-                "Failed loading skill settings: " + e.message,
-                "error",
-              );
-            }
+            return window.theseusLoadSkillSettings(this);
           },
 
           async saveSkillSettings() {
-            this.skillSettings.saving = true;
-            try {
-              const data = await this.api("/api/ui/settings/skills", {
-                method: "PUT",
-                body: JSON.stringify(this.skillSettings.values),
-              });
-              this.skillSettings.values = { ...data.settings };
-              this.toast("Skill settings saved");
-            } catch (e) {
-              this.toast("Save failed: " + e.message, "error");
-            } finally {
-              this.skillSettings.saving = false;
-            }
+            return window.theseusSaveSkillSettings(this);
           },
 
           async resetSkillSettings() {
-            if (
-              !confirm(
-                "Restore default skill retrieval settings for this workspace?",
-              )
-            )
-              return;
-            try {
-              const data = await this.api("/api/ui/settings/skills/reset", {
-                method: "POST",
-              });
-              this.skillSettings.values = { ...data.settings };
-              this.toast("Skill settings reset to defaults");
-            } catch (e) {
-              this.toast("Reset failed: " + e.message, "error");
-            }
+            return window.theseusResetSkillSettings(this);
           },
 
           // ----- MCP Servers panel (Phase 4e) -----
           async loadMcps() {
-            this.mcps.loading = true;
-            try {
-              const data = await this.api("/api/ui/mcps");
-              this.mcps.items = data.mcps || [];
-              this.mcps.loaded = true;
-              this.$nextTick(() => lucide.createIcons());
-            } catch (e) {
-              this.toast("Failed loading MCPs: " + e.message, "error");
-            } finally {
-              this.mcps.loading = false;
-            }
+            return window.theseusLoadMcps(this);
           },
 
           async saveMcpKeys(name) {
-            // Collect drafts for this MCP, drop empty values (keep current).
-            const keys = {};
-            for (const k of Object.keys(this.mcps.drafts)) {
-              if (!k.startsWith(name + ":")) continue;
-              const v = (this.mcps.drafts[k] || "").trim();
-              if (v) keys[k.split(":", 2)[1]] = v;
-            }
-            if (Object.keys(keys).length === 0) {
-              this.toast("Nothing to save — all fields blank", "info");
-              return;
-            }
-            this.mcps.saving[name] = true;
-            try {
-              const data = await this.api(`/api/ui/mcps/${name}/keys`, {
-                method: "POST",
-                body: JSON.stringify({ keys, restart: true }),
-              });
-              if (data.status === "restarting") {
-                this.toast(`Saved ${data.written.length} key(s) — restarting…`);
-                this.restarting = true;
-                this.restartTarget = this.stats.workspace;
-                this.pollRestart();
-              } else {
-                this.toast(`Saved ${data.written.length} key(s)`);
-                this.loadMcps();
-              }
-              // Clear drafts for this MCP
-              for (const k of Object.keys(this.mcps.drafts)) {
-                if (k.startsWith(name + ":")) this.mcps.drafts[k] = "";
-              }
-            } catch (e) {
-              this.toast("Save failed: " + e.message, "error");
-            } finally {
-              this.mcps.saving[name] = false;
-            }
+            return window.theseusSaveMcpKeys(this, name);
           },
 
           async testMcp(name) {
-            this.mcps.testing[name] = true;
-            this.mcps.testResult[name] = null;
-            try {
-              const data = await this.api(`/api/ui/mcps/${name}/test`, {
-                method: "POST",
-              });
-              this.mcps.testResult[name] = data;
-              if (data.ok) {
-                this.toast(`${name}: handshake ok (${data.tool_count} tools)`);
-              } else {
-                this.toast(`${name}: ${data.error || "failed"}`, "error");
-              }
-            } catch (e) {
-              this.mcps.testResult[name] = { ok: false, error: e.message };
-              this.toast("Test failed: " + e.message, "error");
-            } finally {
-              this.mcps.testing[name] = false;
-            }
+            return window.theseusTestMcp(this, name);
           },
 
           pollRestart() {
@@ -8052,90 +7923,31 @@
 
           // ===== RFP Intelligence =====
           async loadIntel() {
-            this.intel.loading = true;
-            try {
-              this.intel.data = await this.api("/api/ui/intel/summary");
-            } catch (e) {
-              this.toast("Intel compute failed: " + e.message, "error");
-            } finally {
-              this.intel.loading = false;
-            }
+            return window.theseusLoadIntel(this);
           },
 
           filteredLmRows() {
-            const rows = this.intel.data?.lm_matrix?.instructions || [];
-            return rows.filter((r) =>
-              r.covered ? this.intel.showCovered : this.intel.showGaps,
-            );
+            return window.theseusFilteredLmRows(this);
           },
 
           orphanFactors() {
-            const rows = this.intel.data?.lm_matrix?.factors || [];
-            return rows.filter((r) => !r.covered);
+            return window.theseusOrphanFactors(this);
           },
 
           filteredTrace() {
-            const rows = this.intel.data?.traceability || [];
-            const q = this.intel.traceFilter.trim().toLowerCase();
-            if (!q) return rows;
-            return rows.filter((r) => {
-              const blob = [
-                r.requirement.id,
-                r.requirement.description,
-                ...r.deliverables.map((d) => d.id),
-                ...r.standards.map((s) => s.id),
-                ...r.metrics.map((m) => m.id),
-              ]
-                .join(" ")
-                .toLowerCase();
-              return blob.includes(q);
-            });
+            return window.theseusFilteredTrace(this);
           },
 
           coverageBadgeClass(score) {
-            if (score >= 3)
-              return "bg-neon-lime/10 text-neon-lime border border-neon-lime/30";
-            if (score === 2)
-              return "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30";
-            if (score === 1)
-              return "bg-neon-amber/10 text-neon-amber border border-neon-amber/30";
-            return "bg-neon-red/10 text-neon-red border border-neon-red/30";
+            return window.theseusCoverageBadgeClass(score);
           },
 
           gapBuckets() {
-            const g = this.intel.data?.gaps || {};
-            return [
-              {
-                id: "req",
-                title: "Requirements without SATISFIED_BY",
-                subtitle: "shall/will language with no satisfying deliverable.",
-                items: g.requirements_no_satisfaction || [],
-                askPrefix:
-                  "Identify candidate deliverables to satisfy requirement",
-              },
-              {
-                id: "fact",
-                title: "Evaluation factors with no proposal instruction hook",
-                subtitle:
-                  "Evaluation factors (UCF Section M or equivalent) that no proposal_instruction (UCF Section L or equivalent) guides toward.",
-                items: g.factors_no_instruction || [],
-                askPrefix:
-                  "Recommend proposal_instruction entities (UCF Section L or equivalent) to add for evaluation factor",
-              },
-              {
-                id: "del",
-                title: "Deliverables without measure",
-                subtitle: "Deliverables lacking MEASURED_BY or TRACKED_BY.",
-                items: g.deliverables_no_measure || [],
-                askPrefix:
-                  "Suggest performance standards or workload metrics for deliverable",
-              },
-            ];
+            return window.theseusGapBuckets(this);
           },
 
           askIntel(prompt) {
-            this.composer = prompt;
-            this.newChat();
+            return window.theseusAskIntel(this, prompt);
           },
         };
       }

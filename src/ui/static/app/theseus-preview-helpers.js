@@ -97,7 +97,10 @@ window.theseusStudioSetSheet = function theseusStudioSetSheet(app, idx) {
   app.studioPreview.sheetIdx = idx;
 };
 
-window.theseusOpenReasoning = async function theseusOpenReasoning(app, deliverable) {
+window.theseusOpenReasoning = async function theseusOpenReasoning(
+  app,
+  deliverable,
+) {
   app.reasoning.open = true;
   app.reasoning.loading = true;
   app.reasoning.error = null;
@@ -139,7 +142,10 @@ window.theseusCloseReasoning = function theseusCloseReasoning(app) {
   app.reasoning.open = false;
 };
 
-window.theseusToggleReasoningStep = function theseusToggleReasoningStep(app, idx) {
+window.theseusToggleReasoningStep = function theseusToggleReasoningStep(
+  app,
+  idx,
+) {
   app.reasoning.expanded[idx] = !app.reasoning.expanded[idx];
 };
 
@@ -228,7 +234,8 @@ window.theseusLoadStudio = async function theseusLoadStudio(app) {
     app.studio.deliverables = response.deliverables || [];
     app.studio.loaded = true;
   } catch (error) {
-    app.studio.error = "Failed to load deliverables: " + (error?.message || error);
+    app.studio.error =
+      "Failed to load deliverables: " + (error?.message || error);
     app.studio.deliverables = [];
   } finally {
     app.studio.loading = false;
@@ -237,12 +244,16 @@ window.theseusLoadStudio = async function theseusLoadStudio(app) {
 };
 
 window.theseusStudioSkillOptions = function theseusStudioSkillOptions(app) {
-  const set = new Set((app.studio.deliverables || []).map((deliverable) => deliverable.skill));
+  const set = new Set(
+    (app.studio.deliverables || []).map((deliverable) => deliverable.skill),
+  );
   return Array.from(set).sort();
 };
 
 window.theseusStudioFormatOptions = function theseusStudioFormatOptions(app) {
-  const set = new Set((app.studio.deliverables || []).map((deliverable) => deliverable.ext || ""));
+  const set = new Set(
+    (app.studio.deliverables || []).map((deliverable) => deliverable.ext || ""),
+  );
   return Array.from(set).filter(Boolean).sort();
 };
 
@@ -256,14 +267,20 @@ window.theseusStudioKey = function theseusStudioKey(deliverable) {
   );
 };
 
-window.theseusIsStudioPinned = function theseusIsStudioPinned(app, deliverable) {
+window.theseusIsStudioPinned = function theseusIsStudioPinned(
+  app,
+  deliverable,
+) {
   return !!(app.studio.pinned || {})[window.theseusStudioKey(deliverable)];
 };
 
 window.theseusStudioFiltered = function theseusStudioFiltered(app) {
   const query = (app.studio.search || "").toLowerCase().trim();
   const filtered = (app.studio.deliverables || []).filter((deliverable) => {
-    if (app.studio.filterSkill && deliverable.skill !== app.studio.filterSkill) {
+    if (
+      app.studio.filterSkill &&
+      deliverable.skill !== app.studio.filterSkill
+    ) {
       return false;
     }
     if (
@@ -289,7 +306,9 @@ window.theseusStudioFiltered = function theseusStudioFiltered(app) {
       index,
       pinned: pinned[pinKey(deliverable)] ? 1 : 0,
     }))
-    .sort((left, right) => right.pinned - left.pinned || left.index - right.index)
+    .sort(
+      (left, right) => right.pinned - left.pinned || left.index - right.index,
+    )
     .map((entry) => entry.deliverable);
 };
 
@@ -306,7 +325,10 @@ window.theseusStudioOpenRun = function theseusStudioOpenRun(app, deliverable) {
   });
 };
 
-window.theseusToggleStudioPin = function theseusToggleStudioPin(app, deliverable) {
+window.theseusToggleStudioPin = function theseusToggleStudioPin(
+  app,
+  deliverable,
+) {
   const key = window.theseusStudioKey(deliverable);
   const next = { ...(app.studio.pinned || {}) };
   if (next[key]) delete next[key];

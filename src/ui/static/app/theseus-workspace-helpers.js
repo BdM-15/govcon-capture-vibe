@@ -12,7 +12,9 @@ window.theseusLoadWorkspaceList = async function theseusLoadWorkspaceList(
   }
 };
 
-window.theseusOpenWorkspaceModal = async function theseusOpenWorkspaceModal(app) {
+window.theseusOpenWorkspaceModal = async function theseusOpenWorkspaceModal(
+  app,
+) {
   app.wsModal.open = true;
   app.wsModal.newName = "";
   await app.loadWorkspaceList(false);
@@ -37,8 +39,7 @@ window.theseusPollRestart = function theseusPollRestart(app) {
           return;
         }
       }
-    } catch {
-    }
+    } catch {}
     setTimeout(tick, 1000);
   };
   setTimeout(tick, 1500);
@@ -94,22 +95,26 @@ window.theseusRestartServer = async function theseusRestartServer(app) {
   }
 };
 
-window.theseusLoadWorkspaceInventory = async function theseusLoadWorkspaceInventory(app) {
-  app.dangerZone.loading = true;
-  try {
-    const response = await app.api("/api/ui/workspaces/inventory");
-    app.dangerZone.workspaces = response.workspaces || [];
-    app.dangerZone.neo4jAvailable = !!response.neo4j_available;
-    app.dangerZone.loaded = true;
-    app.$nextTick(() => lucide.createIcons());
-  } catch (error) {
-    app.toast("Inventory failed: " + error.message, "error");
-  } finally {
-    app.dangerZone.loading = false;
-  }
-};
+window.theseusLoadWorkspaceInventory =
+  async function theseusLoadWorkspaceInventory(app) {
+    app.dangerZone.loading = true;
+    try {
+      const response = await app.api("/api/ui/workspaces/inventory");
+      app.dangerZone.workspaces = response.workspaces || [];
+      app.dangerZone.neo4jAvailable = !!response.neo4j_available;
+      app.dangerZone.loaded = true;
+      app.$nextTick(() => lucide.createIcons());
+    } catch (error) {
+      app.toast("Inventory failed: " + error.message, "error");
+    } finally {
+      app.dangerZone.loading = false;
+    }
+  };
 
-window.theseusOpenDeleteModal = function theseusOpenDeleteModal(app, workspace) {
+window.theseusOpenDeleteModal = function theseusOpenDeleteModal(
+  app,
+  workspace,
+) {
   if (workspace.is_active) {
     app.toast("Switch to another workspace before deleting this one.", "error");
     return;
@@ -153,44 +158,48 @@ window.theseusDeleteModalClearAll = function theseusDeleteModalClearAll(app) {
 
 window.theseusCanSubmitDelete = function theseusCanSubmitDelete(app) {
   const modal = app.deleteModal;
-  const anyScope = modal.scope.neo4j || modal.scope.rag_storage || modal.scope.inputs;
+  const anyScope =
+    modal.scope.neo4j || modal.scope.rag_storage || modal.scope.inputs;
   const nameMatches =
-    modal.target && modal.confirmText === (modal.target.name || "").toUpperCase();
+    modal.target &&
+    modal.confirmText === (modal.target.name || "").toUpperCase();
   return !!(anyScope && nameMatches);
 };
 
-window.theseusSubmitWorkspaceDelete = async function theseusSubmitWorkspaceDelete(app) {
-  if (!window.theseusCanSubmitDelete(app) || app.deleteModal.busy) return;
-  const target = app.deleteModal.target;
-  app.deleteModal.busy = true;
-  try {
-    const response = await app.api(
-      `/api/ui/workspaces/${encodeURIComponent(target.name)}/delete`,
-      {
-        method: "POST",
-        body: JSON.stringify(app.deleteModal.scope),
-      },
-    );
-    const parts = [];
-    const deleted = response.deleted || {};
-    if (deleted.neo4j_nodes != null) {
-      parts.push(`${deleted.neo4j_nodes.toLocaleString()} Neo4j nodes`);
+window.theseusSubmitWorkspaceDelete =
+  async function theseusSubmitWorkspaceDelete(app) {
+    if (!window.theseusCanSubmitDelete(app) || app.deleteModal.busy) return;
+    const target = app.deleteModal.target;
+    app.deleteModal.busy = true;
+    try {
+      const response = await app.api(
+        `/api/ui/workspaces/${encodeURIComponent(target.name)}/delete`,
+        {
+          method: "POST",
+          body: JSON.stringify(app.deleteModal.scope),
+        },
+      );
+      const parts = [];
+      const deleted = response.deleted || {};
+      if (deleted.neo4j_nodes != null) {
+        parts.push(`${deleted.neo4j_nodes.toLocaleString()} Neo4j nodes`);
+      }
+      if (deleted.rag_storage) parts.push("rag_storage/");
+      if (deleted.inputs_files)
+        parts.push(`${deleted.inputs_files} input file(s)`);
+      app.toast(
+        `Deleted ${target.name}: ${parts.join(", ") || "(nothing)"}`,
+        "success",
+      );
+      app.deleteModal.open = false;
+      await app.loadWorkspaceInventory();
+      await app.loadWorkspaceList(true);
+    } catch (error) {
+      app.toast("Delete failed: " + error.message, "error");
+    } finally {
+      app.deleteModal.busy = false;
     }
-    if (deleted.rag_storage) parts.push("rag_storage/");
-    if (deleted.inputs_files) parts.push(`${deleted.inputs_files} input file(s)`);
-    app.toast(
-      `Deleted ${target.name}: ${parts.join(", ") || "(nothing)"}`,
-      "success",
-    );
-    app.deleteModal.open = false;
-    await app.loadWorkspaceInventory();
-    await app.loadWorkspaceList(true);
-  } catch (error) {
-    app.toast("Delete failed: " + error.message, "error");
-  } finally {
-    app.deleteModal.busy = false;
-  }
-};
+  };
 
 window.theseusOpenWipeAllModal = function theseusOpenWipeAllModal(app) {
   app.wipeAllModal.scope = {
@@ -212,7 +221,8 @@ window.theseusCloseWipeAllModal = function theseusCloseWipeAllModal(app) {
 
 window.theseusCanSubmitWipeAll = function theseusCanSubmitWipeAll(app) {
   const modal = app.wipeAllModal;
-  const anyScope = modal.scope.neo4j || modal.scope.rag_storage || modal.scope.inputs;
+  const anyScope =
+    modal.scope.neo4j || modal.scope.rag_storage || modal.scope.inputs;
   return !!(anyScope && modal.confirmText === "DELETE ALL");
 };
 

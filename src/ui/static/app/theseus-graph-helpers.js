@@ -30,12 +30,17 @@ window.theseusLoadGraph = async function theseusLoadGraph(app) {
     if (!isWildcard) params.set("entity_type", label);
     const url = `/api/ui/graph?${params.toString()}`;
     const response = await fetch(url);
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    if (!response.ok)
+      throw new Error(`${response.status} ${response.statusText}`);
     const data = await response.json();
 
     const nodes = (data.nodes || []).map((node) => {
       const props = node.properties || {};
-      const type = (props.entity_type || (node.labels && node.labels[0]) || "concept")
+      const type = (
+        props.entity_type ||
+        (node.labels && node.labels[0]) ||
+        "concept"
+      )
         .toString()
         .toLowerCase();
       return {
@@ -84,7 +89,9 @@ window.theseusLoadGraph = async function theseusLoadGraph(app) {
     nodes.forEach((node) => {
       counts[node.data.type] = (counts[node.data.type] || 0) + 1;
     });
-    app.graph.typeCounts = Object.entries(counts).sort((left, right) => right[1] - left[1]);
+    app.graph.typeCounts = Object.entries(counts).sort(
+      (left, right) => right[1] - left[1],
+    );
     app.graph.stats = {
       nodes: nodes.length,
       edges: edges.length,
@@ -123,7 +130,8 @@ window.theseusRenderGraph = function theseusRenderGraph(app, nodes, edges) {
       {
         selector: "node",
         style: {
-          "background-color": (ele) => window.theseusEntityColor(ele.data("type")),
+          "background-color": (ele) =>
+            window.theseusEntityColor(ele.data("type")),
           "border-color": "#0a0e1a",
           "border-width": 1.5,
           label: "data(label)",
@@ -134,8 +142,10 @@ window.theseusRenderGraph = function theseusRenderGraph(app, nodes, edges) {
           "text-margin-y": 4,
           "text-outline-width": 2,
           "text-outline-color": "#05070d",
-          width: (ele) => Math.max(14, Math.min(46, 14 + (ele.data("degree") || 0) * 2)),
-          height: (ele) => Math.max(14, Math.min(46, 14 + (ele.data("degree") || 0) * 2)),
+          width: (ele) =>
+            Math.max(14, Math.min(46, 14 + (ele.data("degree") || 0) * 2)),
+          height: (ele) =>
+            Math.max(14, Math.min(46, 14 + (ele.data("degree") || 0) * 2)),
           "min-zoomed-font-size": 8,
         },
       },
@@ -184,7 +194,9 @@ window.theseusRenderGraph = function theseusRenderGraph(app, nodes, edges) {
     layout: window.theseusGraphLayoutOptions(app),
   });
 
-  app.cy.on("tap", "node", (evt) => window.theseusSelectGraphNode(app, evt.target));
+  app.cy.on("tap", "node", (evt) =>
+    window.theseusSelectGraphNode(app, evt.target),
+  );
   app.cy.on("tap", (evt) => {
     if (evt.target === app.cy) {
       app.graph.selected = null;
@@ -235,7 +247,10 @@ window.theseusExportGraphPng = function theseusExportGraphPng(app) {
   anchor.click();
 };
 
-window.theseusToggleGraphTypeFilter = function theseusToggleGraphTypeFilter(app, type) {
+window.theseusToggleGraphTypeFilter = function theseusToggleGraphTypeFilter(
+  app,
+  type,
+) {
   const idx = app.graph.hiddenTypes.indexOf(type);
   if (idx >= 0) app.graph.hiddenTypes.splice(idx, 1);
   else app.graph.hiddenTypes.push(type);
@@ -267,10 +282,15 @@ window.theseusApplyGraphFilters = function theseusApplyGraphFilters(app) {
   app.graph.stats.visibleEdges = visibleEdges;
 };
 
-window.theseusSelectGraphNode = async function theseusSelectGraphNode(app, node) {
+window.theseusSelectGraphNode = async function theseusSelectGraphNode(
+  app,
+  node,
+) {
   const data = node.data();
   const skip = new Set(["id", "label", "type", "description", "raw", "degree"]);
-  const props = Object.entries(data.raw || {}).filter(([key]) => !skip.has(key));
+  const props = Object.entries(data.raw || {}).filter(
+    ([key]) => !skip.has(key),
+  );
   props.unshift(["degree", String(data.degree)]);
   app.graph.selected = {
     id: data.label,

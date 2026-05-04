@@ -90,7 +90,10 @@ window.theseusOpenPromptPicker = function theseusOpenPromptPicker(app) {
   app.promptPicker.query = "";
 };
 
-window.theseusUsePromptFromPicker = function theseusUsePromptFromPicker(app, prompt) {
+window.theseusUsePromptFromPicker = function theseusUsePromptFromPicker(
+  app,
+  prompt,
+) {
   app.composer = prompt.prompt;
   app.promptPicker.open = false;
   window.theseusFocusComposer(app);
