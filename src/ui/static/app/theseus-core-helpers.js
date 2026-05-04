@@ -1,37 +1,61 @@
-window.theseusInit = async function theseusInit(app) {
-  app.$watch("active", () =>
-    app.$nextTick(() => {
-      window.theseusRefreshIcons();
-      if (app.active === "graph" && !app.graph.stats.nodes && !app.graph.loading) {
-        app.loadGraph();
-      }
-      if (app.active === "intel" && !app.intel.data && !app.intel.loading) {
-        app.loadIntel();
-      }
-      if (app.active === "settings" && !app.querySettings.loaded) {
-        app.loadQuerySettings();
-      }
-      app.loadSkillSettings();
-      if (app.active === "settings" && !app.mcps.loaded) {
-        app.loadMcps();
-      }
-      if (app.active === "settings" && !app.dangerZone.loaded) {
-        app.loadWorkspaceInventory();
-      }
-      if (app.active === "documents") app.startDocStatsPoll();
-      else app.stopDocStatsPoll();
-      if (app.active === "activity") app.openProcLog();
-      else app.closeProcLog();
-      if (app.active === "skills" && !app.skills.loaded) app.loadSkills();
-      if (app.active === "studio" && !app.studio.loaded) app.loadStudio();
-    }),
-  );
+const theseusSyncActivePanels = function theseusSyncActivePanels(app) {
+  if (app.active === "documents") app.startDocStatsPoll();
+  else app.stopDocStatsPoll();
+  if (app.active === "activity") app.openProcLog();
+  else app.closeProcLog();
+};
 
-  app.$watch("documents", () => window.theseusAfterRender(app));
-  app.$watch("docStats.pipeline.busy", () => window.theseusAfterRender(app));
-  app.$watch("docStats.counts", () => window.theseusAfterRender(app));
-  app.$watch("uploads", () => window.theseusAfterRender(app));
-  app.$watch("chats", () => window.theseusAfterRender(app));
+const theseusHandleActiveChange = function theseusHandleActiveChange(app) {
+  window.theseusRefreshIcons();
+  if (app.active === "graph" && !app.graph.stats.nodes && !app.graph.loading) {
+    app.loadGraph();
+  }
+  if (app.active === "intel" && !app.intel.data && !app.intel.loading) {
+    app.loadIntel();
+  }
+  if (app.active === "settings" && !app.querySettings.loaded) {
+    app.loadQuerySettings();
+  }
+  app.loadSkillSettings();
+  if (app.active === "settings" && !app.mcps.loaded) {
+    app.loadMcps();
+  }
+  if (app.active === "settings" && !app.dangerZone.loaded) {
+    app.loadWorkspaceInventory();
+  }
+  theseusSyncActivePanels(app);
+  if (app.active === "skills" && !app.skills.loaded) app.loadSkills();
+  if (app.active === "studio" && !app.studio.loaded) app.loadStudio();
+};
+
+const theseusWatchAfterRender = function theseusWatchAfterRender(app, paths) {
+  for (const path of paths) {
+    app.$watch(path, () => window.theseusAfterRender(app));
+  }
+};
+
+window.theseusInit = async function theseusInit(app) {
+  app.$watch("active", () => app.$nextTick(() => theseusHandleActiveChange(app)));
+
+  theseusWatchAfterRender(app, [
+    "documents",
+    "docStats.pipeline.busy",
+    "docStats.counts",
+    "uploads",
+    "chats",
+    "graph.selected",
+    "palette.open",
+    "wsModal.open",
+    "wsModal.items",
+    "promptPicker.query",
+    "restarting",
+    "reasoning.open",
+    "reasoning.expanded",
+    "chunkPreview.open",
+    "studioPreview.open",
+    "studioPreview.sheetIdx",
+  ]);
+
   app.$watch("currentChat", () =>
     window.theseusAfterRender(
       app,
@@ -41,10 +65,6 @@ window.theseusInit = async function theseusInit(app) {
       { iconsFirst: true },
     ),
   );
-  app.$watch("graph.selected", () => window.theseusAfterRender(app));
-  app.$watch("palette.open", () => window.theseusAfterRender(app));
-  app.$watch("wsModal.open", () => window.theseusAfterRender(app));
-  app.$watch("wsModal.items", () => window.theseusAfterRender(app));
   app.$watch("promptPicker.open", () =>
     window.theseusAfterRender(
       app,
@@ -56,20 +76,12 @@ window.theseusInit = async function theseusInit(app) {
       { iconsFirst: true },
     ),
   );
-  app.$watch("promptPicker.query", () => window.theseusAfterRender(app));
-  app.$watch("restarting", () => window.theseusAfterRender(app));
-  app.$watch("reasoning.open", () => window.theseusAfterRender(app));
-  app.$watch("reasoning.expanded", () => window.theseusAfterRender(app));
-  app.$watch("chunkPreview.open", () => window.theseusAfterRender(app));
-  app.$watch("studioPreview.open", () => window.theseusAfterRender(app));
-  app.$watch("studioPreview.sheetIdx", () => window.theseusAfterRender(app));
 
   app._loadStudioPinned();
 
   await app.refreshAll();
   window.theseusRefreshIcons();
-  if (app.active === "activity") app.openProcLog();
-  if (app.active === "documents") app.startDocStatsPoll();
+  theseusSyncActivePanels(app);
   setInterval(() => {
     app.loadStats();
     app.checkHealth();

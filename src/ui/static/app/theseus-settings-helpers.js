@@ -1,83 +1,103 @@
-window.theseusLoadQuerySettings = async function theseusLoadQuerySettings(app) {
+const theseusLoadSettingsSection = async function theseusLoadSettingsSection(
+  app,
+  options,
+) {
+  const { stateKey, endpoint, loadErrorLabel } = options;
   try {
-    const data = await app.api("/api/ui/settings/query");
-    app.querySettings.values = { ...data.settings };
-    app.querySettings.defaults = { ...data.defaults };
-    app.querySettings.loaded = true;
+    const data = await app.api(endpoint);
+    app[stateKey].values = { ...data.settings };
+    app[stateKey].defaults = { ...data.defaults };
+    app[stateKey].loaded = true;
   } catch (error) {
-    app.toast("Failed loading query settings: " + error.message, "error");
+    app.toast(`${loadErrorLabel}: ${error.message}`, "error");
   }
+};
+
+const theseusSaveSettingsSection = async function theseusSaveSettingsSection(
+  app,
+  options,
+) {
+  const { stateKey, endpoint, successMessage } = options;
+  app[stateKey].saving = true;
+  try {
+    const data = await app.api(endpoint, {
+      method: "PUT",
+      body: JSON.stringify(app[stateKey].values),
+    });
+    app[stateKey].values = { ...data.settings };
+    app.toast(successMessage);
+  } catch (error) {
+    app.toast("Save failed: " + error.message, "error");
+  } finally {
+    app[stateKey].saving = false;
+  }
+};
+
+const theseusResetSettingsSection = async function theseusResetSettingsSection(
+  app,
+  options,
+) {
+  const { stateKey, endpoint, confirmMessage, successMessage } = options;
+  if (!confirm(confirmMessage)) return;
+  try {
+    const data = await app.api(endpoint, {
+      method: "POST",
+    });
+    app[stateKey].values = { ...data.settings };
+    app.toast(successMessage);
+  } catch (error) {
+    app.toast("Reset failed: " + error.message, "error");
+  }
+};
+
+window.theseusLoadQuerySettings = async function theseusLoadQuerySettings(app) {
+  return theseusLoadSettingsSection(app, {
+    stateKey: "querySettings",
+    endpoint: "/api/ui/settings/query",
+    loadErrorLabel: "Failed loading query settings",
+  });
 };
 
 window.theseusSaveQuerySettings = async function theseusSaveQuerySettings(app) {
-  app.querySettings.saving = true;
-  try {
-    const data = await app.api("/api/ui/settings/query", {
-      method: "PUT",
-      body: JSON.stringify(app.querySettings.values),
-    });
-    app.querySettings.values = { ...data.settings };
-    app.toast("Query settings saved");
-  } catch (error) {
-    app.toast("Save failed: " + error.message, "error");
-  } finally {
-    app.querySettings.saving = false;
-  }
+  return theseusSaveSettingsSection(app, {
+    stateKey: "querySettings",
+    endpoint: "/api/ui/settings/query",
+    successMessage: "Query settings saved",
+  });
 };
 
 window.theseusResetQuerySettings = async function theseusResetQuerySettings(app) {
-  if (!confirm("Restore default query parameters for this workspace?")) return;
-  try {
-    const data = await app.api("/api/ui/settings/query/reset", {
-      method: "POST",
-    });
-    app.querySettings.values = { ...data.settings };
-    app.toast("Query settings reset to defaults");
-  } catch (error) {
-    app.toast("Reset failed: " + error.message, "error");
-  }
+  return theseusResetSettingsSection(app, {
+    stateKey: "querySettings",
+    endpoint: "/api/ui/settings/query/reset",
+    confirmMessage: "Restore default query parameters for this workspace?",
+    successMessage: "Query settings reset to defaults",
+  });
 };
 
 window.theseusLoadSkillSettings = async function theseusLoadSkillSettings(app) {
-  try {
-    const data = await app.api("/api/ui/settings/skills");
-    app.skillSettings.values = { ...data.settings };
-    app.skillSettings.defaults = { ...data.defaults };
-    app.skillSettings.loaded = true;
-  } catch (error) {
-    app.toast("Failed loading skill settings: " + error.message, "error");
-  }
+  return theseusLoadSettingsSection(app, {
+    stateKey: "skillSettings",
+    endpoint: "/api/ui/settings/skills",
+    loadErrorLabel: "Failed loading skill settings",
+  });
 };
 
 window.theseusSaveSkillSettings = async function theseusSaveSkillSettings(app) {
-  app.skillSettings.saving = true;
-  try {
-    const data = await app.api("/api/ui/settings/skills", {
-      method: "PUT",
-      body: JSON.stringify(app.skillSettings.values),
-    });
-    app.skillSettings.values = { ...data.settings };
-    app.toast("Skill settings saved");
-  } catch (error) {
-    app.toast("Save failed: " + error.message, "error");
-  } finally {
-    app.skillSettings.saving = false;
-  }
+  return theseusSaveSettingsSection(app, {
+    stateKey: "skillSettings",
+    endpoint: "/api/ui/settings/skills",
+    successMessage: "Skill settings saved",
+  });
 };
 
 window.theseusResetSkillSettings = async function theseusResetSkillSettings(app) {
-  if (!confirm("Restore default skill retrieval settings for this workspace?")) {
-    return;
-  }
-  try {
-    const data = await app.api("/api/ui/settings/skills/reset", {
-      method: "POST",
-    });
-    app.skillSettings.values = { ...data.settings };
-    app.toast("Skill settings reset to defaults");
-  } catch (error) {
-    app.toast("Reset failed: " + error.message, "error");
-  }
+  return theseusResetSettingsSection(app, {
+    stateKey: "skillSettings",
+    endpoint: "/api/ui/settings/skills/reset",
+    confirmMessage: "Restore default skill retrieval settings for this workspace?",
+    successMessage: "Skill settings reset to defaults",
+  });
 };
 
 window.theseusLoadMcps = async function theseusLoadMcps(app) {
