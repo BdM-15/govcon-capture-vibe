@@ -6149,6 +6149,8 @@
     <!-- ========================== APP LOGIC ========================== -->
     <script src="/ui/app/theseus-constants.js"></script>
     <script src="/ui/app/theseus-render-helpers.js"></script>
+    <script src="/ui/app/theseus-preview-helpers.js"></script>
+    <script src="/ui/app/theseus-skill-helpers.js"></script>
     <script src="/ui/app/theseus-view-helpers.js"></script>
     <script>
       function theseus() {
@@ -7206,101 +7208,19 @@
           // Lazy-loads CDN scripts (Mammoth.js, SheetJS) only when the
           // user opens a DOCX or XLSX preview. Cached after first load.
           _ensureScript(url) {
-            if (!this._scriptCache) this._scriptCache = {};
-            if (this._scriptCache[url]) return this._scriptCache[url];
-            this._scriptCache[url] = new Promise((resolve, reject) => {
-              const s = document.createElement("script");
-              s.src = url;
-              s.async = true;
-              s.onload = () => resolve();
-              s.onerror = () =>
-                reject(new Error("Failed to load script: " + url));
-              document.head.appendChild(s);
-            });
-            return this._scriptCache[url];
+            return window.theseusEnsureScript(this, url);
           },
           _studioFormatFor(d) {
             return window.theseusStudioFormatFor(d);
           },
           async openStudioPreview(d) {
-            this.studioPreview.open = true;
-            this.studioPreview.loading = true;
-            this.studioPreview.error = null;
-            this.studioPreview.deliverable = d;
-            this.studioPreview.kind = this._studioFormatFor(d);
-            this.studioPreview.href = this.studioDownloadHref(d);
-            this.studioPreview.text = "";
-            this.studioPreview.docxHtml = "";
-            this.studioPreview.sheets = [];
-            this.studioPreview.sheetIdx = 0;
-            this.studioPreview.jsonChunks = [];
-            try {
-              const k = this.studioPreview.kind;
-              if (k === "pdf" || k === "video" || k === "image") {
-                // Native browser handlers — nothing to fetch in JS.
-                this.studioPreview.loading = false;
-              } else if (
-                k === "md" ||
-                k === "json" ||
-                k === "csv" ||
-                k === "text"
-              ) {
-                const r = await fetch(this.studioPreview.href);
-                if (!r.ok) throw new Error("HTTP " + r.status);
-                this.studioPreview.text = await r.text();
-                if (k === "json") {
-                  this.studioPreview.jsonChunks = this._extractJsonChunkIds(
-                    this.studioPreview.text,
-                  );
-                }
-                this.studioPreview.loading = false;
-              } else if (k === "docx") {
-                await this._ensureScript(
-                  "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
-                );
-                const r = await fetch(this.studioPreview.href);
-                if (!r.ok) throw new Error("HTTP " + r.status);
-                const buf = await r.arrayBuffer();
-                const out = await window.mammoth.convertToHtml({
-                  arrayBuffer: buf,
-                });
-                this.studioPreview.docxHtml = out && out.value ? out.value : "";
-                this.studioPreview.loading = false;
-              } else if (k === "xlsx") {
-                await this._ensureScript(
-                  "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
-                );
-                const r = await fetch(this.studioPreview.href);
-                if (!r.ok) throw new Error("HTTP " + r.status);
-                const buf = await r.arrayBuffer();
-                const wb = window.XLSX.read(buf, { type: "array" });
-                this.studioPreview.sheets = (wb.SheetNames || []).map(
-                  (name) => ({
-                    name,
-                    html: window.XLSX.utils.sheet_to_html(wb.Sheets[name], {
-                      header: "",
-                      footer: "",
-                    }),
-                  }),
-                );
-                this.studioPreview.sheetIdx = 0;
-                this.studioPreview.loading = false;
-              } else {
-                this.studioPreview.loading = false;
-              }
-            } catch (e) {
-              this.studioPreview.error = e?.message || String(e);
-              this.studioPreview.loading = false;
-            }
-            this.$nextTick(() => {
-              if (window.lucide) lucide.createIcons();
-            });
+            return window.theseusOpenStudioPreview(this, d);
           },
           closeStudioPreview() {
-            this.studioPreview.open = false;
+            return window.theseusCloseStudioPreview(this);
           },
           studioSetSheet(idx) {
-            this.studioPreview.sheetIdx = idx;
+            return window.theseusStudioSetSheet(this, idx);
           },
           // Walk a JSON envelope for chunk_<hex> ids (string or in arrays);
           // returns deduplicated, ordered list. Used so JSON envelopes
@@ -7312,47 +7232,13 @@
           },
           // ===== Phase 6b — Reasoning view =====
           async openReasoning(d) {
-            this.reasoning.open = true;
-            this.reasoning.loading = true;
-            this.reasoning.error = null;
-            this.reasoning.skill = d.skill;
-            this.reasoning.run_id = d.run_id;
-            this.reasoning.title = d.title || "";
-            this.reasoning.created_at = d.created_at || "";
-            this.reasoning.steps = [];
-            this.reasoning.summary = null;
-            this.reasoning.artifacts = [];
-            this.reasoning.expanded = {};
-            try {
-              const r = await fetch(
-                "/api/ui/skills/" +
-                  encodeURIComponent(d.skill) +
-                  "/runs/" +
-                  encodeURIComponent(d.run_id) +
-                  "/reasoning",
-              );
-              if (!r.ok) throw new Error("HTTP " + r.status);
-              const j = await r.json();
-              this.reasoning.steps = j.steps || [];
-              this.reasoning.summary = j.summary || null;
-              this.reasoning.artifacts = j.artifacts || [];
-              this.reasoning.title = j.title || this.reasoning.title;
-              this.reasoning.created_at =
-                j.created_at || this.reasoning.created_at;
-            } catch (e) {
-              this.reasoning.error = e?.message || String(e);
-            } finally {
-              this.reasoning.loading = false;
-              this.$nextTick(() => {
-                if (window.lucide) lucide.createIcons();
-              });
-            }
+            return window.theseusOpenReasoning(this, d);
           },
           closeReasoning() {
-            this.reasoning.open = false;
+            return window.theseusCloseReasoning(this);
           },
           toggleReasoningStep(idx) {
-            this.reasoning.expanded[idx] = !this.reasoning.expanded[idx];
+            return window.theseusToggleReasoningStep(this, idx);
           },
           reasoningStepIcon(kind) {
             return window.theseusReasoningStepIcon(kind);
@@ -7361,12 +7247,7 @@
             return window.theseusPrettyJson(value);
           },
           copyToClipboard(text) {
-            try {
-              navigator.clipboard.writeText(text);
-              this.toast("Copied: " + text, "success");
-            } catch (e) {
-              this.toast("Copy failed", "error");
-            }
+            return window.theseusCopyToClipboard(this, text);
           },
           // ===== Phase 6b.2 — Inline chunk preview =====
           // Workspace-scoped cache so the same chunk fetched from multiple
@@ -7374,80 +7255,18 @@
           // the API once. Reset whenever the active workspace changes.
           _chunkCache: Object.create(null),
           async fetchChunk(chunkId) {
-            if (!chunkId) throw new Error("missing chunk id");
-            const hit = this._chunkCache[chunkId];
-            if (hit) return hit;
-            const r = await fetch(
-              "/api/ui/chunks/" + encodeURIComponent(chunkId),
-            );
-            if (!r.ok) {
-              if (r.status === 404) {
-                throw new Error("Chunk not found in this workspace");
-              }
-              throw new Error("HTTP " + r.status);
-            }
-            const j = await r.json();
-            const record = {
-              chunk_id: chunkId,
-              file_path: j.file_path,
-              full_doc_id: j.full_doc_id,
-              chunk_order_index: j.chunk_order_index,
-              tokens: j.tokens,
-              length: j.length || 0,
-              content: j.content || "",
-              view: this.formatSource({ preview: j.content || "" }),
-            };
-            this._chunkCache[chunkId] = record;
-            return record;
+            return window.theseusFetchChunk(this, chunkId);
           },
           async openChunkPreview(chunkId) {
-            if (!chunkId) return;
-            this.chunkPreview.open = true;
-            this.chunkPreview.loading = true;
-            this.chunkPreview.error = null;
-            this.chunkPreview.chunk_id = chunkId;
-            this.chunkPreview.file_path = null;
-            this.chunkPreview.full_doc_id = null;
-            this.chunkPreview.chunk_order_index = null;
-            this.chunkPreview.tokens = null;
-            this.chunkPreview.length = 0;
-            this.chunkPreview.content = "";
-            try {
-              const rec = await this.fetchChunk(chunkId);
-              this.chunkPreview.file_path = rec.file_path;
-              this.chunkPreview.full_doc_id = rec.full_doc_id;
-              this.chunkPreview.chunk_order_index = rec.chunk_order_index;
-              this.chunkPreview.tokens = rec.tokens;
-              this.chunkPreview.length = rec.length;
-              this.chunkPreview.content = rec.content;
-              this.chunkPreview.view = rec.view;
-              this.chunkPreview.showRaw = false;
-            } catch (e) {
-              this.chunkPreview.error = e?.message || String(e);
-            } finally {
-              this.chunkPreview.loading = false;
-              this.$nextTick(() => {
-                if (window.lucide) lucide.createIcons();
-              });
-            }
+            return window.theseusOpenChunkPreview(this, chunkId);
           },
           closeChunkPreview() {
-            this.chunkPreview.open = false;
+            return window.theseusCloseChunkPreview(this);
           },
           // Phase 4j taxonomy helpers (closed vocabularies — see docs/SKILL_TAXONOMY.md)
           // Persona display config (label + ordering); "none" maps to "Utility & Meta".
           skillPersonaConfig() {
-            return [
-              { id: "capture_manager", label: "Capture Managers" },
-              { id: "proposal_manager", label: "Proposal Managers" },
-              { id: "proposal_writer", label: "Proposal Writers" },
-              { id: "cost_estimator", label: "Cost Estimators" },
-              { id: "contracts_manager", label: "Contracts Managers" },
-              { id: "technical_sme", label: "Technical SMEs" },
-              { id: "legal_compliance", label: "Legal / Compliance" },
-              { id: "program_manager", label: "Program Managers" },
-              { id: "none", label: "Utility & Meta" },
-            ];
+            return window.createTheseusSkillPersonaConfig();
           },
           // Compact filter pills for the persona axis. Each pill has its
           // own filter `id` plus a `personas` array of underlying taxonomy
@@ -7456,47 +7275,13 @@
           // regardless of filters, and SME folds into Operations alongside
           // program_manager (requirements + technical execution contexts).
           skillPersonaFilterConfig() {
-            return [
-              {
-                id: "capture",
-                label: "Capture",
-                personas: ["capture_manager"],
-              },
-              { id: "writer", label: "Writer", personas: ["proposal_writer"] },
-              {
-                id: "operations",
-                label: "Operations",
-                personas: ["technical_sme", "program_manager"],
-              },
-              { id: "cost", label: "Cost", personas: ["cost_estimator"] },
-              {
-                id: "contracts",
-                label: "Contracts",
-                personas: ["contracts_manager"],
-              },
-              { id: "legal", label: "Legal", personas: ["legal_compliance"] },
-            ];
+            return window.createTheseusSkillPersonaFilterConfig();
           },
           skillPhaseConfig() {
-            return [
-              { id: "pursuit", label: "Pursuit" },
-              { id: "capture", label: "Capture" },
-              { id: "strategy", label: "Strategy" },
-              { id: "proposal_development", label: "Proposal Dev" },
-              { id: "negotiation", label: "Negotiation" },
-              { id: "post_award", label: "Post-Award" },
-            ];
+            return window.createTheseusSkillPhaseConfig();
           },
           skillCapabilityConfig() {
-            return [
-              { id: "research", label: "Research" },
-              { id: "analyze", label: "Analyze" },
-              { id: "draft", label: "Draft" },
-              { id: "audit", label: "Audit" },
-              { id: "estimate", label: "Estimate" },
-              { id: "render", label: "Render" },
-              { id: "meta", label: "Meta" },
-            ];
+            return window.createTheseusSkillCapabilityConfig();
           },
           // Meta/utility skills are pinned to the top regardless of filters
           // so the toolbox feels stable. A skill counts as meta when its
@@ -7504,66 +7289,18 @@
           // matches user intuition (skill-creator, huashu-design,
           // govcon-ontology, renderers all sit above the domain skills).
           isMetaSkill(s) {
-            return (
-              (s.personas_primary || "none") === "none" ||
-              s.capability === "meta"
-            );
+            return window.theseusIsMetaSkill(s);
           },
           // Returns true when the skill matches the active persona + phase
           // + capability filters. Empty filter set on an axis = "all skills
           // pass that axis". Across axes the filters AND together.
           skillMatchesFilters(s) {
-            const pe = this.skills.activePersonas;
-            const ph = this.skills.activePhases;
-            const cp = this.skills.activeCapabilities;
-            if (pe.length) {
-              // Expand each active filter id into its underlying persona IDs
-              // (one pill, e.g. "operations", can match multiple personas).
-              const cfg = this.skillPersonaFilterConfig();
-              const expanded = new Set();
-              for (const id of pe) {
-                const entry = cfg.find((p) => p.id === id);
-                if (entry) entry.personas.forEach((x) => expanded.add(x));
-              }
-              const primary = s.personas_primary || "none";
-              const sec = s.personas_secondary || [];
-              if (!expanded.has(primary) && !sec.some((x) => expanded.has(x)))
-                return false;
-            }
-            if (ph.length) {
-              const phases = s.shipley_phases || [];
-              if (!phases.some((p) => ph.includes(p))) return false;
-            }
-            if (cp.length) {
-              if (!cp.includes(s.capability)) return false;
-            }
-            // Free-text search across name + description (case-insensitive,
-            // whitespace-trimmed). Matches if every whitespace-separated
-            // token appears somewhere in the haystack.
-            const q = (this.skills.searchQuery || "").trim().toLowerCase();
-            if (q) {
-              const hay = (
-                (s.name || "") +
-                " " +
-                (s.description || "")
-              ).toLowerCase();
-              const tokens = q.split(/\s+/);
-              if (!tokens.every((t) => hay.includes(t))) return false;
-            }
-            return true;
+            return window.theseusSkillMatchesFilters(this, s);
           },
           // Flat, filtered, sorted skill list. Meta skills first (pinned),
           // then domain skills, both alphabetical within their group.
           skillsFiltered() {
-            const items = (this.skills.items || []).filter((s) =>
-              this.skillMatchesFilters(s),
-            );
-            return items.slice().sort((a, b) => {
-              const am = this.isMetaSkill(a) ? 0 : 1;
-              const bm = this.isMetaSkill(b) ? 0 : 1;
-              if (am !== bm) return am - bm;
-              return a.name.localeCompare(b.name);
-            });
+            return window.theseusSkillsFiltered(this);
           },
           // Per-pill counts. Each returns the total number of skills (out
           // of the full catalog) that would match if ONLY that pill were
@@ -7571,59 +7308,30 @@
           // are stable regardless of currently-active filters so toggling
           // a pill never makes another pill's number jump.
           skillsCountForPersona(id) {
-            const cfg = this.skillPersonaFilterConfig().find(
-              (p) => p.id === id,
-            );
-            if (!cfg) return 0;
-            const targets = new Set(cfg.personas);
-            return (this.skills.items || []).filter((s) => {
-              const primary = s.personas_primary || "none";
-              const sec = s.personas_secondary || [];
-              return targets.has(primary) || sec.some((x) => targets.has(x));
-            }).length;
+            return window.theseusSkillsCountForPersona(this, id);
           },
           skillsCountForPhase(id) {
-            return (this.skills.items || []).filter((s) =>
-              (s.shipley_phases || []).includes(id),
-            ).length;
+            return window.theseusSkillsCountForPhase(this, id);
           },
           skillsCountForCapability(id) {
-            return (this.skills.items || []).filter((s) => s.capability === id)
-              .length;
+            return window.theseusSkillsCountForCapability(this, id);
           },
           toggleSkillPersona(id) {
-            const arr = this.skills.activePersonas;
-            const i = arr.indexOf(id);
-            if (i >= 0) arr.splice(i, 1);
-            else arr.push(id);
-            this.$nextTick(() => lucide.createIcons());
+            return window.theseusToggleSkillPersona(this, id);
           },
           toggleSkillPhase(id) {
-            const arr = this.skills.activePhases;
-            const i = arr.indexOf(id);
-            if (i >= 0) arr.splice(i, 1);
-            else arr.push(id);
-            this.$nextTick(() => lucide.createIcons());
+            return window.theseusToggleSkillPhase(this, id);
           },
           toggleSkillCapability(id) {
-            const arr = this.skills.activeCapabilities;
-            const i = arr.indexOf(id);
-            if (i >= 0) arr.splice(i, 1);
-            else arr.push(id);
-            this.$nextTick(() => lucide.createIcons());
+            return window.theseusToggleSkillCapability(this, id);
           },
           clearSkillFilters() {
-            this.skills.activePersonas = [];
-            this.skills.activePhases = [];
-            this.skills.activeCapabilities = [];
-            this.skills.searchQuery = "";
-            this.$nextTick(() => lucide.createIcons());
+            return window.theseusClearSkillFilters(this);
           },
           // Pretty label for a personas_primary or personas_secondary id
           // (singular form, falls back to id itself for unknown values).
           personaLabel(id) {
-            const cfg = this.skillPersonaConfig().find((p) => p.id === id);
-            return cfg ? cfg.label.replace(/s$/, "") : id;
+            return window.theseusPersonaLabel(this, id);
           },
           async openSkill(name) {
             this.skills.invokeResult = "";
