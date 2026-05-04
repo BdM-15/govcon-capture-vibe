@@ -48,6 +48,7 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
 from src.skills.skill_catalog import SkillCatalog
+from src.skills.skill_emitters import auto_emit_artifacts
 from src.skills.skill_models import (
     Skill,
     SkillFrontmatter,
@@ -461,7 +462,7 @@ class SkillManager:
         if auto_emit:
             try:
                 # Run the emitter in-process; it is best-effort and mustn't raise.
-                self._auto_emit_artifacts(skill, Path(run_dir))
+                auto_emit_artifacts(skill, Path(run_dir))
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Auto-emit artifacts failed for %s run %s: %s", skill.name, run_id, exc)
                 warnings.append(f"auto_emit_artifacts failed: {exc}")
@@ -479,79 +480,6 @@ class SkillManager:
             run_id=run_id,
             run_dir=str(run_dir.resolve()),
         )
-
-    def _auto_emit_artifacts(self, skill: Skill, run_dir: Path) -> None:
-        """Best-effort renderer invocation to produce artifacts for Studio.
-
-        This helper creates a minimal `report.md` and `report.json` from
-        `response.md` and then attempts to call the repository's renderers
-        (`.github/skills/renderers/scripts/render_docx.py` and
-        `render_xlsx.py`). All stdout/stderr are captured into
-        `tool_outputs/` for auditability. Failures are non-fatal and logged.
-        """
-        try:
-            skill_dir = Path(skill.path)
-            artifacts_dir = Path(run_dir) / "artifacts"
-            tool_outputs_dir = Path(run_dir) / "tool_outputs"
-            artifacts_dir.mkdir(parents=True, exist_ok=True)
-            tool_outputs_dir.mkdir(parents=True, exist_ok=True)
-
-            response_path = Path(run_dir) / "response.md"
-            if not response_path.exists():
-                return
-
-            # Create a simple markdown source for DOCX rendering
-            report_md = artifacts_dir / "report.md"
-            report_md.write_text(response_path.read_text(encoding="utf-8"), encoding="utf-8")
-
-            # Create a minimal JSON blob for XLSX rendering (one sheet)
-            report_json = artifacts_dir / "report.json"
-            summary_text = response_path.read_text(encoding="utf-8").strip()
-            json_payload = {"summary": [{"text": summary_text[:1000]}]}
-            report_json.write_text(json.dumps(json_payload, ensure_ascii=False), encoding="utf-8")
-
-            # Locate renderer scripts in the repo (fall back to built-in renderers)
-            repo_root = Path(__file__).resolve().parents[2]
-            renderers_dir = repo_root / ".github" / "skills" / "renderers" / "scripts"
-
-            # Helper to invoke a script and capture outputs
-            import sys as _sys
-
-            def _run_script(prog_path: Path, args: list[str], out_name: str) -> None:
-                try:
-                    proc = subprocess.run(
-                        [_sys.executable, str(prog_path)] + args,
-                        capture_output=True,
-                        text=True,
-                        check=False,
-                        timeout=120,
-                    )
-                except Exception as exc:  # noqa: BLE001
-                    (tool_outputs_dir / f"{out_name}.stderr.txt").write_text(str(exc), encoding="utf-8")
-                    return
-                (tool_outputs_dir / f"{out_name}.stdout.txt").write_text(proc.stdout or "", encoding="utf-8")
-                (tool_outputs_dir / f"{out_name}.stderr.txt").write_text(proc.stderr or "", encoding="utf-8")
-
-            # Attempt DOCX render
-            docx_script = renderers_dir / "render_docx.py"
-            if docx_script.is_file():
-                out_docx = artifacts_dir / f"{skill.name}_report.docx"
-                args = ["--input", str(report_md), "--output", str(out_docx)]
-                # Use a skill-provided reference if present
-                ref = skill_dir / "assets" / "reference.docx"
-                if ref.is_file():
-                    args.extend(["--reference", str(ref)])
-                _run_script(docx_script, args, "render_docx")
-
-            # Attempt XLSX render
-            xlsx_script = renderers_dir / "render_xlsx.py"
-            if xlsx_script.is_file():
-                out_xlsx = artifacts_dir / f"{skill.name}_report.xlsx"
-                args = ["--input", str(report_json), "--output", str(out_xlsx), "--title", "Skill Report"]
-                _run_script(xlsx_script, args, "render_xlsx")
-
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("_auto_emit_artifacts error: %s", exc)
 
     # ---- Run persistence ----------------------------------------------
 
