@@ -1,0 +1,70 @@
+import asyncio
+from pathlib import Path
+
+import pytest
+
+from src.skills.tools import ToolContext, ToolError, tool_read_file, tool_run_script, tool_write_file
+
+
+def _run(coro):
+    return asyncio.new_event_loop().run_until_complete(coro)
+
+
+def _ctx(tmp_path: Path) -> ToolContext:
+    skill_dir = tmp_path / "skill"
+    run_dir = tmp_path / "run"
+    skill_dir.mkdir()
+    run_dir.mkdir()
+    return ToolContext(
+        skill_name="test",
+        skill_dir=skill_dir,
+        run_dir=run_dir,
+        workspace_dir=tmp_path,
+        workspace_name="demo",
+    )
+
+
+def test_tool_read_file_reads_allowed_reference_and_truncates(tmp_path: Path) -> None:
+    ctx = _ctx(tmp_path)
+    ref = ctx.skill_dir / "references"
+    ref.mkdir()
+    (ref / "note.md").write_text("abcdef", encoding="utf-8")
+    ctx.max_read_bytes = 4
+
+    result = _run(tool_read_file(ctx, "references/note.md"))
+
+    assert result.payload["path"] == "references/note.md"
+    assert result.payload["content"] == "abcd"
+    assert result.payload["truncated"] is True
+
+
+def test_tool_read_file_rejects_non_allowlisted_path(tmp_path: Path) -> None:
+    ctx = _ctx(tmp_path)
+    (ctx.skill_dir / "other.txt").write_text("x", encoding="utf-8")
+
+    with pytest.raises(ToolError, match="restricted"):
+        _run(tool_read_file(ctx, "other.txt"))
+
+
+def test_tool_write_file_strips_artifacts_prefix(tmp_path: Path) -> None:
+    ctx = _ctx(tmp_path)
+
+    result = _run(tool_write_file(ctx, "artifacts/out.md", "hello"))
+
+    assert result.payload == {"path": "artifacts/out.md", "bytes_written": 5}
+    assert (ctx.run_dir / "artifacts" / "out.md").read_text(encoding="utf-8") == "hello"
+
+
+def test_tool_run_script_executes_python_script(tmp_path: Path) -> None:
+    ctx = _ctx(tmp_path)
+    scripts = ctx.skill_dir / "scripts"
+    scripts.mkdir()
+    script = scripts / "echo.py"
+    script.write_text("print('ok from script')\n", encoding="utf-8")
+
+    result = _run(tool_run_script(ctx, "scripts/echo.py"))
+
+    assert result.payload["script"] == "scripts/echo.py"
+    assert result.payload["exit_code"] == 0
+    assert "ok from script" in result.payload["stdout"]
+    assert Path(result.transcript_extra["stdout_file"]).is_file()
