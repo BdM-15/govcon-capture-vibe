@@ -63,6 +63,7 @@ from src.server.routes import (
     create_documents_upload_endpoint,
     create_scan_endpoint,
 )
+from src.server.startup_banner import build_startup_banner_items
 from src.server.ui_query_bridge import make_ui_query_bridges
 from src.server.ui_routes import register_ui
 
@@ -164,85 +165,18 @@ async def main():
     # Consolidated startup banner — full pipeline detail in docs/ARCHITECTURE.md
     graph_storage = global_args.graph_storage if hasattr(global_args, 'graph_storage') else "NetworkXStorage"
     from src.utils.logging_config import log_banner, Colors
-    from importlib.metadata import version as _pkg_version, PackageNotFoundError
     from src.ontology.schema import VALID_ENTITY_TYPES, VALID_RELATIONSHIP_TYPES
     c = Colors
-
-    def _ver(pkg: str) -> str:
-        try:
-            return _pkg_version(pkg)
-        except PackageNotFoundError:
-            return "unknown"
-
-    mineru_ver = _ver("mineru")
-    device = settings.mineru_device_mode.upper()
-    device_color = c.GREEN if device == "CUDA" else c.YELLOW
-
-    def _format_reranker_line() -> str:
-        """Format the reranker status line for the startup banner."""
-        if not settings.enable_rerank:
-            return f"{c.DIM}disabled{c.RESET}"
-        rd = settings.rerank_device
-        rd_color = c.GREEN if rd.lower() == "cuda" else c.YELLOW
-        fp = "FP16" if settings.rerank_use_fp16 else "FP32"
-        return (
-            f"{c.CYAN}{settings.rerank_model}{c.RESET}  "
-            f"·  Device: {c.BOLD}{rd_color}{rd.upper()}{c.RESET}  "
-            f"·  {c.YELLOW}{fp}{c.RESET}  "
-            f"·  Min Score: {c.DIM}{settings.min_rerank_score}{c.RESET}"
-        )
-
-    # Knowledge ontology modules stacked for query enrichment
-    # Scope: Shipley Phase 4-6 (Proposal Planning → Proposal Development → Post-Submittal Activities)
-    kg_modules = [
-        ("Shipley Methodology",   "proposal mechanics · writing craft · color teams"),
-        ("Evaluation",            "Evaluation factors / SSEB / source-selection mechanics (UCF Section M or equiv)"),
-        ("Regulations",           "FAR / DFARS clauses · compliance anchors"),
-        ("Workload & Pricing",    "BOE · indirect rates · pricing discipline"),
-        ("Lessons Learned",       "anti-patterns · explicit benefit linkage rule"),
-        ("Company Capabilities",  "KBR platforms · proof points · past performance"),
-        ("Capture (Phase 0-3)",   "pre-RFP terminology · upstream reference only"),
-    ]
-
-    startup_items = [
-        # ── Workspace ────────────────────────────────────────────────────────────
-        ("Workspace",    f"{c.BOLD}{c.WHITE}{settings.workspace}{c.RESET}"),
-        ("Storage",      f"{c.YELLOW}{graph_storage}{c.RESET}  ·  {c.DIM}{global_args.working_dir}{c.RESET}"),
-        ("", ""),
-        # ── Models (LightRAG 1.5.0 per-role dispatch + post-processing) ────────────────
-        ("Extract  (LightRAG)",  f"{c.CYAN}{settings.extraction_llm_name}{c.RESET}"),
-        ("Keyword  (LightRAG)",  f"{c.CYAN}{settings.keyword_llm_name}{c.RESET}"),
-        ("VLM      (LightRAG)",  f"{c.CYAN}{settings.vlm_llm_name}{c.RESET}"),
-        ("Query    (LightRAG)",  f"{c.MAGENTA}{settings.reasoning_llm_name}{c.RESET}"),
-        ("Post-Process",         f"{c.YELLOW}{settings.post_processing_llm_name}{c.RESET}"),
-        ("Embeddings",   f"{c.CYAN}{settings.embedding_model}{c.RESET}  {c.DIM}({settings.embedding_dim}D){c.RESET}"),
-        ("Reranker",     _format_reranker_line()),
-        ("", ""),
-        # ── Stack Versions ───────────────────────────────────────────────────────
-        ("LightRAG",     f"{c.DIM}{_ver('lightrag-hku')}{c.RESET}"),
-        ("RAG-Anything", f"{c.DIM}{_ver('raganything')}{c.RESET}"),
-        ("MinerU",       f"{c.DIM}{mineru_ver}{c.RESET}  ·  Device: {c.BOLD}{device_color}{device}{c.RESET}  ·  Method: {c.YELLOW}{settings.parse_method.upper()}{c.RESET}"),
-        ("Multimodal",   f"Images · Tables · Equations · Formulas  {c.GREEN}▸ ENABLED{c.RESET}"),
-        ("", ""),
-        # ── Ontology Schema ──────────────────────────────────────────────────────
-        ("Schema",       f"{c.BOLD}{c.YELLOW}{len(VALID_ENTITY_TYPES)}{c.RESET} entity types  ·  {c.BOLD}{c.YELLOW}{len(VALID_RELATIONSHIP_TYPES)}{c.RESET} relationship types"),
-        ("Inference",    f"{c.CYAN}3 LLM algorithms{c.RESET}  {c.DIM}(instruction↔evaluation mapping · document structure · orphan resolution){c.RESET}"),
-        ("", ""),
-        # ── Knowledge Ontologies ─────────────────────────────────────────────────
-        ("Knowledge KG", f"{c.BOLD}{c.MAGENTA}{len(kg_modules)} domain ontologies{c.RESET}  {c.DIM}injected for query enrichment{c.RESET}"),
-    ] + [
-        (f"  {c.MAGENTA}▸{c.RESET} {name}", f"{c.DIM}{desc}{c.RESET}")
-        for name, desc in kg_modules
-    ] + [
-        ("Scope", f"{c.DIM}Shipley Phase 4-6 — Proposal Planning → Proposal Development → Post-Submittal Activities{c.RESET}"),
-        ("", ""),
-        # ── Endpoints ────────────────────────────────────────────────────────────
-        ("WebUI",        f"{c.BLUE}http://{host}:{port}/webui{c.RESET}"),
-        ("Capture UI",   f"{c.BOLD}{c.CYAN}http://{host}:{port}/ui{c.RESET}  {c.DIM}(new){c.RESET}"),
-        ("API Docs",     f"{c.BLUE}http://{host}:{port}/docs{c.RESET}"),
-    ]
-    if graph_storage == "Neo4JStorage":
-        startup_items.append(("Neo4j", f"{c.BLUE}http://localhost:7474{c.RESET}"))
+    startup_items = build_startup_banner_items(
+        settings,
+        host=host,
+        port=port,
+        graph_storage=graph_storage,
+        working_dir=global_args.working_dir,
+        entity_count=len(VALID_ENTITY_TYPES),
+        relationship_count=len(VALID_RELATIONSHIP_TYPES),
+        colors=c,
+    )
 
     log_banner(f"{c.BOLD}✅ PROJECT THESEUS — READY{c.RESET}", items=startup_items, logger=logger, force_print=True)
 
