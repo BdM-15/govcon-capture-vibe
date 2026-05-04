@@ -90,3 +90,28 @@ def normalize_relationship_type(
             f"⚠️ Unknown relationship type '{rel_type}' → defaulting to '{fallback}'"
         )
     return fallback
+
+
+def normalize_boe_category(
+    category: str,
+    *,
+    boe_categories,
+    boe_category_mapping,
+    fallback,
+    logger=None,
+):
+    """Normalize raw BOE category string to valid enum value."""
+    category_lower = category.lower().strip()
+
+    for boe_category in boe_categories:
+        if boe_category.value.lower() == category_lower:
+            return boe_category
+
+    if category_lower in boe_category_mapping:
+        return boe_category_mapping[category_lower]
+
+    if logger is not None:
+        logger.warning(
+            f"Unmapped BOE category '{category}' -> defaulting to '{fallback.value}'"
+        )
+    return fallback

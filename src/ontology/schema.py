@@ -5,6 +5,7 @@ import logging
 
 from src.ontology.entity_catalog import get_default_catalog
 from src.ontology.schema_support import (
+    normalize_boe_category as _normalize_boe_category,
     normalize_relationship_type as _normalize_relationship_type,
     render_relationship_types_guidance as _render_relationship_types_guidance,
 )
@@ -119,20 +120,13 @@ def normalize_boe_category(category: str, fallback: BOECategory = BOECategory.LA
     GRACEFUL HANDLING: Never returns None - always maps to a valid category.
     Unknown categories are mapped to fallback (default: Labor) and logged as WARNING.
     """
-    category_lower = category.lower().strip()
-    
-    # Check if it's already a valid category
-    for boe_cat in BOECategory:
-        if boe_cat.value.lower() == category_lower:
-            return boe_cat
-    
-    # Try mapping from common invalid values
-    if category_lower in BOE_CATEGORY_MAPPING:
-        return BOE_CATEGORY_MAPPING[category_lower]
-    
-    # GRACEFUL FALLBACK: Log warning and use fallback category
-    logger.warning(f"Unmapped BOE category '{category}' -> defaulting to '{fallback.value}'")
-    return fallback
+    return _normalize_boe_category(
+        category,
+        boe_categories=BOECategory,
+        boe_category_mapping=BOE_CATEGORY_MAPPING,
+        fallback=fallback,
+        logger=logger,
+    )
 
 # ==========================================
 # Base Entity Model
