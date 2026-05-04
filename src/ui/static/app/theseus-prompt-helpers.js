@@ -125,3 +125,12 @@ window.theseusPickerPhases = function theseusPickerPhases(app) {
   phases.sort((left, right) => String(left.id).localeCompare(String(right.id)));
   return phases;
 };
+
+window.theseusLoadPromptLibrary = async function theseusLoadPromptLibrary(app) {
+  try {
+    const response = await app.api("/api/ui/prompt-library");
+    app.promptLibrary = response.prompts || [];
+  } catch {
+    app.promptLibrary = [];
+  }
+};

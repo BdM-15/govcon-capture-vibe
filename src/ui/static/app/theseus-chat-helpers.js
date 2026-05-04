@@ -132,3 +132,12 @@ window.theseusExportMessage = function theseusExportMessage(app, message, idx) {
   URL.revokeObjectURL(url);
   app.toast("Exported as Markdown", "info");
 };
+
+window.theseusLoadChats = async function theseusLoadChats(app) {
+  try {
+    const response = await app.api("/api/ui/chats");
+    app.chats = response.chats || [];
+  } catch {
+    app.chats = [];
+  }
+};

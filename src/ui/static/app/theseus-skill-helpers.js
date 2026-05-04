@@ -243,3 +243,45 @@ window.theseusOpenSkill = async function theseusOpenSkill(app, name) {
     app.toast("Failed to load skill: " + (error?.message || error), "error");
   }
 };
+
+window.theseusInvokeSkill = async function theseusInvokeSkill(app) {
+  if (!app.skills.current) return;
+  app.skills.invoking = true;
+  app.skills.invokeResult = "";
+  app.skills.invokeMeta = null;
+  app.skills.run = null;
+  app.skills.transcriptOpen = false;
+  app.skills.transcriptExpanded = {};
+  try {
+    const response = await app.api(
+      "/api/ui/skills/" + encodeURIComponent(app.skills.current.name) + "/invoke",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: app.skills.invokePrompt || "",
+        }),
+      },
+    );
+    app.skills.invokeResult = response.response || "(empty response)";
+    app.skills.invokeMeta = {
+      entities_used: response.entities_used,
+      elapsed_ms: response.elapsed_ms,
+      warnings: response.warnings,
+      run_id: response.run_id,
+      run_dir: response.run_dir,
+    };
+    if ((response.warnings || []).length) {
+      app.toast(response.warnings.join("; "), "warn");
+    }
+    if (response.run_id) {
+      app.toast("Saved run " + response.run_id, "ok");
+      app.loadSkillRuns(app.skills.current.name);
+    }
+  } catch (error) {
+    app.toast("Skill invocation failed: " + (error?.message || error), "error");
+  } finally {
+    app.skills.invoking = false;
+    app.$nextTick(() => lucide.createIcons());
+  }
+};

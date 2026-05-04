@@ -6153,6 +6153,9 @@
     <script src="/ui/app/theseus-skill-helpers.js"></script>
     <script src="/ui/app/theseus-prompt-helpers.js"></script>
     <script src="/ui/app/theseus-chat-helpers.js"></script>
+    <script src="/ui/app/theseus-graph-helpers.js"></script>
+    <script src="/ui/app/theseus-workspace-helpers.js"></script>
+    <script src="/ui/app/theseus-palette-helpers.js"></script>
     <script src="/ui/app/theseus-view-helpers.js"></script>
     <script>
       function theseus() {
@@ -7058,21 +7061,11 @@
 
           // ----- Chats -----
           async loadChats() {
-            try {
-              const r = await this.api("/api/ui/chats");
-              this.chats = r.chats || [];
-            } catch {
-              this.chats = [];
-            }
+            return window.theseusLoadChats(this);
           },
 
           async loadPromptLibrary() {
-            try {
-              const r = await this.api("/api/ui/prompt-library");
-              this.promptLibrary = r.prompts || [];
-            } catch {
-              this.promptLibrary = [];
-            }
+            return window.theseusLoadPromptLibrary(this);
           },
 
           // ----- Agent Skills (dual-use page) -----
@@ -7245,49 +7238,7 @@
             return window.theseusOpenSkill(this, name);
           },
           async invokeSkill() {
-            if (!this.skills.current) return;
-            this.skills.invoking = true;
-            this.skills.invokeResult = "";
-            this.skills.invokeMeta = null;
-            this.skills.run = null;
-            this.skills.transcriptOpen = false;
-            this.skills.transcriptExpanded = {};
-            try {
-              const r = await this.api(
-                "/api/ui/skills/" +
-                  encodeURIComponent(this.skills.current.name) +
-                  "/invoke",
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    prompt: this.skills.invokePrompt || "",
-                  }),
-                },
-              );
-              this.skills.invokeResult = r.response || "(empty response)";
-              this.skills.invokeMeta = {
-                entities_used: r.entities_used,
-                elapsed_ms: r.elapsed_ms,
-                warnings: r.warnings,
-                run_id: r.run_id,
-                run_dir: r.run_dir,
-              };
-              if ((r.warnings || []).length)
-                this.toast(r.warnings.join("; "), "warn");
-              if (r.run_id) {
-                this.toast("Saved run " + r.run_id, "ok");
-                this.loadSkillRuns(this.skills.current.name);
-              }
-            } catch (e) {
-              this.toast(
-                "Skill invocation failed: " + (e?.message || e),
-                "error",
-              );
-            } finally {
-              this.skills.invoking = false;
-              this.$nextTick(() => lucide.createIcons());
-            }
+            return window.theseusInvokeSkill(this);
           },
           async loadSkillRuns(name) {
             return window.theseusLoadSkillRuns(this, name);
@@ -7797,337 +7748,51 @@
           },
 
           async searchLabels() {
-            const q = (this.graph.labelQuery || "").trim();
-            if (!q) {
-              this.graph.labelOptions = [];
-              return;
-            }
-            try {
-              const r = await fetch(
-                `/graph/label/search?q=${encodeURIComponent(q)}&limit=30`,
-              );
-              if (!r.ok) return;
-              const data = await r.json();
-              this.graph.labelOptions = Array.isArray(data)
-                ? data
-                : data.labels || data.results || [];
-            } catch {
-              this.graph.labelOptions = [];
-            }
+            return window.theseusSearchLabels(this);
           },
 
           async loadGraph() {
-            const label = (this.graph.label || "*").trim() || "*";
-            this.graph.loading = true;
-            this.graph.selected = null;
-            try {
-              // Use our /api/ui/graph endpoint (Cytoscape-friendly, sanitized,
-              // up to 5000 nodes, no upstream LightRAG /graphs serialization bug).
-              // We ignore label here when label === '*' since the new endpoint
-              // is workspace-scoped; for specific labels we still scope to entity_type.
-              const isWildcard = !label || label === "*";
-              const params = new URLSearchParams({
-                max_nodes: String(this.graph.maxNodes),
-              });
-              if (!isWildcard) params.set("entity_type", label);
-              const url = `/api/ui/graph?${params.toString()}`;
-              const r = await fetch(url);
-              if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-              const data = await r.json();
-              const nodes = (data.nodes || []).map((n) => {
-                const p = n.properties || {};
-                const type = (
-                  p.entity_type ||
-                  (n.labels && n.labels[0]) ||
-                  "concept"
-                )
-                  .toString()
-                  .toLowerCase();
-                return {
-                  data: {
-                    id: String(n.id),
-                    label: (p.entity_id || n.id)
-                      .toString()
-                      .replace(/^"|"$/g, ""),
-                    type,
-                    description: p.description || "",
-                    raw: p,
-                    degree: 0,
-                  },
-                };
-              });
-              const nodeIds = new Set(nodes.map((n) => n.data.id));
-              const edges = (data.edges || [])
-                .filter(
-                  (e) =>
-                    nodeIds.has(String(e.source)) &&
-                    nodeIds.has(String(e.target)),
-                )
-                .map((e) => {
-                  const p = e.properties || {};
-                  return {
-                    data: {
-                      id: String(e.id),
-                      source: String(e.source),
-                      target: String(e.target),
-                      label: e.type || p.keywords || "RELATED_TO",
-                      weight: parseFloat(p.weight ?? 1) || 1,
-                      confidence: parseFloat(p.confidence ?? 1) || 1,
-                      raw: p,
-                    },
-                  };
-                });
-              // compute degrees + type counts
-              const deg = {};
-              edges.forEach((e) => {
-                deg[e.data.source] = (deg[e.data.source] || 0) + 1;
-                deg[e.data.target] = (deg[e.data.target] || 0) + 1;
-              });
-              nodes.forEach((n) => (n.data.degree = deg[n.data.id] || 0));
-              const counts = {};
-              nodes.forEach(
-                (n) => (counts[n.data.type] = (counts[n.data.type] || 0) + 1),
-              );
-              this.graph.typeCounts = Object.entries(counts).sort(
-                (a, b) => b[1] - a[1],
-              );
-              this.graph.stats = {
-                nodes: nodes.length,
-                edges: edges.length,
-                visibleNodes: nodes.length,
-                visibleEdges: edges.length,
-                truncated: !!data.is_truncated,
-              };
-              this.renderGraph(nodes, edges);
-            } catch (e) {
-              this.toast("Graph load failed: " + e.message, "error");
-            } finally {
-              this.graph.loading = false;
-            }
+            return window.theseusLoadGraph(this);
           },
 
           loadGraphFromNode(id) {
-            this.graph.label = id;
-            this.graph.labelQuery = id;
-            this.loadGraph();
+            return window.theseusLoadGraphFromNode(this, id);
           },
 
           renderGraph(nodes, edges) {
-            const container = this.$refs.cy;
-            if (!container) return;
-            if (this.cy) {
-              try {
-                this.cy.destroy();
-              } catch {}
-              this.cy = null;
-            }
-            const self = this;
-            this.cy = cytoscape({
-              container,
-              elements: [...nodes, ...edges],
-              wheelSensitivity: 0.3,
-              style: [
-                {
-                  selector: "node",
-                  style: {
-                    "background-color": (ele) =>
-                      self.entityColor(ele.data("type")),
-                    "border-color": "#0a0e1a",
-                    "border-width": 1.5,
-                    label: "data(label)",
-                    "font-size": 9,
-                    color: "#cbd5e1",
-                    "font-family": "JetBrains Mono, monospace",
-                    "text-valign": "bottom",
-                    "text-margin-y": 4,
-                    "text-outline-width": 2,
-                    "text-outline-color": "#05070d",
-                    width: (ele) =>
-                      Math.max(
-                        14,
-                        Math.min(46, 14 + (ele.data("degree") || 0) * 2),
-                      ),
-                    height: (ele) =>
-                      Math.max(
-                        14,
-                        Math.min(46, 14 + (ele.data("degree") || 0) * 2),
-                      ),
-                    "min-zoomed-font-size": 8,
-                  },
-                },
-                {
-                  selector: "node:selected",
-                  style: {
-                    "border-color": "#00f0ff",
-                    "border-width": 3,
-                    "overlay-color": "#00f0ff",
-                    "overlay-opacity": 0.15,
-                  },
-                },
-                {
-                  selector: "edge",
-                  style: {
-                    "curve-style": "bezier",
-                    width: (ele) =>
-                      Math.max(0.6, Math.min(3, ele.data("weight") || 1)),
-                    "line-color": "#2c3a5e",
-                    "target-arrow-color": "#2c3a5e",
-                    "target-arrow-shape": "triangle",
-                    "arrow-scale": 0.8,
-                    opacity: 0.55,
-                    label: "data(label)",
-                    "font-size": 7,
-                    color: "#64748b",
-                    "font-family": "JetBrains Mono, monospace",
-                    "text-rotation": "autorotate",
-                    "text-background-color": "#05070d",
-                    "text-background-opacity": 0.7,
-                    "text-background-padding": 1,
-                    "min-zoomed-font-size": 9,
-                  },
-                },
-                {
-                  selector: "edge:selected",
-                  style: {
-                    "line-color": "#ff2bd6",
-                    "target-arrow-color": "#ff2bd6",
-                    opacity: 1,
-                    width: 2.5,
-                  },
-                },
-                { selector: ".dimmed", style: { opacity: 0.08 } },
-                { selector: ".highlight", style: { opacity: 1 } },
-              ],
-              layout: this.layoutOptions(),
-            });
-
-            this.cy.on("tap", "node", (evt) => self.selectNode(evt.target));
-            this.cy.on("tap", (evt) => {
-              if (evt.target === self.cy) {
-                self.graph.selected = null;
-                self.cy.elements().removeClass("dimmed highlight");
-              }
-            });
-            this.applyFilters();
+            return window.theseusRenderGraph(this, nodes, edges);
           },
 
           layoutOptions() {
-            const base = { animate: false, fit: true, padding: 30 };
-            if (this.graph.layout === "fcose")
-              return {
-                name: "fcose",
-                quality: "default",
-                randomize: true,
-                nodeRepulsion: 4500,
-                idealEdgeLength: 80,
-                ...base,
-              };
-            if (this.graph.layout === "concentric")
-              return {
-                name: "concentric",
-                concentric: (n) => n.degree(),
-                levelWidth: () => 2,
-                ...base,
-              };
-            return { name: this.graph.layout, ...base };
+            return window.theseusGraphLayoutOptions(this);
           },
 
           relayout() {
-            if (!this.cy) return;
-            this.cy.layout(this.layoutOptions()).run();
+            return window.theseusRelayoutGraph(this);
           },
 
           fitGraph() {
-            if (this.cy) this.cy.fit(undefined, 30);
+            return window.theseusFitGraph(this);
           },
 
           exportPng() {
-            if (!this.cy) return;
-            const png = this.cy.png({ full: true, scale: 2, bg: "#05070d" });
-            const a = document.createElement("a");
-            a.href = png;
-            a.download = `theseus-graph-${Date.now()}.png`;
-            a.click();
+            return window.theseusExportGraphPng(this);
           },
 
           toggleTypeFilter(type) {
-            const i = this.graph.hiddenTypes.indexOf(type);
-            if (i >= 0) this.graph.hiddenTypes.splice(i, 1);
-            else this.graph.hiddenTypes.push(type);
-            this.applyFilters();
+            return window.theseusToggleGraphTypeFilter(this, type);
           },
 
           applyFilters() {
-            if (!this.cy) return;
-            const hidden = new Set(this.graph.hiddenTypes);
-            const minC = this.graph.minConfidence;
-            let visN = 0,
-              visE = 0;
-            this.cy.batch(() => {
-              this.cy.nodes().forEach((n) => {
-                const show = !hidden.has(n.data("type"));
-                n.style("display", show ? "element" : "none");
-                if (show) visN++;
-              });
-              this.cy.edges().forEach((e) => {
-                const srcOk = e.source().style("display") !== "none";
-                const tgtOk = e.target().style("display") !== "none";
-                const confOk = (e.data("confidence") ?? 1) >= minC;
-                const show = srcOk && tgtOk && confOk;
-                e.style("display", show ? "element" : "none");
-                if (show) visE++;
-              });
-            });
-            this.graph.stats.visibleNodes = visN;
-            this.graph.stats.visibleEdges = visE;
+            return window.theseusApplyGraphFilters(this);
           },
 
           async selectNode(node) {
-            const d = node.data();
-            const skip = new Set([
-              "id",
-              "label",
-              "type",
-              "description",
-              "raw",
-              "degree",
-            ]);
-            const props = Object.entries(d.raw || {}).filter(
-              ([k]) => !skip.has(k),
-            );
-            props.unshift(["degree", String(d.degree)]);
-            this.graph.selected = {
-              id: d.label,
-              type: d.type,
-              description: d.description,
-            };
-            this.graph.selectedProps = props.map(([k, v]) => [
-              k,
-              typeof v === "string" ? v : JSON.stringify(v),
-            ]);
-
-            // Highlight neighborhood
-            this.cy.elements().addClass("dimmed").removeClass("highlight");
-            const hood = node.closedNeighborhood();
-            hood.removeClass("dimmed").addClass("highlight");
-
-            // Fetch source chunks
-            this.graph.chunksLoading = true;
-            this.graph.chunks = [];
-            try {
-              const r = await this.api(
-                `/api/ui/entity/${encodeURIComponent(d.label)}/chunks?limit=5`,
-              );
-              this.graph.chunks = r.chunks || [];
-            } catch {
-            } finally {
-              this.graph.chunksLoading = false;
-            }
+            return window.theseusSelectGraphNode(this, node);
           },
 
           askAboutEntity(entity) {
-            this.composer = `Tell me everything about "${entity.id}" (${entity.type}). Cite source chunks.`;
-            this.newChat(entity.id);
+            return window.theseusAskAboutEntity(this, entity);
           },
 
           // ===== Workspace switching =====
@@ -8138,219 +7803,64 @@
            * full modal.
            */
           async loadWorkspaceList(silent = true) {
-            try {
-              const r = await this.api("/api/ui/workspaces");
-              this.wsModal.items = r.workspaces || [];
-            } catch (e) {
-              if (!silent) {
-                this.toast("Could not list workspaces: " + e.message, "error");
-              }
-            }
+            return window.theseusLoadWorkspaceList(this, silent);
           },
 
           async openWorkspaceModal() {
-            this.wsModal.open = true;
-            this.wsModal.newName = "";
-            await this.loadWorkspaceList(false);
+            return window.theseusOpenWorkspaceModal(this);
           },
 
           async switchWorkspace(name, create = false) {
-            if (!name || this.wsModal.switching) return;
-            if (name === this.stats.workspace) {
-              this.wsModal.open = false;
-              return;
-            }
-            if (
-              !confirm(
-                `Switch to workspace "${name}"? The server will restart.`,
-              )
-            )
-              return;
-            this.wsModal.switching = true;
-            try {
-              await this.api("/api/ui/workspaces/switch", {
-                method: "POST",
-                body: JSON.stringify({ name, create }),
-              });
-              this.wsModal.open = false;
-              this.restartTarget = name;
-              this.restartStuck = false;
-              this.restarting = true;
-              this.pollRestart();
-            } catch (e) {
-              this.toast("Switch failed: " + e.message, "error");
-            } finally {
-              this.wsModal.switching = false;
-            }
+            return window.theseusSwitchWorkspace(this, name, create);
           },
 
           async restartServer() {
-            if (
-              !confirm(
-                "Restart the server now? Active uploads or in-flight queries will be interrupted.",
-              )
-            )
-              return;
-            try {
-              await this.api("/api/ui/restart", { method: "POST" });
-              this.restartTarget = this.stats.workspace || "server";
-              this.restartStuck = false;
-              this.restarting = true;
-              this.pollRestart();
-            } catch (e) {
-              this.toast("Restart failed: " + e.message, "error");
-            }
+            return window.theseusRestartServer(this);
           },
 
           // ===== Danger Zone — workspace deletion =====
           async loadWorkspaceInventory() {
-            this.dangerZone.loading = true;
-            try {
-              const r = await this.api("/api/ui/workspaces/inventory");
-              this.dangerZone.workspaces = r.workspaces || [];
-              this.dangerZone.neo4jAvailable = !!r.neo4j_available;
-              this.dangerZone.loaded = true;
-              this.$nextTick(() => lucide.createIcons());
-            } catch (e) {
-              this.toast("Inventory failed: " + e.message, "error");
-            } finally {
-              this.dangerZone.loading = false;
-            }
+            return window.theseusLoadWorkspaceInventory(this);
           },
 
           openDeleteModal(ws) {
-            if (ws.is_active) {
-              this.toast(
-                "Switch to another workspace before deleting this one.",
-                "error",
-              );
-              return;
-            }
-            this.deleteModal.target = ws;
-            this.deleteModal.scope = {
-              neo4j: ws.neo4j_nodes > 0,
-              rag_storage: ws.storage_mb !== null,
-              inputs: false,
-            };
-            this.deleteModal.confirmText = "";
-            this.deleteModal.busy = false;
-            this.deleteModal.open = true;
-            this.$nextTick(() => lucide.createIcons());
+            return window.theseusOpenDeleteModal(this, ws);
           },
 
           closeDeleteModal() {
-            if (this.deleteModal.busy) return;
-            this.deleteModal.open = false;
-            this.deleteModal.target = null;
-            this.deleteModal.confirmText = "";
+            return window.theseusCloseDeleteModal(this);
           },
 
           deleteModalSelectAll() {
-            const t = this.deleteModal.target;
-            if (!t) return;
-            this.deleteModal.scope = {
-              neo4j: t.neo4j_nodes > 0,
-              rag_storage: t.storage_mb !== null,
-              inputs: t.inputs_files > 0 || t.inputs_mb > 0,
-            };
+            return window.theseusDeleteModalSelectAll(this);
           },
 
           deleteModalClearAll() {
-            this.deleteModal.scope = {
-              neo4j: false,
-              rag_storage: false,
-              inputs: false,
-            };
+            return window.theseusDeleteModalClearAll(this);
           },
 
           canSubmitDelete() {
-            const m = this.deleteModal;
-            const anyScope =
-              m.scope.neo4j || m.scope.rag_storage || m.scope.inputs;
-            const nameMatches =
-              m.target && m.confirmText === (m.target.name || "").toUpperCase();
-            return !!(anyScope && nameMatches);
+            return window.theseusCanSubmitDelete(this);
           },
 
           async submitWorkspaceDelete() {
-            if (!this.canSubmitDelete() || this.deleteModal.busy) return;
-            const target = this.deleteModal.target;
-            this.deleteModal.busy = true;
-            try {
-              const res = await this.api(
-                `/api/ui/workspaces/${encodeURIComponent(target.name)}/delete`,
-                {
-                  method: "POST",
-                  body: JSON.stringify(this.deleteModal.scope),
-                },
-              );
-              const parts = [];
-              const d = res.deleted || {};
-              if (d.neo4j_nodes != null)
-                parts.push(`${d.neo4j_nodes.toLocaleString()} Neo4j nodes`);
-              if (d.rag_storage) parts.push("rag_storage/");
-              if (d.inputs_files) parts.push(`${d.inputs_files} input file(s)`);
-              this.toast(
-                `Deleted ${target.name}: ${parts.join(", ") || "(nothing)"}`,
-                "success",
-              );
-              this.deleteModal.open = false;
-              await this.loadWorkspaceInventory();
-              await this.loadWorkspaceList(true); // refresh modal/palette list
-            } catch (e) {
-              this.toast("Delete failed: " + e.message, "error");
-            } finally {
-              this.deleteModal.busy = false;
-            }
+            return window.theseusSubmitWorkspaceDelete(this);
           },
 
           openWipeAllModal() {
-            this.wipeAllModal.scope = {
-              neo4j: true,
-              rag_storage: true,
-              inputs: false,
-            };
-            this.wipeAllModal.confirmText = "";
-            this.wipeAllModal.busy = false;
-            this.wipeAllModal.open = true;
-            this.$nextTick(() => lucide.createIcons());
+            return window.theseusOpenWipeAllModal(this);
           },
 
           closeWipeAllModal() {
-            if (this.wipeAllModal.busy) return;
-            this.wipeAllModal.open = false;
-            this.wipeAllModal.confirmText = "";
+            return window.theseusCloseWipeAllModal(this);
           },
 
           canSubmitWipeAll() {
-            const m = this.wipeAllModal;
-            const anyScope =
-              m.scope.neo4j || m.scope.rag_storage || m.scope.inputs;
-            return !!(anyScope && m.confirmText === "DELETE ALL");
+            return window.theseusCanSubmitWipeAll(this);
           },
 
           async submitWipeAll() {
-            if (!this.canSubmitWipeAll() || this.wipeAllModal.busy) return;
-            this.wipeAllModal.busy = true;
-            try {
-              await this.api("/api/ui/workspaces/wipe-all", {
-                method: "POST",
-                body: JSON.stringify({
-                  ...this.wipeAllModal.scope,
-                  confirm: "DELETE ALL",
-                }),
-              });
-              this.toast("Wipe complete. Restarting server…", "success");
-              this.wipeAllModal.open = false;
-              this.restartTarget = this.stats.workspace || "server";
-              this.restartStuck = false;
-              this.restarting = true;
-              this.pollRestart();
-            } catch (e) {
-              this.toast("Wipe failed: " + e.message, "error");
-            } finally {
-              this.wipeAllModal.busy = false;
-            }
+            return window.theseusSubmitWipeAll(this);
           },
 
           // ----- Query parameter settings -----
@@ -8524,179 +8034,20 @@
           },
 
           pollRestart() {
-            // The server restarts via os.execv; the new process will report
-            // stats.workspace === restartTarget. We poll until either:
-            //   (a) we see the new workspace in /api/ui/stats -> reload
-            //   (b) we exceed maxWaitMs -> show manual-reload fallback
-            const target = this.restartTarget;
-            const startedAt = Date.now();
-            const maxWaitMs = 60_000; // 60s safety cap
-            const tick = async () => {
-              if (!this.restarting) return; // user dismissed / reset
-              if (Date.now() - startedAt > maxWaitMs) {
-                this.restartStuck = true;
-                return;
-              }
-              try {
-                const r = await fetch("/api/ui/stats", { cache: "no-store" });
-                if (r.ok) {
-                  const j = await r.json();
-                  if (j.workspace === target) {
-                    window.location.reload();
-                    return;
-                  }
-                  // Still the old process serving the previous workspace.
-                }
-              } catch {
-                // Server is down mid-restart — expected; keep polling.
-              }
-              setTimeout(tick, 1000);
-            };
-            // Give the server a moment to actually restart before first probe.
-            setTimeout(tick, 1500);
+            return window.theseusPollRestart(this);
           },
 
           // ===== Command palette =====
           openPalette() {
-            this.palette.open = true;
-            this.palette.query = "";
-            this.palette.cursor = 0;
-            // Refresh workspace list so the palette reflects newly added
-            // folders without forcing the user to open the full modal.
-            this.loadWorkspaceList();
-            this.$nextTick(() => {
-              this.$refs.paletteInput?.focus();
-              lucide.createIcons();
-            });
+            return window.theseusOpenPalette(this);
           },
 
           paletteResults() {
-            const q = (this.palette.query || "").trim().toLowerCase();
-            const items = [];
-            // Views
-            this.navGroups
-              .flatMap((g) => g.items)
-              .forEach((n) =>
-                items.push({
-                  key: "view:" + n.id,
-                  kind: "view",
-                  label: n.label,
-                  hint: "Open " + n.label,
-                  icon: n.icon,
-                  action: () => {
-                    this.active = n.id;
-                  },
-                }),
-              );
-            // Workspace switch — one item per workspace + the modal opener
-            const activeWs = (this.stats && this.stats.workspace) || "";
-            (this.wsModal.items || []).forEach((ws) => {
-              const isActive = ws.name === activeWs;
-              items.push({
-                key: "ws:" + ws.name,
-                kind: "workspace",
-                label: isActive
-                  ? `${ws.name}  (active)`
-                  : `Switch to: ${ws.name}`,
-                hint: isActive
-                  ? "Current workspace — already loaded"
-                  : `Restart server with workspace "${ws.name}"`,
-                icon: isActive ? "check-circle" : "layers",
-                action: () => {
-                  if (isActive) return;
-                  this.switchWorkspace(ws.name);
-                },
-              });
-            });
-            items.push({
-              key: "ws:manage",
-              kind: "workspace",
-              label: "Manage workspaces…",
-              hint: "Open workspace picker (create, switch, inspect)",
-              icon: "settings-2",
-              action: () => this.openWorkspaceModal(),
-            });
-            // Actions
-            items.push({
-              key: "act:newchat",
-              kind: "action",
-              label: "New capture chat",
-              hint: "Start a fresh Shipley-mentor chat",
-              icon: "message-square-plus",
-              action: () => this.newChat(),
-            });
-            items.push({
-              key: "act:upload",
-              kind: "action",
-              label: "Upload RFP",
-              hint: "Open the documents view",
-              icon: "upload-cloud",
-              action: () => {
-                this.active = "documents";
-              },
-            });
-            items.push({
-              key: "act:scan",
-              kind: "action",
-              label: "Scan inputs/<workspace>/",
-              hint: "Trigger /scan-rfp",
-              icon: "folder-search",
-              action: () => this.scanRfp(),
-            });
-            items.push({
-              key: "act:refresh",
-              kind: "action",
-              label: "Refresh all",
-              hint: "Reload stats / docs / chats",
-              icon: "refresh-cw",
-              action: () => this.refreshAll(),
-            });
-            // Recent chats
-            (this.chats || []).slice(0, 8).forEach((c) =>
-              items.push({
-                key: "chat:" + c.id,
-                kind: "chat",
-                label: c.title || "(untitled)",
-                hint: `${c.message_count} msgs · ${c.mode}`,
-                icon: "message-square",
-                action: () => {
-                  this.openChat(c.id);
-                  this.active = "chat";
-                },
-              }),
-            );
-            // Prompts
-            (this.promptLibrary || []).forEach((p) =>
-              items.push({
-                key: "prompt:" + p.title,
-                kind: "prompt",
-                label: p.title,
-                hint: `Phase ${p.phase} · ${p.prompt.slice(0, 60)}…`,
-                icon: "wand-sparkles",
-                action: () => {
-                  this.composer = p.prompt;
-                  this.newChat();
-                },
-              }),
-            );
-            if (!q) return items.slice(0, 12);
-            return items
-              .filter(
-                (i) =>
-                  i.label.toLowerCase().includes(q) ||
-                  (i.hint || "").toLowerCase().includes(q),
-              )
-              .slice(0, 20);
+            return window.theseusPaletteResults(this);
           },
 
           runPaletteAction(item) {
-            if (!item) return;
-            this.palette.open = false;
-            try {
-              item.action();
-            } catch (e) {
-              this.toast("Action failed: " + e.message, "error");
-            }
+            return window.theseusRunPaletteAction(this, item);
           },
 
           // ===== RFP Intelligence =====
