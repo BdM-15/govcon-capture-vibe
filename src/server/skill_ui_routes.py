@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from src.core import get_settings
 from src.server.skill_run_ui_routes import register_skill_run_ui_routes
+from src.server.skill_settings_ui_routes import register_skill_settings_ui_routes
 from src.skills import get_skill_manager
 from src.skills.context import (
     build_skill_briefing_book,
@@ -19,7 +20,6 @@ from src.skills.context import (
 )
 from src.skills.settings import (
     SkillSettingsStore,
-    VALID_SKILL_RETRIEVAL_MODES,
     resolve_skill_runtime_mode,
 )
 
@@ -34,16 +34,6 @@ class SkillInstallPayload(BaseModel):
 
     url: str = Field(..., description="https://github.com/<org>/<repo> URL")
     name: Optional[str] = Field(None, description="Override target skill slug")
-
-
-class SkillSettingsUpdate(BaseModel):
-    """Per-workspace skill briefing-book and retrieval overrides."""
-
-    max_entities_per_type: Optional[int] = Field(default=None, ge=1, le=500)
-    max_chunks_per_entity: Optional[int] = Field(default=None, ge=0, le=10)
-    max_relationships_per_entity: Optional[int] = Field(default=None, ge=0, le=50)
-    retrieval_mode: Optional[str] = Field(default=None, max_length=20)
-    retrieval_top_k: Optional[int] = Field(default=None, ge=5, le=500)
 
 
 def register_skill_ui_routes(
@@ -147,41 +137,11 @@ def register_skill_ui_routes(
             top_k,
         )
 
-    @app.get("/api/ui/settings/skills", tags=["theseus-ui"])
-    async def get_skill_settings() -> JSONResponse:
-        return JSONResponse(
-            {
-                "workspace": get_settings().workspace,
-                "settings": settings_store.read(),
-                "defaults": settings_store.defaults(),
-            }
-        )
-
-    @app.put("/api/ui/settings/skills", tags=["theseus-ui"])
-    async def update_skill_settings(payload: SkillSettingsUpdate) -> JSONResponse:
-        current = settings_store.read()
-        updates = payload.model_dump(exclude_none=True)
-        if "retrieval_mode" in updates:
-            mode = (updates["retrieval_mode"] or "").strip().lower()
-            if mode not in VALID_SKILL_RETRIEVAL_MODES:
-                raise HTTPException(400, f"Unsupported retrieval_mode: {mode}")
-            updates["retrieval_mode"] = mode
-        current.update(updates)
-        try:
-            settings_store.write(current)
-        except OSError as exc:
-            raise HTTPException(500, f"Failed writing settings: {exc}") from exc
-        return JSONResponse({"settings": current})
-
-    @app.post("/api/ui/settings/skills/reset", tags=["theseus-ui"])
-    async def reset_skill_settings() -> JSONResponse:
-        path = settings_store.path()
-        try:
-            if path.exists():
-                path.unlink()
-        except OSError as exc:
-            raise HTTPException(500, f"Failed resetting settings: {exc}") from exc
-        return JSONResponse({"settings": settings_store.defaults()})
+    register_skill_settings_ui_routes(
+        app,
+        settings_store=settings_store,
+        workspace_name=lambda: get_settings().workspace,
+    )
 
     @app.get("/api/ui/skills", tags=["theseus-ui"])
     async def list_skills_route() -> JSONResponse:
