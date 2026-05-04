@@ -26,10 +26,16 @@ Integration Points:
 """
 
 import logging
-from datetime import datetime, timezone
-
 from src.utils.time_utils import now_local
 from typing import TYPE_CHECKING
+
+from src.ontology.bootstrap_support import (
+    marker_path_for_workspace,
+    prepare_custom_kg,
+    read_bootstrap_marker,
+    resolve_workspace_dir,
+    write_bootstrap_marker,
+)
 
 from src.ontology.govcon_kg import (
     build_govcon_ontology_kg,
@@ -72,9 +78,7 @@ async def bootstrap_govcon_ontology(
         >>> result = await bootstrap_govcon_ontology(rag)
         >>> print(f"Bootstrapped {result['entities_added']} entities")
     """
-    import os
-    
-    workspace_dir = working_dir or getattr(lightrag, "working_dir", None)
+    workspace_dir = resolve_workspace_dir(lightrag, working_dir)
     if not workspace_dir:
         logger.error("Cannot determine workspace directory for bootstrap")
         return {
@@ -82,13 +86,15 @@ async def bootstrap_govcon_ontology(
             "error": "No working directory available"
         }
     
-    marker_path = os.path.join(workspace_dir, BOOTSTRAP_MARKER)
+    marker_path = marker_path_for_workspace(workspace_dir, BOOTSTRAP_MARKER)
     
     # Check if already bootstrapped
-    if os.path.exists(marker_path) and not force:
+    if not force:
+        bootstrap_time = read_bootstrap_marker(marker_path)
+    else:
+        bootstrap_time = None
+    if bootstrap_time is not None:
         logger.info(f"📚 Ontology already bootstrapped for {workspace_dir}")
-        with open(marker_path, "r") as f:
-            bootstrap_time = f.read().strip()
         return {
             "status": "already_bootstrapped",
             "bootstrapped_at": bootstrap_time,
@@ -117,31 +123,8 @@ async def bootstrap_govcon_ontology(
         # Build the consolidated knowledge graph
         custom_kg = build_govcon_ontology_kg()
         
-        # Add source_id to chunks if not present (required by LightRAG)
         source_label = "govcon_domain_ontology"
-        for chunk in custom_kg["chunks"]:
-            if "source_id" not in chunk:
-                chunk["source_id"] = source_label
-        
-        # Ensure relationships have source_id for chunk mapping
-        for rel in custom_kg["relationships"]:
-            if "source_id" not in rel:
-                rel["source_id"] = source_label
-        
-        # Add a synthetic chunk for relationship source mapping
-        # (LightRAG looks up chunk_to_source_map using source_id)
-        custom_kg["chunks"].append({
-            "content": (
-                "GovCon Domain Ontology: Curated knowledge base for federal government "
-                "contracting covering Shipley BD Lifecycle, FAR/DFARS compliance, "
-                "evaluation methodology, BOE and staffing patterns, capture management, "
-                "and lessons learned from 20+ years of federal contracting experience. "
-                "This ontology provides evergreen domain context that enhances "
-                "RFP-specific entity extraction and query intelligence."
-            ),
-            "source_id": source_label,
-            "file_path": "govcon_ontology"
-        })
+        custom_kg = prepare_custom_kg(custom_kg, source_label=source_label)
         
         # Inject into LightRAG using native async method
         logger.info("   📥 Injecting into LightRAG via ainsert_custom_kg()...")
@@ -151,9 +134,7 @@ async def bootstrap_govcon_ontology(
         end_time = now_local()
         duration = (end_time - start_time).total_seconds()
         
-        os.makedirs(workspace_dir, exist_ok=True)
-        with open(marker_path, "w") as f:
-            f.write(end_time.isoformat())
+        write_bootstrap_marker(marker_path, end_time.isoformat())
         
         logger.info(f"✅ Ontology bootstrap complete in {duration:.2f}s")
         logger.info(f"   → Workspace now has domain context for enhanced queries")
@@ -187,13 +168,9 @@ async def check_bootstrap_status(working_dir: str) -> dict:
     Returns:
         dict: Status with bootstrapped flag and timestamp
     """
-    import os
-    
-    marker_path = os.path.join(working_dir, BOOTSTRAP_MARKER)
-    
-    if os.path.exists(marker_path):
-        with open(marker_path, "r") as f:
-            bootstrap_time = f.read().strip()
+    marker_path = marker_path_for_workspace(working_dir, BOOTSTRAP_MARKER)
+    bootstrap_time = read_bootstrap_marker(marker_path)
+    if bootstrap_time is not None:
         return {
             "bootstrapped": True,
             "bootstrapped_at": bootstrap_time,
@@ -217,9 +194,9 @@ def clear_bootstrap_marker(working_dir: str) -> bool:
         bool: True if marker was cleared, False if didn't exist
     """
     import os
-    
-    marker_path = os.path.join(working_dir, BOOTSTRAP_MARKER)
-    
+
+    marker_path = marker_path_for_workspace(working_dir, BOOTSTRAP_MARKER)
+
     if os.path.exists(marker_path):
         os.remove(marker_path)
         logger.info(f"🗑️ Cleared bootstrap marker for {working_dir}")
