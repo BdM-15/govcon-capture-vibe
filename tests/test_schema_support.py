@@ -1,9 +1,11 @@
 from src.ontology.schema import VALID_RELATIONSHIP_TYPES
-from src.ontology.schema import BOECategory
+from src.ontology.schema import BOECategory, VALID_ENTITY_TYPES
 from src.ontology.schema_support import (
+    clean_entity_name,
     INFERENCE_ONLY_RELATIONSHIP_TYPES,
     ROGUE_RELATIONSHIP_MAPPINGS,
     normalize_boe_category,
+    normalize_entity_type_payload,
     normalize_relationship_type,
     render_relationship_types_guidance,
 )
@@ -82,3 +84,29 @@ def test_normalize_boe_category_maps_known_and_fallback_values() -> None:
         logger=logger,
     ) == BOECategory.LABOR
     assert logger.warning_messages[-1] == "Unmapped BOE category 'mystery' -> defaulting to 'Labor'"
+
+
+def test_normalize_entity_type_payload_repairs_case_and_invalid_types() -> None:
+    logger = _Logger()
+
+    values = normalize_entity_type_payload(
+        {"entity_name": "Acme", "entity_type": "Organization"},
+        valid_entity_types=VALID_ENTITY_TYPES,
+        logger=logger,
+    )
+    assert values["entity_type"] == "organization"
+
+    values = normalize_entity_type_payload(
+        {"entity_name": "Acme", "entity_type": "VendorThing"},
+        valid_entity_types=VALID_ENTITY_TYPES,
+        logger=logger,
+    )
+    assert values["entity_type"] == "concept"
+    assert logger.warning_messages[-1].startswith("⚠️ Invalid entity_type 'VendorThing' for 'Acme' (valid types: ")
+    assert logger.warning_messages[-1].endswith("...)")
+
+
+def test_clean_entity_name_strips_leading_hashes_and_whitespace() -> None:
+    assert clean_entity_name("  # Section L ") == "# Section L"
+    assert clean_entity_name("# Section L ") == "Section L"
+    assert clean_entity_name("No Cleanup Needed") == "No Cleanup Needed"

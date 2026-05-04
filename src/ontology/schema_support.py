@@ -115,3 +115,40 @@ def normalize_boe_category(
             f"Unmapped BOE category '{category}' -> defaulting to '{fallback.value}'"
         )
     return fallback
+
+
+def normalize_entity_type_payload(
+    values,
+    *,
+    valid_entity_types: set[str] | frozenset[str],
+    logger=None,
+    fallback: str = "concept",
+):
+    """Normalize entity_type in a raw entity payload before model parsing."""
+    if not isinstance(values, dict):
+        return values
+
+    entity_type = values.get("entity_type", "")
+    if not entity_type:
+        return values
+
+    entity_type_lower = entity_type.lower()
+    if entity_type_lower not in valid_entity_types:
+        entity_name = values.get("entity_name", "unknown")
+        if logger is not None:
+            logger.warning(
+                f"⚠️ Invalid entity_type '{entity_type}' for '{entity_name}' "
+                f"(valid types: {', '.join(sorted(valid_entity_types)[:5])}...)"
+            )
+        values["entity_type"] = fallback
+        return values
+
+    if entity_type != entity_type_lower:
+        values["entity_type"] = entity_type_lower
+
+    return values
+
+
+def clean_entity_name(entity_name: str) -> str:
+    """Remove common LLM formatting artifacts from entity names."""
+    return entity_name.lstrip("#").strip()

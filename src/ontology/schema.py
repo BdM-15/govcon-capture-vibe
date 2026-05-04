@@ -5,7 +5,9 @@ import logging
 
 from src.ontology.entity_catalog import get_default_catalog
 from src.ontology.schema_support import (
+    clean_entity_name as _clean_entity_name,
     normalize_boe_category as _normalize_boe_category,
+    normalize_entity_type_payload as _normalize_entity_type_payload,
     normalize_relationship_type as _normalize_relationship_type,
     render_relationship_types_guidance as _render_relationship_types_guidance,
 )
@@ -152,24 +154,11 @@ class BaseEntity(BaseModel):
         - Normalizes case (Organization → organization)
         - Uses 'concept' as fallback for unknown types
         """
-        if isinstance(values, dict):
-            entity_type = values.get('entity_type', '')
-            if entity_type:
-                entity_type_lower = entity_type.lower()
-                
-                if entity_type_lower not in VALID_ENTITY_TYPES:
-                    entity_name = values.get('entity_name', 'unknown')
-                    # Log clearly - this helps identify prompt issues
-                    logger.warning(
-                        f"⚠️ Invalid entity_type '{entity_type}' for '{entity_name}' "
-                        f"(valid types: {', '.join(sorted(VALID_ENTITY_TYPES)[:5])}...)"
-                    )
-                    # Use 'concept' as intelligent fallback
-                    values['entity_type'] = 'concept'
-                elif entity_type != entity_type_lower:
-                    # Just normalize case
-                    values['entity_type'] = entity_type_lower
-        return values
+        return _normalize_entity_type_payload(
+            values,
+            valid_entity_types=VALID_ENTITY_TYPES,
+            logger=logger,
+        )
 
     @model_validator(mode='after')
     def clean_entity_name(self):
@@ -177,8 +166,7 @@ class BaseEntity(BaseModel):
         Clean entity name by removing leading '#' characters often added by Grok.
         """
         if self.entity_name:
-            # Strip leading '#' and whitespace
-            cleaned_name = self.entity_name.lstrip('#').strip()
+            cleaned_name = _clean_entity_name(self.entity_name)
             if cleaned_name != self.entity_name:
                 self.entity_name = cleaned_name
         return self
