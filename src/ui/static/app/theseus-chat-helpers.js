@@ -59,13 +59,7 @@ window.theseusStopMessage = function theseusStopMessage(app) {
   } catch (_) {}
 };
 
-window.theseusSendMessage = async function theseusSendMessage(app) {
-  if (!app.currentChat || !app.composer.trim() || app.sending) return;
-
-  const content = app.composer.trim();
-  const chatId = app.currentChat.id;
-  app.composer = "";
-  app.sending = true;
+const theseusResetChatStreamState = function theseusResetChatStreamState(app) {
   app.chatStatus = { phase: null, label: "", retrieve_ms: null };
   app.streamLiveContent = "";
   app.thinkElapsed = 0;
@@ -74,6 +68,12 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
     clearInterval(app.thinkTimer);
     app.thinkTimer = null;
   }
+};
+
+const theseusBeginChatSend = function theseusBeginChatSend(app, content) {
+  app.composer = "";
+  app.sending = true;
+  theseusResetChatStreamState(app);
 
   app.currentChat.messages.push({
     role: "user",
@@ -87,8 +87,43 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
     streaming: true,
   });
 
-  let live = app.currentChat.messages[app.currentChat.messages.length - 1];
   window.theseusScrollMessages(app);
+  return app.currentChat.messages[app.currentChat.messages.length - 1];
+};
+
+const theseusReplaceLiveChatMessage = function theseusReplaceLiveChatMessage(
+  app,
+  live,
+  patch,
+) {
+  const idx = app.currentChat.messages.length - 1;
+  const updated = { ...live, ...patch };
+  if (idx >= 0) app.currentChat.messages.splice(idx, 1, updated);
+  return updated;
+};
+
+const theseusFinishChatSend = function theseusFinishChatSend(app) {
+  app.sending = false;
+  app.chatAbort = null;
+  theseusResetChatStreamState(app);
+  window.theseusScrollMessages(app);
+};
+
+const theseusPriorUserMessage = function theseusPriorUserMessage(messages, idx) {
+  for (let userIdx = idx - 1; userIdx >= 0; userIdx--) {
+    if (messages[userIdx].role === "user") {
+      return { index: userIdx, message: messages[userIdx] };
+    }
+  }
+  return null;
+};
+
+window.theseusSendMessage = async function theseusSendMessage(app) {
+  if (!app.currentChat || !app.composer.trim() || app.sending) return;
+
+  const content = app.composer.trim();
+  const chatId = app.currentChat.id;
+  let live = theseusBeginChatSend(app, content);
 
   const controller = new AbortController();
   app.chatAbort = controller;
@@ -161,46 +196,35 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
           continue;
         }
 
-        const idx = app.currentChat.messages.length - 1;
         if (event === "sources") {
-          const updated = {
-            ...live,
+          live = theseusReplaceLiveChatMessage(app, live, {
             sources: parsed,
             sourcesOpen: false,
-          };
-          live = updated;
-          app.currentChat.messages.splice(idx, 1, updated);
+          });
           continue;
         }
 
         if (event === "token" && parsed.text) {
-          const updated = {
-            ...live,
+          live = theseusReplaceLiveChatMessage(app, live, {
             content: (live.content || "") + parsed.text,
-          };
-          live = updated;
-          app.currentChat.messages.splice(idx, 1, updated);
-          app.streamLiveContent = updated.content;
+          });
+          app.streamLiveContent = live.content;
           scheduleScroll();
           continue;
         }
 
         if (event === "error") {
-          const updated = {
-            ...live,
+          live = theseusReplaceLiveChatMessage(app, live, {
             content:
               (live.content || "") +
               `\n\n\u26A0\uFE0F ${parsed.message || "stream error"}`,
-          };
-          live = updated;
-          app.currentChat.messages.splice(idx, 1, updated);
+          });
           app.toast("Query failed", "error");
           continue;
         }
 
         if (event === "done") {
           const updated = {
-            ...live,
             streaming: false,
           };
           if (parsed.assistant?.content) {
@@ -211,14 +235,12 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
           if (parsed.assistant?.sources) {
             updated.sources = parsed.assistant.sources;
           }
-          live = updated;
-          app.currentChat.messages.splice(idx, 1, updated);
+          live = theseusReplaceLiveChatMessage(app, live, updated);
         }
       }
     }
     await app.loadChats();
   } catch (error) {
-    const idx = app.currentChat.messages.length - 1;
     let failureContent = live.content || "";
     if (error?.name === "AbortError") {
       failureContent += "\n\n_(stopped)_";
@@ -227,21 +249,12 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
         failureContent || `\u26A0\uFE0F ${error?.message || "stream failed"}`;
       app.toast("Query failed", "error");
     }
-    const updated = { ...live, content: failureContent, streaming: false };
-    live = updated;
-    if (idx >= 0) app.currentChat.messages.splice(idx, 1, updated);
+    live = theseusReplaceLiveChatMessage(app, live, {
+      content: failureContent,
+      streaming: false,
+    });
   } finally {
-    app.sending = false;
-    app.chatAbort = null;
-    app.chatStatus = { phase: null, label: "", retrieve_ms: null };
-    app.streamLiveContent = "";
-    app.thinkStartedAt = null;
-    app.thinkElapsed = 0;
-    if (app.thinkTimer) {
-      clearInterval(app.thinkTimer);
-      app.thinkTimer = null;
-    }
-    window.theseusScrollMessages(app);
+    theseusFinishChatSend(app);
   }
 };
 
@@ -275,15 +288,14 @@ window.theseusRegenerateMessage = async function theseusRegenerateMessage(
   const messages = app.currentChat.messages;
   if (idx <= 0 || idx >= messages.length) return;
 
-  let userIdx = idx - 1;
-  while (userIdx >= 0 && messages[userIdx].role !== "user") userIdx--;
-  if (userIdx < 0) {
+  const priorUser = theseusPriorUserMessage(messages, idx);
+  if (!priorUser) {
     app.toast("No prior user message to regenerate from", "error");
     return;
   }
 
-  const userContent = messages[userIdx].content;
-  messages.splice(userIdx);
+  const userContent = priorUser.message.content;
+  messages.splice(priorUser.index);
   app.composer = userContent;
   await app.sendMessage();
 };
@@ -299,12 +311,9 @@ window.theseusExportMessage = function theseusExportMessage(app, message, idx) {
 
   let prompt = "";
   if (app.currentChat && idx != null) {
-    for (let j = idx - 1; j >= 0; j--) {
-      if (app.currentChat.messages[j].role === "user") {
-        prompt = app.currentChat.messages[j].content;
-        break;
-      }
-    }
+    prompt =
+      theseusPriorUserMessage(app.currentChat.messages, idx)?.message.content ||
+      "";
   }
 
   const front =
