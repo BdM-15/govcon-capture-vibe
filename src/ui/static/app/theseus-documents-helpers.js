@@ -89,40 +89,78 @@ window.theseusLoadDocuments = async function theseusLoadDocuments(app) {
   }
 };
 
+const theseusUpdateUploadCollection = function theseusUpdateUploadCollection(
+  app,
+  collectionKey,
+  id,
+  patch,
+) {
+  app[collectionKey] = app[collectionKey].map((entry) =>
+    entry.id === id ? { ...entry, ...patch } : entry,
+  );
+};
+
+const theseusStageOnlyUpload = async function theseusStageOnlyUpload(
+  app,
+  file,
+  options,
+) {
+  const {
+    collectionKey,
+    pendingStatus,
+    successStatus,
+    successMessage,
+  } = options;
+
+  const id = Math.random().toString(36).slice(2);
+  app[collectionKey].unshift({ id, name: file.name, status: pendingStatus });
+
+  const formData = new FormData();
+  formData.append("file", file);
+  try {
+    const response = await fetch("/documents/upload?stage_only=true", {
+      method: "POST",
+      body: formData,
+    });
+    const payload = await response.json();
+    theseusUpdateUploadCollection(app, collectionKey, id, {
+      status: response.ok ? successStatus : "error",
+      msg: response.ok ? successMessage : payload.message || "failed",
+    });
+    return response.ok;
+  } catch {
+    theseusUpdateUploadCollection(app, collectionKey, id, {
+      status: "error",
+      msg: "network",
+    });
+    return false;
+  }
+};
+
+const theseusScheduleDocumentRefresh = function theseusScheduleDocumentRefresh(
+  app,
+  delayMs,
+  actions,
+) {
+  setTimeout(() => {
+    if (actions.documents) app.loadDocuments();
+    if (actions.stats) app.loadStats();
+    if (actions.docStats) app.loadDocStats();
+  }, delayMs);
+};
+
 window.theseusUploadFiles = async function theseusUploadFiles(app, fileList) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
 
-  const tasks = files.map(async (file) => {
-    const id = Math.random().toString(36).slice(2);
-    app.uploads.unshift({ id, name: file.name, status: "uploading" });
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const response = await fetch("/documents/upload?stage_only=true", {
-        method: "POST",
-        body: formData,
-      });
-      const payload = await response.json();
-      app.uploads = app.uploads.map((upload) =>
-        upload.id === id
-          ? {
-              ...upload,
-              status: response.ok ? "done" : "error",
-              msg: response.ok ? "queued" : payload.message || "failed",
-            }
-          : upload,
-      );
-      return response.ok;
-    } catch {
-      app.uploads = app.uploads.map((upload) =>
-        upload.id === id
-          ? { ...upload, status: "error", msg: "network" }
-          : upload,
-      );
-      return false;
-    }
-  });
+  const tasks = files.map((file) =>
+    theseusStageOnlyUpload(app, file, {
+      collectionKey: "uploads",
+      pendingStatus: "uploading",
+      successStatus: "done",
+      successMessage: "queued",
+    }),
+  );
 
   const results = await Promise.all(tasks);
   const okCount = results.filter(Boolean).length;
@@ -146,48 +184,25 @@ window.theseusUploadFiles = async function theseusUploadFiles(app, fileList) {
     app.docStats.scanning = false;
   }
 
-  setTimeout(() => {
-    app.loadDocuments();
-    app.loadStats();
-    app.loadDocStats();
-  }, 1500);
+  theseusScheduleDocumentRefresh(app, 1500, {
+    documents: true,
+    stats: true,
+    docStats: true,
+  });
 };
 
 window.theseusStageFiles = async function theseusStageFiles(app, fileList) {
   const files = Array.from(fileList || []);
   for (const file of files) {
-    const id = Math.random().toString(36).slice(2);
-    app.stagedUploads.unshift({
-      id,
-      name: file.name,
-      status: "staging",
+    const ok = await theseusStageOnlyUpload(app, file, {
+      collectionKey: "stagedUploads",
+      pendingStatus: "staging",
+      successStatus: "staged",
+      successMessage: "ready",
     });
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const response = await fetch("/documents/upload?stage_only=true", {
-        method: "POST",
-        body: formData,
-      });
-      const payload = await response.json();
-      app.stagedUploads = app.stagedUploads.map((upload) =>
-        upload.id === id
-          ? {
-              ...upload,
-              status: response.ok ? "staged" : "error",
-              msg: response.ok ? "ready" : payload.message || "failed",
-            }
-          : upload,
-      );
-      if (response.ok) {
-        app.toast(`${file.name} staged - click Scan now when ready`);
-      }
-    } catch {
-      app.stagedUploads = app.stagedUploads.map((upload) =>
-        upload.id === id
-          ? { ...upload, status: "error", msg: "network" }
-          : upload,
-      );
+    if (ok) {
+      app.toast(`${file.name} staged - click Scan now when ready`);
+    } else {
       app.toast(`Stage failed: ${file.name}`, "error");
     }
   }
@@ -199,10 +214,10 @@ window.theseusScanRfp = async function theseusScanRfp(app) {
   try {
     const response = await app.api("/scan-rfp", { method: "POST" });
     app.toast(response.message || "Scan started");
-    setTimeout(() => {
-      app.loadDocuments();
-      app.loadDocStats();
-    }, 1500);
+    theseusScheduleDocumentRefresh(app, 1500, {
+      documents: true,
+      docStats: true,
+    });
   } catch (error) {
     app.toast("Scan failed: " + error.message, "error");
   } finally {
@@ -256,7 +271,7 @@ window.theseusCancelPipeline = async function theseusCancelPipeline(app) {
   try {
     await app.api("/documents/cancel_pipeline", { method: "POST" });
     app.toast("Pipeline cancellation requested");
-    setTimeout(() => app.loadDocStats(), 800);
+    theseusScheduleDocumentRefresh(app, 800, { docStats: true });
   } catch (error) {
     app.toast("Cancel failed: " + error.message, "error");
   } finally {
@@ -275,10 +290,10 @@ window.theseusReprocessFailed = async function theseusReprocessFailed(app) {
       method: "POST",
     });
     app.toast(`Re-queued ${failed} failed document(s)`);
-    setTimeout(() => {
-      app.loadDocuments();
-      app.loadDocStats();
-    }, 1000);
+    theseusScheduleDocumentRefresh(app, 1000, {
+      documents: true,
+      docStats: true,
+    });
   } catch (error) {
     app.toast("Reprocess failed: " + error.message, "error");
   } finally {

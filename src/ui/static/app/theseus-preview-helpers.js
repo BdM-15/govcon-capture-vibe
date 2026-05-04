@@ -12,12 +12,21 @@ window.theseusEnsureScript = function theseusEnsureScript(app, url) {
   return app._scriptCache[url];
 };
 
-window.theseusOpenStudioPreview = async function theseusOpenStudioPreview(
+const THESEUS_TEXT_PREVIEW_KINDS = new Set(["md", "json", "csv", "text"]);
+
+const theseusFetchPreviewResponse = async function theseusFetchPreviewResponse(
+  href,
+) {
+  const response = await fetch(href);
+  if (!response.ok) throw new Error("HTTP " + response.status);
+  return response;
+};
+
+const theseusResetStudioPreview = function theseusResetStudioPreview(
   app,
   deliverable,
 ) {
   app.studioPreview.open = true;
-  app.studioPreview.loading = true;
   app.studioPreview.error = null;
   app.studioPreview.deliverable = deliverable;
   app.studioPreview.kind = window.theseusStudioFormatFor(deliverable);
@@ -27,64 +36,75 @@ window.theseusOpenStudioPreview = async function theseusOpenStudioPreview(
   app.studioPreview.sheets = [];
   app.studioPreview.sheetIdx = 0;
   app.studioPreview.jsonChunks = [];
+};
+
+const theseusLoadTextStudioPreview = async function theseusLoadTextStudioPreview(
+  app,
+) {
+  const response = await theseusFetchPreviewResponse(app.studioPreview.href);
+  app.studioPreview.text = await response.text();
+  if (app.studioPreview.kind === "json") {
+    app.studioPreview.jsonChunks = window.theseusExtractJsonChunkIds(
+      app.studioPreview.text,
+    );
+  }
+};
+
+const theseusLoadDocxStudioPreview = async function theseusLoadDocxStudioPreview(
+  app,
+) {
+  await window.theseusEnsureScript(
+    app,
+    "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
+  );
+  const response = await theseusFetchPreviewResponse(app.studioPreview.href);
+  const buffer = await response.arrayBuffer();
+  const out = await window.mammoth.convertToHtml({ arrayBuffer: buffer });
+  app.studioPreview.docxHtml = out && out.value ? out.value : "";
+};
+
+const theseusLoadXlsxStudioPreview = async function theseusLoadXlsxStudioPreview(
+  app,
+) {
+  await window.theseusEnsureScript(
+    app,
+    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
+  );
+  const response = await theseusFetchPreviewResponse(app.studioPreview.href);
+  const buffer = await response.arrayBuffer();
+  const workbook = window.XLSX.read(buffer, { type: "array" });
+  app.studioPreview.sheets = (workbook.SheetNames || []).map((name) => ({
+    name,
+    html: window.XLSX.utils.sheet_to_html(workbook.Sheets[name], {
+      header: "",
+      footer: "",
+    }),
+  }));
+  app.studioPreview.sheetIdx = 0;
+};
+
+window.theseusOpenStudioPreview = async function theseusOpenStudioPreview(
+  app,
+  deliverable,
+) {
+  app.studioPreview.loading = true;
+  theseusResetStudioPreview(app, deliverable);
 
   try {
     const kind = app.studioPreview.kind;
-    if (kind === "pdf" || kind === "video" || kind === "image") {
-      app.studioPreview.loading = false;
-    } else if (
-      kind === "md" ||
-      kind === "json" ||
-      kind === "csv" ||
-      kind === "text"
-    ) {
-      const response = await fetch(app.studioPreview.href);
-      if (!response.ok) throw new Error("HTTP " + response.status);
-      app.studioPreview.text = await response.text();
-      if (kind === "json") {
-        app.studioPreview.jsonChunks = window.theseusExtractJsonChunkIds(
-          app.studioPreview.text,
-        );
-      }
-      app.studioPreview.loading = false;
+    if (THESEUS_TEXT_PREVIEW_KINDS.has(kind)) {
+      await theseusLoadTextStudioPreview(app);
     } else if (kind === "docx") {
-      await window.theseusEnsureScript(
-        app,
-        "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
-      );
-      const response = await fetch(app.studioPreview.href);
-      if (!response.ok) throw new Error("HTTP " + response.status);
-      const buffer = await response.arrayBuffer();
-      const out = await window.mammoth.convertToHtml({ arrayBuffer: buffer });
-      app.studioPreview.docxHtml = out && out.value ? out.value : "";
-      app.studioPreview.loading = false;
+      await theseusLoadDocxStudioPreview(app);
     } else if (kind === "xlsx") {
-      await window.theseusEnsureScript(
-        app,
-        "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
-      );
-      const response = await fetch(app.studioPreview.href);
-      if (!response.ok) throw new Error("HTTP " + response.status);
-      const buffer = await response.arrayBuffer();
-      const workbook = window.XLSX.read(buffer, { type: "array" });
-      app.studioPreview.sheets = (workbook.SheetNames || []).map((name) => ({
-        name,
-        html: window.XLSX.utils.sheet_to_html(workbook.Sheets[name], {
-          header: "",
-          footer: "",
-        }),
-      }));
-      app.studioPreview.sheetIdx = 0;
-      app.studioPreview.loading = false;
-    } else {
-      app.studioPreview.loading = false;
+      await theseusLoadXlsxStudioPreview(app);
     }
   } catch (error) {
     app.studioPreview.error = error?.message || String(error);
+  } finally {
     app.studioPreview.loading = false;
+    window.theseusAfterRender(app);
   }
-
-  window.theseusAfterRender(app);
 };
 
 window.theseusCloseStudioPreview = function theseusCloseStudioPreview(app) {
