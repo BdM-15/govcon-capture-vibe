@@ -29,14 +29,18 @@ import time
 import os
 import re
 import asyncio
-import json
-from pathlib import Path
 from typing import Dict, Callable, Awaitable, List
 from pydantic import ValidationError
 
 from src.core import get_settings
 from src.inference.neo4j_graph_io import Neo4jGraphIO, group_entities_by_type
 from src.inference.algorithms import run_all_algorithms_parallel
+from src.inference.semantic_post_process_support import (
+    GENERIC_REL_TYPES as _GENERIC_REL_TYPES,
+    count_vdb_entries as _count_vdb_entries,
+    heuristic_table_type_mapping as _heuristic_table_type_mapping,
+    resolve_generic_relationship as _resolve_generic_relationship,
+)
 from src.ontology.schema import VALID_ENTITY_TYPES, InferredRelationship
 from src.utils.llm_client import call_llm_async
 from src.utils.llm_parsing import extract_json_from_response, parse_with_pydantic
@@ -45,28 +49,6 @@ logger = logging.getLogger(__name__)
 
 # Convert set to list for prompt generation
 ALLOWED_TYPES = list(VALID_ENTITY_TYPES)
-
-
-def _count_vdb_entries(rag_storage_path: str, filename: str) -> int | None:
-    """Return the current number of entries in a LightRAG VDB JSON file."""
-    if not rag_storage_path:
-        return None
-
-    path = Path(rag_storage_path) / filename
-    if not path.exists():
-        return None
-
-    try:
-        with path.open(encoding="utf-8") as file:
-            payload = json.load(file)
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.warning("Could not read %s for final count reporting: %s", path, exc)
-        return None
-
-    data = payload.get("data", []) if isinstance(payload, dict) else payload
-    if isinstance(data, (list, dict)):
-        return len(data)
-    return None
 
 
 def get_semantic_post_processing_config():
@@ -93,148 +75,6 @@ MAX_CONCURRENT_LLM_CALLS = _settings.get_effective_post_processing_max_async()
 # Root cause: Table-derived text from MinerU/VLM has entities co-occurring
 # without prose connectors, so the LLM defaults to generic relationships.
 # ═══════════════════════════════════════════════════════════════════════════════
-
-_ENTITY_PAIR_REL_MAP = {
-    # ─── WORK & DELIVERABLES ───
-    ("requirement", "deliverable"): "SATISFIED_BY",
-    ("deliverable", "requirement"): "SATISFIED_BY",
-    ("requirement", "performance_standard"): "MEASURED_BY",
-    ("performance_standard", "requirement"): "MEASURED_BY",
-    ("work_scope_item", "deliverable"): "PRODUCES",
-    ("deliverable", "work_scope_item"): "PRODUCES",
-    ("requirement", "workload_metric"): "QUANTIFIES",
-    ("workload_metric", "requirement"): "QUANTIFIES",
-    ("deliverable", "contract_line_item"): "PRICED_UNDER",
-    ("contract_line_item", "deliverable"): "PRICED_UNDER",
-    ("requirement", "contract_line_item"): "PRICED_UNDER",
-    ("contract_line_item", "requirement"): "PRICED_UNDER",
-    ("deliverable", "organization"): "SUBMITTED_TO",
-    ("organization", "deliverable"): "SUBMITTED_TO",
-    # ─── EVALUATION ───
-    ("requirement", "evaluation_factor"): "EVALUATED_BY",
-    ("evaluation_factor", "requirement"): "EVALUATED_BY",
-    ("deliverable", "evaluation_factor"): "EVALUATED_BY",
-    ("evaluation_factor", "deliverable"): "EVALUATED_BY",
-    ("work_scope_item", "evaluation_factor"): "EVALUATED_BY",
-    ("evaluation_factor", "work_scope_item"): "EVALUATED_BY",
-    ("evaluation_factor", "evaluation_factor"): "CHILD_OF",
-    # ─── AUTHORITY & GOVERNANCE ───
-    ("requirement", "clause"): "GOVERNED_BY",
-    ("clause", "requirement"): "GOVERNED_BY",
-    ("requirement", "regulatory_reference"): "GOVERNED_BY",
-    ("regulatory_reference", "requirement"): "GOVERNED_BY",
-    # ─── RESOURCE ───
-    ("requirement", "labor_category"): "STAFFED_BY",
-    ("labor_category", "requirement"): "STAFFED_BY",
-    ("work_scope_item", "labor_category"): "STAFFED_BY",
-    ("labor_category", "work_scope_item"): "STAFFED_BY",
-    ("location", "equipment"): "HAS_EQUIPMENT",
-    ("equipment", "location"): "HAS_EQUIPMENT",
-    ("government_furnished_item", "organization"): "PROVIDED_BY",
-    ("organization", "government_furnished_item"): "PROVIDED_BY",
-    # ─── STRATEGIC ───
-    ("requirement", "customer_priority"): "ADDRESSES",
-    ("customer_priority", "requirement"): "ADDRESSES",
-    ("requirement", "pain_point"): "ADDRESSES",
-    ("pain_point", "requirement"): "ADDRESSES",
-}
-
-# Relationship types that indicate the LLM used a generic fallback
-_GENERIC_REL_TYPES = {"RELATED_TO"}
-
-
-def _resolve_generic_relationship(rel_type: str, src_type: str, tgt_type: str) -> str:
-    """
-    Re-type a generic relationship based on source and target entity types.
-    
-    Only operates on RELATED_TO relationships (the normalized form of
-    belongs_to, contained_in, and other generic LLM outputs).
-    
-    Returns the original type if no better mapping exists.
-    """
-    if rel_type not in _GENERIC_REL_TYPES:
-        return rel_type
-    
-    pair = (src_type.lower(), tgt_type.lower())
-    return _ENTITY_PAIR_REL_MAP.get(pair, rel_type)
-
-
-def _heuristic_table_type_mapping(entity: Dict) -> str:
-    """
-    Intelligently map "table" entities (from RAG-Anything) to govcon types based on content.
-    
-    RAG-Anything's TableModalProcessor hardcodes entity_type="table" for all tables.
-    This function examines the entity name and content to determine the correct govcon type.
-    
-    Args:
-        entity: Entity dict with entity_name, content, etc.
-    
-    Returns:
-        Mapped govcon type or None if LLM inference needed
-    """
-    name = (entity.get('entity_name') or '').lower()
-    # BUG FIX: Table entities have content in 'content' field, not 'description'
-    # The VDB stores: entity_name, entity_type, content, source_id, file_path, vector
-    desc = (entity.get('description') or entity.get('content') or '').lower()
-    text = f"{name} {desc}"
-    
-    # CDRL/Deliverable tables → deliverable
-    if any(kw in text for kw in ['cdrl', 'contract data', 'deliverable', 'dd form 1423', 'data item']):
-        return 'deliverable'
-    
-    # Evaluation/Rating tables → evaluation_factor  
-    if any(kw in text for kw in ['evaluation', 'rating', 'scoring', 'assessment', 'criteria', 'factor']):
-        return 'evaluation_factor'
-    
-    # Performance/Surveillance tables → performance_standard
-    if any(kw in text for kw in ['performance', 'metric', 'sla', 'kpi', 'threshold', 'standard', 'qasp', 'aql']):
-        return 'performance_standard'
-    
-    # Workload data tables → requirement (CRITICAL for BOE/workload enrichment)
-    # Must come BEFORE the general 'work' pattern to catch workload-specific tables
-    if any(kw in text for kw in ['workload', 'aircraft visit', 'estimated monthly', 'h.2.0', 'j.2.0', 'k.2.0', 'l.2.0']):
-        return 'requirement'
-    
-    # Requirements/SOW tables → requirement
-    if any(kw in text for kw in ['requirement', 'shall', 'must', 'sow', 'pws', 'task', 'work']):
-        return 'requirement'
-    
-    # Submission/Proposal tables → proposal_instruction
-    if any(kw in text for kw in ['submission', 'proposal', 'volume', 'page limit', 'format']):
-        return 'proposal_instruction'
-    
-    # Clause/Regulation tables → clause
-    if any(kw in text for kw in ['far ', 'dfars', 'clause', 'provision', '52.2']):
-        return 'clause'
-    
-    # Section/Document reference tables → document_section or document
-    if any(kw in text for kw in ['section', 'paragraph', 'attachment', 'annex', 'exhibit', 'appendix']):
-        return 'document_section'
-    
-    # Organization/personnel tables → organization or labor_category
-    if any(kw in text for kw in ['organization', 'contractor', 'government', 'agency']):
-        return 'organization'
-    if any(kw in text for kw in ['personnel', 'staff', 'position', 'role', 'labor category']):
-        return 'labor_category'
-    
-    # Equipment/Material tables → equipment
-    if any(kw in text for kw in ['gfe', 'gfp', 'gfi', 'government furnished', 'government-furnished']):
-        return 'government_furnished_item'
-    if any(kw in text for kw in ['equipment', 'material', 'supply', 'asset']):
-        return 'equipment'
-    
-    # Schedule/Timeline tables → concept (general information)
-    if any(kw in text for kw in ['schedule', 'timeline', 'milestone', 'calendar', 'date']):
-        return 'concept'
-    
-    # Pricing/Cost tables → concept (we don't have a pricing type)
-    if any(kw in text for kw in ['price', 'cost', 'clin', 'labor rate', 'fee']):
-        return 'concept'
-    
-    # Can't determine heuristically - default to 'concept' (no LLM fallback)
-    # With Pydantic validation in extraction, we don't need LLM post-processing
-    return 'concept'
-
 
 # NOTE: _infer_entity_type and _infer_entity_types_parallel REMOVED
 # With Pydantic validation in extraction, LLM-based entity type correction is no longer needed.
