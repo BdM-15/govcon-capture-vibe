@@ -33,6 +33,7 @@ from raganything import RAGAnything, RAGAnythingConfig
 from src.ontology.schema import VALID_ENTITY_TYPES
 from src.core import get_settings
 from src.server.doc_status_compat import apply_doc_status_compatibility_shim
+from src.server.multimodal_setup import configure_multimodal_stack
 from src.utils.time_utils import to_local_iso
 
 logger = logging.getLogger(__name__)
@@ -561,145 +562,11 @@ async def initialize_raganything():
     lightrag_instance.relationships_vdb.meta_fields = extended_rel_meta
     logger.info(f"✅ Extended relationships_vdb.meta_fields: {extended_rel_meta}")
     
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # Register GovCon multimodal prompts via RAGAnything's prompt registry (Branch #072)
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # RAGAnything 1.2.10 introduced register_prompt_language() / set_prompt_language()
-    # (GitHub issue #85 — prompt language support). This allows atomic, thread-safe
-    # replacement of all multimodal analysis prompts without subclassing processors.
-    #
-    # We register a "govcon" language that overrides TABLE/IMAGE/EQUATION system prompts
-    # and the processing prompts used by TableModalProcessor, ImageModalProcessor, and
-    # EquationModalProcessor. Native library processors then use these govcon prompts
-    # automatically — no custom processor subclass required.
-    # ═══════════════════════════════════════════════════════════════════════════════
-    from raganything.prompt_manager import register_prompt_language, set_prompt_language
-    from prompts.multimodal.govcon_multimodal_prompts import GOVCON_MULTIMODAL_PROMPTS
-
-    register_prompt_language("govcon", GOVCON_MULTIMODAL_PROMPTS)
-    set_prompt_language("govcon")
-    logger.info(f"✅ Registered and activated 'govcon' prompt language ({len(GOVCON_MULTIMODAL_PROMPTS)} prompt overrides)")
-    logger.info("   - TABLE_ANALYSIS_SYSTEM: federal acquisition analyst + workload/CLIN/CDRL focus")
-    logger.info("   - table_prompt(_with_context): multi-page continuation detection, govcon directives")
-    logger.info("   - IMAGE_ANALYSIS_SYSTEM: org charts, facility layouts, CDRL hierarchies")
-    logger.info("   - vision_prompt(_with_context): all visible text + contractual element extraction")
-    logger.info("   - EQUATION prompts: performance formulas, incentive calculations")
-    logger.info("   - QUERY_TABLE/IMAGE prompts: govcon analyst framing for query-time VLM")
-
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # Register library-native modal processors (TableModalProcessor etc.)
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # Now that govcon prompts are active, the library's native processors use them
-    # automatically. No custom subclass needed — GovconMultimodalProcessor removed.
-    #
-    # Native processor benefits over custom subclass:
-    # - Structured JSON response → named entity (not generic "table_p53")
-    # - separate entity_info.summary → richer VDB embedding
-    # - _parse_table_response / _parse_response fallback handling
-    # - context_extractor wired via BaseModalProcessor._get_context_for_item()
-    # ═══════════════════════════════════════════════════════════════════════════════
-    from raganything.modalprocessors import (
-        TableModalProcessor,
-        ImageModalProcessor,
-        EquationModalProcessor,
+    configure_multimodal_stack(
+        _rag_anything,
+        llm_model_func=llm_model_func_wrapped,
+        vision_model_func=vision_model_func,
     )
-
-    # Get the context_extractor that RAGAnything created during _ensure_lightrag_initialized()
-    context_extractor = _rag_anything.context_extractor
-    if context_extractor:
-        logger.info(f"✅ Context extractor available: window={context_extractor.config.context_window}, mode={context_extractor.config.context_mode}")
-    else:
-        logger.warning("⚠️ Context extractor not available - tables will be processed without section context")
-
-    _rag_anything.modal_processors["table"] = TableModalProcessor(
-        _rag_anything.lightrag, llm_model_func_wrapped, context_extractor
-    )
-    _rag_anything.modal_processors["image"] = ImageModalProcessor(
-        _rag_anything.lightrag, vision_model_func, context_extractor
-    )
-    _rag_anything.modal_processors["equation"] = EquationModalProcessor(
-        _rag_anything.lightrag, llm_model_func_wrapped, context_extractor
-    )
-
-    logger.info("✅ Native RAGAnything modal processors registered with govcon prompts")
-    logger.info("   table    → TableModalProcessor    (govcon TABLE_ANALYSIS_SYSTEM + table_prompt)")
-    logger.info("   image    → ImageModalProcessor    (govcon IMAGE_ANALYSIS_SYSTEM + vision_prompt)")
-    logger.info("   equation → EquationModalProcessor (govcon EQUATION_ANALYSIS_SYSTEM + equation_prompt)")
-
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # SHIM: RAGAnything 1.2.10 ↔ LightRAG 1.5.0 `role_llm_funcs` incompatibility
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # LightRAG 1.5.0 exposes `role_llm_funcs` as a @property (lightrag.py:934)
-    # backed by the private `_role_llm_states` map — it is NOT a dataclass field
-    # and therefore NOT in `lightrag.__dict__`.
-    #
-    # RAGAnything 1.2.10's multimodal pipeline reads global_config in two
-    # orthogonal ways, BOTH of which miss the property:
-    #
-    #   (a) BaseModalProcessor.__init__ snapshots `self.global_config =
-    #       asdict(lightrag)` (modalprocessors.py:389) — asdict() only walks
-    #       dataclass fields, drops the property.
-    #
-    #   (b) processor.py lines 750, 1257, 1354 pass `self.lightrag.__dict__`
-    #       directly to `extract_entities(...)` and `merge_nodes_and_edges(...)`,
-    #       bypassing the snapshot entirely. `__dict__` is the raw instance
-    #       dict and does NOT trigger property descriptors.
-    #
-    # The actual extract_entities call site for multimodal chunks is path (b),
-    # so patching processor.global_config (path a) accomplishes nothing — we
-    # confirmed this with a fresh _t2 reprocess after committing 5697f7e: the
-    # 'role_llm_funcs' KeyError still fired identically.
-    #
-    # Real fix: inject role_llm_funcs INTO `lightrag.__dict__` directly. Direct
-    # dict-key reads (`d["role_llm_funcs"]`) read the dict, not the descriptor,
-    # so the injected entry wins. Normal attribute access (`lightrag.role_llm_funcs`)
-    # still goes through the property because data-descriptor lookup precedes
-    # instance dict — so we don't break LightRAG's own internals.
-    #
-    # Confirmed upstream `main` (post v1.2.10) still uses `asdict(lightrag)` and
-    # `self.lightrag.__dict__` — no PR in flight as of 2026-04-30. Remove this
-    # block once raganything releases an LR-1.5-aware version. See proj-theseus
-    # issue #118 (orthogonal — table boilerplate dominates retrieval).
-    # ═══════════════════════════════════════════════════════════════════════════════
-    _lr = _rag_anything.lightrag
-    _build_gc = getattr(_lr, "_build_global_config", None)
-    _live_role_funcs = getattr(_lr, "role_llm_funcs", None)
-    if callable(_build_gc) and _live_role_funcs:
-        try:
-            _full_gc = _build_gc()
-            # (1) Inject directly into lightrag.__dict__ so processor.py's
-            #     `self.lightrag.__dict__["role_llm_funcs"]` lookups succeed.
-            _lr.__dict__["role_llm_funcs"] = _full_gc.get("role_llm_funcs", {})
-            # (2) Also refresh each modal processor's snapshot for completeness
-            #     (covers any future code path that reads processor.global_config).
-            _patched = 0
-            for _modal_kind, _modal_proc in _rag_anything.modal_processors.items():
-                try:
-                    _modal_proc.global_config = _full_gc
-                    _patched += 1
-                except Exception as _shim_err:  # pragma: no cover - defensive
-                    logger.warning(
-                        "⚠️ role_llm_funcs shim failed for modal processor '%s': %s",
-                        _modal_kind, _shim_err,
-                    )
-            logger.info(
-                "✅ Shim applied: injected role_llm_funcs into lightrag.__dict__ "
-                "(roles=%s) AND rebuilt global_config for %d modal processors "
-                "(workaround for raganything 1.2.10 ↔ lightrag 1.5.0 property/asdict bug)",
-                sorted(_live_role_funcs.keys()), _patched,
-            )
-        except Exception as _shim_err:
-            logger.error(
-                "❌ role_llm_funcs shim failed: %s — multimodal extraction will fall "
-                "back to bare table/image/equation placeholders", _shim_err,
-            )
-    else:
-        logger.warning(
-            "⚠️ Cannot apply role_llm_funcs shim: _build_global_config callable=%s, "
-            "role_llm_funcs available=%s — modal multimodal extraction may fall "
-            "back to bare table/image/equation placeholders",
-            callable(_build_gc), bool(_live_role_funcs),
-        )
 
     # ═══════════════════════════════════════════════════════════════════════════════
     # CRITICAL: REPLACE LightRAG's ENTIRE prompt system with GovCon versions
