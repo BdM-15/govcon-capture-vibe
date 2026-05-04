@@ -18,17 +18,16 @@ import asyncio
 import logging
 import threading
 from datetime import datetime
-from typing import Optional
-from fastapi import UploadFile, File, BackgroundTasks, Query
-from fastapi.responses import JSONResponse
+from fastapi import BackgroundTasks
 from lightrag.api.config import global_args
 from raganything.callbacks import ProcessingCallback
 
 from src.core import get_settings
 from src.server.document_processing import process_document_with_semantic_inference as run_document_processing
 from src.server.scan_routes import create_scan_endpoint as register_scan_endpoint
-from src.server.upload_staging import (
-    save_upload_to_workspace,
+from src.server.upload_routes import (
+    create_documents_upload_endpoint as register_documents_upload_endpoint,
+    create_insert_endpoint as register_insert_endpoint,
 )
 
 logger = logging.getLogger(__name__)
@@ -225,140 +224,20 @@ async def process_document_with_semantic_inference(
 
 
 def create_insert_endpoint(app, rag_instance):
-    """
-    Create custom /insert endpoint with automatic semantic post-processing.
-
-    Saves the upload to inputs/<workspace>/ (preserving the original) and runs
-    RAG-Anything + LightRAG extraction with LLM-powered relationship inference.
-    """
-
-    async def insert_with_semantic_processing(
-        file: UploadFile = File(...),
-        workspace: Optional[str] = Query(
-            None,
-            description="Workspace to save into. Defaults to the server's current workspace.",
-        ),
-    ):
-        logger.info(f"🔔 ENDPOINT CALLED: /insert with file: {file.filename}")
-
-        await _callback.register_request_start(file.filename)
-
-        try:
-            file_path = await save_upload_to_workspace(file, workspace)
-            logger.info(
-                f"📄 Processing {file_path.name} via /insert "
-                f"(saved to {file_path.parent})"
-            )
-
-            processing_result = await process_document_with_semantic_inference(
-                str(file_path), file_path.name, rag_instance, rag_instance.llm_model_func
-            )
-
-            logger.info(f"✅ Processing complete for {file_path.name}")
-
-            return JSONResponse({
-                "status": "success",
-                "message": f"Document {file_path.name} processed successfully",
-                "saved_to": str(file_path),
-                "relationships_inferred": processing_result["relationships_inferred"],
-                "method": "RAG-Anything + LLM semantic inference (format-agnostic)",
-            })
-
-        except Exception as e:
-            logger.error(f"❌ Error processing document: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
-
-        finally:
-            await _callback.register_request_end(file.filename)
-
-    app.add_api_route(
-        "/insert",
-        insert_with_semantic_processing,
-        methods=["POST"],
-        response_class=JSONResponse,
+    register_insert_endpoint(
+        app,
+        rag_instance,
+        process_document_func=process_document_with_semantic_inference,
+        callback=_callback,
     )
 
 
 def create_documents_upload_endpoint(app, rag_instance):
-    """
-    Override LightRAG's WebUI /documents/upload endpoint to use RAG-Anything.
-
-    Saves the upload to inputs/<workspace>/ so the WebUI flow and the
-    /scan-rfp filesystem flow both stage originals in the same place.
-    """
-
-    async def documents_upload_with_raganything(
-        file: UploadFile = File(...),
-        workspace: Optional[str] = Query(
-            None,
-            description="Workspace to save into. Defaults to the server's current workspace.",
-        ),
-        stage_only: bool = Query(
-            False,
-            description="If true, save the file to inputs/<workspace>/ without triggering extraction. Use Folder Watcher → Scan now to process later.",
-        ),
-    ):
-        logger.info(
-            f"🔔 ENDPOINT CALLED: /documents/upload with file: {file.filename} "
-            f"(stage_only={stage_only})"
-        )
-
-        # In stage-only mode we skip the batch callback so we don't trip
-        # post-processing on a save that produced no extraction work.
-        if not stage_only:
-            await _callback.register_request_start(file.filename)
-
-        try:
-            file_path = await save_upload_to_workspace(file, workspace)
-
-            if stage_only:
-                logger.info(
-                    f"📥 Staged {file_path.name} to {file_path.parent} "
-                    f"(no processing — awaiting /scan-rfp)"
-                )
-                return JSONResponse({
-                    "status": "staged",
-                    "message": f"Document {file_path.name} staged for batch scan",
-                    "saved_to": str(file_path),
-                    "stage_only": True,
-                })
-
-            logger.info(
-                f"📄 Processing {file_path.name} via WebUI /documents/upload "
-                f"(saved to {file_path.parent})"
-            )
-
-            processing_result = await process_document_with_semantic_inference(
-                str(file_path), file_path.name, rag_instance, rag_instance.llm_model_func
-            )
-
-            logger.info(f"✅ Processing complete for {file_path.name}")
-
-            return JSONResponse({
-                "status": "success",
-                "message": f"Document {file_path.name} processed successfully",
-                "saved_to": str(file_path),
-                "relationships_inferred": processing_result.get("relationships_inferred", 0),
-                "method": "RAG-Anything + LLM semantic inference (format-agnostic)",
-            })
-
-        except Exception as e:
-            logger.error(f"❌ Error processing document: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
-
-        finally:
-            if not stage_only:
-                await _callback.register_request_end(file.filename)
-
-    app.add_api_route(
-        "/documents/upload",
-        documents_upload_with_raganything,
-        methods=["POST"],
-        response_class=JSONResponse,
+    register_documents_upload_endpoint(
+        app,
+        rag_instance,
+        process_document_func=process_document_with_semantic_inference,
+        callback=_callback,
     )
 
 
