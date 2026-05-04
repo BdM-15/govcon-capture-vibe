@@ -1,14 +1,17 @@
 import json
 from pathlib import Path
 from types import SimpleNamespace
+import subprocess
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.ontology.schema import VALID_ENTITY_TYPES, VALID_RELATIONSHIP_TYPES
+from src.server import dashboard_stats
 from src.server.dashboard_stats import (
     gather_stats,
     register_dashboard_stats_routes,
+    release_version,
     ui_chat_history_pairs,
 )
 
@@ -96,3 +99,35 @@ def test_dashboard_stats_route_uses_injected_dependencies(tmp_path) -> None:
     assert response.status_code == 200, response.text
     assert response.json()["workspace"] == "demo"
     assert response.json()["graph_storage"] == "NetworkXStorage"
+
+
+def test_release_version_uses_repo_root_for_git_tag(monkeypatch) -> None:
+    monkeypatch.delenv("THESEUS_RELEASE_VERSION", raising=False)
+    monkeypatch.setattr(dashboard_stats, "_RELEASE_VERSION_CACHE", None)
+    captured: dict[str, object] = {}
+
+    def fake_run(*args, **kwargs):
+        captured["cwd"] = kwargs["cwd"]
+        return SimpleNamespace(stdout="v1.4.0\n")
+
+    monkeypatch.setattr(dashboard_stats.subprocess, "run", fake_run)
+
+    assert release_version() == "v1.4.0"
+    assert captured["cwd"] == Path(dashboard_stats.__file__).resolve().parents[2]
+
+
+def test_release_version_does_not_cache_fallback(monkeypatch) -> None:
+    monkeypatch.delenv("THESEUS_RELEASE_VERSION", raising=False)
+    monkeypatch.setattr(dashboard_stats, "_RELEASE_VERSION_CACHE", None)
+    calls = {"count": 0}
+
+    def fake_run(*args, **kwargs):
+        calls["count"] += 1
+        raise subprocess.CalledProcessError(1, args[0])
+
+    monkeypatch.setattr(dashboard_stats.subprocess, "run", fake_run)
+
+    assert release_version() == "v0.0.0"
+    assert dashboard_stats._RELEASE_VERSION_CACHE is None
+    assert release_version() == "v0.0.0"
+    assert calls["count"] == 2

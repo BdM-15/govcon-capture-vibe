@@ -18,6 +18,7 @@ from src.utils.time_utils import now_local_iso
 
 _STACK_CACHE: Optional[dict[str, Optional[str]]] = None
 _RELEASE_VERSION_CACHE: Optional[str] = None
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def stack_versions() -> dict[str, Optional[str]]:
@@ -46,32 +47,32 @@ def stack_versions() -> dict[str, Optional[str]]:
 
 
 def release_version() -> str:
-        """Resolve the current Theseus release version for UI display."""
-        global _RELEASE_VERSION_CACHE  # noqa: PLW0603
-        if _RELEASE_VERSION_CACHE is not None:
-            return _RELEASE_VERSION_CACHE
-
-        env_version = os.getenv("THESEUS_RELEASE_VERSION", "").strip()
-        if env_version:
-            _RELEASE_VERSION_CACHE = env_version
-            return env_version
-
-        try:
-            completed = subprocess.run(
-                    ["git", "describe", "--tags", "--abbrev=0"],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-            )
-            tag = completed.stdout.strip()
-            if tag:
-                    _RELEASE_VERSION_CACHE = tag
-                    return tag
-        except (FileNotFoundError, subprocess.CalledProcessError):
-            pass
-
-        _RELEASE_VERSION_CACHE = "v0.0.0"
+    """Resolve the current Theseus release version for UI display."""
+    global _RELEASE_VERSION_CACHE  # noqa: PLW0603
+    if _RELEASE_VERSION_CACHE is not None:
         return _RELEASE_VERSION_CACHE
+
+    env_version = os.getenv("THESEUS_RELEASE_VERSION", "").strip()
+    if env_version:
+        _RELEASE_VERSION_CACHE = env_version
+        return env_version
+
+    try:
+        completed = subprocess.run(
+            ["git", "describe", "--tags", "--abbrev=0"],
+            cwd=_REPO_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        tag = completed.stdout.strip()
+        if tag:
+            _RELEASE_VERSION_CACHE = tag
+            return tag
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        pass
+
+    return "v0.0.0"
 
 
 def ui_chat_history_pairs() -> int:
