@@ -54,6 +54,12 @@ that gets injected into the workspace's LightRAG instance.
 import logging
 from typing import TypedDict
 
+from src.ontology.govcon_kg_support import (
+    build_ontology_stats,
+    combine_knowledge_graph_parts,
+    validate_custom_kg,
+)
+
 # Import all knowledge modules via package __init__
 from src.ontology.knowledge import (
     # Shipley
@@ -139,49 +145,24 @@ def build_govcon_ontology_kg() -> CustomKnowledgeGraph:
         >>> kg = build_govcon_ontology_kg()
         >>> await rag.ainsert_custom_kg(kg)
     """
-    # Combine all entity lists
-    all_entities: list[CustomEntity] = [
-        *SHIPLEY_ENTITIES,
-        *REGULATION_ENTITIES,
-        *EVALUATION_ENTITIES,
-        *WORKLOAD_ENTITIES,
-        *CAPTURE_ENTITIES,
-        *LESSONS_ENTITIES,
-        *COMPANY_ENTITIES,
-    ]
-    
-    # Combine all relationship lists
-    all_relationships: list[CustomRelationship] = [
-        *SHIPLEY_RELATIONSHIPS,
-        *REGULATION_RELATIONSHIPS,
-        *EVALUATION_RELATIONSHIPS,
-        *WORKLOAD_RELATIONSHIPS,
-        *CAPTURE_RELATIONSHIPS,
-        *LESSONS_RELATIONSHIPS,
-        *COMPANY_RELATIONSHIPS,
-    ]
-    
-    # Combine all chunk lists
-    all_chunks: list[CustomChunk] = [
-        *SHIPLEY_CHUNKS,
-        *REGULATION_CHUNKS,
-        *EVALUATION_CHUNKS,
-        *WORKLOAD_CHUNKS,
-        *CAPTURE_CHUNKS,
-        *LESSONS_CHUNKS,
-        *COMPANY_CHUNKS,
-    ]
-    
-    logger.info(
-        f"Consolidated GovCon ontology: {len(all_entities)} entities, "
-        f"{len(all_relationships)} relationships, {len(all_chunks)} chunks"
+    combined = combine_knowledge_graph_parts(
+        [
+            (SHIPLEY_ENTITIES, SHIPLEY_RELATIONSHIPS, SHIPLEY_CHUNKS),
+            (REGULATION_ENTITIES, REGULATION_RELATIONSHIPS, REGULATION_CHUNKS),
+            (EVALUATION_ENTITIES, EVALUATION_RELATIONSHIPS, EVALUATION_CHUNKS),
+            (WORKLOAD_ENTITIES, WORKLOAD_RELATIONSHIPS, WORKLOAD_CHUNKS),
+            (CAPTURE_ENTITIES, CAPTURE_RELATIONSHIPS, CAPTURE_CHUNKS),
+            (LESSONS_ENTITIES, LESSONS_RELATIONSHIPS, LESSONS_CHUNKS),
+            (COMPANY_ENTITIES, COMPANY_RELATIONSHIPS, COMPANY_CHUNKS),
+        ]
     )
     
-    return {
-        "entities": all_entities,
-        "relationships": all_relationships,
-        "chunks": all_chunks,
-    }
+    logger.info(
+        f"Consolidated GovCon ontology: {len(combined['entities'])} entities, "
+        f"{len(combined['relationships'])} relationships, {len(combined['chunks'])} chunks"
+    )
+
+    return combined
 
 
 def get_ontology_stats() -> dict:
@@ -195,63 +176,17 @@ def get_ontology_stats() -> dict:
         >>> stats = get_ontology_stats()
         >>> print(f"Total entities: {stats['total_entities']}")
     """
-    return {
-        "modules": {
-            "shipley": {
-                "entities": len(SHIPLEY_ENTITIES),
-                "relationships": len(SHIPLEY_RELATIONSHIPS),
-                "chunks": len(SHIPLEY_CHUNKS),
-            },
-            "regulations": {
-                "entities": len(REGULATION_ENTITIES),
-                "relationships": len(REGULATION_RELATIONSHIPS),
-                "chunks": len(REGULATION_CHUNKS),
-            },
-            "evaluation": {
-                "entities": len(EVALUATION_ENTITIES),
-                "relationships": len(EVALUATION_RELATIONSHIPS),
-                "chunks": len(EVALUATION_CHUNKS),
-            },
-            "workload": {
-                "entities": len(WORKLOAD_ENTITIES),
-                "relationships": len(WORKLOAD_RELATIONSHIPS),
-                "chunks": len(WORKLOAD_CHUNKS),
-            },
-            "capture": {
-                "entities": len(CAPTURE_ENTITIES),
-                "relationships": len(CAPTURE_RELATIONSHIPS),
-                "chunks": len(CAPTURE_CHUNKS),
-            },
-            "lessons_learned": {
-                "entities": len(LESSONS_ENTITIES),
-                "relationships": len(LESSONS_RELATIONSHIPS),
-                "chunks": len(LESSONS_CHUNKS),
-            },
-            "company_capabilities": {
-                "entities": len(COMPANY_ENTITIES),
-                "relationships": len(COMPANY_RELATIONSHIPS),
-                "chunks": len(COMPANY_CHUNKS),
-            },
-        },
-        "total_entities": sum([
-            len(SHIPLEY_ENTITIES), len(REGULATION_ENTITIES),
-            len(EVALUATION_ENTITIES), len(WORKLOAD_ENTITIES),
-            len(CAPTURE_ENTITIES), len(LESSONS_ENTITIES),
-            len(COMPANY_ENTITIES),
-        ]),
-        "total_relationships": sum([
-            len(SHIPLEY_RELATIONSHIPS), len(REGULATION_RELATIONSHIPS),
-            len(EVALUATION_RELATIONSHIPS), len(WORKLOAD_RELATIONSHIPS),
-            len(CAPTURE_RELATIONSHIPS), len(LESSONS_RELATIONSHIPS),
-            len(COMPANY_RELATIONSHIPS),
-        ]),
-        "total_chunks": sum([
-            len(SHIPLEY_CHUNKS), len(REGULATION_CHUNKS),
-            len(EVALUATION_CHUNKS), len(WORKLOAD_CHUNKS),
-            len(CAPTURE_CHUNKS), len(LESSONS_CHUNKS),
-            len(COMPANY_CHUNKS),
-        ]),
-    }
+    return build_ontology_stats(
+        {
+            "shipley": (SHIPLEY_ENTITIES, SHIPLEY_RELATIONSHIPS, SHIPLEY_CHUNKS),
+            "regulations": (REGULATION_ENTITIES, REGULATION_RELATIONSHIPS, REGULATION_CHUNKS),
+            "evaluation": (EVALUATION_ENTITIES, EVALUATION_RELATIONSHIPS, EVALUATION_CHUNKS),
+            "workload": (WORKLOAD_ENTITIES, WORKLOAD_RELATIONSHIPS, WORKLOAD_CHUNKS),
+            "capture": (CAPTURE_ENTITIES, CAPTURE_RELATIONSHIPS, CAPTURE_CHUNKS),
+            "lessons_learned": (LESSONS_ENTITIES, LESSONS_RELATIONSHIPS, LESSONS_CHUNKS),
+            "company_capabilities": (COMPANY_ENTITIES, COMPANY_RELATIONSHIPS, COMPANY_CHUNKS),
+        }
+    )
 
 
 def validate_ontology() -> tuple[bool, list[str]]:
@@ -267,52 +202,8 @@ def validate_ontology() -> tuple[bool, list[str]]:
     Returns:
         tuple[bool, list[str]]: (is_valid, list of error messages)
     """
-    errors: list[str] = []
     kg = build_govcon_ontology_kg()
-    
-    # Collect all entity names
-    entity_names = set()
-    
-    # Validate entities
-    for i, entity in enumerate(kg["entities"]):
-        # Check required fields
-        if not entity.get("entity_name"):
-            errors.append(f"Entity {i}: missing entity_name")
-        if not entity.get("entity_type"):
-            errors.append(f"Entity {i}: missing entity_type")
-        if not entity.get("description"):
-            errors.append(f"Entity {i}: missing description")
-        
-        # Check for duplicates
-        name = entity.get("entity_name", "")
-        if name in entity_names:
-            errors.append(f"Duplicate entity name: {name}")
-        entity_names.add(name)
-    
-    # Validate relationships
-    for i, rel in enumerate(kg["relationships"]):
-        # Check required fields
-        if not rel.get("src_id"):
-            errors.append(f"Relationship {i}: missing src_id")
-        if not rel.get("tgt_id"):
-            errors.append(f"Relationship {i}: missing tgt_id")
-        if not rel.get("description"):
-            errors.append(f"Relationship {i}: missing description")
-        
-        # Check entity references exist
-        src = rel.get("src_id", "")
-        tgt = rel.get("tgt_id", "")
-        if src and src not in entity_names:
-            errors.append(f"Relationship {i}: src_id '{src}' not found in entities")
-        if tgt and tgt not in entity_names:
-            errors.append(f"Relationship {i}: tgt_id '{tgt}' not found in entities")
-    
-    # Validate chunks
-    for i, chunk in enumerate(kg["chunks"]):
-        if not chunk.get("content"):
-            errors.append(f"Chunk {i}: missing content")
-    
-    is_valid = len(errors) == 0
+    is_valid, errors = validate_custom_kg(kg)
     
     if is_valid:
         logger.info("Ontology validation passed")
