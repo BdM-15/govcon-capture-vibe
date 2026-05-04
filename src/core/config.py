@@ -26,6 +26,8 @@ from typing import Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
+from src.core.config_policy import effective_async, validate_required_settings as _validate_required_settings
+
 
 class Settings(BaseSettings):
     """
@@ -367,43 +369,22 @@ class Settings(BaseSettings):
     
     def get_effective_llm_max_async(self) -> int:
         """Get effective LLM max async (legacy MAX_ASYNC override if set)."""
-        return self.max_async if self.max_async is not None else self.llm_max_async
+        return effective_async(self.max_async, self.llm_max_async)
     
     def get_effective_embedding_max_async(self) -> int:
         """Get effective embedding max async (legacy MAX_ASYNC override if set)."""
-        return self.max_async if self.max_async is not None else self.embedding_max_async
+        return effective_async(self.max_async, self.embedding_max_async)
     
     def get_effective_post_processing_max_async(self) -> int:
         """Get effective post-processing max async (legacy MAX_ASYNC override if set)."""
-        return self.max_async if self.max_async is not None else self.post_processing_max_async
+        return effective_async(self.max_async, self.post_processing_max_async)
     
     def validate_required_settings(self) -> None:
         """
         Validate that required settings are present.
         Call this at startup to fail fast with clear error messages.
         """
-        errors = []
-        
-        if not self.llm_binding_api_key:
-            errors.append("LLM_BINDING_API_KEY is required")
-        
-        if not self.embedding_binding_api_key:
-            errors.append("EMBEDDING_BINDING_API_KEY is required")
-        
-        if not self.chunk_size:
-            errors.append("CHUNK_SIZE is required (no safe default exists)")
-        
-        if not self.chunk_overlap_size:
-            errors.append("CHUNK_OVERLAP_SIZE is required (no safe default exists)")
-        
-        if self.graph_storage == "Neo4JStorage" and not self.neo4j_password:
-            errors.append("NEO4J_PASSWORD is required when using Neo4JStorage")
-        
-        if errors:
-            raise ValueError(
-                "Missing required configuration:\n  - " + "\n  - ".join(errors) +
-                "\n\nPlease check your .env file."
-            )
+        _validate_required_settings(self)
 
 
 # Module-level cache for settings singleton
