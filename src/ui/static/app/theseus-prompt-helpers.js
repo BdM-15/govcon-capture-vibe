@@ -23,30 +23,54 @@ window.theseusPromptPhaseMeta = function theseusPromptPhaseMeta() {
   };
 };
 
-window.theseusFilteredPrompts = function theseusFilteredPrompts(app) {
-  const query = (app.promptFilter || "").trim().toLowerCase();
-  if (!query) return app.promptLibrary;
-  return app.promptLibrary.filter(
+const theseusSearchPrompts = function theseusSearchPrompts(prompts, query) {
+  const normalizedQuery = (query || "").trim().toLowerCase();
+  if (!normalizedQuery) return prompts;
+  return prompts.filter(
     (prompt) =>
-      (prompt.title || "").toLowerCase().includes(query) ||
-      (prompt.category || "").toLowerCase().includes(query) ||
-      (prompt.prompt || "").toLowerCase().includes(query),
+      (prompt.title || "").toLowerCase().includes(normalizedQuery) ||
+      (prompt.category || "").toLowerCase().includes(normalizedQuery) ||
+      (prompt.prompt || "").toLowerCase().includes(normalizedQuery),
   );
+};
+
+const theseusPromptPhaseInfo = function theseusPromptPhaseInfo(id) {
+  const phaseId = String(id);
+  const meta = window.theseusPromptPhaseMeta()[phaseId] || {};
+  return {
+    id: phaseId,
+    label: meta.label || `Phase ${phaseId}`,
+    pillClass: meta.pillClass || "bg-ink-800 text-slate-400 border-edge",
+    accentClass: meta.accentClass || "accent-cyan",
+  };
+};
+
+const theseusLoadPromptIntoComposer = function theseusLoadPromptIntoComposer(
+  app,
+  prompt,
+  options = {},
+) {
+  const { closePicker = false, activateChat = false } = options;
+  app.composer = prompt.prompt;
+  if (closePicker) app.promptPicker.open = false;
+  if (activateChat) app.active = "chat";
+  window.theseusFocusComposer(app);
+  app.toast("Prompt loaded into composer", "info");
+};
+
+window.theseusFilteredPrompts = function theseusFilteredPrompts(app) {
+  return theseusSearchPrompts(app.promptLibrary, app.promptFilter);
 };
 
 window.theseusPhaseLabel = function theseusPhaseLabel(id) {
-  return window.theseusPromptPhaseMeta()[String(id)]?.label || `Phase ${id}`;
+  return theseusPromptPhaseInfo(id).label;
 };
 
 window.theseusPhasePillClass = function theseusPhasePillClass(id) {
-  return (
-    window.theseusPromptPhaseMeta()[String(id)]?.pillClass ||
-    "bg-ink-800 text-slate-400 border-edge"
-  );
+  return theseusPromptPhaseInfo(id).pillClass;
 };
 
 window.theseusPromptPhases = function theseusPromptPhases(app) {
-  const meta = window.theseusPromptPhaseMeta();
   const buckets = {};
   for (const prompt of window.theseusFilteredPrompts(app)) {
     const phase = String(prompt.phase || "?");
@@ -55,10 +79,7 @@ window.theseusPromptPhases = function theseusPromptPhases(app) {
   return Object.keys(buckets)
     .sort()
     .map((id) => ({
-      id,
-      label: meta[id]?.label || `Phase ${id}`,
-      pillClass: meta[id]?.pillClass || "bg-ink-800 text-slate-400 border-edge",
-      accentClass: meta[id]?.accentClass || "accent-cyan",
+      ...theseusPromptPhaseInfo(id),
       items: buckets[id],
     }));
 };
@@ -70,10 +91,7 @@ window.theseusFocusComposer = function theseusFocusComposer(app) {
 };
 
 window.theseusUsePrompt = function theseusUsePrompt(app, prompt) {
-  app.composer = prompt.prompt;
-  app.active = "chat";
-  window.theseusFocusComposer(app);
-  app.toast("Prompt loaded into composer", "info");
+  theseusLoadPromptIntoComposer(app, prompt, { activateChat: true });
 };
 
 window.theseusCopyPrompt = async function theseusCopyPrompt(app, prompt) {
@@ -93,31 +111,18 @@ window.theseusUsePromptFromPicker = function theseusUsePromptFromPicker(
   app,
   prompt,
 ) {
-  app.composer = prompt.prompt;
-  app.promptPicker.open = false;
-  window.theseusFocusComposer(app);
-  app.toast("Prompt loaded into composer", "info");
+  theseusLoadPromptIntoComposer(app, prompt, { closePicker: true });
 };
 
 window.theseusPickerPhases = function theseusPickerPhases(app) {
-  const query = (app.promptPicker.query || "").toLowerCase().trim();
-  const matched = !query
-    ? app.promptLibrary
-    : app.promptLibrary.filter(
-        (prompt) =>
-          (prompt.title || "").toLowerCase().includes(query) ||
-          (prompt.category || "").toLowerCase().includes(query) ||
-          (prompt.prompt || "").toLowerCase().includes(query),
-      );
+  const matched = theseusSearchPrompts(app.promptLibrary, app.promptPicker.query);
   const phases = [];
   const byId = {};
   for (const prompt of matched) {
     const id = String(prompt.phase || "?");
     if (!byId[id]) {
       byId[id] = {
-        id,
-        label: window.theseusPhaseLabel(id),
-        pillClass: window.theseusPhasePillClass(id),
+        ...theseusPromptPhaseInfo(id),
         items: [],
       };
       phases.push(byId[id]);
