@@ -42,18 +42,17 @@ import asyncio
 import json
 import logging
 import re
-import shutil
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
+from src.skills.skill_catalog import SkillCatalog
 from src.skills.skill_models import (
     Skill,
     SkillFrontmatter,
     SkillInvocationResult,
     SkillRunSummary,
-    parse_frontmatter,
 )
 from src.skills.runs import (
     STUDIO_EXTRA_MIME as _STUDIO_EXTRA_MIME,
@@ -101,9 +100,7 @@ class SkillManager:
     ) -> None:
         self.skills_dir = skills_dir
         self.ledger_path = ledger_path
-        self._skills: dict[str, Skill] = {}
-        self._lock = asyncio.Lock()
-        self._ledger: dict[str, dict[str, Any]] = {}
+        self._catalog = SkillCatalog(skills_dir=skills_dir, ledger_path=ledger_path)
         self._run_store = SkillRunStore()
         # Phase 4a: MCP client subsystem. Lazy-imported so legacy-mode
         # deployments without any MCPs installed pay zero cost.
@@ -116,162 +113,26 @@ class SkillManager:
     # ---- Discovery ----------------------------------------------------
 
     def discover(self) -> dict[str, Skill]:
-        """Walk ``.github/skills/`` and register every ``SKILL.md`` found."""
-        self._load_ledger()
-        registered: dict[str, Skill] = {}
-        if not self.skills_dir.exists():
-            logger.info("Skills directory missing: %s", self.skills_dir)
-            self._skills = registered
-            return registered
-
-        for child in sorted(self.skills_dir.iterdir()):
-            if not child.is_dir():
-                continue
-            skill_md = child / "SKILL.md"
-            if not skill_md.exists():
-                continue
-            try:
-                skill = self._load_skill(child, skill_md)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Failed to load skill at %s: %s", child, exc)
-                continue
-            registered[skill.name] = skill
-
-        self._skills = registered
-        logger.info("Discovered %d agent skills under %s", len(registered), self.skills_dir)
-        return registered
-
-    def _load_skill(self, folder: Path, skill_md: Path) -> Skill:
-        text = skill_md.read_text(encoding="utf-8")
-        fm, body = parse_frontmatter(text)
-        name = fm.name or folder.name
-        ledger_entry = self._ledger.get(name, {})
-        return Skill(
-            name=name,
-            path=str(folder.resolve()),
-            skill_md_path=str(skill_md.resolve()),
-            frontmatter=fm,
-            body_md=body,
-            has_scripts=(folder / "scripts").is_dir(),
-            has_templates=(folder / "templates").is_dir(),
-            has_assets=(folder / "assets").is_dir(),
-            has_references=(folder / "references").is_dir(),
-            has_evals=(folder / "evals").is_dir(),
-            installed_at=ledger_entry.get("installed_at", ""),
-            last_invoked_at=ledger_entry.get("last_invoked_at", ""),
-            source=ledger_entry.get("source", "builtin"),
-            source_url=ledger_entry.get("source_url", ""),
-        )
+        return self._catalog.discover()
 
     # ---- Public read API ---------------------------------------------
 
     def list_skills(self, include_developer: bool = False) -> list[dict[str, Any]]:
-        if not self._skills:
-            self.discover()
-        return [
-            s.to_summary()
-            for s in self._skills.values()
-            if include_developer or not (s.frontmatter.metadata or {}).get("developer_only", False)
-        ]
+        return self._catalog.list_skills(include_developer=include_developer)
 
     def get_skill(self, name: str) -> Optional[Skill]:
-        if not self._skills:
-            self.discover()
-        return self._skills.get(name)
+        return self._catalog.get_skill(name)
 
     def get_skill_detail(self, name: str) -> Optional[dict[str, Any]]:
-        skill = self.get_skill(name)
-        if not skill:
-            return None
-        detail = skill.to_summary()
-        detail["body_md"] = skill.body_md
-        detail["references"] = self._list_subdir(Path(skill.path) / "references", ".md")
-        detail["assets"] = self._list_subdir(
-            Path(skill.path) / "assets",
-            ".md", ".html", ".txt", ".css", ".svg", ".png", ".jpg", ".jpeg",
-            ".json", ".jsx", ".js", ".mjs", ".mp3", ".mp4", ".gif",
-        )
-        # Deprecated alias for back-compat — spec renamed templates/ -> assets/.
-        # Kept so any pre-2.3 skill that still ships a templates/ folder is still
-        # listed in /api/ui/skills/{name} until it migrates.
-        detail["templates"] = self._list_subdir(
-            Path(skill.path) / "templates", ".md", ".html", ".txt"
-        )
-        detail["scripts"] = self._list_subdir(
-            Path(skill.path) / "scripts", ".py", ".js", ".sh"
-        )
-        return detail
-
-    @staticmethod
-    def _list_subdir(folder: Path, *exts: str) -> list[dict[str, str]]:
-        if not folder.is_dir():
-            return []
-        out: list[dict[str, str]] = []
-        for p in sorted(folder.iterdir()):
-            if not p.is_file():
-                continue
-            if exts and p.suffix.lower() not in exts:
-                continue
-            out.append({"name": p.name, "size": str(p.stat().st_size)})
-        return out
+        return self._catalog.get_skill_detail(name)
 
     # ---- Install / uninstall -----------------------------------------
 
     async def install_from_github(self, url: str, name: Optional[str] = None) -> Skill:
-        """Clone a GitHub repo into ``.github/skills/<name>``.
-
-        The repo MUST contain a ``SKILL.md`` at its root. URL must be HTTPS to
-        github.com (we refuse other hosts and any non-https scheme to limit
-        SSRF / supply-chain blast radius). The clone is shallow and the .git
-        directory is removed after success.
-        """
-        if not url.startswith("https://github.com/"):
-            raise ValueError(
-                "Only https://github.com/ URLs are accepted for skill install"
-            )
-        target_name = name or _slug_from_github_url(url)
-        if not _SAFE_SLUG.match(target_name):
-            raise ValueError(f"Invalid target skill name: {target_name!r}")
-
-        target_dir = self.skills_dir / target_name
-        if target_dir.exists():
-            raise FileExistsError(f"Skill already installed: {target_name}")
-
-        async with self._lock:
-            self.skills_dir.mkdir(parents=True, exist_ok=True)
-            # git is run in a worker thread to avoid blocking the loop.
-            await asyncio.to_thread(_git_clone_shallow, url, target_dir)
-            try:
-                skill_md = target_dir / "SKILL.md"
-                if not skill_md.exists():
-                    raise ValueError("Cloned repo has no SKILL.md at the root")
-                shutil.rmtree(target_dir / ".git", ignore_errors=True)
-                self._record_install(target_name, url)
-            except Exception:
-                shutil.rmtree(target_dir, ignore_errors=True)
-                raise
-
-        self.discover()
-        skill = self._skills.get(target_name)
-        if skill is None:
-            raise RuntimeError("Install completed but skill not discoverable")
-        return skill
+        return await self._catalog.install_from_github(url, name=name)
 
     async def uninstall(self, name: str) -> bool:
-        """Remove an installed (non-builtin) skill."""
-        skill = self.get_skill(name)
-        if skill is None:
-            return False
-        if skill.source == "builtin":
-            raise PermissionError(
-                f"Refusing to remove built-in skill {name!r} — edit the source instead"
-            )
-        async with self._lock:
-            shutil.rmtree(skill.path, ignore_errors=True)
-            self._ledger.pop(name, None)
-            self._save_ledger()
-        self.discover()
-        return True
+        return await self._catalog.uninstall(name)
 
     # ---- Invocation ---------------------------------------------------
 
@@ -856,71 +717,8 @@ class SkillManager:
             filename,
         )
 
-    # ---- Ledger persistence -------------------------------------------
-
-    def _load_ledger(self) -> None:
-        if not self.ledger_path.exists():
-            self._ledger = {}
-            return
-        try:
-            self._ledger = json.loads(self.ledger_path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Skills ledger unreadable, resetting: %s", exc)
-            self._ledger = {}
-
-    def _save_ledger(self) -> None:
-        self.ledger_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.ledger_path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self._ledger, indent=2), encoding="utf-8")
-        tmp.replace(self.ledger_path)
-
-    def _record_install(self, name: str, url: str) -> None:
-        now = datetime.now(timezone.utc).isoformat()
-        self._ledger[name] = {
-            "source": "installed",
-            "source_url": url,
-            "installed_at": now,
-            "last_invoked_at": "",
-        }
-        self._save_ledger()
-
     def _touch_invocation(self, name: str) -> None:
-        entry = self._ledger.setdefault(
-            name, {"source": "builtin", "source_url": "", "installed_at": ""}
-        )
-        entry["last_invoked_at"] = datetime.now(timezone.utc).isoformat()
-        try:
-            self._save_ledger()
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Failed to persist skill invocation timestamp: %s", exc)
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-_SAFE_SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
-
-
-def _slug_from_github_url(url: str) -> str:
-    """Derive a default skill slug from a GitHub repo URL."""
-    tail = url.rstrip("/").rsplit("/", 1)[-1]
-    if tail.endswith(".git"):
-        tail = tail[:-4]
-    slug = re.sub(r"[^a-z0-9_-]+", "-", tail.lower()).strip("-")
-    return slug or "skill"
-
-
-def _git_clone_shallow(url: str, target_dir: Path) -> None:
-    """Run ``git clone --depth=1`` synchronously. Raises on non-zero exit."""
-    cmd = ["git", "clone", "--depth=1", "--quiet", url, str(target_dir)]
-    proc = subprocess.run(  # noqa: S603 — args are constructed from validated input
-        cmd, capture_output=True, text=True, check=False, timeout=60
-    )
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"git clone failed (exit {proc.returncode}): {proc.stderr.strip()}"
-        )
+        self._catalog.touch_invocation(name)
 
 
 # ---------------------------------------------------------------------------
