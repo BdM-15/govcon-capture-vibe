@@ -278,6 +278,146 @@ window.theseusStudioDownloadHref = function theseusStudioDownloadHref(
   );
 };
 
+window.theseusRenderMd = function theseusRenderMd(text, msgIdx) {
+  if (!text) return "";
+  try {
+    const html = window.marked
+      ? window.marked.parse(text, { breaks: true, gfm: true })
+      : text;
+    const safe = window.DOMPurify
+      ? window.DOMPurify.sanitize(html, {
+          ADD_ATTR: ["data-cite", "data-msg-idx", "data-cite-anchor"],
+        })
+      : html;
+    return window.theseusEnhanceCitations(safe, msgIdx);
+  } catch (_) {
+    return text;
+  }
+};
+
+window.theseusEnhanceCitations = function theseusEnhanceCitations(html, msgIdx) {
+  if (!html || typeof window === "undefined" || !window.document) {
+    return html;
+  }
+
+  const idx = msgIdx == null ? 0 : msgIdx;
+  try {
+    const wrap = document.createElement("div");
+    wrap.innerHTML = html;
+
+    const headings = wrap.querySelectorAll("h1, h2, h3, h4, h5, h6");
+    let refHeading = null;
+    for (const heading of headings) {
+      const text = (heading.textContent || "").trim().toLowerCase();
+      if (
+        text === "references" ||
+        text === "sources" ||
+        text === "citations"
+      ) {
+        refHeading = heading;
+        break;
+      }
+    }
+
+    const refMap = {};
+    if (refHeading) {
+      let node = refHeading.nextElementSibling;
+      while (node) {
+        if (/^H[1-6]$/.test(node.tagName)) break;
+        const items = node.querySelectorAll ? node.querySelectorAll("li") : [];
+        items.forEach((item) => {
+          const match = (item.textContent || "").match(/^\s*\[(\d+)\]/);
+          if (!match) return;
+
+          const refNumber = match[1];
+          const anchorId = `cite-${idx}-${refNumber}`;
+          item.setAttribute("id", anchorId);
+          item.setAttribute("data-cite-anchor", refNumber);
+          item.classList.add("cite-target");
+          refMap[refNumber] = anchorId;
+        });
+        node = node.nextElementSibling;
+      }
+    }
+
+    const skipParents = new Set(["CODE", "PRE", "A", "BUTTON", "SCRIPT", "STYLE"]);
+    const refStart = refHeading || null;
+    const inRefSection = (node) => {
+      if (!refStart) return false;
+      let current = node;
+      while (current && current !== wrap) {
+        let sibling = current;
+        while (sibling) {
+          if (sibling === refStart) return true;
+          sibling = sibling.previousSibling;
+        }
+        current = current.parentNode;
+      }
+      return false;
+    };
+
+    const walker = document.createTreeWalker(wrap, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        if (!node.parentNode) return NodeFilter.FILTER_REJECT;
+        if (skipParents.has(node.parentNode.nodeName)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        if (inRefSection(node)) return NodeFilter.FILTER_REJECT;
+        if (!/\[\s*\d+(?:\s*,\s*\d+)*\s*\]/.test(node.nodeValue)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
+    const targets = [];
+    let currentNode;
+    while ((currentNode = walker.nextNode())) targets.push(currentNode);
+
+    const citeRe = /\[\s*(\d+(?:\s*,\s*\d+)*)\s*\]/g;
+    targets.forEach((node) => {
+      const text = node.nodeValue;
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      let match;
+      citeRe.lastIndex = 0;
+      while ((match = citeRe.exec(text)) !== null) {
+        if (match.index > last) {
+          frag.appendChild(document.createTextNode(text.slice(last, match.index)));
+        }
+
+        const numbers = match[1].split(",").map((part) => part.trim());
+        numbers.forEach((number, numberIndex) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "cite-chip";
+          btn.setAttribute("data-cite", number);
+          btn.setAttribute("data-msg-idx", String(idx));
+          btn.title = refMap[number]
+            ? `Jump to reference [${number}]`
+            : `Citation [${number}] (no matching reference)`;
+          if (!refMap[number]) btn.classList.add("cite-chip-orphan");
+          btn.textContent = number;
+          frag.appendChild(btn);
+          if (numberIndex < numbers.length - 1) {
+            frag.appendChild(document.createTextNode(" "));
+          }
+        });
+        last = match.index + match[0].length;
+      }
+
+      if (last < text.length) {
+        frag.appendChild(document.createTextNode(text.slice(last)));
+      }
+      node.parentNode.replaceChild(frag, node);
+    });
+
+    return wrap.innerHTML;
+  } catch (_) {
+    return html;
+  }
+};
+
 window.theseusScrollToRefList = function theseusScrollToRefList(app, idx, n) {
   const el = document.getElementById(`cite-${idx}-${n}`);
   if (!el) {

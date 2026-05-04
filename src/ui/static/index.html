@@ -6153,6 +6153,7 @@
     <script src="/ui/app/theseus-skill-helpers.js"></script>
     <script src="/ui/app/theseus-prompt-helpers.js"></script>
     <script src="/ui/app/theseus-chat-helpers.js"></script>
+    <script src="/ui/app/theseus-documents-helpers.js"></script>
     <script src="/ui/app/theseus-graph-helpers.js"></script>
     <script src="/ui/app/theseus-intel-helpers.js"></script>
     <script src="/ui/app/theseus-settings-helpers.js"></script>
@@ -6627,68 +6628,15 @@
            * still healthy.
            */
           openProcLog() {
-            if (this.procLog.es) return; // already open
-            try {
-              const es = new EventSource(
-                "/api/ui/processing-log/stream?limit=1500",
-              );
-              this.procLog.es = es;
-              this.procLog.error = null;
-              es.addEventListener("open", () => {
-                this.procLog.streaming = true;
-              });
-              es.addEventListener("snapshot", (e) => {
-                try {
-                  const payload = JSON.parse(e.data);
-                  this.procLog.events = payload.events || [];
-                  this._scrollProcLog();
-                } catch {
-                  /* noop */
-                }
-              });
-              es.addEventListener("event", (e) => {
-                try {
-                  const ev = JSON.parse(e.data);
-                  // Cap client-side so the DOM doesn't grow unbounded during
-                  // long ingestion runs. Snapshot can be up to 1500, so allow
-                  // headroom (2000) before we start dropping the oldest events.
-                  this.procLog.events.push(ev);
-                  if (this.procLog.events.length > 2000) {
-                    this.procLog.events.splice(
-                      0,
-                      this.procLog.events.length - 2000,
-                    );
-                  }
-                  this._scrollProcLog();
-                } catch {
-                  /* noop */
-                }
-              });
-              es.onerror = () => {
-                // Browser auto-retries EventSource by default; we just surface
-                // the disconnected state in the header pill.
-                this.procLog.streaming = false;
-                this.procLog.error = "stream interrupted (will retry)";
-              };
-            } catch (e) {
-              this.procLog.error = String(e);
-            }
+            return window.theseusOpenProcLog(this);
           },
 
           closeProcLog() {
-            if (this.procLog.es) {
-              try {
-                this.procLog.es.close();
-              } catch {
-                /* noop */
-              }
-              this.procLog.es = null;
-            }
-            this.procLog.streaming = false;
+            return window.theseusCloseProcLog(this);
           },
 
           clearProcLog() {
-            this.procLog.events = [];
+            return window.theseusClearProcLog(this);
           },
 
           /**
@@ -6697,122 +6645,20 @@
            * Two-stage filter: category (audit bucket) → level (severity).
            */
           filteredProcLog() {
-            const cat = this.procLog.category;
-            const f = this.procLog.filter;
-            let evs = this.procLog.events;
-            if (cat && cat !== "all")
-              evs = evs.filter((e) => (e.category || "other") === cat);
-            if (f === "phase")
-              evs = evs.filter((e) => e.kind === "phase" || e.phase);
-            else if (f === "errors")
-              evs = evs.filter(
-                (e) => e.kind === "error" || e.kind === "warning",
-              );
-            return evs;
+            return window.theseusFilteredProcLog(this);
           },
 
           _scrollProcLog() {
-            if (!this.procLog.autoscroll) return;
-            this.$nextTick(() => {
-              const el = this.$refs.procLogScroll;
-              if (el) el.scrollTop = el.scrollHeight;
-            });
+            return window.theseusScrollProcLog(this);
           },
 
           // ----- Documents -----
           async loadDocuments() {
-            try {
-              const data = await this.api("/documents");
-              // /documents groups docs by status: { statuses: { processed: [...], failed: [...], ... } }
-              const docs = [];
-              const buckets = data.statuses || {};
-              for (const [status, list] of Object.entries(buckets)) {
-                for (const d of list) docs.push({ ...d, status });
-              }
-              docs.sort((a, b) =>
-                (b.created_at || "").localeCompare(a.created_at || ""),
-              );
-              this.documents = docs;
-            } catch (e) {
-              this.documents = [];
-            }
+            return window.theseusLoadDocuments(this);
           },
 
           async uploadFiles(fileList) {
-            const files = Array.from(fileList || []);
-            if (!files.length) return;
-
-            // Two-phase flow (matches LightRAG WebUI UX):
-            //   1. POST every file in PARALLEL to /documents/upload?stage_only=true
-            //      so the browser side completes near-instantly regardless of
-            //      how many files were dropped.
-            //   2. Once all files have landed in inputs/<workspace>/, fire a
-            //      single /scan-rfp call that hands the batch off to the
-            //      server's background pipeline (MinerU + extraction +
-            //      semantic post-processing). The user is free to keep
-            //      working while it runs.
-            const tasks = files.map(async (f) => {
-              const id = Math.random().toString(36).slice(2);
-              this.uploads.unshift({ id, name: f.name, status: "uploading" });
-              const fd = new FormData();
-              fd.append("file", f);
-              try {
-                const r = await fetch("/documents/upload?stage_only=true", {
-                  method: "POST",
-                  body: fd,
-                });
-                const j = await r.json();
-                this.uploads = this.uploads.map((u) =>
-                  u.id === id
-                    ? {
-                        ...u,
-                        status: r.ok ? "done" : "error",
-                        msg: r.ok ? "queued" : j.message || "failed",
-                      }
-                    : u,
-                );
-                return r.ok;
-              } catch (e) {
-                this.uploads = this.uploads.map((u) =>
-                  u.id === id ? { ...u, status: "error", msg: "network" } : u,
-                );
-                return false;
-              }
-            });
-
-            const results = await Promise.all(tasks);
-            const okCount = results.filter(Boolean).length;
-            const failCount = results.length - okCount;
-
-            if (okCount === 0) {
-              this.toast(`Upload failed for all ${failCount} file(s)`, "error");
-              return;
-            }
-
-            // Kick off the background batch scan. The /scan-rfp endpoint
-            // returns immediately after enqueuing — extraction runs async on
-            // the server and post-processing fires when the batch idles.
-            try {
-              this.docStats.scanning = true;
-              const r = await this.api("/scan-rfp", { method: "POST" });
-              const msg = failCount
-                ? `${okCount} file(s) queued (${failCount} failed) — extraction running`
-                : `${okCount} file(s) queued — extraction running`;
-              this.toast(r.message || msg);
-            } catch (e) {
-              this.toast(
-                `Files staged but scan failed to start: ${e.message}`,
-                "error",
-              );
-            } finally {
-              this.docStats.scanning = false;
-            }
-
-            setTimeout(() => {
-              this.loadDocuments();
-              this.loadStats();
-              this.loadDocStats();
-            }, 1500);
+            return window.theseusUploadFiles(this, fileList);
           },
 
           /**
@@ -6822,243 +6668,67 @@
            * single scan job.
            */
           async stageFiles(fileList) {
-            const files = Array.from(fileList || []);
-            for (const f of files) {
-              const id = Math.random().toString(36).slice(2);
-              this.stagedUploads.unshift({
-                id,
-                name: f.name,
-                status: "staging",
-              });
-              const fd = new FormData();
-              fd.append("file", f);
-              try {
-                const r = await fetch("/documents/upload?stage_only=true", {
-                  method: "POST",
-                  body: fd,
-                });
-                const j = await r.json();
-                this.stagedUploads = this.stagedUploads.map((u) =>
-                  u.id === id
-                    ? {
-                        ...u,
-                        status: r.ok ? "staged" : "error",
-                        msg: r.ok ? "ready" : j.message || "failed",
-                      }
-                    : u,
-                );
-                if (r.ok)
-                  this.toast(`${f.name} staged — click Scan now when ready`);
-              } catch (e) {
-                this.stagedUploads = this.stagedUploads.map((u) =>
-                  u.id === id ? { ...u, status: "error", msg: "network" } : u,
-                );
-                this.toast(`Stage failed: ${f.name}`, "error");
-              }
-            }
-            this.$nextTick(() => lucide.createIcons());
+            return window.theseusStageFiles(this, fileList);
           },
 
           async scanRfp() {
-            this.docStats.scanning = true;
-            try {
-              const r = await this.api("/scan-rfp", { method: "POST" });
-              this.toast(r.message || "Scan started");
-              setTimeout(() => {
-                this.loadDocuments();
-                this.loadDocStats();
-              }, 1500);
-            } catch (e) {
-              this.toast("Scan failed: " + e.message, "error");
-            } finally {
-              this.docStats.scanning = false;
-            }
+            return window.theseusScanRfp(this);
           },
 
           // Pulls per-status doc counts and pipeline state from LightRAG.
           // Endpoints are part of LightRAG's bundled FastAPI server, not our
           // ui_routes wrapper — we call them directly and tolerate failures.
           async loadDocStats() {
-            try {
-              const counts = await this.api("/documents/status_counts");
-              // LightRAG returns { status_counts: { processed: N, ... } }
-              this.docStats.counts = counts.status_counts || counts || {};
-            } catch (_) {
-              /* leave existing counts */
-            }
-            try {
-              const pipe = await this.api("/documents/pipeline_status");
-              this.docStats.pipeline = {
-                busy: !!pipe.busy,
-                latest_message: pipe.latest_message || "",
-                job_name: pipe.job_name || "",
-              };
-            } catch (_) {
-              this.docStats.pipeline = {
-                busy: false,
-                latest_message: "",
-                job_name: "",
-              };
-            }
+            return window.theseusLoadDocStats(this);
           },
 
           startDocStatsPoll() {
-            this.stopDocStatsPoll();
-            this.loadDocStats();
-            this._docStatsTimer = setInterval(() => this.loadDocStats(), 4000);
+            return window.theseusStartDocStatsPoll(this);
           },
 
           stopDocStatsPoll() {
-            if (this._docStatsTimer) {
-              clearInterval(this._docStatsTimer);
-              this._docStatsTimer = null;
-            }
+            return window.theseusStopDocStatsPoll(this);
           },
 
           async cancelPipeline() {
-            if (
-              !confirm(
-                "Cancel the running document-processing pipeline? Any in-flight chunk extraction will be aborted at the next checkpoint.",
-              )
-            )
-              return;
-            this.docStats.cancelling = true;
-            try {
-              await this.api("/documents/cancel_pipeline", { method: "POST" });
-              this.toast("Pipeline cancellation requested");
-              setTimeout(() => this.loadDocStats(), 800);
-            } catch (e) {
-              this.toast("Cancel failed: " + e.message, "error");
-            } finally {
-              this.docStats.cancelling = false;
-            }
+            return window.theseusCancelPipeline(this);
           },
 
           async reprocessFailed() {
-            const failed = this.docStats.counts.failed ?? 0;
-            if (
-              !confirm(
-                `Re-queue ${failed} failed document(s) for another extraction pass?`,
-              )
-            )
-              return;
-            this.docStats.reprocessing = true;
-            try {
-              await this.api("/documents/reprocess_failed", {
-                method: "POST",
-              });
-              this.toast(`Re-queued ${failed} failed document(s)`);
-              setTimeout(() => {
-                this.loadDocuments();
-                this.loadDocStats();
-              }, 1000);
-            } catch (e) {
-              this.toast("Reprocess failed: " + e.message, "error");
-            } finally {
-              this.docStats.reprocessing = false;
-            }
+            return window.theseusReprocessFailed(this);
           },
 
           async deleteDocument(doc) {
-            const label = doc.file_path || doc.id;
-            if (
-              !confirm(
-                `Permanently delete "${label}" and all derived entities, relationships, chunks, and embeddings?\n\nThis cannot be undone.`,
-              )
-            )
-              return;
-            this.docStats.deletingId = doc.id;
-            try {
-              await this.api("/documents/delete_document", {
-                method: "DELETE",
-                body: JSON.stringify({
-                  doc_ids: [doc.id],
-                  delete_file: false,
-                }),
-              });
-              this.documents = this.documents.filter((d) => d.id !== doc.id);
-              this.toast(`Deleted ${label}`);
-              this.loadDocStats();
-              this.loadStats();
-            } catch (e) {
-              this.toast("Delete failed: " + e.message, "error");
-            } finally {
-              this.docStats.deletingId = null;
-            }
+            return window.theseusDeleteDocument(this, doc);
           },
 
           filteredDocuments() {
-            const q = (this.docFilter.query || "").toLowerCase().trim();
-            const s = this.docFilter.status;
-            return this.documents.filter((d) => {
-              if (s && d.status !== s) return false;
-              if (q && !(d.file_path || d.id || "").toLowerCase().includes(q))
-                return false;
-              return true;
-            });
+            return window.theseusFilteredDocuments(this);
           },
 
           // Drops LightRAG's response cache so subsequent queries re-call the
           // LLM. Useful after editing prompts or model config.
           async clearLlmCache() {
-            if (
-              !confirm(
-                "Clear the LLM response cache?\n\nAll subsequent queries will re-call the model. Existing extractions and embeddings are unaffected.",
-              )
-            )
-              return;
-            this.serverOps.clearingCache = true;
-            try {
-              await this.api("/documents/clear_cache", { method: "POST" });
-              this.toast("LLM response cache cleared");
-            } catch (e) {
-              this.toast("Clear failed: " + e.message, "error");
-            } finally {
-              this.serverOps.clearingCache = false;
-            }
+            return window.theseusClearLlmCache(this);
           },
 
           // Wipes every document in the active workspace (graph, vectors, KV)
           // but keeps the workspace itself alive. Useful when iterating on
           // extraction prompts without scrapping the whole rag_storage folder.
           async clearAllDocuments() {
-            const ws = this.stats.workspace || "this workspace";
-            if (
-              !confirm(
-                `Wipe ALL documents in "${ws}"?\n\nThis deletes the knowledge graph, vector indexes, and KV stores for every document. Source files in inputs/ are kept. The workspace remains active.\n\nThis cannot be undone.`,
-              )
-            )
-              return;
-            this.serverOps.clearingDocs = true;
-            try {
-              await this.api("/documents", { method: "DELETE" });
-              this.toast(`Cleared all documents in ${ws}`);
-              await this.loadDocuments();
-              await this.loadDocStats();
-              await this.refreshAll();
-            } catch (e) {
-              this.toast("Clear documents failed: " + e.message, "error");
-            } finally {
-              this.serverOps.clearingDocs = false;
-            }
+            return window.theseusClearAllDocuments(this);
           },
 
           // Settings accordion bulk controls.
           settingsExpandAll() {
-            document
-              .querySelectorAll("details.acc")
-              .forEach((d) => (d.open = true));
+            return window.theseusSettingsExpandAll();
           },
           settingsCollapseAll() {
-            document
-              .querySelectorAll("details.acc")
-              .forEach((d) => (d.open = false));
+            return window.theseusSettingsCollapseAll();
           },
 
           askAbout(doc) {
-            this.active = "chat";
-            this.composer = `Focus on the document "${doc.file_path || doc.id}". `;
-            this.newChat(doc.file_path || doc.id);
+            return window.theseusAskAboutDocument(this, doc);
           },
 
           // ----- Chats -----
@@ -7336,363 +7006,19 @@
           },
 
           async sendMessage() {
-            if (!this.currentChat || !this.composer.trim() || this.sending)
-              return;
-            const content = this.composer.trim();
-            const chatId = this.currentChat.id;
-            this.composer = "";
-            this.sending = true;
-            this.chatStatus = { phase: null, label: "", retrieve_ms: null };
-            this.streamLiveContent = "";
-            // Thinking-elapsed timer: starts when LLM iterator opens (status=generating)
-            // and the user is staring at a static "context retrieved" line. Gives them
-            // visible motion until the first emitted token arrives.
-            this.thinkElapsed = 0;
-            this.thinkStartedAt = null;
-            if (this.thinkTimer) {
-              clearInterval(this.thinkTimer);
-              this.thinkTimer = null;
-            }
-            // Optimistic user bubble + empty assistant placeholder we'll fill
-            // as SSE tokens arrive.
-            this.currentChat.messages.push({
-              role: "user",
-              content,
-              ts: new Date().toISOString(),
-            });
-            const placeholder = {
-              role: "assistant",
-              content: "",
-              ts: new Date().toISOString(),
-              streaming: true,
-            };
-            this.currentChat.messages.push(placeholder);
-            // IMPORTANT: re-acquire the reactive proxy reference. Alpine wraps
-            // pushed objects in a Proxy; our local `placeholder` still points
-            // at the unwrapped object, so mutations like `placeholder.content +=`
-            // wouldn't trigger re-renders until another reactivity tick.
-            // Capture the reactive proxy reference for the assistant
-            // placeholder. We rebind `live` to a fresh plain object on each
-            // SSE token (see below) so Alpine's array reactivity fires every
-            // chunk — mirroring the LightRAG webui pattern of returning a
-            // new array element per chunk instead of mutating in place.
-            let live =
-              this.currentChat.messages[this.currentChat.messages.length - 1];
-            this.scrollMsgs();
-
-            const controller = new AbortController();
-            this.chatAbort = controller;
-            try {
-              const resp = await fetch(
-                `/api/ui/chats/${chatId}/messages/stream`,
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ content }),
-                  signal: controller.signal,
-                },
-              );
-              if (!resp.ok || !resp.body) {
-                throw new Error(`HTTP ${resp.status}`);
-              }
-
-              const reader = resp.body.getReader();
-              const decoder = new TextDecoder();
-              let buffer = "";
-              let scrollPending = false;
-              const scheduleScroll = () => {
-                if (scrollPending) return;
-                scrollPending = true;
-                requestAnimationFrame(() => {
-                  scrollPending = false;
-                  const el = this.$refs.msgs;
-                  if (el) el.scrollTop = el.scrollHeight;
-                });
-              };
-
-              // Parse SSE frames separated by blank lines.
-              while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-                let sep;
-                while ((sep = buffer.indexOf("\n\n")) !== -1) {
-                  const frame = buffer.slice(0, sep);
-                  buffer = buffer.slice(sep + 2);
-                  let event = "message";
-                  let data = "";
-                  for (const line of frame.split("\n")) {
-                    if (line.startsWith("event:")) event = line.slice(6).trim();
-                    else if (line.startsWith("data:"))
-                      data += line.slice(5).trim();
-                  }
-                  if (!data) continue;
-                  let parsed;
-                  try {
-                    parsed = JSON.parse(data);
-                  } catch {
-                    continue;
-                  }
-                  if (event === "status") {
-                    this.chatStatus = {
-                      phase: parsed.phase || null,
-                      label: parsed.label || "",
-                      retrieve_ms:
-                        parsed.retrieve_ms != null
-                          ? parsed.retrieve_ms
-                          : this.chatStatus.retrieve_ms,
-                    };
-                    if (parsed.phase === "generating" && !this.thinkTimer) {
-                      this.thinkStartedAt = Date.now();
-                      this.thinkTimer = setInterval(() => {
-                        this.thinkElapsed = Math.floor(
-                          (Date.now() - this.thinkStartedAt) / 1000,
-                        );
-                      }, 250);
-                    }
-                  } else if (event === "sources") {
-                    // Pre-flight retrieval payload: chunks/references/counts.
-                    // Attach to the in-flight assistant message so the
-                    // collapsible Sources panel can render before the first
-                    // token arrives.
-                    const idx = this.currentChat.messages.length - 1;
-                    const updated = {
-                      ...live,
-                      sources: parsed,
-                      sourcesOpen: false,
-                    };
-                    live = updated;
-                    this.currentChat.messages.splice(idx, 1, updated);
-                  } else if (event === "token" && parsed.text) {
-                    // Replace the last message with a NEW object so Alpine's
-                    // x-for picks up the change. Mutating live.content alone
-                    // doesn't always re-trigger inner x-html expressions when
-                    // :key uses the index (the iteration var keeps pointing
-                    // at the same proxy and Alpine batches the diff away).
-                    const idx = this.currentChat.messages.length - 1;
-                    const updated = {
-                      ...live,
-                      content: (live.content || "") + parsed.text,
-                    };
-                    live = updated;
-                    this.currentChat.messages.splice(idx, 1, updated);
-                    this.streamLiveContent = updated.content;
-                    scheduleScroll();
-                  } else if (event === "error") {
-                    const idx = this.currentChat.messages.length - 1;
-                    const updated = {
-                      ...live,
-                      content:
-                        (live.content || "") +
-                        `\n\nâš ï¸ ${parsed.message || "stream error"}`,
-                    };
-                    live = updated;
-                    this.currentChat.messages.splice(idx, 1, updated);
-                    this.toast("Query failed", "error");
-                  } else if (event === "done") {
-                    const idx = this.currentChat.messages.length - 1;
-                    const updated = {
-                      ...live,
-                      streaming: false,
-                    };
-                    if (parsed.assistant?.content) {
-                      updated.content = parsed.assistant.content;
-                      updated.mode = parsed.assistant.mode;
-                      updated.timing = parsed.assistant.timing || parsed.timing;
-                    }
-                    if (parsed.assistant?.sources) {
-                      updated.sources = parsed.assistant.sources;
-                    }
-                    live = updated;
-                    this.currentChat.messages.splice(idx, 1, updated);
-                  }
-                }
-              }
-              await this.loadChats();
-            } catch (e) {
-              const idx = this.currentChat.messages.length - 1;
-              let content = live.content || "";
-              if (e?.name === "AbortError") {
-                content = content + "\n\n_(stopped)_";
-              } else {
-                content = content || "âš ï¸ " + (e?.message || "stream failed");
-                this.toast("Query failed", "error");
-              }
-              const updated = { ...live, content, streaming: false };
-              live = updated;
-              if (idx >= 0) this.currentChat.messages.splice(idx, 1, updated);
-            } finally {
-              this.sending = false;
-              this.chatAbort = null;
-              this.chatStatus = { phase: null, label: "", retrieve_ms: null };
-              this.streamLiveContent = "";
-              this.thinkStartedAt = null;
-              this.thinkElapsed = 0;
-              if (this.thinkTimer) {
-                clearInterval(this.thinkTimer);
-                this.thinkTimer = null;
-              }
-              this.scrollMsgs();
-            }
+            return window.theseusSendMessage(this);
           },
 
           stopMessage() {
-            if (this.chatAbort) {
-              try {
-                this.chatAbort.abort();
-              } catch (_) {}
-            }
+            return window.theseusStopMessage(this);
           },
 
           renderMd(text, msgIdx) {
-            if (!text) return "";
-            try {
-              const html = window.marked
-                ? window.marked.parse(text, { breaks: true, gfm: true })
-                : text;
-              const safe = window.DOMPurify
-                ? window.DOMPurify.sanitize(html, {
-                    ADD_ATTR: ["data-cite", "data-msg-idx", "data-cite-anchor"],
-                  })
-                : html;
-              return this.enhanceCitations(safe, msgIdx);
-            } catch (_) {
-              return text;
-            }
+            return window.theseusRenderMd(text, msgIdx);
           },
 
           enhanceCitations(html, msgIdx) {
-            if (!html || typeof window === "undefined" || !window.document)
-              return html;
-            const idx = msgIdx == null ? 0 : msgIdx;
-            try {
-              const wrap = document.createElement("div");
-              wrap.innerHTML = html;
-
-              // 1) Find the References heading (h1-h6 whose text is References / Sources / Citations)
-              const headings = wrap.querySelectorAll("h1, h2, h3, h4, h5, h6");
-              let refHeading = null;
-              for (const h of headings) {
-                const t = (h.textContent || "").trim().toLowerCase();
-                if (
-                  t === "references" ||
-                  t === "sources" ||
-                  t === "citations"
-                ) {
-                  refHeading = h;
-                  break;
-                }
-              }
-
-              // 2) Tag <li> items in the References list with anchor IDs based on leading [N]
-              const refMap = {}; // n -> anchor id
-              if (refHeading) {
-                let node = refHeading.nextElementSibling;
-                while (node) {
-                  if (/^H[1-6]$/.test(node.tagName)) break; // next section
-                  const items = node.querySelectorAll
-                    ? node.querySelectorAll("li")
-                    : [];
-                  items.forEach((li) => {
-                    const m = (li.textContent || "").match(/^\s*\[(\d+)\]/);
-                    if (m) {
-                      const n = m[1];
-                      const aid = `cite-${idx}-${n}`;
-                      li.setAttribute("id", aid);
-                      li.setAttribute("data-cite-anchor", n);
-                      li.classList.add("cite-target");
-                      refMap[n] = aid;
-                    }
-                  });
-                  node = node.nextElementSibling;
-                }
-              }
-
-              // 3) Walk text nodes (skip code/pre/refs section) and wrap [N] / [N, M]
-              const skipParents = new Set([
-                "CODE",
-                "PRE",
-                "A",
-                "BUTTON",
-                "SCRIPT",
-                "STYLE",
-              ]);
-              const refStart = refHeading || null;
-              const inRefSection = (node) => {
-                if (!refStart) return false;
-                // Walk up to body level checking previous siblings up to refStart
-                let cur = node;
-                while (cur && cur !== wrap) {
-                  // Check if any ancestor's previousSibling chain reaches refStart
-                  let p = cur;
-                  while (p) {
-                    if (p === refStart) return true;
-                    p = p.previousSibling;
-                  }
-                  cur = cur.parentNode;
-                }
-                return false;
-              };
-
-              const walker = document.createTreeWalker(
-                wrap,
-                NodeFilter.SHOW_TEXT,
-                {
-                  acceptNode: (n) => {
-                    if (!n.parentNode) return NodeFilter.FILTER_REJECT;
-                    if (skipParents.has(n.parentNode.nodeName))
-                      return NodeFilter.FILTER_REJECT;
-                    if (inRefSection(n)) return NodeFilter.FILTER_REJECT;
-                    if (!/\[\s*\d+(?:\s*,\s*\d+)*\s*\]/.test(n.nodeValue))
-                      return NodeFilter.FILTER_REJECT;
-                    return NodeFilter.FILTER_ACCEPT;
-                  },
-                },
-              );
-
-              const targets = [];
-              let cur;
-              while ((cur = walker.nextNode())) targets.push(cur);
-
-              const citeRe = /\[\s*(\d+(?:\s*,\s*\d+)*)\s*\]/g;
-              targets.forEach((node) => {
-                const text = node.nodeValue;
-                const frag = document.createDocumentFragment();
-                let last = 0;
-                let m;
-                citeRe.lastIndex = 0;
-                while ((m = citeRe.exec(text)) !== null) {
-                  if (m.index > last)
-                    frag.appendChild(
-                      document.createTextNode(text.slice(last, m.index)),
-                    );
-                  const nums = m[1].split(",").map((s) => s.trim());
-                  nums.forEach((n, k) => {
-                    const btn = document.createElement("button");
-                    btn.type = "button";
-                    btn.className = "cite-chip";
-                    btn.setAttribute("data-cite", n);
-                    btn.setAttribute("data-msg-idx", String(idx));
-                    btn.title = refMap[n]
-                      ? `Jump to reference [${n}]`
-                      : `Citation [${n}] (no matching reference)`;
-                    if (!refMap[n]) btn.classList.add("cite-chip-orphan");
-                    btn.textContent = n;
-                    frag.appendChild(btn);
-                    if (k < nums.length - 1)
-                      frag.appendChild(document.createTextNode(" "));
-                  });
-                  last = m.index + m[0].length;
-                }
-                if (last < text.length)
-                  frag.appendChild(document.createTextNode(text.slice(last)));
-                node.parentNode.replaceChild(frag, node);
-              });
-
-              return wrap.innerHTML;
-            } catch (_) {
-              return html;
-            }
+            return window.theseusEnhanceCitations(html, msgIdx);
           },
 
           handleCiteClick(ev) {
@@ -7738,10 +7064,7 @@
           },
 
           scrollMsgs() {
-            this.$nextTick(() => {
-              const el = this.$refs.msgs;
-              if (el) el.scrollTop = el.scrollHeight;
-            });
+            return window.theseusScrollMessages(this);
           },
 
           // ===== Knowledge Graph =====

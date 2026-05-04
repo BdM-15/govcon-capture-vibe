@@ -151,3 +151,57 @@ window.theseusTestMcp = async function theseusTestMcp(app, name) {
     app.mcps.testing[name] = false;
   }
 };
+
+window.theseusClearLlmCache = async function theseusClearLlmCache(app) {
+  if (
+    !confirm(
+      "Clear the LLM response cache?\n\nAll subsequent queries will re-call the model. Existing extractions and embeddings are unaffected.",
+    )
+  ) {
+    return;
+  }
+  app.serverOps.clearingCache = true;
+  try {
+    await app.api("/documents/clear_cache", { method: "POST" });
+    app.toast("LLM response cache cleared");
+  } catch (error) {
+    app.toast("Clear failed: " + error.message, "error");
+  } finally {
+    app.serverOps.clearingCache = false;
+  }
+};
+
+window.theseusClearAllDocuments = async function theseusClearAllDocuments(app) {
+  const workspace = app.stats.workspace || "this workspace";
+  if (
+    !confirm(
+      `Wipe ALL documents in "${workspace}"?\n\nThis deletes the knowledge graph, vector indexes, and KV stores for every document. Source files in inputs/ are kept. The workspace remains active.\n\nThis cannot be undone.`,
+    )
+  ) {
+    return;
+  }
+  app.serverOps.clearingDocs = true;
+  try {
+    await app.api("/documents", { method: "DELETE" });
+    app.toast(`Cleared all documents in ${workspace}`);
+    await app.loadDocuments();
+    await app.loadDocStats();
+    await app.refreshAll();
+  } catch (error) {
+    app.toast("Clear documents failed: " + error.message, "error");
+  } finally {
+    app.serverOps.clearingDocs = false;
+  }
+};
+
+window.theseusSettingsExpandAll = function theseusSettingsExpandAll() {
+  document.querySelectorAll("details.acc").forEach((detail) => {
+    detail.open = true;
+  });
+};
+
+window.theseusSettingsCollapseAll = function theseusSettingsCollapseAll() {
+  document.querySelectorAll("details.acc").forEach((detail) => {
+    detail.open = false;
+  });
+};
