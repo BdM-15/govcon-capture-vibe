@@ -83,6 +83,25 @@ const theseusLoadXlsxStudioPreview = async function theseusLoadXlsxStudioPreview
   app.studioPreview.sheetIdx = 0;
 };
 
+const theseusRunPreviewLoad = async function theseusRunPreviewLoad(
+  app,
+  panel,
+  task,
+  options = {},
+) {
+  const { onError } = options;
+  panel.loading = true;
+  panel.error = null;
+  try {
+    await task();
+  } catch (error) {
+    panel.error = onError ? onError(error) : error?.message || String(error);
+  } finally {
+    panel.loading = false;
+    window.theseusAfterRender(app);
+  }
+};
+
 window.theseusOpenStudioPreview = async function theseusOpenStudioPreview(
   app,
   deliverable,
@@ -120,8 +139,6 @@ window.theseusOpenReasoning = async function theseusOpenReasoning(
   deliverable,
 ) {
   app.reasoning.open = true;
-  app.reasoning.loading = true;
-  app.reasoning.error = null;
   app.reasoning.skill = deliverable.skill;
   app.reasoning.run_id = deliverable.run_id;
   app.reasoning.title = deliverable.title || "";
@@ -131,7 +148,7 @@ window.theseusOpenReasoning = async function theseusOpenReasoning(
   app.reasoning.artifacts = [];
   app.reasoning.expanded = {};
 
-  try {
+  await theseusRunPreviewLoad(app, app.reasoning, async () => {
     const response = await fetch(
       "/api/ui/skills/" +
         encodeURIComponent(deliverable.skill) +
@@ -146,12 +163,7 @@ window.theseusOpenReasoning = async function theseusOpenReasoning(
     app.reasoning.artifacts = payload.artifacts || [];
     app.reasoning.title = payload.title || app.reasoning.title;
     app.reasoning.created_at = payload.created_at || app.reasoning.created_at;
-  } catch (error) {
-    app.reasoning.error = error?.message || String(error);
-  } finally {
-    app.reasoning.loading = false;
-    window.theseusAfterRender(app);
-  }
+  });
 };
 
 window.theseusCloseReasoning = function theseusCloseReasoning(app) {
@@ -210,8 +222,6 @@ window.theseusOpenChunkPreview = async function theseusOpenChunkPreview(
 ) {
   if (!chunkId) return;
   app.chunkPreview.open = true;
-  app.chunkPreview.loading = true;
-  app.chunkPreview.error = null;
   app.chunkPreview.chunk_id = chunkId;
   app.chunkPreview.file_path = null;
   app.chunkPreview.full_doc_id = null;
@@ -220,7 +230,7 @@ window.theseusOpenChunkPreview = async function theseusOpenChunkPreview(
   app.chunkPreview.length = 0;
   app.chunkPreview.content = "";
 
-  try {
+  await theseusRunPreviewLoad(app, app.chunkPreview, async () => {
     const record = await window.theseusFetchChunk(app, chunkId);
     app.chunkPreview.file_path = record.file_path;
     app.chunkPreview.full_doc_id = record.full_doc_id;
@@ -230,12 +240,7 @@ window.theseusOpenChunkPreview = async function theseusOpenChunkPreview(
     app.chunkPreview.content = record.content;
     app.chunkPreview.view = record.view;
     app.chunkPreview.showRaw = false;
-  } catch (error) {
-    app.chunkPreview.error = error?.message || String(error);
-  } finally {
-    app.chunkPreview.loading = false;
-    window.theseusAfterRender(app);
-  }
+  });
 };
 
 window.theseusCloseChunkPreview = function theseusCloseChunkPreview(app) {
@@ -243,20 +248,21 @@ window.theseusCloseChunkPreview = function theseusCloseChunkPreview(app) {
 };
 
 window.theseusLoadStudio = async function theseusLoadStudio(app) {
-  app.studio.loading = true;
-  app.studio.error = null;
-  try {
+  await theseusRunPreviewLoad(
+    app,
+    app.studio,
+    async () => {
     const response = await app.api("/api/ui/studio");
     app.studio.deliverables = response.deliverables || [];
     app.studio.loaded = true;
-  } catch (error) {
-    app.studio.error =
-      "Failed to load deliverables: " + (error?.message || error);
-    app.studio.deliverables = [];
-  } finally {
-    app.studio.loading = false;
-    window.theseusAfterRender(app);
-  }
+    },
+    {
+      onError: (error) => {
+        app.studio.deliverables = [];
+        return "Failed to load deliverables: " + (error?.message || error);
+      },
+    },
+  );
 };
 
 window.theseusStudioSkillOptions = function theseusStudioSkillOptions(app) {
