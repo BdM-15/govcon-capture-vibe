@@ -17,9 +17,7 @@ import os
 import asyncio
 import logging
 import threading
-import uuid
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 from fastapi import UploadFile, File, BackgroundTasks, Query
 from fastapi.responses import JSONResponse
@@ -29,9 +27,8 @@ from lightrag.utils import compute_mdhash_id
 from raganything.callbacks import ProcessingCallback
 
 from src.core import get_settings
+from src.server.scan_routes import create_scan_endpoint as register_scan_endpoint
 from src.server.upload_staging import (
-    list_scannable_files,
-    resolve_scan_folder,
     save_upload_to_workspace,
 )
 from src.utils.time_utils import now_local_iso
@@ -579,135 +576,12 @@ def create_documents_upload_endpoint(app, rag_instance):
     )
 
 
-# ============================================================================
-# /scan-rfp ENDPOINT — Filesystem-based batch ingestion from inputs/<workspace>/
-# ============================================================================
-# Reuses the same `process_document_with_semantic_inference` pipeline as
-# /insert and /documents/upload, so multimodal parsing, callback dispatch,
-# and batch-completion post-processing all behave identically.
-#
-# Convention:
-#   inputs/<workspace>/*.{pdf,docx,...}  ← drop files here
-#   POST /scan-rfp                        ← triggers ingest of new files
-#
-# Idempotent: skips files whose filename already has status="processed"
-# in the workspace's doc_status KV store (mirrors upstream LightRAG /scan).
-
-async def _filter_already_processed(rag_instance, files: list[Path]) -> tuple[list[Path], list[str]]:
-    """Split files into (to_process, already_processed_names) using doc_status."""
-    to_process: list[Path] = []
-    already: list[str] = []
-    doc_status = rag_instance.lightrag.doc_status
-    for f in files:
-        try:
-            existing = await doc_status.get_doc_by_file_path(f.name)
-        except Exception:
-            existing = None
-        if existing and existing.get("status") == "processed":
-            already.append(f.name)
-        else:
-            to_process.append(f)
-    return to_process, already
-
-
-async def _run_scan(rag_instance, folder: Path, track_id: str):
-    """Background task: process all new files in `folder` sequentially."""
-    try:
-        all_files = list_scannable_files(folder)
-        if not all_files:
-            logger.info(f"📭 [scan {track_id}] No supported files in {folder}")
-            return
-
-        to_process, already = await _filter_already_processed(rag_instance, all_files)
-        logger.info(
-            f"📂 [scan {track_id}] {folder}: {len(all_files)} found, "
-            f"{len(to_process)} to process, {len(already)} already processed"
-        )
-
-        if not to_process:
-            return
-
-        for file_path in to_process:
-            await _callback.register_request_start(file_path.name)
-            try:
-                logger.info(f"📄 [scan {track_id}] Processing {file_path.name}")
-                await process_document_with_semantic_inference(
-                    str(file_path),
-                    file_path.name,
-                    rag_instance,
-                    rag_instance.llm_model_func,
-                )
-            except Exception as e:
-                logger.error(f"❌ [scan {track_id}] Failed {file_path.name}: {e}")
-            finally:
-                await _callback.register_request_end(file_path.name)
-
-        logger.info(
-            f"✅ [scan {track_id}] Completed — {len(to_process)} files queued. "
-            f"Batch post-processing will run after {get_settings().batch_timeout_seconds}s idle."
-        )
-    except Exception as e:
-        logger.error(f"❌ [scan {track_id}] Scan failed: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-
-
 def create_scan_endpoint(app, rag_instance):
-    """
-    Register POST /scan-rfp — filesystem batch ingest from inputs/<workspace>/.
-
-    Returns immediately with a track_id; processing runs in the background.
-    Reuses the standard upload pipeline so multimodal parsing, batch callbacks,
-    and semantic post-processing all fire normally.
-    """
-
-    async def scan_rfp(
-        background_tasks: BackgroundTasks,
-        workspace: Optional[str] = Query(
-            None,
-            description="Workspace to scan. Defaults to the server's current workspace.",
-        ),
-    ):
-        try:
-            folder = resolve_scan_folder(workspace)
-            files = list_scannable_files(folder)
-            track_id = f"scan-{uuid.uuid4().hex[:8]}"
-
-            if not files:
-                return JSONResponse({
-                    "status": "empty",
-                    "track_id": track_id,
-                    "folder": str(folder),
-                    "files_found": 0,
-                    "message": f"No supported files found in {folder}. "
-                               f"Drop PDFs/DOCX/etc. into this folder and call /scan-rfp again.",
-                })
-
-            background_tasks.add_task(_run_scan, rag_instance, folder, track_id)
-
-            return JSONResponse({
-                "status": "scanning_started",
-                "track_id": track_id,
-                "folder": str(folder),
-                "files_found": len(files),
-                "message": (
-                    f"Scanning {len(files)} file(s) in background. "
-                    f"Watch server logs (filter on '[scan {track_id}]') for progress. "
-                    f"Already-processed files are skipped automatically."
-                ),
-            })
-        except Exception as e:
-            logger.error(f"❌ /scan-rfp failed: {e}")
-            return JSONResponse(
-                {"status": "error", "message": str(e)},
-                status_code=500,
-            )
-
-    app.add_api_route(
-        "/scan-rfp",
-        scan_rfp,
-        methods=["POST"],
-        response_class=JSONResponse,
+    register_scan_endpoint(
+        app,
+        rag_instance,
+        process_document_func=process_document_with_semantic_inference,
+        callback=_callback,
     )
 
 
