@@ -6151,6 +6151,8 @@
     <script src="/ui/app/theseus-render-helpers.js"></script>
     <script src="/ui/app/theseus-preview-helpers.js"></script>
     <script src="/ui/app/theseus-skill-helpers.js"></script>
+    <script src="/ui/app/theseus-prompt-helpers.js"></script>
+    <script src="/ui/app/theseus-chat-helpers.js"></script>
     <script src="/ui/app/theseus-view-helpers.js"></script>
     <script>
       function theseus() {
@@ -7075,134 +7077,40 @@
 
           // ----- Agent Skills (dual-use page) -----
           async loadSkills(force = false) {
-            this.skills.loading = true;
-            this.skills.error = null;
-            try {
-              const url = force ? "/api/ui/skills/refresh" : "/api/ui/skills";
-              const r = await this.api(url, force ? { method: "POST" } : {});
-              this.skills.items = r.skills || [];
-              this.skills.loaded = true;
-            } catch (e) {
-              this.skills.error = "Failed to load skills: " + (e?.message || e);
-              this.skills.items = [];
-            } finally {
-              this.skills.loading = false;
-              this.$nextTick(() => lucide.createIcons());
-            }
+            return window.theseusLoadSkills(this, force);
           },
 
           // ----- Studio (Phase 6a — cross-skill deliverables index) -----
           async loadStudio() {
-            this.studio.loading = true;
-            this.studio.error = null;
-            try {
-              const r = await this.api("/api/ui/studio");
-              this.studio.deliverables = r.deliverables || [];
-              this.studio.loaded = true;
-            } catch (e) {
-              this.studio.error =
-                "Failed to load deliverables: " + (e?.message || e);
-              this.studio.deliverables = [];
-            } finally {
-              this.studio.loading = false;
-              this.$nextTick(() => lucide.createIcons());
-            }
+            return window.theseusLoadStudio(this);
           },
           studioSkillOptions() {
-            const set = new Set(
-              (this.studio.deliverables || []).map((d) => d.skill),
-            );
-            return Array.from(set).sort();
+            return window.theseusStudioSkillOptions(this);
           },
           studioFormatOptions() {
-            const set = new Set(
-              (this.studio.deliverables || []).map((d) => d.ext || ""),
-            );
-            return Array.from(set).filter(Boolean).sort();
+            return window.theseusStudioFormatOptions(this);
           },
           studioFiltered() {
-            const q = (this.studio.search || "").toLowerCase().trim();
-            const filtered = (this.studio.deliverables || []).filter((d) => {
-              if (
-                this.studio.filterSkill &&
-                d.skill !== this.studio.filterSkill
-              )
-                return false;
-              if (
-                this.studio.filterFormat &&
-                (d.ext || "") !== this.studio.filterFormat
-              )
-                return false;
-              if (
-                q &&
-                !(d.filename || "").toLowerCase().includes(q) &&
-                !(d.title || "").toLowerCase().includes(q)
-              )
-                return false;
-              return true;
-            });
-            // Pinned anchors (Phase 6a-2) sort to the top, preserving the
-            // existing order within each group (server already returns
-            // newest-first).
-            const pinKey = (d) => this.studioKey(d);
-            const pinned = this.studio.pinned || {};
-            return filtered
-              .map((d, i) => ({ d, i, p: pinned[pinKey(d)] ? 1 : 0 }))
-              .sort((a, b) => b.p - a.p || a.i - b.i)
-              .map((x) => x.d);
+            return window.theseusStudioFiltered(this);
           },
           studioDownloadHref(d) {
             return window.theseusStudioDownloadHref(d);
           },
           studioOpenRun(d) {
-            // Deep-link the existing skill-run drawer: switch to Skills
-            // tab, open the originating skill detail, then load this run.
-            this.active = "skills";
-            this.$nextTick(async () => {
-              try {
-                if (!this.skills.loaded) await this.loadSkills();
-                await this.openSkill(d.skill);
-                this.loadSkillRun(d.skill, d.run_id);
-              } catch (e) {
-                this.toast("Could not open run: " + (e?.message || e), "error");
-              }
-            });
+            return window.theseusStudioOpenRun(this, d);
           },
           // ===== Phase 6a-2 — Pinned anchors (Theseus mythos) =====
           studioKey(d) {
-            return (
-              (d.skill || "") +
-              "/" +
-              (d.run_id || "") +
-              "/" +
-              (d.filename || "")
-            );
+            return window.theseusStudioKey(d);
           },
           isStudioPinned(d) {
-            return !!(this.studio.pinned || {})[this.studioKey(d)];
+            return window.theseusIsStudioPinned(this, d);
           },
           toggleStudioPin(d) {
-            const k = this.studioKey(d);
-            const next = { ...(this.studio.pinned || {}) };
-            if (next[k]) delete next[k];
-            else next[k] = true;
-            this.studio.pinned = next;
-            try {
-              localStorage.setItem(
-                "theseus.studio.pinned",
-                JSON.stringify(next),
-              );
-            } catch (_) {
-              /* localStorage unavailable */
-            }
+            return window.theseusToggleStudioPin(this, d);
           },
           _loadStudioPinned() {
-            try {
-              const raw = localStorage.getItem("theseus.studio.pinned");
-              if (raw) this.studio.pinned = JSON.parse(raw) || {};
-            } catch (_) {
-              this.studio.pinned = {};
-            }
+            return window.theseusLoadStudioPinned(this);
           },
           // ===== Phase 6a-2 — Inline preview pane =====
           // Lazy-loads CDN scripts (Mammoth.js, SheetJS) only when the
@@ -7334,21 +7242,7 @@
             return window.theseusPersonaLabel(this, id);
           },
           async openSkill(name) {
-            this.skills.invokeResult = "";
-            this.skills.invokeMeta = null;
-            this.skills.invokePrompt = "";
-            this.skills.runs = [];
-            try {
-              const detail = await this.api(
-                "/api/ui/skills/" + encodeURIComponent(name),
-              );
-              this.skills.current = detail;
-              this.skills.detailOpen = true;
-              this.$nextTick(() => lucide.createIcons());
-              this.loadSkillRuns(name);
-            } catch (e) {
-              this.toast("Failed to load skill: " + (e?.message || e), "error");
-            }
+            return window.theseusOpenSkill(this, name);
           },
           async invokeSkill() {
             if (!this.skills.current) return;
@@ -7396,20 +7290,7 @@
             }
           },
           async loadSkillRuns(name) {
-            if (!name) return;
-            this.skills.runsLoading = true;
-            try {
-              const r = await this.api(
-                "/api/ui/skills/" + encodeURIComponent(name) + "/runs",
-              );
-              this.skills.runs = r.runs || [];
-            } catch (e) {
-              // Non-fatal: workspace may have no runs yet.
-              this.skills.runs = [];
-            } finally {
-              this.skills.runsLoading = false;
-              this.$nextTick(() => lucide.createIcons());
-            }
+            return window.theseusLoadSkillRuns(this, name);
           },
           formatBytes(n) {
             return window.theseusFormatBytes(n);
@@ -7418,352 +7299,87 @@
             return window.theseusArtifactIcon(mime, name);
           },
           async loadSkillRun(name, runId) {
-            if (!name || !runId) return;
-            try {
-              const r = await this.api(
-                "/api/ui/skills/" +
-                  encodeURIComponent(name) +
-                  "/runs/" +
-                  encodeURIComponent(runId),
-              );
-              this.skills.invokeResult = r.response || "(empty)";
-              this.skills.invokePrompt = r.metadata?.prompt_preview || "";
-              this.skills.invokeMeta = {
-                entities_used: r.metadata?.entities_used || [],
-                elapsed_ms: r.metadata?.elapsed_ms || 0,
-                warnings: [],
-                run_id: r.run_id,
-                run_dir: r.run_dir,
-              };
-              // Tools-mode: stash full run incl. transcript so the drawer renders.
-              this.skills.run = r;
-              this.skills.transcriptExpanded = {};
-              this.skills.transcriptOpen = (r.transcript || []).length > 0;
-              this.$nextTick(() => lucide.createIcons());
-            } catch (e) {
-              this.toast("Failed to load run: " + (e?.message || e), "error");
-            }
+            return window.theseusLoadSkillRun(this, name, runId);
           },
           async deleteSkillRun(name, runId) {
-            if (!name || !runId) return;
-            if (
-              !confirm(
-                `Delete run ${runId}? This removes the saved files on disk.`,
-              )
-            )
-              return;
-            try {
-              await this.api(
-                "/api/ui/skills/" +
-                  encodeURIComponent(name) +
-                  "/runs/" +
-                  encodeURIComponent(runId),
-                { method: "DELETE" },
-              );
-              this.toast("Run deleted", "ok");
-              this.loadSkillRuns(name);
-            } catch (e) {
-              this.toast("Delete failed: " + (e?.message || e), "error");
-            }
+            return window.theseusDeleteSkillRun(this, name, runId);
           },
           async installSkill() {
-            const url = (this.skills.installUrl || "").trim();
-            if (!url) return;
-            this.skills.installing = true;
-            try {
-              await this.api("/api/ui/skills/install", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url }),
-              });
-              this.skills.installModal = false;
-              this.skills.installUrl = "";
-              this.toast("Skill installed", "ok");
-              await this.loadSkills(true);
-            } catch (e) {
-              this.toast("Install failed: " + (e?.message || e), "error");
-            } finally {
-              this.skills.installing = false;
-            }
+            return window.theseusInstallSkill(this);
           },
           async uninstallSkill() {
-            if (!this.skills.current) return;
-            const name = this.skills.current.name;
-            if (!confirm(`Uninstall skill "${name}"?`)) return;
-            try {
-              await this.api("/api/ui/skills/" + encodeURIComponent(name), {
-                method: "DELETE",
-              });
-              this.skills.detailOpen = false;
-              this.skills.current = null;
-              this.toast("Skill removed", "ok");
-              await this.loadSkills(true);
-            } catch (e) {
-              this.toast("Uninstall failed: " + (e?.message || e), "error");
-            }
+            return window.theseusUninstallSkill(this);
           },
 
           // ----- Prompt library helpers -----
           filteredPrompts() {
-            const q = (this.promptFilter || "").trim().toLowerCase();
-            if (!q) return this.promptLibrary;
-            return this.promptLibrary.filter(
-              (p) =>
-                (p.title || "").toLowerCase().includes(q) ||
-                (p.category || "").toLowerCase().includes(q) ||
-                (p.prompt || "").toLowerCase().includes(q),
-            );
+            return window.theseusFilteredPrompts(this);
           },
           promptPhases() {
-            const meta = this._phaseMeta();
-            const buckets = {};
-            for (const p of this.filteredPrompts()) {
-              const ph = String(p.phase || "?");
-              (buckets[ph] = buckets[ph] || []).push(p);
-            }
-            return Object.keys(buckets)
-              .sort()
-              .map((id) => ({
-                id,
-                label: meta[id]?.label || `Phase ${id}`,
-                pillClass:
-                  meta[id]?.pillClass ||
-                  "bg-ink-800 text-slate-400 border-edge",
-                accentClass: meta[id]?.accentClass || "accent-cyan",
-                items: buckets[id],
-              }));
+            return window.theseusPromptPhases(this);
           },
           _phaseMeta() {
-            return {
-              3: {
-                label: "Capture & RFP Discovery",
-                pillClass: "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/30",
-                accentClass: "accent-cyan",
-              },
-              4: {
-                label: "Proposal Planning",
-                pillClass:
-                  "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/30",
-                accentClass: "accent-magenta",
-              },
-              5: {
-                label: "Proposal Development",
-                pillClass: "bg-neon-lime/10 text-neon-lime border-neon-lime/30",
-                accentClass: "accent-lime",
-              },
-              6: {
-                label: "Color Reviews & Submittal",
-                pillClass:
-                  "bg-neon-amber/10 text-neon-amber border-neon-amber/30",
-                accentClass: "accent-amber",
-              },
-            };
+            return window.theseusPromptPhaseMeta();
           },
           phaseLabel(id) {
-            return this._phaseMeta()[String(id)]?.label || `Phase ${id}`;
+            return window.theseusPhaseLabel(id);
           },
           phasePillClass(id) {
-            return (
-              this._phaseMeta()[String(id)]?.pillClass ||
-              "bg-ink-800 text-slate-400 border-edge"
-            );
+            return window.theseusPhasePillClass(id);
           },
           usePrompt(p) {
-            this.composer = p.prompt;
-            this.active = "chat";
-            this.$nextTick(() => {
-              if (this.$refs.composer) this.$refs.composer.focus();
-            });
-            this.toast("Prompt loaded into composer", "info");
+            return window.theseusUsePrompt(this, p);
           },
           async copyPrompt(p) {
-            try {
-              await navigator.clipboard.writeText(p.prompt);
-              this.toast("Prompt copied to clipboard", "info");
-            } catch {
-              this.toast("Copy failed", "error");
-            }
+            return window.theseusCopyPrompt(this, p);
           },
 
           // ----- Prompt picker (modal triggered from chat composer) -----
           openPromptPicker() {
-            this.promptPicker.open = true;
-            this.promptPicker.query = "";
+            return window.theseusOpenPromptPicker(this);
           },
           usePromptFromPicker(p) {
-            this.composer = p.prompt;
-            this.promptPicker.open = false;
-            this.$nextTick(() => {
-              if (this.$refs.composer) this.$refs.composer.focus();
-            });
-            this.toast("Prompt loaded into composer", "info");
+            return window.theseusUsePromptFromPicker(this, p);
           },
           pickerPhases() {
-            const q = (this.promptPicker.query || "").toLowerCase().trim();
-            const matched = !q
-              ? this.promptLibrary
-              : this.promptLibrary.filter(
-                  (p) =>
-                    (p.title || "").toLowerCase().includes(q) ||
-                    (p.category || "").toLowerCase().includes(q) ||
-                    (p.prompt || "").toLowerCase().includes(q),
-                );
-            const phases = [];
-            const byId = {};
-            for (const p of matched) {
-              const id = String(p.phase || "?");
-              if (!byId[id]) {
-                byId[id] = {
-                  id,
-                  label: this.phaseLabel(id),
-                  pillClass: this.phasePillClass(id),
-                  items: [],
-                };
-                phases.push(byId[id]);
-              }
-              byId[id].items.push(p);
-            }
-            phases.sort((a, b) => String(a.id).localeCompare(String(b.id)));
-            return phases;
+            return window.theseusPickerPhases(this);
           },
 
           async newChat(rfpContext = null) {
-            const c = await this.api("/api/ui/chats", {
-              method: "POST",
-              body: JSON.stringify({
-                title: "New chat",
-                mode: "mix",
-                rfp_context: rfpContext,
-              }),
-            });
-            await this.loadChats();
-            await this.openChat(c.id);
-            this.active = "chat";
+            return window.theseusNewChat(this, rfpContext);
           },
 
           async openChat(id) {
-            try {
-              this.currentChat = await this.api(`/api/ui/chats/${id}`);
-            } catch (e) {
-              this.toast("Could not open chat", "error");
-            }
+            return window.theseusOpenChat(this, id);
           },
 
           async deleteChat(id) {
-            if (!confirm("Delete this chat?")) return;
-            await this.api(`/api/ui/chats/${id}`, { method: "DELETE" });
-            if (this.currentChat?.id === id) this.currentChat = null;
-            await this.loadChats();
-            await this.loadStats();
+            return window.theseusDeleteChat(this, id);
           },
 
           async renameChat() {
-            if (!this.currentChat) return;
-            await this.api(`/api/ui/chats/${this.currentChat.id}`, {
-              method: "PATCH",
-              body: JSON.stringify({ title: this.currentChat.title }),
-            });
-            await this.loadChats();
+            return window.theseusRenameChat(this);
           },
 
           async updateMode() {
-            if (!this.currentChat) return;
-            await this.api(`/api/ui/chats/${this.currentChat.id}`, {
-              method: "PATCH",
-              body: JSON.stringify({ mode: this.currentChat.mode }),
-            });
+            return window.theseusUpdateChatMode(this);
           },
 
           // ----- Per-message actions (branch 101) -----
           async copyMessage(m) {
-            if (!m || !m.content) return;
-            try {
-              await navigator.clipboard.writeText(m.content);
-              this.toast("Message copied to clipboard", "info");
-            } catch (e) {
-              this.toast("Copy failed: " + e.message, "error");
-            }
+            return window.theseusCopyMessage(this, m);
           },
 
           editMessage(m) {
-            if (!m || m.role !== "user" || this.sending) return;
-            this.composer = m.content;
-            // Focus the composer textarea if present.
-            this.$nextTick(() => {
-              const ta = document.querySelector('textarea[x-model="composer"]');
-              if (ta) {
-                ta.focus();
-                ta.setSelectionRange(ta.value.length, ta.value.length);
-              }
-            });
-            this.toast("Loaded into composer — edit and send", "info");
+            return window.theseusEditMessage(this, m);
           },
 
           async regenerateMessage(idx) {
-            if (this.sending || !this.currentChat) return;
-            const msgs = this.currentChat.messages;
-            if (idx <= 0 || idx >= msgs.length) return;
-            // Walk backward to find the most recent user message before idx.
-            let userIdx = idx - 1;
-            while (userIdx >= 0 && msgs[userIdx].role !== "user") userIdx--;
-            if (userIdx < 0) {
-              this.toast("No prior user message to regenerate from", "error");
-              return;
-            }
-            const userContent = msgs[userIdx].content;
-            // Drop the user message + everything after it (the assistant
-            // bubble being regenerated and any subsequent turns). sendMessage()
-            // will re-append the user bubble + a fresh assistant placeholder.
-            msgs.splice(userIdx);
-            this.composer = userContent;
-            await this.sendMessage();
+            return window.theseusRegenerateMessage(this, idx);
           },
 
           exportMessage(m, idx) {
-            if (!m || !m.content) return;
-            const ts = new Date().toISOString().replace(/[:.]/g, "-");
-            const chatTitle =
-              (this.currentChat && this.currentChat.title) || "chat";
-            const slug = chatTitle
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, "-")
-              .slice(0, 40);
-            // Try to find the preceding user message for context.
-            let prompt = "";
-            if (this.currentChat && idx != null) {
-              for (let j = idx - 1; j >= 0; j--) {
-                if (this.currentChat.messages[j].role === "user") {
-                  prompt = this.currentChat.messages[j].content;
-                  break;
-                }
-              }
-            }
-            const front =
-              `---\n` +
-              `chat: ${chatTitle}\n` +
-              `workspace: ${(this.stats && this.stats.workspace) || ""}\n` +
-              `mode: ${m.mode || (this.currentChat && this.currentChat.mode) || ""}\n` +
-              `exported: ${new Date().toISOString()}\n` +
-              (m.timing && m.timing.total_ms != null
-                ? `total_ms: ${m.timing.total_ms}\n`
-                : "") +
-              `---\n\n`;
-            const body =
-              (prompt ? `## Question\n\n${prompt}\n\n## Answer\n\n` : "") +
-              m.content +
-              "\n";
-            const blob = new Blob([front + body], {
-              type: "text/markdown;charset=utf-8",
-            });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `theseus-${slug}-${ts}.md`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            this.toast("Exported as Markdown", "info");
+            return window.theseusExportMessage(this, m, idx);
           },
 
           async sendMessage() {

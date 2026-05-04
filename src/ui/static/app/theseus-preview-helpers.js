@@ -219,3 +219,111 @@ window.theseusOpenChunkPreview = async function theseusOpenChunkPreview(
 window.theseusCloseChunkPreview = function theseusCloseChunkPreview(app) {
   app.chunkPreview.open = false;
 };
+
+window.theseusLoadStudio = async function theseusLoadStudio(app) {
+  app.studio.loading = true;
+  app.studio.error = null;
+  try {
+    const response = await app.api("/api/ui/studio");
+    app.studio.deliverables = response.deliverables || [];
+    app.studio.loaded = true;
+  } catch (error) {
+    app.studio.error = "Failed to load deliverables: " + (error?.message || error);
+    app.studio.deliverables = [];
+  } finally {
+    app.studio.loading = false;
+    app.$nextTick(() => lucide.createIcons());
+  }
+};
+
+window.theseusStudioSkillOptions = function theseusStudioSkillOptions(app) {
+  const set = new Set((app.studio.deliverables || []).map((deliverable) => deliverable.skill));
+  return Array.from(set).sort();
+};
+
+window.theseusStudioFormatOptions = function theseusStudioFormatOptions(app) {
+  const set = new Set((app.studio.deliverables || []).map((deliverable) => deliverable.ext || ""));
+  return Array.from(set).filter(Boolean).sort();
+};
+
+window.theseusStudioKey = function theseusStudioKey(deliverable) {
+  return (
+    (deliverable.skill || "") +
+    "/" +
+    (deliverable.run_id || "") +
+    "/" +
+    (deliverable.filename || "")
+  );
+};
+
+window.theseusIsStudioPinned = function theseusIsStudioPinned(app, deliverable) {
+  return !!(app.studio.pinned || {})[window.theseusStudioKey(deliverable)];
+};
+
+window.theseusStudioFiltered = function theseusStudioFiltered(app) {
+  const query = (app.studio.search || "").toLowerCase().trim();
+  const filtered = (app.studio.deliverables || []).filter((deliverable) => {
+    if (app.studio.filterSkill && deliverable.skill !== app.studio.filterSkill) {
+      return false;
+    }
+    if (
+      app.studio.filterFormat &&
+      (deliverable.ext || "") !== app.studio.filterFormat
+    ) {
+      return false;
+    }
+    if (
+      query &&
+      !(deliverable.filename || "").toLowerCase().includes(query) &&
+      !(deliverable.title || "").toLowerCase().includes(query)
+    ) {
+      return false;
+    }
+    return true;
+  });
+  const pinned = app.studio.pinned || {};
+  const pinKey = window.theseusStudioKey;
+  return filtered
+    .map((deliverable, index) => ({
+      deliverable,
+      index,
+      pinned: pinned[pinKey(deliverable)] ? 1 : 0,
+    }))
+    .sort((left, right) => right.pinned - left.pinned || left.index - right.index)
+    .map((entry) => entry.deliverable);
+};
+
+window.theseusStudioOpenRun = function theseusStudioOpenRun(app, deliverable) {
+  app.active = "skills";
+  app.$nextTick(async () => {
+    try {
+      if (!app.skills.loaded) await app.loadSkills();
+      await app.openSkill(deliverable.skill);
+      app.loadSkillRun(deliverable.skill, deliverable.run_id);
+    } catch (error) {
+      app.toast("Could not open run: " + (error?.message || error), "error");
+    }
+  });
+};
+
+window.theseusToggleStudioPin = function theseusToggleStudioPin(app, deliverable) {
+  const key = window.theseusStudioKey(deliverable);
+  const next = { ...(app.studio.pinned || {}) };
+  if (next[key]) delete next[key];
+  else next[key] = true;
+  app.studio.pinned = next;
+  try {
+    localStorage.setItem("theseus.studio.pinned", JSON.stringify(next));
+  } catch (_) {
+    /* localStorage unavailable */
+  }
+};
+
+window.theseusLoadStudioPinned = function theseusLoadStudioPinned(app) {
+  try {
+    const raw = localStorage.getItem("theseus.studio.pinned");
+    if (raw) app.studio.pinned = JSON.parse(raw) || {};
+  } catch (_) {
+    app.studio.pinned = {};
+  }
+};

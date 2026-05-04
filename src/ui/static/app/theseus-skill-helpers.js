@@ -109,3 +109,137 @@ window.theseusPersonaLabel = function theseusPersonaLabel(app, id) {
   const cfg = app.skillPersonaConfig().find((persona) => persona.id === id);
   return cfg ? cfg.label.replace(/s$/, "") : id;
 };
+
+window.theseusLoadSkillRuns = async function theseusLoadSkillRuns(app, name) {
+  if (!name) return;
+  app.skills.runsLoading = true;
+  try {
+    const response = await app.api(
+      "/api/ui/skills/" + encodeURIComponent(name) + "/runs",
+    );
+    app.skills.runs = response.runs || [];
+  } catch (error) {
+    app.skills.runs = [];
+  } finally {
+    app.skills.runsLoading = false;
+    app.$nextTick(() => lucide.createIcons());
+  }
+};
+
+window.theseusLoadSkillRun = async function theseusLoadSkillRun(app, name, runId) {
+  if (!name || !runId) return;
+  try {
+    const response = await app.api(
+      "/api/ui/skills/" +
+        encodeURIComponent(name) +
+        "/runs/" +
+        encodeURIComponent(runId),
+    );
+    app.skills.invokeResult = response.response || "(empty)";
+    app.skills.invokePrompt = response.metadata?.prompt_preview || "";
+    app.skills.invokeMeta = {
+      entities_used: response.metadata?.entities_used || [],
+      elapsed_ms: response.metadata?.elapsed_ms || 0,
+      warnings: [],
+      run_id: response.run_id,
+      run_dir: response.run_dir,
+    };
+    app.skills.run = response;
+    app.skills.transcriptExpanded = {};
+    app.skills.transcriptOpen = (response.transcript || []).length > 0;
+    app.$nextTick(() => lucide.createIcons());
+  } catch (error) {
+    app.toast("Failed to load run: " + (error?.message || error), "error");
+  }
+};
+
+window.theseusDeleteSkillRun = async function theseusDeleteSkillRun(app, name, runId) {
+  if (!name || !runId) return;
+  if (!confirm(`Delete run ${runId}? This removes the saved files on disk.`)) {
+    return;
+  }
+  try {
+    await app.api(
+      "/api/ui/skills/" +
+        encodeURIComponent(name) +
+        "/runs/" +
+        encodeURIComponent(runId),
+      { method: "DELETE" },
+    );
+    app.toast("Run deleted", "ok");
+    app.loadSkillRuns(name);
+  } catch (error) {
+    app.toast("Delete failed: " + (error?.message || error), "error");
+  }
+};
+
+window.theseusInstallSkill = async function theseusInstallSkill(app) {
+  const url = (app.skills.installUrl || "").trim();
+  if (!url) return;
+  app.skills.installing = true;
+  try {
+    await app.api("/api/ui/skills/install", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    app.skills.installModal = false;
+    app.skills.installUrl = "";
+    app.toast("Skill installed", "ok");
+    await app.loadSkills(true);
+  } catch (error) {
+    app.toast("Install failed: " + (error?.message || error), "error");
+  } finally {
+    app.skills.installing = false;
+  }
+};
+
+window.theseusUninstallSkill = async function theseusUninstallSkill(app) {
+  if (!app.skills.current) return;
+  const name = app.skills.current.name;
+  if (!confirm(`Uninstall skill "${name}"?`)) return;
+  try {
+    await app.api("/api/ui/skills/" + encodeURIComponent(name), {
+      method: "DELETE",
+    });
+    app.skills.detailOpen = false;
+    app.skills.current = null;
+    app.toast("Skill removed", "ok");
+    await app.loadSkills(true);
+  } catch (error) {
+    app.toast("Uninstall failed: " + (error?.message || error), "error");
+  }
+};
+
+window.theseusLoadSkills = async function theseusLoadSkills(app, force = false) {
+  app.skills.loading = true;
+  app.skills.error = null;
+  try {
+    const url = force ? "/api/ui/skills/refresh" : "/api/ui/skills";
+    const response = await app.api(url, force ? { method: "POST" } : {});
+    app.skills.items = response.skills || [];
+    app.skills.loaded = true;
+  } catch (error) {
+    app.skills.error = "Failed to load skills: " + (error?.message || error);
+    app.skills.items = [];
+  } finally {
+    app.skills.loading = false;
+    app.$nextTick(() => lucide.createIcons());
+  }
+};
+
+window.theseusOpenSkill = async function theseusOpenSkill(app, name) {
+  app.skills.invokeResult = "";
+  app.skills.invokeMeta = null;
+  app.skills.invokePrompt = "";
+  app.skills.runs = [];
+  try {
+    const detail = await app.api("/api/ui/skills/" + encodeURIComponent(name));
+    app.skills.current = detail;
+    app.skills.detailOpen = true;
+    app.$nextTick(() => lucide.createIcons());
+    app.loadSkillRuns(name);
+  } catch (error) {
+    app.toast("Failed to load skill: " + (error?.message || error), "error");
+  }
+};
