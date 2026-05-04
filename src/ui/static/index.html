@@ -6147,93 +6147,14 @@
     </div>
 
     <!-- ========================== APP LOGIC ========================== -->
+    <script src="/ui/app/theseus-constants.js"></script>
+    <script src="/ui/app/theseus-render-helpers.js"></script>
+    <script src="/ui/app/theseus-view-helpers.js"></script>
     <script>
       function theseus() {
         return {
           // ----- state -----
-          navGroups: [
-            {
-              id: "capture",
-              label: "CAPTURE",
-              accent: "cyan",
-              items: [
-                {
-                  id: "dashboard",
-                  label: "Dashboard",
-                  icon: "layout-dashboard",
-                  accent: "cyan",
-                },
-                {
-                  id: "documents",
-                  label: "Documents",
-                  icon: "file-text",
-                  accent: "magenta",
-                },
-                {
-                  id: "intel",
-                  label: "RFP Intelligence",
-                  icon: "shield-check",
-                  accent: "amber",
-                },
-                {
-                  id: "studio",
-                  label: "Studio",
-                  icon: "folder-open",
-                  accent: "lime",
-                },
-              ],
-            },
-            {
-              id: "tools",
-              label: "TOOLS",
-              accent: "magenta",
-              items: [
-                {
-                  id: "graph",
-                  label: "Knowledge Graph",
-                  icon: "git-fork",
-                  accent: "lime",
-                },
-                {
-                  id: "chat",
-                  label: "Capture Chat",
-                  icon: "message-square",
-                  accent: "cyan",
-                },
-                {
-                  id: "prompts",
-                  label: "Prompt Library",
-                  icon: "library",
-                  accent: "magenta",
-                },
-                {
-                  id: "skills",
-                  label: "Agent Skills",
-                  icon: "wand-2",
-                  accent: "magenta",
-                },
-                {
-                  id: "activity",
-                  label: "Activity Log",
-                  icon: "activity",
-                  accent: "amber",
-                },
-              ],
-            },
-            {
-              id: "system",
-              label: "SYSTEM",
-              accent: "lime",
-              items: [
-                {
-                  id: "settings",
-                  label: "Settings",
-                  icon: "settings",
-                  accent: "amber",
-                },
-              ],
-            },
-          ],
+          navGroups: window.createTheseusNavGroups(),
           active: "dashboard",
           health: false,
           stats: {},
@@ -6488,16 +6409,7 @@
           // RFP Intelligence state
           intel: {
             tab: "lm",
-            tabs: [
-              {
-                id: "lm",
-                label: "Instructions ↔ Evaluation",
-                icon: "arrow-left-right",
-              },
-              { id: "trace", label: "Traceability", icon: "list-tree" },
-              { id: "coverage", label: "Coverage", icon: "shield-check" },
-              { id: "gaps", label: "Gaps", icon: "alert-triangle" },
-            ],
+            tabs: window.createTheseusIntelTabs(),
             data: null,
             loading: false,
             showCovered: true,
@@ -6506,93 +6418,23 @@
           },
 
           navTitle() {
-            const m = {
-              dashboard: "Dashboard",
-              documents: "Documents",
-              graph: "Knowledge Graph",
-              chat: "Capture Chat",
-              intel: "RFP Intelligence",
-              studio: "Studio",
-              settings: "Settings",
-            };
-            return m[this.active] || "";
+            return window.theseusNavTitle(this.active);
           },
 
           navIcon() {
-            const flat = this.navGroups.flatMap((g) => g.items);
-            return flat.find((i) => i.id === this.active)?.icon || "circle";
+            return window.theseusNavIcon(this.navGroups, this.active);
           },
 
           navSubtitle() {
-            const entityTypeCount =
-              this.stats.ontology?.entity_type_count ?? 32;
-            const relationshipTypeCount =
-              this.stats.ontology?.relationship_type_count ?? 26;
-            const m = {
-              dashboard: "capture command overview",
-              documents: "ingest · MinerU · multimodal extraction",
-              graph: `${entityTypeCount} entity types · ${relationshipTypeCount} relationship types`,
-              chat: "shipley mentor · RAG over the workspace",
-              intel:
-                "instructions ↔ evaluation · traceability · coverage · gaps",
-              studio: "capture products · every artifact every skill produced",
-              settings: "workspace · storage · models",
-            };
-            return m[this.active] || "";
+            return window.theseusNavSubtitle(this.active, this.stats);
           },
 
           greeting() {
-            const h = new Date().getHours();
-            const part =
-              h < 5
-                ? "Working late"
-                : h < 12
-                  ? "Good morning"
-                  : h < 17
-                    ? "Good afternoon"
-                    : "Good evening";
-            return `${part}, Ben`;
+            return window.theseusGreeting();
           },
 
           metrics() {
-            return [
-              {
-                label: "Documents",
-                value: this.stats.documents ?? "—",
-                icon: "file-text",
-                hint: "Processed in this workspace",
-                go: "documents",
-                accent: "cyan",
-                color: "text-neon-cyan",
-              },
-              {
-                label: "Entities",
-                value: this.stats.entities ?? "—",
-                icon: "sparkles",
-                hint: `${this.stats.ontology?.entity_type_count ?? 32} govcon types`,
-                go: "graph",
-                accent: "magenta",
-                color: "text-neon-magenta",
-              },
-              {
-                label: "Relationships",
-                value: this.stats.relationships ?? "—",
-                icon: "link",
-                hint: `${this.stats.ontology?.relationship_type_count ?? 26} canonical types`,
-                go: "graph",
-                accent: "lime",
-                color: "text-neon-lime",
-              },
-              {
-                label: "Chats",
-                value: this.stats.chats ?? 0,
-                icon: "messages-square",
-                hint: "Saved sessions",
-                go: "chat",
-                accent: "amber",
-                color: "text-neon-amber",
-              },
-            ];
+            return window.theseusMetrics(this.stats);
           },
 
           // ----- lifecycle -----
@@ -7308,14 +7150,7 @@
               .map((x) => x.d);
           },
           studioDownloadHref(d) {
-            return (
-              "/api/ui/skills/" +
-              encodeURIComponent(d.skill) +
-              "/runs/" +
-              encodeURIComponent(d.run_id) +
-              "/artifacts/" +
-              encodeURIComponent(d.filename)
-            );
+            return window.theseusStudioDownloadHref(d);
           },
           studioOpenRun(d) {
             // Deep-link the existing skill-run drawer: switch to Skills
@@ -7385,25 +7220,7 @@
             return this._scriptCache[url];
           },
           _studioFormatFor(d) {
-            const ext = (d.ext || "").toLowerCase().replace(/^\./, "");
-            if (ext === "pdf") return "pdf";
-            if (ext === "mp4" || ext === "webm" || ext === "mov")
-              return "video";
-            if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext))
-              return "image";
-            if (ext === "md" || ext === "markdown") return "md";
-            if (ext === "json") return "json";
-            if (ext === "csv") return "csv";
-            if (
-              ext === "txt" ||
-              ext === "log" ||
-              ext === "yaml" ||
-              ext === "yml"
-            )
-              return "text";
-            if (ext === "docx") return "docx";
-            if (ext === "xlsx" || ext === "xls") return "xlsx";
-            return "unsupported";
+            return window.theseusStudioFormatFor(d);
           },
           async openStudioPreview(d) {
             this.studioPreview.open = true;
@@ -7491,20 +7308,7 @@
           // back-linked to their originating chunks via the existing
           // openChunkPreview() modal from Phase 6b.2.
           _extractJsonChunkIds(text) {
-            if (!text) return [];
-            const re = /chunk-[0-9a-f]{8,}/gi;
-            const seen = new Set();
-            const out = [];
-            let m;
-            while ((m = re.exec(text)) !== null) {
-              const id = m[0];
-              if (!seen.has(id)) {
-                seen.add(id);
-                out.push(id);
-              }
-              if (out.length >= 200) break; // safety cap
-            }
-            return out;
+            return window.theseusExtractJsonChunkIds(text);
           },
           // ===== Phase 6b — Reasoning view =====
           async openReasoning(d) {
@@ -7551,21 +7355,10 @@
             this.reasoning.expanded[idx] = !this.reasoning.expanded[idx];
           },
           reasoningStepIcon(kind) {
-            return (
-              {
-                system: "settings",
-                user: "user",
-                assistant_text: "message-circle",
-                tool_action: "wrench",
-              }[kind] || "circle"
-            );
+            return window.theseusReasoningStepIcon(kind);
           },
           reasoningPrettyJson(value) {
-            try {
-              return JSON.stringify(value, null, 2);
-            } catch {
-              return String(value);
-            }
+            return window.theseusPrettyJson(value);
           },
           copyToClipboard(text) {
             try {
@@ -7911,35 +7704,10 @@
             }
           },
           formatBytes(n) {
-            if (!n || n < 0) return "0 B";
-            const units = ["B", "KB", "MB", "GB"];
-            let i = 0;
-            let v = n;
-            while (v >= 1024 && i < units.length - 1) {
-              v /= 1024;
-              i++;
-            }
-            return (i === 0 ? v : v.toFixed(1)) + " " + units[i];
+            return window.theseusFormatBytes(n);
           },
           artifactIcon(mime, name) {
-            const m = (mime || "").toLowerCase();
-            const ext = (name || "").split(".").pop().toLowerCase();
-            if (
-              m.startsWith("image/") ||
-              ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)
-            )
-              return "image";
-            if (m.startsWith("video/") || ["mp4", "webm", "mov"].includes(ext))
-              return "film";
-            if (m.startsWith("audio/")) return "music";
-            if (ext === "pdf" || m === "application/pdf") return "file-text";
-            if (["pptx", "ppt"].includes(ext)) return "presentation";
-            if (["docx", "doc"].includes(ext)) return "file-text";
-            if (["xlsx", "xls", "csv"].includes(ext)) return "table";
-            if (["json", "yaml", "yml", "md", "txt"].includes(ext))
-              return "file-code";
-            if (["zip", "tar", "gz"].includes(ext)) return "archive";
-            return "file";
+            return window.theseusArtifactIcon(mime, name);
           },
           async loadSkillRun(name, runId) {
             if (!name || !runId) return;
@@ -8651,71 +8419,19 @@
           },
 
           handleCiteClick(ev) {
-            const btn =
-              ev.target && ev.target.closest
-                ? ev.target.closest(".cite-chip")
-                : null;
-            if (!btn) return;
-            ev.preventDefault();
-            const n = btn.getAttribute("data-cite");
-            const idx = btn.getAttribute("data-msg-idx");
-            if (!n || idx == null) return;
-            // Prefer the streamed Sources panel (richer preview). Fall back to
-            // the inline ### References list when no sources event arrived.
-            const msg = this.currentChat?.messages?.[Number(idx)];
-            const hasSources =
-              msg && msg.sources && Array.isArray(msg.sources.chunks)
-                ? msg.sources.chunks.some(
-                    (c) => String(c.reference_id) === String(n),
-                  )
-                : false;
-            if (hasSources) {
-              if (!msg.sourcesOpen) {
-                this.toggleSources(Number(idx), true);
-              }
-              this.$nextTick(() => {
-                const row = document.getElementById(`source-${idx}-${n}`);
-                if (row) {
-                  row.scrollIntoView({ behavior: "smooth", block: "center" });
-                  row.classList.remove("cite-flash");
-                  void row.offsetWidth;
-                  row.classList.add("cite-flash");
-                  return;
-                }
-                // Sources panel didn't have it after open — fall through to ref list.
-                this._scrollToRefList(idx, n);
-              });
-              return;
-            }
-            this._scrollToRefList(idx, n);
+            return window.theseusHandleCiteClick(this, ev);
           },
 
           _scrollToRefList(idx, n) {
-            const el = document.getElementById(`cite-${idx}-${n}`);
-            if (!el) {
-              this.toast(`Reference [${n}] not found in this answer`, "error");
-              return;
-            }
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
-            el.classList.remove("cite-flash");
-            void el.offsetWidth;
-            el.classList.add("cite-flash");
+            return window.theseusScrollToRefList(this, idx, n);
           },
 
           toggleSources(i, forceOpen) {
-            const msgs = this.currentChat?.messages;
-            if (!msgs || !msgs[i]) return;
-            const cur = msgs[i];
-            const next = forceOpen === true ? true : !cur.sourcesOpen;
-            const updated = { ...cur, sourcesOpen: next };
-            msgs.splice(i, 1, updated);
+            return window.theseusToggleSources(this, i, forceOpen);
           },
 
           basename(path) {
-            if (!path) return "";
-            const norm = String(path).replace(/\\/g, "/");
-            const parts = norm.split("/");
-            return parts[parts.length - 1] || norm;
+            return window.theseusBasename(path);
           },
 
           /**
@@ -8727,26 +8443,7 @@
            * so it's obvious why earlier turns stop influencing answers.
            */
           memoryLabel() {
-            const cap =
-              (this.stats &&
-                this.stats.chat &&
-                this.stats.chat.history_pairs_cap) ||
-              20;
-            const msgs = (this.currentChat && this.currentChat.messages) || [];
-            // Count completed pairs (user followed by assistant). The trailing
-            // user message that's still awaiting a reply doesn't count yet.
-            let pairs = 0;
-            for (let i = 0; i < msgs.length - 1; i++) {
-              if (msgs[i].role === "user" && msgs[i + 1].role === "assistant") {
-                pairs++;
-                i++;
-              }
-            }
-            const inContext = Math.min(pairs, cap);
-            if (pairs === 0) return "multi-turn · follow-ups carry context";
-            if (pairs > cap)
-              return `${inContext} of ${pairs} turns in context · older trimmed`;
-            return `${inContext} turn${inContext === 1 ? "" : "s"} in context`;
+            return window.theseusMemoryLabel(this.stats, this.currentChat);
           },
 
           /**
@@ -8760,137 +8457,7 @@
            * Returns { kind, badge, caption, body, tableSummary }.
            */
           formatSource(s) {
-            const raw = s && s.preview ? String(s.preview) : "";
-            const out = {
-              kind: "text",
-              badge: "TEXT",
-              caption: "",
-              body: raw,
-              tableSummary: "",
-            };
-            if (!raw) {
-              out.kind = "unknown";
-              out.badge = "EMPTY";
-              return out;
-            }
-            const head = raw.slice(0, 64).toLowerCase();
-            const isTable = /\btable analysis\b|\bstructure:\s*<table/i.test(
-              raw,
-            );
-            const isImage =
-              /\bimage analysis\b|\bimage path\s*:/i.test(raw) && !isTable;
-            const isEquation =
-              /\bequation analysis\b|\\begin\{equation\}|\$\$/i.test(head);
-
-            // Caption extraction (multi-modal blocks): "Caption: <text>" until newline.
-            const capMatch = raw.match(/(?:^|\n)\s*Caption\s*:\s*([^\n]+)/i);
-            if (capMatch) {
-              const cap = capMatch[1].trim();
-              if (cap && cap.toLowerCase() !== "none") out.caption = cap;
-            }
-
-            if (isTable) {
-              out.kind = "table";
-              out.badge = "TABLE";
-              // Parse the Structure: <table>...</table> blob client-side. The
-              // preview is truncated at 800 chars so the table is usually
-              // clipped — count complete <tr> rows we can see and report.
-              const structIdx = raw.search(/Structure\s*:/i);
-              const structHtml = structIdx >= 0 ? raw.slice(structIdx) : raw;
-              const trMatches = structHtml.match(/<tr[\s>]/gi) || [];
-              const firstTr = structHtml.match(/<tr[^>]*>[\s\S]*?<\/tr>/i);
-              const cellCount = firstTr
-                ? (firstTr[0].match(/<t[dh][\s>]/gi) || []).length
-                : 0;
-              // Markdown-table fallback (MinerU often emits | a | b | rows
-              // instead of <table>). Count pipe-rows to give the user *some*
-              // idea of size.
-              let mdRows = 0;
-              let mdCols = 0;
-              if (!trMatches.length) {
-                const mdLines = structHtml
-                  .split(/\n/)
-                  .filter((ln) => /^\s*\|.*\|\s*$/.test(ln));
-                // Drop the markdown separator row (|---|---|).
-                const dataLines = mdLines.filter(
-                  (ln) => !/^\s*\|[\s:|-]+\|\s*$/.test(ln),
-                );
-                mdRows = dataLines.length;
-                if (dataLines.length) {
-                  mdCols = (dataLines[0].match(/\|/g) || []).length - 1;
-                }
-              }
-              const totalRows = trMatches.length || mdRows;
-              const totalCols = cellCount || mdCols;
-              const rowsLabel = totalRows
-                ? `${totalRows}${s.truncated ? "+" : ""} rows`
-                : "rows unknown";
-              const colsLabel = totalCols ? ` \u00d7 ${totalCols} cols` : "";
-              out.tableSummary = `${rowsLabel}${colsLabel}${
-                s.truncated ? " (preview clipped)" : ""
-              }`;
-
-              // Prefer the VLM "Analysis:" paragraph as the body — that's
-              // the human-readable summary the user actually wants. Fall
-              // back to Footnotes, then to a cleaned dump of the whole
-              // chunk minus the Image Path line and the Structure blob.
-              const analysisMatch = raw.match(
-                /(?:^|\n)\s*Analysis\s*:\s*([\s\S]+?)(?=\n\s*(?:Footnotes|Image Path|Caption|Structure)\s*:|$)/i,
-              );
-              const footnotesMatch = raw.match(
-                /(?:^|\n)\s*Footnotes\s*:\s*([\s\S]+?)(?=\n\s*(?:Analysis|Image Path|Caption|Structure)\s*:|$)/i,
-              );
-              if (analysisMatch && analysisMatch[1].trim()) {
-                out.body = analysisMatch[1].trim();
-              } else if (footnotesMatch && footnotesMatch[1].trim()) {
-                out.body = footnotesMatch[1].trim();
-              } else {
-                out.body = raw
-                  .replace(/(?:^|\n)\s*Image Path\s*:\s*[^\n]+/i, "")
-                  .replace(
-                    /(?:^|\n)\s*Structure\s*:\s*<table[\s\S]*?<\/table>\s*/i,
-                    "\n",
-                  )
-                  .replace(/(?:^|\n)\s*Structure\s*:\s*<table[\s\S]*$/i, "")
-                  // Markdown-table fallback strip: drop the Structure: line
-                  // and every following pipe-table row.
-                  .replace(
-                    /(?:^|\n)\s*Structure\s*:[^\n]*(?:\n\s*\|[^\n]*)+/i,
-                    "\n",
-                  )
-                  .replace(/\n{3,}/g, "\n\n")
-                  .trim();
-              }
-              return out;
-            }
-
-            if (isImage) {
-              out.kind = "image";
-              out.badge = "IMAGE";
-              // Body is whatever VLM analysis text follows the path/caption.
-              // Strip the "Image Path:" line so we don't repeat the file path.
-              out.body = raw
-                .replace(/(?:^|\n)\s*Image Path\s*:\s*[^\n]+/i, "")
-                .replace(/(?:^|\n)\s*Caption\s*:\s*[^\n]+/i, "")
-                .replace(/^\s*Image Analysis\s*:?\s*/i, "")
-                .trim();
-              return out;
-            }
-
-            if (isEquation) {
-              out.kind = "equation";
-              out.badge = "EQN";
-              out.body = raw
-                .replace(/^\s*Equation Analysis\s*:?\s*/i, "")
-                .trim();
-              return out;
-            }
-
-            // Default: plain text chunk. Already readable.
-            out.kind = "text";
-            out.badge = "TEXT";
-            out.body = raw;
-            return out;
+            return window.theseusFormatSource(s);
           },
 
           scrollMsgs() {
@@ -8902,49 +8469,7 @@
 
           // ===== Knowledge Graph =====
           entityColor(type) {
-            const PALETTE = {
-              // Document structure
-              document: "#00f0ff",
-              document_section: "#22c1f5",
-              amendment: "#7df9ff",
-              clause: "#a78bfa",
-              regulatory_reference: "#c084fc",
-              // Requirements / compliance
-              requirement: "#ff2bd6",
-              proposal_instruction: "#ff6ad5",
-              evaluation_factor: "#ffb020",
-              subfactor: "#ffd166",
-              performance_standard: "#fbbf24",
-              compliance_artifact: "#f59e0b",
-              // Work / deliverables
-              deliverable: "#00ff9c",
-              work_scope_item: "#34d399",
-              transition_activity: "#10b981",
-              contract_line_item: "#84cc16",
-              workload_metric: "#a3e635",
-              technical_specification: "#bef264",
-              // People / orgs
-              organization: "#ff3b6b",
-              person: "#fb7185",
-              labor_category: "#f472b6",
-              // Strategy / capture
-              strategic_theme: "#ec4899",
-              customer_priority: "#d946ef",
-              pain_point: "#ef4444",
-              past_performance_reference: "#f97316",
-              proposal_volume: "#fdba74",
-              // Operational / resources
-              equipment: "#60a5fa",
-              technology: "#3b82f6",
-              government_furnished_item: "#1d4ed8",
-              pricing_element: "#fde047",
-              program: "#facc15",
-              // Generic
-              concept: "#94a3b8",
-              event: "#cbd5e1",
-              location: "#64748b",
-            };
-            return PALETTE[type] || "#64748b";
+            return window.theseusEntityColor(type);
           },
 
           async searchLabels() {
