@@ -13,6 +13,7 @@ Architecture:
 5. Auto-Enhancement → Semantic post-processing runs ONCE after last document
 """
 
+import os
 import asyncio
 import logging
 import threading
