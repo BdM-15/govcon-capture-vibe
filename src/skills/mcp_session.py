@@ -7,10 +7,14 @@ import json
 import logging
 import os
 import shutil
-from dataclasses import dataclass
 from typing import Any, Optional
 
 from src.skills.mcp_manifest import MCPManifest
+from src.skills.mcp_protocol import (
+    MCPToolDescriptor,
+    extract_text_content,
+    parse_tool_descriptors,
+)
 from src.skills.settings import (
     mcp_handshake_timeout,
     mcp_shutdown_timeout,
@@ -19,29 +23,11 @@ from src.skills.settings import (
 
 logger = logging.getLogger(__name__)
 
-_TOOL_NAME_MAX = 64
 _MCP_PROTOCOL_VERSION = "2025-06-18"
 
 
 class MCPError(Exception):
     """Raised for any MCP-side failure (spawn, handshake, call, shutdown)."""
-
-
-@dataclass
-class MCPToolDescriptor:
-    """An MCP-discovered tool, ready to be wrapped into a ToolSpec."""
-
-    server: str
-    name: str
-    description: str
-    input_schema: dict[str, Any]
-
-    @property
-    def namespaced_name(self) -> str:
-        candidate = f"mcp__{self.server}__{self.name}"
-        if len(candidate) > _TOOL_NAME_MAX:
-            candidate = candidate[:_TOOL_NAME_MAX]
-        return candidate
 
 
 class MCPSession:
@@ -172,7 +158,7 @@ class MCPSession:
 
         result = response.get("result") or {}
         is_error = bool(result.get("isError"))
-        text = _extract_text_content(result.get("content"))
+        text = extract_text_content(result.get("content"))
         if is_error:
             raise MCPError(
                 f"MCP {self.manifest.name!r} tool {tool_name!r} returned an error: {text or '(no detail)'}"
@@ -198,25 +184,7 @@ class MCPSession:
             raise MCPError(f"MCP {self.manifest.name!r}: tools/list error: {response['error']}")
         result = response.get("result") or {}
         raw_tools = result.get("tools") or []
-        descriptors: list[MCPToolDescriptor] = []
-        for entry in raw_tools:
-            if not isinstance(entry, dict):
-                continue
-            name = str(entry.get("name") or "").strip()
-            if not name:
-                continue
-            schema = entry.get("inputSchema") or {"type": "object", "properties": {}}
-            if not isinstance(schema, dict):
-                schema = {"type": "object", "properties": {}}
-            descriptors.append(
-                MCPToolDescriptor(
-                    server=self.manifest.name,
-                    name=name,
-                    description=str(entry.get("description") or "").strip(),
-                    input_schema=schema,
-                )
-            )
-        return descriptors
+        return parse_tool_descriptors(self.manifest.name, raw_tools)
 
     async def _request(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         if self._proc is None:
@@ -298,29 +266,3 @@ class MCPSession:
             raise
         except Exception as exc:
             logger.debug("MCP %s stderr reader stopped: %s", self.manifest.name, exc)
-
-
-def _extract_text_content(content: Any) -> str:
-    if content is None:
-        return ""
-    if isinstance(content, str):
-        return content
-    if not isinstance(content, list):
-        return json.dumps(content, ensure_ascii=False, default=str)
-    parts: list[str] = []
-    for item in content:
-        if not isinstance(item, dict):
-            parts.append(str(item))
-            continue
-        kind = item.get("type")
-        if kind == "text":
-            parts.append(str(item.get("text") or ""))
-        elif kind == "image":
-            parts.append(f"[image:{item.get('mimeType') or 'unknown'}]")
-        elif kind == "resource":
-            resource = item.get("resource")
-            uri = resource.get("uri") if isinstance(resource, dict) else None
-            parts.append(f"[resource:{uri or 'embedded'}]")
-        else:
-            parts.append(json.dumps(item, ensure_ascii=False, default=str))
-    return "\n".join(part for part in parts if part)
