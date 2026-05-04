@@ -43,14 +43,21 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
 from src.skills.runs import SkillRunStore
+from src.skills.run_metadata import STUDIO_EXTRA_MIME, resolve_artifact_mime
 from src.skills.skill_catalog import SkillCatalog
 from src.skills.skill_execution import SkillExecutor
 from src.skills.skill_models import (
     Skill,
+    SkillFrontmatter,
     SkillInvocationResult,
+    SkillRunSummary,
 )
 
 logger = logging.getLogger(__name__)
+
+# Back-compat surface for Studio download route/tests that historically imported
+# mime helpers from src.skills.manager.
+_STUDIO_EXTRA_MIME = STUDIO_EXTRA_MIME
 
 
 # ---------------------------------------------------------------------------
