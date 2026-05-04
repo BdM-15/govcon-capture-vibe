@@ -22,6 +22,7 @@ from src.server.workspace_admin import (
     ensure_active_storage_workspace,
     self_restart,
     set_env_var,
+    wipe_all_workspaces_sync,
     workspace_inventory,
 )
 from src.server.storage_counts import safe_count_json_keys
@@ -137,37 +138,21 @@ def register_workspace_ui_routes(
                 "At least one scope (neo4j/rag_storage/inputs) must be true.",
             )
 
-        def wipe_all_sync() -> dict[str, Any]:
-            inventory = inventory_func(
-                active_workspace=workspace_name(),
-                graph_storage=graph_storage(),
-            )
-            names = [row["name"] for row in inventory["workspaces"]]
-            results = [
-                delete_workspace_func(
-                    name,
-                    WorkspaceDeleteScope(
-                        neo4j=scope.neo4j,
-                        rag_storage=scope.rag_storage,
-                        inputs=scope.inputs,
-                    ),
-                    graph_storage=graph_storage(),
-                )
-                for name in names
-            ]
-            try:
-                ensure_active_workspace(workspace_name())
-            except Exception:  # noqa: BLE001
-                pass
-            return {"deleted": results, "workspaces": len(results)}
-
         logger.warning(
             "Wipe all workspaces requested (neo4j=%s, rag_storage=%s, inputs=%s)",
             scope.neo4j,
             scope.rag_storage,
             scope.inputs,
         )
-        result = await asyncio.to_thread(wipe_all_sync)
+        result = await asyncio.to_thread(
+            wipe_all_workspaces_sync,
+            scope,
+            active_workspace=workspace_name(),
+            graph_storage=graph_storage(),
+            inventory_func=inventory_func,
+            delete_workspace_func=delete_workspace_func,
+            ensure_active_workspace=ensure_active_workspace,
+        )
         _schedule_restart(0.75)
         result["restarting"] = True
         return JSONResponse(result)

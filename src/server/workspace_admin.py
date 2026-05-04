@@ -11,7 +11,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from src.core import reset_settings
-from src.server.storage_counts import safe_count_json_keys
+from src.server.workspace_maintenance import DEFAULT_WORKSPACE_MAINTENANCE
 
 logger = logging.getLogger(__name__)
 
@@ -42,24 +42,7 @@ class WipeAllScope(BaseModel):
 
 def discover_workspaces(working_dir: Path) -> list[dict[str, Any]]:
     """List candidate workspaces under the configured working directory."""
-    if not working_dir.exists():
-        return []
-    signature_files = ("kv_store_doc_status.json", "vdb_entities.json", "vdb_chunks.json")
-    workspaces: list[dict[str, Any]] = []
-    for child in sorted(working_dir.iterdir()):
-        if not child.is_dir() or child.name.startswith((".", "_")):
-            continue
-        has_data = any((child / filename).exists() for filename in signature_files)
-        workspaces.append(
-            {
-                "name": child.name,
-                "has_data": has_data,
-                "documents": safe_count_json_keys(child / "kv_store_doc_status.json"),
-                "entities": safe_count_json_keys(child / "vdb_entities.json"),
-                "chats": sum(1 for _ in (child / "chats").glob("*.json")) if (child / "chats").exists() else 0,
-            }
-        )
-    return workspaces
+    return DEFAULT_WORKSPACE_MAINTENANCE.discover_workspaces(working_dir)
 
 
 def set_env_var(key: str, value: str) -> None:
@@ -96,54 +79,10 @@ def self_restart() -> None:
 
 def workspace_inventory(*, active_workspace: str, graph_storage: str) -> dict[str, Any]:
     """Combine rag_storage, Neo4j, and inputs views into one table."""
-    from tools.workspace_cleanup import (
-        _inputs_root,
-        _inputs_workspaces,
-        _neo4j_workspaces,
-        _rag_storage_root,
-        _storage_workspaces,
+    return DEFAULT_WORKSPACE_MAINTENANCE.workspace_inventory(
+        active_workspace=active_workspace,
+        graph_storage=graph_storage,
     )
-
-    rag_root = _rag_storage_root()
-    inputs_root = _inputs_root()
-    storage_ws = _storage_workspaces(rag_root)
-    inputs_ws = _inputs_workspaces(inputs_root)
-
-    neo4j_ws: dict[str, int] = {}
-    backend = (graph_storage or "").lower()
-    if "neo4j" in backend:
-        try:
-            from src.inference.neo4j_graph_io import Neo4jGraphIO
-
-            io = Neo4jGraphIO()
-            try:
-                neo4j_ws = _neo4j_workspaces(io)
-            finally:
-                io.close()
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Neo4j inventory failed: %s", exc)
-
-    all_names = sorted(set(neo4j_ws) | set(storage_ws) | set(inputs_ws))
-    rows: list[dict[str, Any]] = []
-    for name in all_names:
-        inputs = inputs_ws.get(name)
-        rows.append(
-            {
-                "name": name,
-                "is_active": name == active_workspace,
-                "neo4j_nodes": neo4j_ws.get(name, 0),
-                "storage_mb": storage_ws.get(name),
-                "inputs_files": inputs[0] if inputs else 0,
-                "inputs_mb": inputs[1] if inputs else 0.0,
-            }
-        )
-    return {
-        "active": active_workspace,
-        "rag_storage_root": str(rag_root),
-        "inputs_root": str(inputs_root),
-        "neo4j_available": "neo4j" in backend,
-        "workspaces": rows,
-    }
 
 
 def delete_workspace_sync(
@@ -153,59 +92,47 @@ def delete_workspace_sync(
     graph_storage: str,
 ) -> dict[str, Any]:
     """Delete one workspace's selected storage buckets."""
-    from tools.workspace_cleanup import (
-        _delete_inputs_workspace,
-        _delete_neo4j_workspace,
-        _delete_storage_workspace,
-        _inputs_root,
-        _rag_storage_root,
+    return DEFAULT_WORKSPACE_MAINTENANCE.delete_workspace(
+        name,
+        scope,
+        graph_storage=graph_storage,
     )
 
-    result: dict[str, Any] = {"workspace": name, "deleted": {}}
 
-    if scope.neo4j:
-        backend = (graph_storage or "").lower()
-        if "neo4j" in backend:
-            try:
-                from src.inference.neo4j_graph_io import Neo4jGraphIO
-
-                io = Neo4jGraphIO()
-                try:
-                    nodes = _delete_neo4j_workspace(io, name)
-                    result["deleted"]["neo4j_nodes"] = nodes
-                finally:
-                    io.close()
-            except Exception as exc:  # noqa: BLE001
-                result["deleted"]["neo4j_error"] = str(exc)
-        else:
-            result["deleted"]["neo4j_skipped"] = "backend is not Neo4j"
-
-    if scope.rag_storage:
-        try:
-            existed = _delete_storage_workspace(name, _rag_storage_root())
-            result["deleted"]["rag_storage"] = existed
-        except Exception as exc:  # noqa: BLE001
-            result["deleted"]["rag_storage_error"] = str(exc)
-
-    if scope.inputs:
-        try:
-            count, mb = _delete_inputs_workspace(name, _inputs_root())
-            workspace_inputs = _inputs_root() / name
-            if workspace_inputs.exists() and workspace_inputs.is_dir() and not any(workspace_inputs.iterdir()):
-                try:
-                    workspace_inputs.rmdir()
-                except OSError:
-                    pass
-            result["deleted"]["inputs_files"] = count
-            result["deleted"]["inputs_mb"] = mb
-        except Exception as exc:  # noqa: BLE001
-            result["deleted"]["inputs_error"] = str(exc)
-
-    return result
+def wipe_all_workspaces_sync(
+    scope: WipeAllScope,
+    *,
+    active_workspace: str,
+    graph_storage: str,
+    inventory_func=workspace_inventory,
+    delete_workspace_func=delete_workspace_sync,
+    ensure_active_workspace=DEFAULT_WORKSPACE_MAINTENANCE.ensure_active_storage_workspace,
+) -> dict[str, Any]:
+    """Clean-slate wipe across every discovered workspace."""
+    inventory = inventory_func(
+        active_workspace=active_workspace,
+        graph_storage=graph_storage,
+    )
+    names = [row["name"] for row in inventory["workspaces"]]
+    results = [
+        delete_workspace_func(
+            name,
+            WorkspaceDeleteScope(
+                neo4j=scope.neo4j,
+                rag_storage=scope.rag_storage,
+                inputs=scope.inputs,
+            ),
+            graph_storage=graph_storage,
+        )
+        for name in names
+    ]
+    try:
+        ensure_active_workspace(active_workspace)
+    except Exception:  # noqa: BLE001
+        pass
+    return {"deleted": results, "workspaces": len(results)}
 
 
 def ensure_active_storage_workspace(active_workspace: str) -> None:
     """Ensure the active rag_storage workspace exists after a clean-slate wipe."""
-    from tools.workspace_cleanup import _rag_storage_root
-
-    (_rag_storage_root() / active_workspace).mkdir(parents=True, exist_ok=True)
+    DEFAULT_WORKSPACE_MAINTENANCE.ensure_active_storage_workspace(active_workspace)
