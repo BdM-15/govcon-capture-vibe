@@ -37,6 +37,8 @@ from src.inference.neo4j_graph_io import Neo4jGraphIO, group_entities_by_type
 from src.inference.algorithms import run_all_algorithms_parallel
 from src.inference.semantic_post_process_support import (
     GENERIC_REL_TYPES as _GENERIC_REL_TYPES,
+    build_post_processing_result,
+    collect_relationship_retype_updates,
     count_vdb_entries as _count_vdb_entries,
     heuristic_table_type_mapping as _heuristic_table_type_mapping,
     resolve_generic_relationship as _resolve_generic_relationship,
@@ -589,7 +591,6 @@ async def _semantic_post_processor_neo4j(
         # NO LLM calls needed - all corrections are heuristic/deterministic.
         # ========================================================================
         phase_start = time.time()
-        phase_start = time.time()
         logger.info("\n🔧 Phase 2 · Entity Normalization: Lightweight type cleanup...")
         entity_updates = []
         grouped = group_entities_by_type(entities)
@@ -696,6 +697,9 @@ async def _semantic_post_processor_neo4j(
             entities_corrected = neo4j_io.update_entity_types(entity_updates)
         else:
             logger.info("\n✅ No entity type corrections needed (native LightRAG extraction working)")
+
+        phase_times['Phase 2 · Entity Normalization'] = time.time() - phase_start
+        logger.info(f"  ⏱️  Phase 2 completed in {phase_times['Phase 2 · Entity Normalization']:.1f}s")
         
         # Phase 3: Generic Relationship Type Resolution (NO LLM)
         # ========================================================================
@@ -706,39 +710,15 @@ async def _semantic_post_processor_neo4j(
         # ========================================================================
         phase_start = time.time()
         logger.info("\n🔗 Phase 3 · Relationship Normalization: Resolving generic types (entity-pair lookup)...")
-        
-        phase_times['Phase 2 · Entity Normalization'] = time.time() - phase_start
-        logger.info(f"  ⏱️  Phase 2 completed in {phase_times['Phase 2 · Entity Normalization']:.1f}s")
-        
+
         # Reload entities with corrected types
         entities = neo4j_io.get_all_entities()
         relationships = neo4j_io.get_all_relationships()
         
         # Build entity lookup by elementId
         entity_by_id = {e['id']: e for e in entities}
-        
-        # Find RELATED_TO relationships that can be retyped
-        retype_updates = []
-        for rel in relationships:
-            if rel['type'] not in _GENERIC_REL_TYPES:
-                continue
-            
-            src_entity = entity_by_id.get(rel['source'])
-            tgt_entity = entity_by_id.get(rel['target'])
-            if not src_entity or not tgt_entity:
-                continue
-            
-            src_type = (src_entity.get('entity_type') or '').lower()
-            tgt_type = (tgt_entity.get('entity_type') or '').lower()
-            
-            new_type = _resolve_generic_relationship(rel['type'], src_type, tgt_type)
-            if new_type != rel['type']:
-                retype_updates.append({
-                    'source_id': rel['source'],
-                    'target_id': rel['target'],
-                    'old_type': rel['type'],
-                    'new_type': new_type,
-                })
+
+        retype_updates = collect_relationship_retype_updates(relationships, entity_by_id)
         
         relationships_retyped = 0
         if retype_updates:
@@ -807,10 +787,22 @@ async def _semantic_post_processor_neo4j(
         # including VDB sync side effects, has finished.
         type_counts = neo4j_io.get_entity_count_by_type()
         rel_counts = neo4j_io.get_relationship_count_by_type()
-        final_entity_count = sum(type_counts.values())
-        final_relationship_count = sum(rel_counts.values())
-        vdb_entity_count = _count_vdb_entries(rag_storage_path, "vdb_entities.json")
-        vdb_relationship_count = _count_vdb_entries(rag_storage_path, "vdb_relationships.json")
+        result = build_post_processing_result(
+            rag_storage_path=rag_storage_path,
+            type_counts=type_counts,
+            rel_counts=rel_counts,
+            entities_corrected=entities_corrected,
+            relationships_inferred=relationships_inferred,
+            relationships_synced=relationships_synced,
+            processing_time=processing_time,
+            starting_entity_count=starting_entity_count,
+            starting_relationship_count=starting_rel_count,
+            vdb_sync_status=vdb_sync_stats.get("status", "unknown"),
+        )
+        final_entity_count = result["final_entity_count"]
+        final_relationship_count = result["final_relationship_count"]
+        vdb_entity_count = result["vdb_entity_count"]
+        vdb_relationship_count = result["vdb_relationship_count"]
         
         # Summary statistics
         processing_time = time.time() - start_time
@@ -852,22 +844,7 @@ async def _semantic_post_processor_neo4j(
         logger.info(f"  VDB Synced Relationships:      {relationships_synced}")
         logger.info("="*60)
         
-        return {
-            "status": "success",
-            "entities_corrected": entities_corrected,
-            "relationships_inferred": relationships_inferred,
-            "relationships_synced": relationships_synced,
-            "processing_time": processing_time,
-            "entity_type_counts": type_counts,
-            "relationship_type_counts": rel_counts,
-            "starting_entity_count": starting_entity_count,
-            "starting_relationship_count": starting_rel_count,
-            "final_entity_count": final_entity_count,
-            "final_relationship_count": final_relationship_count,
-            "vdb_entity_count": vdb_entity_count,
-            "vdb_relationship_count": vdb_relationship_count,
-            "vdb_sync_status": vdb_sync_stats.get("status", "unknown")
-        }
+        return result
         
     except Exception as e:
         logger.error(f"❌ Error during Neo4j post-processing: {e}", exc_info=True)

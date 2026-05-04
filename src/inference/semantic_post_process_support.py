@@ -85,6 +85,73 @@ def resolve_generic_relationship(rel_type: str, src_type: str, tgt_type: str) ->
     return ENTITY_PAIR_REL_MAP.get(pair, rel_type)
 
 
+def collect_relationship_retype_updates(
+    relationships: list[dict],
+    entity_by_id: dict[str, dict],
+) -> list[dict]:
+    """Plan RELATED_TO retypes using current entity types."""
+    retype_updates = []
+    for relationship in relationships:
+        if relationship.get("type") not in GENERIC_REL_TYPES:
+            continue
+
+        src_entity = entity_by_id.get(relationship.get("source"))
+        tgt_entity = entity_by_id.get(relationship.get("target"))
+        if not src_entity or not tgt_entity:
+            continue
+
+        src_type = (src_entity.get("entity_type") or "").lower()
+        tgt_type = (tgt_entity.get("entity_type") or "").lower()
+        new_type = resolve_generic_relationship(relationship["type"], src_type, tgt_type)
+        if new_type != relationship["type"]:
+            retype_updates.append(
+                {
+                    "source_id": relationship["source"],
+                    "target_id": relationship["target"],
+                    "old_type": relationship["type"],
+                    "new_type": new_type,
+                }
+            )
+    return retype_updates
+
+
+def build_post_processing_result(
+    *,
+    rag_storage_path: str,
+    type_counts: dict[str, int],
+    rel_counts: dict[str, int],
+    entities_corrected: int,
+    relationships_inferred: int,
+    relationships_synced: int,
+    processing_time: float,
+    starting_entity_count: int,
+    starting_relationship_count: int,
+    vdb_sync_status: str,
+) -> dict:
+    """Build final success payload with authoritative post-processing counts."""
+    final_entity_count = sum(type_counts.values())
+    final_relationship_count = sum(rel_counts.values())
+    vdb_entity_count = count_vdb_entries(rag_storage_path, "vdb_entities.json")
+    vdb_relationship_count = count_vdb_entries(rag_storage_path, "vdb_relationships.json")
+
+    return {
+        "status": "success",
+        "entities_corrected": entities_corrected,
+        "relationships_inferred": relationships_inferred,
+        "relationships_synced": relationships_synced,
+        "processing_time": processing_time,
+        "entity_type_counts": type_counts,
+        "relationship_type_counts": rel_counts,
+        "starting_entity_count": starting_entity_count,
+        "starting_relationship_count": starting_relationship_count,
+        "final_entity_count": final_entity_count,
+        "final_relationship_count": final_relationship_count,
+        "vdb_entity_count": vdb_entity_count,
+        "vdb_relationship_count": vdb_relationship_count,
+        "vdb_sync_status": vdb_sync_status,
+    }
+
+
 def heuristic_table_type_mapping(entity: Dict) -> str:
     """Map RAG-Anything `table` entities into govcon entity types."""
     name = (entity.get("entity_name") or "").lower()
