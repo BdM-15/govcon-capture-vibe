@@ -60,3 +60,35 @@ def build_embedding_function(
         max_token_size=8192,
         func=embed_fn,
     )
+
+
+def build_lightrag_runtime_kwargs(
+    *,
+    entity_types_guidance: str,
+    chunking_func,
+    llm_timeout: int,
+    role_llm_configs,
+    rerank_func,
+    min_rerank_score: float,
+    graph_storage: str | None,
+) -> dict[str, Any]:
+    """Build non-sensitive LightRAG runtime kwargs for initialization."""
+    kwargs: dict[str, Any] = {
+        "addon_params": {
+            "entity_types_guidance": entity_types_guidance,
+            "entity_type_prompt_file": "govcon.yaml",
+            "language": "English",
+        },
+        "chunking_func": chunking_func,
+        "default_llm_timeout": llm_timeout,
+        "role_llm_configs": role_llm_configs,
+    }
+
+    if rerank_func is not None:
+        kwargs["rerank_model_func"] = rerank_func
+        kwargs["min_rerank_score"] = min_rerank_score
+
+    if graph_storage == "Neo4JStorage":
+        kwargs["graph_storage"] = graph_storage
+
+    return kwargs

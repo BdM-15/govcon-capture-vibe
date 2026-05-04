@@ -14,6 +14,7 @@ import logging
 from typing import Dict, List
 
 from src.core import get_settings
+from .orchestrator_support import AlgorithmRunSpec, collect_algorithm_relationships
 from .infer_lm_links import infer_lm_links
 from .infer_document_structure import infer_document_structure
 from .resolve_orphans import resolve_orphans
@@ -84,17 +85,12 @@ async def run_all_algorithms_parallel(
     
     logger.info(f"  Running {len(tasks)} LLM-powered algorithms...")
     results = await asyncio.gather(*tasks, return_exceptions=True)
-    
-    # Process results
-    all_relationships = []
-    for name, result in zip(algorithm_names, results):
-        if isinstance(result, Exception):
-            logger.error(f"  ❌ {name} failed: {result}")
-        elif result:
-            all_relationships.extend(result)
-            logger.info(f"  ✅ {name}: {len(result)} relationships")
-        else:
-            logger.info(f"  ⏭️  {name}: skipped (no applicable entities)")
+
+    algorithm_runs = [
+        AlgorithmRunSpec(name=name, result=result)
+        for name, result in zip(algorithm_names, results)
+    ]
+    all_relationships = collect_algorithm_relationships(algorithm_runs, logger=logger)
     
     # =========================================================================
     # Heuristic algorithm (instant, no LLM)

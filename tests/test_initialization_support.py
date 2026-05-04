@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 from src.server.initialization_support import (
     build_embedding_function,
+    build_lightrag_runtime_kwargs,
     build_raganything_config,
     configure_mineru_environment,
 )
@@ -86,4 +87,53 @@ def test_build_embedding_function_uses_unwrapped_embed_impl() -> None:
         "model": "text-embedding-3-large",
         "api_key": "key-123",
         "max_token_size": 8192,
+    }
+
+
+def test_build_lightrag_runtime_kwargs_includes_optional_features() -> None:
+    runtime_kwargs = build_lightrag_runtime_kwargs(
+        entity_types_guidance="PART D",
+        chunking_func="chunker",
+        llm_timeout=600,
+        role_llm_configs={"extract": "cfg"},
+        rerank_func="rerank",
+        min_rerank_score=0.42,
+        graph_storage="Neo4JStorage",
+    )
+
+    assert runtime_kwargs == {
+        "addon_params": {
+            "entity_types_guidance": "PART D",
+            "entity_type_prompt_file": "govcon.yaml",
+            "language": "English",
+        },
+        "chunking_func": "chunker",
+        "default_llm_timeout": 600,
+        "role_llm_configs": {"extract": "cfg"},
+        "rerank_model_func": "rerank",
+        "min_rerank_score": 0.42,
+        "graph_storage": "Neo4JStorage",
+    }
+
+
+def test_build_lightrag_runtime_kwargs_omits_optional_features_when_disabled() -> None:
+    runtime_kwargs = build_lightrag_runtime_kwargs(
+        entity_types_guidance="PART D",
+        chunking_func="chunker",
+        llm_timeout=300,
+        role_llm_configs={"query": "cfg"},
+        rerank_func=None,
+        min_rerank_score=0.42,
+        graph_storage="NetworkXStorage",
+    )
+
+    assert runtime_kwargs == {
+        "addon_params": {
+            "entity_types_guidance": "PART D",
+            "entity_type_prompt_file": "govcon.yaml",
+            "language": "English",
+        },
+        "chunking_func": "chunker",
+        "default_llm_timeout": 300,
+        "role_llm_configs": {"query": "cfg"},
     }

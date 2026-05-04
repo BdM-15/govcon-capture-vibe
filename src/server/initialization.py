@@ -34,6 +34,7 @@ from src.ontology.schema import VALID_ENTITY_TYPES
 from src.core import get_settings
 from src.server.initialization_support import (
     build_embedding_function,
+    build_lightrag_runtime_kwargs,
     build_raganything_config,
     configure_mineru_environment,
 )
@@ -216,42 +217,20 @@ async def initialize_raganything():
     role_llm_configs = role_routing.role_llm_configs
 
     lightrag_kwargs = {
-        "addon_params": {
-            "entity_types_guidance": entity_types_guidance,
-            # Prompt text still comes from GOVCON_PROMPTS; JSON examples are loaded
-            # from prompts/entity_type/govcon.yaml via LightRAG's prompt profile.
-            "entity_type_prompt_file": "govcon.yaml",
-            "language": "English",
-        },
         # Phase 1.2 (issue #124): native JSON structured-output extraction.
         # LightRAG uses entity_extraction_json_* prompt keys and
         # _process_json_extraction_result (json_repair-based parser).
         "entity_extraction_use_json": True,
-        # Chunking configuration comes from environment variables:
-        # - CHUNK_SIZE controls chunk_token_size (default: 4096)
-        # - CHUNK_OVERLAP_SIZE controls chunk_overlap_token_size (default: 600)
-        # LightRAG reads these at dataclass field initialization time
-        "chunking_func": govcon_chunking_func,
-        
-        # LLM timeout: default 180s causes Worker timeout (2×=360s) failures on complex chunks
-        # Increased to 600s (10 min) to handle extraction from dense requirement tables
-        "default_llm_timeout": llm_timeout,
-
-        # Phase 1.0 — native per-role LLM routing (LightRAG 1.5.0)
-        "role_llm_configs": role_llm_configs,
+        **build_lightrag_runtime_kwargs(
+            entity_types_guidance=entity_types_guidance,
+            chunking_func=govcon_chunking_func,
+            llm_timeout=llm_timeout,
+            role_llm_configs=role_llm_configs,
+            rerank_func=rerank_func,
+            min_rerank_score=settings.min_rerank_score,
+            graph_storage=getattr(global_args, "graph_storage", None),
+        ),
     }
-
-    # Wire reranker only if enabled (avoid passing None which LightRAG also accepts,
-    # but keeping kwargs minimal makes intent explicit in logs).
-    if rerank_func is not None:
-        lightrag_kwargs["rerank_model_func"] = rerank_func
-        lightrag_kwargs["min_rerank_score"] = settings.min_rerank_score
-    
-    # Add Neo4j configuration if enabled (from config.py global_args setup)
-    # Note: Neo4j connection details come from environment variables (NEO4J_URI, etc.)
-    # LightRAG reads these automatically - we only need to specify graph_storage type
-    if hasattr(global_args, 'graph_storage') and global_args.graph_storage == "Neo4JStorage":
-        lightrag_kwargs["graph_storage"] = global_args.graph_storage
     
     # LLM function for RAGAnything top-level + modal processors. RAGAnything's
     # TableModalProcessor / EquationModalProcessor parse their own JSON shape

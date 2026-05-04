@@ -23,6 +23,15 @@ from src.inference.relationship_payloads import (
     group_retype_updates,
     partition_relationships_by_type,
 )
+from src.inference.neo4j_query_support import (
+    run_count_query,
+    run_mapped_query,
+    run_projected_query,
+)
+from src.inference.neo4j_write_support import (
+    log_rejected_entities,
+    log_rejected_relationships,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -64,13 +73,15 @@ class Neo4jGraphIO:
                n.description as description,
                n.source_id as source_id
         """
-        
-        with self.driver.session(database=self.database) as session:
-            result = session.run(query)
-            entities = [entity_record_to_dict(record) for record in result]
-            
-            logger.info(f"  📊 Fetched {len(entities)} entities from Neo4j")
-            return entities
+
+        entities = run_mapped_query(
+            self.driver,
+            self.database,
+            query,
+            entity_record_to_dict,
+        )
+        logger.info(f"  📊 Fetched {len(entities)} entities from Neo4j")
+        return entities
     
     def get_all_relationships(self) -> List[Dict]:
         """
@@ -88,13 +99,15 @@ class Neo4jGraphIO:
                r.description as description,
                r.keywords as keywords
         """
-        
-        with self.driver.session(database=self.database) as session:
-            result = session.run(query)
-            relationships = [relationship_record_to_dict(record) for record in result]
-            
-            logger.info(f"  📊 Fetched {len(relationships)} relationships from Neo4j")
-            return relationships
+
+        relationships = run_mapped_query(
+            self.driver,
+            self.database,
+            query,
+            relationship_record_to_dict,
+        )
+        logger.info(f"  📊 Fetched {len(relationships)} relationships from Neo4j")
+        return relationships
     
     def get_orphaned_entity_ids(self) -> List[str]:
         """
@@ -108,13 +121,16 @@ class Neo4jGraphIO:
         WHERE NOT (n)-[]-()
         RETURN n.entity_id as entity_name
         """
-        
-        with self.driver.session(database=self.database) as session:
-            result = session.run(query)
-            orphan_names = entity_names_from_records(result)
-            if orphan_names:
-                logger.info(f"  📊 Found {len(orphan_names)} truly orphaned entities in Neo4j")
-            return orphan_names
+
+        orphan_names = run_projected_query(
+            self.driver,
+            self.database,
+            query,
+            entity_names_from_records,
+        )
+        if orphan_names:
+            logger.info(f"  📊 Found {len(orphan_names)} truly orphaned entities in Neo4j")
+        return orphan_names
     
     def update_entity_types(self, entity_updates: List[Dict]) -> int:
         """
@@ -136,14 +152,17 @@ class Neo4jGraphIO:
             n.corrected_at = datetime()
         RETURN count(n) as updated_count
         """
-        
-        with self.driver.session(database=self.database) as session:
-            result = session.run(query, updates=entity_updates)
-            record = result.single()
-            count = count_from_record(record, 'updated_count')
-            
-            logger.info(f"  ✅ Updated {count} entity types in Neo4j")
-            return count
+
+        count = run_count_query(
+            self.driver,
+            self.database,
+            query,
+            count_from_record,
+            'updated_count',
+            updates=entity_updates,
+        )
+        logger.info(f"  ✅ Updated {count} entity types in Neo4j")
+        return count
     
     def update_entity_properties(self, property_updates: List[Dict]) -> int:
         """
@@ -166,14 +185,17 @@ class Neo4jGraphIO:
             n.enriched_at = datetime()
         RETURN count(n) as updated_count
         """
-        
-        with self.driver.session(database=self.database) as session:
-            result = session.run(query, updates=property_updates)
-            record = result.single()
-            count = count_from_record(record, 'updated_count')
-            
-            logger.info(f"  ✅ Updated {count} entities with new properties in Neo4j")
-            return count
+
+        count = run_count_query(
+            self.driver,
+            self.database,
+            query,
+            count_from_record,
+            'updated_count',
+            updates=property_updates,
+        )
+        logger.info(f"  ✅ Updated {count} entities with new properties in Neo4j")
+        return count
     
     def create_relationships(self, new_relationships: List[Dict]) -> int:
         """
@@ -195,25 +217,11 @@ class Neo4jGraphIO:
         valid_relationships, rejected_relationships = partition_relationships_by_type(
             new_relationships
         )
-        
-        # CRITICAL: Log rejected relationships for data loss visibility
-        if rejected_relationships:
-            logger.error("=" * 80)
-            logger.error("❌ CRITICAL: REJECTED MALFORMED RELATIONSHIPS (DATA LOSS)")
-            logger.error("=" * 80)
-            logger.error(f"Rejected {len(rejected_relationships)} of {len(new_relationships)} relationships due to null/empty 'relationship_type'")
-            logger.error("")
-            logger.error("REJECTED RELATIONSHIPS:")
-            for i, rel in enumerate(rejected_relationships, 1):
-                logger.error(f"  [{i}] Source: {rel.get('source_id', 'MISSING')}")
-                logger.error(f"      Target: {rel.get('target_id', 'MISSING')}")
-                logger.error(f"      Type:   {repr(rel.get('relationship_type', 'MISSING'))}")
-                logger.error(f"      Reason: {rel.get('reasoning', 'N/A')[:100]}")
-                logger.error(f"      Full:   {rel}")
-                logger.error("")
-            logger.error("=" * 80)
-            logger.error("⚠️  INVESTIGATE: Check inference algorithms for null type generation")
-            logger.error("=" * 80)
+        log_rejected_relationships(
+            new_relationships,
+            rejected_relationships,
+            logger=logger,
+        )
         
         if not valid_relationships:
             logger.info("  💾 No valid relationships to create")
@@ -348,10 +356,13 @@ class Neo4jGraphIO:
         RETURN n.entity_type as type, count(n) as count
         ORDER BY count DESC
         """
-        
-        with self.driver.session(database=self.database) as session:
-            result = session.run(query)
-            return type_counts_from_records(result)
+
+        return run_projected_query(
+            self.driver,
+            self.database,
+            query,
+            type_counts_from_records,
+        )
     
     def get_relationship_count_by_type(self) -> Dict[str, int]:
         """
@@ -365,10 +376,13 @@ class Neo4jGraphIO:
         RETURN type(r) as type, count(r) as count
         ORDER BY count DESC
         """
-        
-        with self.driver.session(database=self.database) as session:
-            result = session.run(query)
-            return type_counts_from_records(result)
+
+        return run_projected_query(
+            self.driver,
+            self.database,
+            query,
+            type_counts_from_records,
+        )
     
     def create_entities(self, entities: List[Dict]) -> int:
         """
@@ -383,12 +397,7 @@ class Neo4jGraphIO:
         # Filter out any entities that might have slipped through with None names
         # Note: LightRAG native extraction handles this, but this is a safety net.
         valid_entities, rejected_entities = partition_entities_by_name(entities)
-        for entity in rejected_entities:
-            # This should rarely happen with native LightRAG extraction
-            logger.error(f"❌ Critical Error: Entity reached Neo4j without a name! Dropping to prevent DB corruption. Entity: {entity}")
-
-        if rejected_entities:
-            logger.warning(f"⚠️ Skipped {len(rejected_entities)} entities with missing names in Neo4j creation")
+        log_rejected_entities(rejected_entities, logger=logger)
 
         if not valid_entities:
             logger.info("  💾 No valid entities to create")
@@ -434,14 +443,17 @@ class Neo4jGraphIO:
         
         RETURN count(n) as created_count
         """
-        
-        with self.driver.session(database=self.database) as session:
-            result = session.run(query, entities=valid_entities)
-            record = result.single()
-            count = count_from_record(record, 'created_count')
-            
-            logger.info(f"  💾 Created/Merged {count} entities in Neo4j")
-            return count
+
+        count = run_count_query(
+            self.driver,
+            self.database,
+            query,
+            count_from_record,
+            'created_count',
+            entities=valid_entities,
+        )
+        logger.info(f"  💾 Created/Merged {count} entities in Neo4j")
+        return count
 
     def create_typed_relationships(self, relationships: List[Dict]) -> int:
         """
@@ -461,14 +473,17 @@ class Neo4jGraphIO:
         }}, target) YIELD rel as r
         RETURN count(r) as created_count
         """
-        
-        with self.driver.session(database=self.database) as session:
-            result = session.run(query, relationships=relationships)
-            record = result.single()
-            count = count_from_record(record, 'created_count')
 
-            logger.info(f"  💾 Created {count} typed relationships in Neo4j")
-            return count
+        count = run_count_query(
+            self.driver,
+            self.database,
+            query,
+            count_from_record,
+            'created_count',
+            relationships=relationships,
+        )
+        logger.info(f"  💾 Created {count} typed relationships in Neo4j")
+        return count
 
 
 __all__ = ["Neo4jGraphIO", "group_entities_by_type"]
