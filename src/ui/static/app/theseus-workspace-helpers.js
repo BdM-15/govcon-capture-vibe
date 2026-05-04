@@ -45,6 +45,19 @@ window.theseusPollRestart = function theseusPollRestart(app) {
   setTimeout(tick, 1500);
 };
 
+const theseusBeginRestart = function theseusBeginRestart(app, target) {
+  app.restartTarget = target;
+  app.restartStuck = false;
+  app.restarting = true;
+  app.pollRestart();
+};
+
+const theseusModalHasSelectedScope = function theseusModalHasSelectedScope(
+  modal,
+) {
+  return !!(modal.scope.neo4j || modal.scope.rag_storage || modal.scope.inputs);
+};
+
 window.theseusSwitchWorkspace = async function theseusSwitchWorkspace(
   app,
   name,
@@ -65,10 +78,7 @@ window.theseusSwitchWorkspace = async function theseusSwitchWorkspace(
       body: JSON.stringify({ name, create }),
     });
     app.wsModal.open = false;
-    app.restartTarget = name;
-    app.restartStuck = false;
-    app.restarting = true;
-    app.pollRestart();
+    theseusBeginRestart(app, name);
   } catch (error) {
     app.toast("Switch failed: " + error.message, "error");
   } finally {
@@ -86,10 +96,7 @@ window.theseusRestartServer = async function theseusRestartServer(app) {
   }
   try {
     await app.api("/api/ui/restart", { method: "POST" });
-    app.restartTarget = app.stats.workspace || "server";
-    app.restartStuck = false;
-    app.restarting = true;
-    app.pollRestart();
+    theseusBeginRestart(app, app.stats.workspace || "server");
   } catch (error) {
     app.toast("Restart failed: " + error.message, "error");
   }
@@ -158,12 +165,10 @@ window.theseusDeleteModalClearAll = function theseusDeleteModalClearAll(app) {
 
 window.theseusCanSubmitDelete = function theseusCanSubmitDelete(app) {
   const modal = app.deleteModal;
-  const anyScope =
-    modal.scope.neo4j || modal.scope.rag_storage || modal.scope.inputs;
   const nameMatches =
     modal.target &&
     modal.confirmText === (modal.target.name || "").toUpperCase();
-  return !!(anyScope && nameMatches);
+  return !!(theseusModalHasSelectedScope(modal) && nameMatches);
 };
 
 window.theseusSubmitWorkspaceDelete =
@@ -221,9 +226,9 @@ window.theseusCloseWipeAllModal = function theseusCloseWipeAllModal(app) {
 
 window.theseusCanSubmitWipeAll = function theseusCanSubmitWipeAll(app) {
   const modal = app.wipeAllModal;
-  const anyScope =
-    modal.scope.neo4j || modal.scope.rag_storage || modal.scope.inputs;
-  return !!(anyScope && modal.confirmText === "DELETE ALL");
+  return !!(
+    theseusModalHasSelectedScope(modal) && modal.confirmText === "DELETE ALL"
+  );
 };
 
 window.theseusSubmitWipeAll = async function theseusSubmitWipeAll(app) {
@@ -239,10 +244,7 @@ window.theseusSubmitWipeAll = async function theseusSubmitWipeAll(app) {
     });
     app.toast("Wipe complete. Restarting server…", "success");
     app.wipeAllModal.open = false;
-    app.restartTarget = app.stats.workspace || "server";
-    app.restartStuck = false;
-    app.restarting = true;
-    app.pollRestart();
+    theseusBeginRestart(app, app.stats.workspace || "server");
   } catch (error) {
     app.toast("Wipe failed: " + error.message, "error");
   } finally {
