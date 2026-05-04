@@ -63,6 +63,7 @@ from src.server.routes import (
     create_documents_upload_endpoint,
     create_scan_endpoint,
 )
+from src.server.ui_query_bridge import make_ui_query_bridges
 from src.server.ui_routes import register_ui
 
 # Set up logging
@@ -157,82 +158,8 @@ async def main():
     logger.info("✅ Use LightRAG's native /query/data endpoint for structured data retrieval (agent workflows)")
 
     # Project Theseus custom UI (cyberpunk capture workbench at /ui)
-    async def _ui_query(text: str, mode: str, history: list[dict], stream: bool, overrides: dict | None = None):
-        """UI query bridge: passes per-workspace QueryParam tunables + reranker score.
-
-        `overrides` is a dict from `_build_query_overrides()` containing any of:
-        top_k, chunk_top_k, max_entity_tokens, max_relation_tokens,
-        max_total_tokens, enable_rerank, only_need_context, only_need_prompt,
-        response_type, user_prompt, min_rerank_score.
-
-        `min_rerank_score` is applied to the LightRAG instance for the call so
-        the reranker honors the per-workspace threshold.
-
-        Returns either a string (stream=False) or an AsyncIterator[str]
-        (stream=True). The UI router unpacks both shapes.
-        """
-        from lightrag import QueryParam
-        overrides = dict(overrides or {})
-        # min_rerank_score isn't a QueryParam field — apply it directly to the
-        # LightRAG instance. Safe to mutate per-call: extraction reranker reads
-        # this attribute on each invocation.
-        min_score = overrides.pop("min_rerank_score", None)
-        if min_score is not None:
-            try:
-                rag_instance.lightrag.min_rerank_score = float(min_score)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Failed setting min_rerank_score=%r: %s", min_score, exc)
-        # Drop any unknown keys to avoid TypeError if QueryParam evolves.
-        valid_fields = {f.name for f in QueryParam.__dataclass_fields__.values()}
-        param_kwargs = {k: v for k, v in overrides.items() if k in valid_fields}
-        return await rag_instance.lightrag.aquery(
-            text,
-            param=QueryParam(
-                mode=mode,
-                stream=stream,
-                conversation_history=history or [],
-                **param_kwargs,
-            ),
-        )
-
-    async def _ui_query_data(text: str, mode: str, history: list[dict], overrides: dict | None = None):
-        """UI data bridge: returns LightRAG aquery_data structured retrieval (chunks/entities/relationships/references) without LLM generation. Used by the chat SSE endpoint to emit a `sources` event before streaming the answer."""
-        from lightrag import QueryParam
-        overrides = dict(overrides or {})
-        min_score = overrides.pop("min_rerank_score", None)
-        if min_score is not None:
-            try:
-                rag_instance.lightrag.min_rerank_score = float(min_score)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Failed setting min_rerank_score=%r: %s", min_score, exc)
-        valid_fields = {f.name for f in QueryParam.__dataclass_fields__.values()}
-        param_kwargs = {k: v for k, v in overrides.items() if k in valid_fields}
-        # stream is irrelevant for aquery_data (no generation), drop it.
-        param_kwargs.pop("stream", None)
-        return await rag_instance.lightrag.aquery_data(
-            text,
-            param=QueryParam(
-                mode=mode,
-                conversation_history=history or [],
-                **param_kwargs,
-            ),
-        )
-
-    async def _ui_llm(prompt: str) -> str:
-        """Skill-invocation bridge: call the underlying LLM directly.
-
-        Used by ``/api/ui/skills/{name}/invoke`` to dispatch a fully-composed
-        skill prompt to the configured chat model without routing through the
-        RAG query template (skills compose their own prompts that already
-        include workspace entity context).
-        """
-        llm = getattr(rag_instance.lightrag, "llm_model_func", None)
-        if llm is None:
-            raise RuntimeError("LightRAG instance has no llm_model_func configured")
-        result = await llm(prompt, system_prompt=None, history_messages=[])
-        return result if isinstance(result, str) else str(result)
-
-    register_ui(app, _ui_query, _ui_query_data, llm_func=_ui_llm)
+    ui_bridges = make_ui_query_bridges(rag_instance, logger=logger)
+    register_ui(app, ui_bridges.query, ui_bridges.query_data, llm_func=ui_bridges.llm)
 
     # Consolidated startup banner — full pipeline detail in docs/ARCHITECTURE.md
     graph_storage = global_args.graph_storage if hasattr(global_args, 'graph_storage') else "NetworkXStorage"
