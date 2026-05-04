@@ -18,6 +18,75 @@ window.theseusSearchLabels = async function theseusSearchLabels(app) {
   }
 };
 
+const theseusGraphNodeType = function theseusGraphNodeType(node) {
+  const props = node.properties || {};
+  return (
+    props.entity_type ||
+    (node.labels && node.labels[0]) ||
+    "concept"
+  )
+    .toString()
+    .toLowerCase();
+};
+
+const theseusGraphElements = function theseusGraphElements(data) {
+  const nodes = (data.nodes || []).map((node) => {
+    const props = node.properties || {};
+    return {
+      data: {
+        id: String(node.id),
+        label: (props.entity_id || node.id).toString().replace(/^"|"$/g, ""),
+        type: theseusGraphNodeType(node),
+        description: props.description || "",
+        raw: props,
+        degree: 0,
+      },
+    };
+  });
+
+  const nodeIds = new Set(nodes.map((node) => node.data.id));
+  const edges = (data.edges || [])
+    .filter(
+      (edge) =>
+        nodeIds.has(String(edge.source)) && nodeIds.has(String(edge.target)),
+    )
+    .map((edge) => {
+      const props = edge.properties || {};
+      return {
+        data: {
+          id: String(edge.id),
+          source: String(edge.source),
+          target: String(edge.target),
+          label: edge.type || props.keywords || "RELATED_TO",
+          weight: parseFloat(props.weight ?? 1) || 1,
+          confidence: parseFloat(props.confidence ?? 1) || 1,
+          raw: props,
+        },
+      };
+    });
+
+  return { nodes, edges };
+};
+
+const theseusApplyGraphDegrees = function theseusApplyGraphDegrees(nodes, edges) {
+  const degrees = {};
+  edges.forEach((edge) => {
+    degrees[edge.data.source] = (degrees[edge.data.source] || 0) + 1;
+    degrees[edge.data.target] = (degrees[edge.data.target] || 0) + 1;
+  });
+  nodes.forEach((node) => {
+    node.data.degree = degrees[node.data.id] || 0;
+  });
+};
+
+const theseusGraphTypeCounts = function theseusGraphTypeCounts(nodes) {
+  const counts = {};
+  nodes.forEach((node) => {
+    counts[node.data.type] = (counts[node.data.type] || 0) + 1;
+  });
+  return Object.entries(counts).sort((left, right) => right[1] - left[1]);
+};
+
 window.theseusLoadGraph = async function theseusLoadGraph(app) {
   const label = (app.graph.label || "*").trim() || "*";
   app.graph.loading = true;
@@ -34,64 +103,9 @@ window.theseusLoadGraph = async function theseusLoadGraph(app) {
       throw new Error(`${response.status} ${response.statusText}`);
     const data = await response.json();
 
-    const nodes = (data.nodes || []).map((node) => {
-      const props = node.properties || {};
-      const type = (
-        props.entity_type ||
-        (node.labels && node.labels[0]) ||
-        "concept"
-      )
-        .toString()
-        .toLowerCase();
-      return {
-        data: {
-          id: String(node.id),
-          label: (props.entity_id || node.id).toString().replace(/^"|"$/g, ""),
-          type,
-          description: props.description || "",
-          raw: props,
-          degree: 0,
-        },
-      };
-    });
-
-    const nodeIds = new Set(nodes.map((node) => node.data.id));
-    const edges = (data.edges || [])
-      .filter(
-        (edge) =>
-          nodeIds.has(String(edge.source)) && nodeIds.has(String(edge.target)),
-      )
-      .map((edge) => {
-        const props = edge.properties || {};
-        return {
-          data: {
-            id: String(edge.id),
-            source: String(edge.source),
-            target: String(edge.target),
-            label: edge.type || props.keywords || "RELATED_TO",
-            weight: parseFloat(props.weight ?? 1) || 1,
-            confidence: parseFloat(props.confidence ?? 1) || 1,
-            raw: props,
-          },
-        };
-      });
-
-    const degrees = {};
-    edges.forEach((edge) => {
-      degrees[edge.data.source] = (degrees[edge.data.source] || 0) + 1;
-      degrees[edge.data.target] = (degrees[edge.data.target] || 0) + 1;
-    });
-    nodes.forEach((node) => {
-      node.data.degree = degrees[node.data.id] || 0;
-    });
-
-    const counts = {};
-    nodes.forEach((node) => {
-      counts[node.data.type] = (counts[node.data.type] || 0) + 1;
-    });
-    app.graph.typeCounts = Object.entries(counts).sort(
-      (left, right) => right[1] - left[1],
-    );
+    const { nodes, edges } = theseusGraphElements(data);
+    theseusApplyGraphDegrees(nodes, edges);
+    app.graph.typeCounts = theseusGraphTypeCounts(nodes);
     app.graph.stats = {
       nodes: nodes.length,
       edges: edges.length,
