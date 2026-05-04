@@ -152,6 +152,51 @@ def build_post_processing_result(
     }
 
 
+def plan_entity_type_updates(
+    grouped: dict[str, list[dict]],
+    *,
+    allowed_types: list[str],
+    table_type_mapper,
+) -> tuple[list[dict], list[dict], int, int]:
+    """Plan deterministic entity-type cleanup updates for Phase 2."""
+    entity_updates = []
+    unknown_entities = []
+    table_mapped = 0
+    hash_cleaned = 0
+    allowed_type_names = {entity_type.lower() for entity_type in allowed_types}
+
+    for entity_type, entity_group in grouped.items():
+        entity_type_clean = entity_type.lower()
+        has_hash_prefix = entity_type_clean.startswith("#")
+        has_pipe_prefix = entity_type_clean.startswith("|") or entity_type_clean.startswith("#|")
+
+        if entity_type_clean.startswith("#|"):
+            entity_type_clean = entity_type_clean[2:]
+        elif has_hash_prefix:
+            entity_type_clean = entity_type_clean[1:]
+        elif entity_type_clean.startswith("|"):
+            entity_type_clean = entity_type_clean[1:]
+
+        if entity_type_clean == "table":
+            for entity in entity_group:
+                mapped_type = table_type_mapper(entity)
+                if mapped_type:
+                    entity_updates.append({"id": entity["id"], "new_entity_type": mapped_type})
+                    table_mapped += 1
+            continue
+
+        if (has_hash_prefix or has_pipe_prefix) and entity_type_clean in allowed_type_names:
+            for entity in entity_group:
+                entity_updates.append({"id": entity["id"], "new_entity_type": entity_type_clean})
+                hash_cleaned += 1
+            continue
+
+        if entity_type_clean == "unknown":
+            unknown_entities.extend(entity_group)
+
+    return entity_updates, unknown_entities, table_mapped, hash_cleaned
+
+
 def heuristic_table_type_mapping(entity: Dict) -> str:
     """Map RAG-Anything `table` entities into govcon entity types."""
     name = (entity.get("entity_name") or "").lower()

@@ -35,6 +35,7 @@ from src.inference.semantic_post_process_support import (
     build_post_processing_result,
     collect_relationship_retype_updates,
     heuristic_table_type_mapping as _heuristic_table_type_mapping,
+    plan_entity_type_updates,
 )
 from src.ontology.schema import VALID_ENTITY_TYPES
 
@@ -147,60 +148,15 @@ async def _semantic_post_processor_neo4j(
         # ========================================================================
         phase_start = time.time()
         logger.info("\n🔧 Phase 2 · Entity Normalization: Lightweight type cleanup...")
-        entity_updates = []
         grouped = group_entities_by_type(entities)
-        
-        table_mapped = 0
-        hash_cleaned = 0
-        unknown_entities = []  # Collect UNKNOWN entities for LLM retyping
-        
-        for entity_type, entity_group in grouped.items():
-            entity_type_clean = entity_type.lower()
-            
-            # Strip various prefix formats from LightRAG internal markers
-            # Handles: "#requirement", "#|requirement", "|requirement"
-            has_hash_prefix = entity_type_clean.startswith('#')
-            has_pipe_prefix = entity_type_clean.startswith('|') or entity_type_clean.startswith('#|')
-            
-            if entity_type_clean.startswith('#|'):
-                entity_type_clean = entity_type_clean[2:]  # Strip "#|"
-            elif has_hash_prefix:
-                entity_type_clean = entity_type_clean[1:]  # Strip "#"
-            elif entity_type_clean.startswith('|'):
-                entity_type_clean = entity_type_clean[1:]  # Strip "|"
-            
-            # CASE 1: "table" entities from RAG-Anything multimodal processors
-            # These bypass our Pydantic adapter - map based on content heuristically
-            if entity_type_clean == 'table':
-                logger.info(f"  📊 Processing {len(entity_group)} table entities (from RAG-Anything)...")
-                for entity in entity_group:
-                    mapped_type = _heuristic_table_type_mapping(entity)
-                    if mapped_type:
-                        entity_updates.append({
-                            'id': entity['id'],
-                            'new_entity_type': mapped_type
-                        })
-                        table_mapped += 1
-                    # If can't map, leave as 'concept' (safe default)
-                    # NO LLM fallback - extraction should have handled this
-                continue
-            
-            # CASE 2: Prefixed types (#requirement, #|requirement, |requirement) - clean the prefix
-            if (has_hash_prefix or has_pipe_prefix) and entity_type_clean in [t.lower() for t in ALLOWED_TYPES]:
-                logger.info(f"  🔧 Cleaning {len(entity_group)} '{entity_type}' → '{entity_type_clean}'")
-                for entity in entity_group:
-                    entity_updates.append({
-                        'id': entity['id'],
-                        'new_entity_type': entity_type_clean
-                    })
-                    hash_cleaned += 1
-                continue
-            
-            # CASE 3: "UNKNOWN" entities - created by LightRAG when relationships reference
-            # entities that weren't extracted (due to delimiter corruption or missing extraction).
-            # These could contain critical workload drivers - retype them with LLM.
-            if entity_type_clean == 'unknown':
-                unknown_entities.extend(entity_group)
+        entity_updates, unknown_entities, table_mapped, hash_cleaned = plan_entity_type_updates(
+            grouped,
+            allowed_types=ALLOWED_TYPES,
+            table_type_mapper=_heuristic_table_type_mapping,
+        )
+
+        if table_mapped > 0:
+            logger.info(f"  📊 Processing {table_mapped} table entities (from RAG-Anything)...")
         
         if table_mapped > 0:
             logger.info(f"  ✅ Heuristically mapped {table_mapped} table entities")

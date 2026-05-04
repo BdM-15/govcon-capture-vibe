@@ -5,6 +5,7 @@ from src.inference.semantic_post_process_support import (
     collect_relationship_retype_updates,
     count_vdb_entries,
     heuristic_table_type_mapping,
+    plan_entity_type_updates,
     resolve_generic_relationship,
 )
 
@@ -80,3 +81,34 @@ def test_build_post_processing_result_computes_final_counts(tmp_path) -> None:
     assert result["final_relationship_count"] == 4
     assert result["vdb_entity_count"] == 1
     assert result["vdb_relationship_count"] == 2
+
+
+def test_plan_entity_type_updates_handles_table_hash_and_unknown() -> None:
+    grouped = {
+        "table": [
+            {"id": "t1", "entity_name": "CDRL Matrix", "content": "deliverable table"},
+        ],
+        "#requirement": [
+            {"id": "h1", "entity_name": "Req 1"},
+        ],
+        "UNKNOWN": [
+            {"id": "u1", "entity_name": "Mystery"},
+        ],
+        "concept": [
+            {"id": "c1", "entity_name": "Leave Alone"},
+        ],
+    }
+
+    updates, unknown_entities, table_mapped, hash_cleaned = plan_entity_type_updates(
+        grouped,
+        allowed_types=["requirement", "concept"],
+        table_type_mapper=heuristic_table_type_mapping,
+    )
+
+    assert updates == [
+        {"id": "t1", "new_entity_type": "deliverable"},
+        {"id": "h1", "new_entity_type": "requirement"},
+    ]
+    assert unknown_entities == [{"id": "u1", "entity_name": "Mystery"}]
+    assert table_mapped == 1
+    assert hash_cleaned == 1
