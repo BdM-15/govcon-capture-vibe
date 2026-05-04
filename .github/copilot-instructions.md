@@ -1,16 +1,10 @@
 # Copilot Instructions for GovCon-Capture-Vibe
 
-## ⚠️ CRITICAL RULE: Never Commit Without User Approval
+## ⚠️ CRITICAL RULE: Never Commit Without A Proper Commit Message
 
 **MANDATORY**: Before running `git commit`, you MUST:
 
 1. Prepare the commit message following Conventional Commits format
-2. Show the user what will be committed (`git status`)
-3. Present the proposed commit message
-4. Wait for explicit user approval
-5. Only then execute `git commit`
-
-**NEVER execute `git commit` on your own initiative.**
 
 ---
 
