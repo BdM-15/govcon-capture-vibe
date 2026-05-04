@@ -32,6 +32,11 @@ from raganything import RAGAnything, RAGAnythingConfig
 # V3 unified prompt loaded directly from file - no prompt_loader needed
 from src.ontology.schema import VALID_ENTITY_TYPES
 from src.core import get_settings
+from src.server.initialization_support import (
+    build_embedding_function,
+    build_raganything_config,
+    configure_mineru_environment,
+)
 from src.server.llm_routing import build_role_llm_routing
 from src.server.rag_post_init import finalize_rag_initialization
 from src.utils.time_utils import to_local_iso
@@ -82,19 +87,8 @@ async def initialize_raganything():
     enable_equation = settings.enable_equation_processing
     device = settings.mineru_device_mode
     
-    # CRITICAL: MinerU reads MINERU_DEVICE_MODE from environment, NOT from RAGAnythingConfig
-    # Ensure it's set in the current process environment so MinerU subprocess inherits it
-    # NOTE: MinerU 3.0 removed the -d CLI flag; device is managed internally by the API service.
-    # The environment variable is still read by MinerU's internal configuration.
-    os.environ["MINERU_DEVICE_MODE"] = device
-    
-    # CRITICAL: Disable MinerU cross-page table merging (Issue #65, MinerU #4311)
-    # When tables span multiple pages, MinerU's merge logic keeps only the first page's
-    # img_path and table_body, resulting in EMPTY data for continuation pages.
-    # Per MinerU maintainer @myhloli: Set MINERU_TABLE_MERGE_ENABLE=0 to preserve per-page data.
-    # Our context-aware processing + semantic inference will connect related tables via CHILD_OF.
-    table_merge_value = "1" if settings.mineru_table_merge_enable else "0"
-    os.environ["MINERU_TABLE_MERGE_ENABLE"] = table_merge_value
+    # CRITICAL: MinerU reads MINERU_DEVICE_MODE / MINERU_TABLE_MERGE_ENABLE from env.
+    configure_mineru_environment(settings)
     logger.info(f"✅ MinerU table merge: {'ENABLED' if settings.mineru_table_merge_enable else 'DISABLED (preserves per-page data)'}")
     
     # Note: All other MinerU variables (MINERU_LANG, MINERU_FORMULA_ENABLE,
@@ -123,18 +117,10 @@ async def initialize_raganything():
     # workspace state stays readable for humans: canonical LightRAG stores remain
     # at rag_storage/{workspace}/ while per-document MinerU artifacts live under
     # rag_storage/{workspace}/mineru/.
-    workspace_dir = os.path.join(working_dir, settings.workspace)
-    mineru_output_dir = os.path.join(workspace_dir, "mineru")
-    os.makedirs(mineru_output_dir, exist_ok=True)
-    config = RAGAnythingConfig(
+    config, mineru_output_dir = build_raganything_config(
+        settings,
         working_dir=working_dir,
-        parser_output_dir=mineru_output_dir,
-        parser=parser,
-        parse_method=parse_method,
-        enable_image_processing=enable_image,
-        enable_table_processing=enable_table,
-        enable_equation_processing=enable_equation,
-        # Context settings are automatically loaded from env vars by RAGAnythingConfig
+        config_cls=RAGAnythingConfig,
     )
     logger.info(f"📁 MinerU parser output → {mineru_output_dir}")
     
@@ -158,25 +144,12 @@ async def initialize_raganything():
     llm_model_func_wrapped = role_routing.modal_llm_func
     use_strict_schema = role_routing.use_strict_schema
     
-    # Embedding function: use LightRAG's native openai_embed with built-in truncation
-    # LightRAG 1.4.13 openai_embed.func accepts max_token_size for auto-truncation.
-    # Use .func (unwrapped) to avoid @wrap_embedding_func_with_attrs dimension mismatch
-    # when using text-embedding-3-large (3072 dims) vs default text-embedding-3-small (1536).
-    from functools import partial
-    embed_impl = getattr(openai_embed, "func", openai_embed)
-    embed_fn = partial(
-        embed_impl,
-        model=settings.embedding_model,
-        api_key=openai_api_key,
-        max_token_size=8192,
-    )
-
-    embedding_dim = settings.embedding_dim
-
-    embedding_func = EmbeddingFunc(
-        embedding_dim=embedding_dim,
-        max_token_size=8192,
-        func=embed_fn,
+    # Embedding function: use LightRAG's native openai_embed with built-in truncation.
+    embedding_func = build_embedding_function(
+        settings,
+        openai_api_key=openai_api_key,
+        embed_factory=openai_embed,
+        embedding_func_cls=EmbeddingFunc,
     )
     
     # ═══════════════════════════════════════════════════════════════════════════════
