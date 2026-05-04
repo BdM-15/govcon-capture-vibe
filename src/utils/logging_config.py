@@ -22,8 +22,10 @@ import logging.handlers
 import os
 import sys
 from pathlib import Path
-from datetime import datetime
 from typing import List, Tuple, Optional
+
+from src.utils.log_filters import ConsoleFilter, ProcessingFilter, ServerFilter
+from src.utils.log_helpers import get_log_summary, log_graceful_failure
 
 
 if sys.platform == 'win32':
@@ -149,95 +151,6 @@ def log_banner(
 
     _emit(separator)
     _emit("")
-
-
-class ConsoleFilter(logging.Filter):
-    """
-    Allowlist filter for console output.
-
-    INFO+ is shown for: startup banner, batch completion, and post-processing
-    phase transitions. Everything else (VDB loading, LightRAG internals, prompt
-    registration, Neo4j index setup) goes to log files only.
-
-    Warnings and errors from ANY logger always pass through.
-    """
-
-    # Loggers allowed to emit INFO+ to the terminal
-    _ALLOWED = {
-        "src.raganything_server",
-        "uvicorn.error",
-        "src.server.routes",    # batch completion + post-processing trigger
-        "src.inference",        # phase transitions + algorithm results
-        "src.extraction.govcon_reranker",  # rerank timing + score visibility
-    }
-
-    def filter(self, record):
-        # Warnings and errors always surface
-        if record.levelno >= logging.WARNING:
-            return True
-        # Uvicorn access logs (per-request) never surface
-        if record.name == "uvicorn.access":
-            return False
-        # Allow exact matches or prefix matches (e.g. src.inference covers src.inference.semantic_post_processor)
-        return any(record.name == name or record.name.startswith(name + ".") for name in self._ALLOWED)
-
-
-class ProcessingFilter(logging.Filter):
-    """Filter to capture RFP processing logs (RAG-Anything, LightRAG, semantic inference)"""
-    
-    def filter(self, record):
-        # Capture logs from processing components
-        processing_loggers = [
-            "lightrag",
-            "raganything",
-            "src.server.routes",  # Our processing pipeline
-            "src.inference",  # Semantic inference (entity correction, relationship inference, metadata enrichment)
-            "src.ingestion",  # Document ingestion
-            "src.extraction.govcon_reranker",  # rerank timing + score visibility
-        ]
-        
-        for logger_name in processing_loggers:
-            if record.name.startswith(logger_name):
-                return True
-        
-        # Capture key processing messages regardless of logger
-        processing_keywords = [
-            "Processing",
-            "entities",
-            "relationships",
-            "semantic",
-            "GraphML",
-            "Neo4j",
-            "inference",
-            "enrichment",
-            "parsing",
-            "extraction",
-        ]
-        
-        message = record.getMessage()
-        for keyword in processing_keywords:
-            if keyword in message:
-                return True
-        
-        return False
-
-
-class ServerFilter(logging.Filter):
-    """Filter for server logs (startup, config, API calls - excluding processing details)"""
-    
-    def filter(self, record):
-        # Exclude processing logs from server log
-        processing_loggers = [
-            "lightrag.llm",  # LLM calls
-            "lightrag.kg",   # Knowledge graph operations
-            "raganything",
-        ]
-        
-        for logger_name in processing_loggers:
-            if record.name.startswith(logger_name):
-                return False
-        
-        return True
 
 
 def _remove_workspace_file_handlers(target_logger: logging.Logger) -> None:
@@ -402,63 +315,4 @@ def setup_logging(
         "processing_log": str(processing_log_file),
         "server_log": str(server_log_file),
         "error_log": str(error_log_file),
-    }
-
-
-def log_graceful_failure(logger: logging.Logger, operation: str, error: Exception, context: str = "") -> None:
-    """
-    Log a graceful failure with truncated error message (non-critical, processing continues).
-    
-    Use this for expected failures that should not crash the system:
-    - Table extraction failures (3-5% tolerance)
-    - Relationship inference failures
-    - Individual chunk processing failures
-    
-    Args:
-        logger: Logger instance to use
-        operation: Brief description of what failed (e.g., "Table extraction", "Relationship inference")
-        error: The exception that was caught
-        context: Optional context (e.g., chunk_id, table_id) to include in log
-    
-    Example:
-        try:
-            result = process_table(...)
-        except Exception as e:
-            log_graceful_failure(logger, "Table extraction", e, chunk_id)
-            return empty_result()
-    """
-    error_msg = str(error)[:100]  # Truncate to 100 chars
-    if context:
-        logger.warning(f"⚠️ {operation} failed ({context}): {error_msg} - continuing with degraded result")
-    else:
-        logger.warning(f"⚠️ {operation} failed: {error_msg} - continuing with degraded result")
-
-
-def get_log_summary(log_dir: str = "logs") -> dict:
-    """Get summary of current log files with sizes and timestamps"""
-    log_path = Path(log_dir)
-    
-    if not log_path.exists():
-        return {"error": "Log directory does not exist"}
-    
-    log_files = []
-    for log_file in sorted(log_path.glob("*.log*")):
-        try:
-            stat = log_file.stat()
-            log_files.append({
-                "name": log_file.name,
-                "size_mb": round(stat.st_size / 1024 / 1024, 2),
-                "modified": datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
-                "path": str(log_file.absolute())
-            })
-        except Exception as e:
-            log_files.append({
-                "name": log_file.name,
-                "error": str(e)
-            })
-    
-    return {
-        "log_directory": str(log_path.absolute()),
-        "total_files": len(log_files),
-        "files": log_files
     }
