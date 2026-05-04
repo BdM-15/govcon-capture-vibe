@@ -334,6 +334,9 @@ window.theseusSelectGraphNode = async function theseusSelectGraphNode(
 };
 
 window.theseusAskAboutEntity = function theseusAskAboutEntity(app, entity) {
-  app.composer = `Tell me everything about "${entity.id}" (${entity.type}). Cite source chunks.`;
-  app.newChat(entity.id);
+  window.theseusStartChatWithComposer(
+    app,
+    `Tell me everything about "${entity.id}" (${entity.type}). Cite source chunks.`,
+    entity.id,
+  );
 };

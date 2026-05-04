@@ -148,8 +148,7 @@ window.theseusPaletteResults = function theseusPaletteResults(app) {
         hint: `Phase ${prompt.phase} · ${prompt.prompt.slice(0, 60)}…`,
         icon: "wand-sparkles",
         action: () => {
-          app.composer = prompt.prompt;
-          app.newChat();
+          window.theseusStartChatWithComposer(app, prompt.prompt);
         },
       }),
     ),

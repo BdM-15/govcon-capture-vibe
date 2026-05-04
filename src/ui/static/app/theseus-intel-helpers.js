@@ -82,6 +82,5 @@ window.theseusGapBuckets = function theseusGapBuckets(app) {
 };
 
 window.theseusAskIntel = function theseusAskIntel(app, prompt) {
-  app.composer = prompt;
-  app.newChat();
+  window.theseusStartChatWithComposer(app, prompt);
 };

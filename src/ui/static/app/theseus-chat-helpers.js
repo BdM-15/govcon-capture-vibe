@@ -269,15 +269,11 @@ window.theseusCopyMessage = async function theseusCopyMessage(app, message) {
 
 window.theseusEditMessage = function theseusEditMessage(app, message) {
   if (!message || message.role !== "user" || app.sending) return;
-  app.composer = message.content;
-  app.$nextTick(() => {
-    const textarea = document.querySelector('textarea[x-model="composer"]');
-    if (textarea) {
-      textarea.focus();
-      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    }
+  window.theseusLoadComposerText(app, message.content, {
+    focus: true,
+    placeCaretEnd: true,
+    toastMessage: "Loaded into composer — edit and send",
   });
-  app.toast("Loaded into composer — edit and send", "info");
 };
 
 window.theseusRegenerateMessage = async function theseusRegenerateMessage(

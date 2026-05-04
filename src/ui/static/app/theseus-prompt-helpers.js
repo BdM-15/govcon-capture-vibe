@@ -51,11 +51,11 @@ const theseusLoadPromptIntoComposer = function theseusLoadPromptIntoComposer(
   options = {},
 ) {
   const { closePicker = false, activateChat = false } = options;
-  app.composer = prompt.prompt;
-  if (closePicker) app.promptPicker.open = false;
-  if (activateChat) app.active = "chat";
-  window.theseusFocusComposer(app);
-  app.toast("Prompt loaded into composer", "info");
+  window.theseusLoadComposerText(app, prompt.prompt, {
+    closePromptPicker: closePicker,
+    activateChat,
+    toastMessage: "Prompt loaded into composer",
+  });
 };
 
 window.theseusFilteredPrompts = function theseusFilteredPrompts(app) {
@@ -82,12 +82,6 @@ window.theseusPromptPhases = function theseusPromptPhases(app) {
       ...theseusPromptPhaseInfo(id),
       items: buckets[id],
     }));
-};
-
-window.theseusFocusComposer = function theseusFocusComposer(app) {
-  app.$nextTick(() => {
-    if (app.$refs.composer) app.$refs.composer.focus();
-  });
 };
 
 window.theseusUsePrompt = function theseusUsePrompt(app, prompt) {

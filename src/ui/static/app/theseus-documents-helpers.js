@@ -344,6 +344,9 @@ window.theseusFilteredDocuments = function theseusFilteredDocuments(app) {
 
 window.theseusAskAboutDocument = function theseusAskAboutDocument(app, doc) {
   app.active = "chat";
-  app.composer = `Focus on the document "${doc.file_path || doc.id}". `;
-  app.newChat(doc.file_path || doc.id);
+  window.theseusStartChatWithComposer(
+    app,
+    `Focus on the document "${doc.file_path || doc.id}". `,
+    doc.file_path || doc.id,
+  );
 };
