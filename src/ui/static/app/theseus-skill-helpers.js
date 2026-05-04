@@ -97,19 +97,19 @@ window.theseusSkillsCountForCapability =
       .length;
   };
 
+const theseusToggleArrayValue = function theseusToggleArrayValue(values, id) {
+  const index = values.indexOf(id);
+  if (index >= 0) values.splice(index, 1);
+  else values.push(id);
+};
+
 window.theseusToggleSkillPersona = function theseusToggleSkillPersona(app, id) {
-  const arr = app.skills.activePersonas;
-  const idx = arr.indexOf(id);
-  if (idx >= 0) arr.splice(idx, 1);
-  else arr.push(id);
+  theseusToggleArrayValue(app.skills.activePersonas, id);
   window.theseusAfterRender(app);
 };
 
 window.theseusToggleSkillPhase = function theseusToggleSkillPhase(app, id) {
-  const arr = app.skills.activePhases;
-  const idx = arr.indexOf(id);
-  if (idx >= 0) arr.splice(idx, 1);
-  else arr.push(id);
+  theseusToggleArrayValue(app.skills.activePhases, id);
   window.theseusAfterRender(app);
 };
 
@@ -117,10 +117,7 @@ window.theseusToggleSkillCapability = function theseusToggleSkillCapability(
   app,
   id,
 ) {
-  const arr = app.skills.activeCapabilities;
-  const idx = arr.indexOf(id);
-  if (idx >= 0) arr.splice(idx, 1);
-  else arr.push(id);
+  theseusToggleArrayValue(app.skills.activeCapabilities, id);
   window.theseusAfterRender(app);
 };
 
@@ -208,42 +205,73 @@ window.theseusDeleteSkillRun = async function theseusDeleteSkillRun(
   }
 };
 
+const theseusSkillErrorMessage = function theseusSkillErrorMessage(error) {
+  return error?.message || error;
+};
+
+const theseusMutateSkillCatalog = async function theseusMutateSkillCatalog(
+  app,
+  options,
+) {
+  const {
+    confirmMessage,
+    busyKey,
+    request,
+    onSuccess,
+    successMessage,
+    errorLabel,
+  } = options;
+
+  if (confirmMessage && !confirm(confirmMessage)) return;
+  if (busyKey) app.skills[busyKey] = true;
+  try {
+    await request();
+    if (onSuccess) onSuccess();
+    app.toast(successMessage, "ok");
+    await app.loadSkills(true);
+  } catch (error) {
+    app.toast(`${errorLabel}: ${theseusSkillErrorMessage(error)}`, "error");
+  } finally {
+    if (busyKey) app.skills[busyKey] = false;
+  }
+};
+
 window.theseusInstallSkill = async function theseusInstallSkill(app) {
   const url = (app.skills.installUrl || "").trim();
   if (!url) return;
-  app.skills.installing = true;
-  try {
-    await app.api("/api/ui/skills/install", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
-    app.skills.installModal = false;
-    app.skills.installUrl = "";
-    app.toast("Skill installed", "ok");
-    await app.loadSkills(true);
-  } catch (error) {
-    app.toast("Install failed: " + (error?.message || error), "error");
-  } finally {
-    app.skills.installing = false;
-  }
+  return theseusMutateSkillCatalog(app, {
+    busyKey: "installing",
+    request: () =>
+      app.api("/api/ui/skills/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      }),
+    onSuccess: () => {
+      app.skills.installModal = false;
+      app.skills.installUrl = "";
+    },
+    successMessage: "Skill installed",
+    errorLabel: "Install failed",
+  });
 };
 
 window.theseusUninstallSkill = async function theseusUninstallSkill(app) {
   if (!app.skills.current) return;
   const name = app.skills.current.name;
-  if (!confirm(`Uninstall skill "${name}"?`)) return;
-  try {
-    await app.api("/api/ui/skills/" + encodeURIComponent(name), {
-      method: "DELETE",
-    });
-    app.skills.detailOpen = false;
-    app.skills.current = null;
-    app.toast("Skill removed", "ok");
-    await app.loadSkills(true);
-  } catch (error) {
-    app.toast("Uninstall failed: " + (error?.message || error), "error");
-  }
+  return theseusMutateSkillCatalog(app, {
+    confirmMessage: `Uninstall skill "${name}"?`,
+    request: () =>
+      app.api("/api/ui/skills/" + encodeURIComponent(name), {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      app.skills.detailOpen = false;
+      app.skills.current = null;
+    },
+    successMessage: "Skill removed",
+    errorLabel: "Uninstall failed",
+  });
 };
 
 window.theseusLoadSkills = async function theseusLoadSkills(
