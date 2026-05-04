@@ -58,11 +58,7 @@ import uvicorn
 # Import modular components (AFTER load_dotenv() so they see environment variables)
 from src.server.config import configure_raganything_args
 from src.server.initialization import initialize_raganything, get_rag_instance
-from src.server.routes import (
-    create_insert_endpoint,
-    create_documents_upload_endpoint,
-    create_scan_endpoint,
-)
+from src.server.route_overrides import register_custom_ingestion_routes
 from src.server.startup_banner import build_startup_banner_items
 from src.server.ui_query_bridge import make_ui_query_bridges
 from src.server.ui_routes import register_ui
@@ -141,22 +137,7 @@ async def main():
     settings = get_settings()
 
     # Step 4: Override endpoints to use RAG-Anything + semantic post-processing
-    # Remove original LightRAG endpoints that don't support multimodal processing
-    new_routes = []
-    for route in app.router.routes:
-        # Skip the original /insert and /documents/upload POST endpoints
-        if hasattr(route, 'path') and hasattr(route, 'methods') and 'POST' in route.methods:
-            if route.path in ['/insert', '/documents/upload']:
-                continue
-        new_routes.append(route)
-    app.router.routes = new_routes
-    
-    # Add our custom endpoints with RAG-Anything multimodal processing + semantic inference
-    create_insert_endpoint(app, rag_instance)
-    create_documents_upload_endpoint(app, rag_instance)
-    create_scan_endpoint(app, rag_instance)
-    logger.info("✅ Custom endpoints registered: /insert, /documents/upload, /scan-rfp")
-    logger.info("✅ Use LightRAG's native /query/data endpoint for structured data retrieval (agent workflows)")
+    register_custom_ingestion_routes(app, rag_instance, logger=logger)
 
     # Project Theseus custom UI (cyberpunk capture workbench at /ui)
     ui_bridges = make_ui_query_bridges(rag_instance, logger=logger)
