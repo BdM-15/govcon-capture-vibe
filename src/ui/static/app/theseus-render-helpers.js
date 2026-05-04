@@ -174,21 +174,47 @@ window.theseusEntityColor = function theseusEntityColor(type) {
   return palette[type] || "#64748b";
 };
 
+const THESEUS_IMAGE_EXTENSIONS = new Set([
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "webp",
+  "svg",
+]);
+
+const THESEUS_VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov"]);
+const THESEUS_TEXT_EXTENSIONS = new Set(["txt", "log", "yaml", "yml"]);
+const THESEUS_SPREADSHEET_EXTENSIONS = new Set(["xlsx", "xls"]);
+const THESEUS_DOCUMENT_EXTENSIONS = new Set(["docx", "doc"]);
+const THESEUS_CODE_ARTIFACT_EXTENSIONS = new Set([
+  "json",
+  "yaml",
+  "yml",
+  "md",
+  "txt",
+]);
+const THESEUS_ARCHIVE_EXTENSIONS = new Set(["zip", "tar", "gz"]);
+
+const theseusNormalizedExtension = function theseusNormalizedExtension(value) {
+  return (value || "").toLowerCase().replace(/^\./, "");
+};
+
 window.theseusStudioFormatFor = function theseusStudioFormatFor(deliverable) {
-  const ext = (deliverable.ext || "").toLowerCase().replace(/^\./, "");
+  const ext = theseusNormalizedExtension(deliverable.ext);
   if (ext === "pdf") return "pdf";
-  if (ext === "mp4" || ext === "webm" || ext === "mov") return "video";
-  if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)) {
+  if (THESEUS_VIDEO_EXTENSIONS.has(ext)) return "video";
+  if (THESEUS_IMAGE_EXTENSIONS.has(ext)) {
     return "image";
   }
   if (ext === "md" || ext === "markdown") return "md";
   if (ext === "json") return "json";
   if (ext === "csv") return "csv";
-  if (ext === "txt" || ext === "log" || ext === "yaml" || ext === "yml") {
+  if (THESEUS_TEXT_EXTENSIONS.has(ext)) {
     return "text";
   }
   if (ext === "docx") return "docx";
-  if (ext === "xlsx" || ext === "xls") return "xlsx";
+  if (THESEUS_SPREADSHEET_EXTENSIONS.has(ext)) return "xlsx";
   return "unsupported";
 };
 
@@ -242,26 +268,20 @@ window.theseusFormatBytes = function theseusFormatBytes(n) {
 
 window.theseusArtifactIcon = function theseusArtifactIcon(mime, name) {
   const normalizedMime = (mime || "").toLowerCase();
-  const ext = ((name || "").split(".").pop() || "").toLowerCase();
-  if (
-    normalizedMime.startsWith("image/") ||
-    ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)
-  ) {
+  const ext = theseusNormalizedExtension((name || "").split(".").pop());
+  if (normalizedMime.startsWith("image/") || THESEUS_IMAGE_EXTENSIONS.has(ext)) {
     return "image";
   }
-  if (
-    normalizedMime.startsWith("video/") ||
-    ["mp4", "webm", "mov"].includes(ext)
-  ) {
+  if (normalizedMime.startsWith("video/") || THESEUS_VIDEO_EXTENSIONS.has(ext)) {
     return "film";
   }
   if (normalizedMime.startsWith("audio/")) return "music";
   if (ext === "pdf" || normalizedMime === "application/pdf") return "file-text";
   if (["pptx", "ppt"].includes(ext)) return "presentation";
-  if (["docx", "doc"].includes(ext)) return "file-text";
-  if (["xlsx", "xls", "csv"].includes(ext)) return "table";
-  if (["json", "yaml", "yml", "md", "txt"].includes(ext)) return "file-code";
-  if (["zip", "tar", "gz"].includes(ext)) return "archive";
+  if (THESEUS_DOCUMENT_EXTENSIONS.has(ext)) return "file-text";
+  if (THESEUS_SPREADSHEET_EXTENSIONS.has(ext) || ext === "csv") return "table";
+  if (THESEUS_CODE_ARTIFACT_EXTENSIONS.has(ext)) return "file-code";
+  if (THESEUS_ARCHIVE_EXTENSIONS.has(ext)) return "archive";
   return "file";
 };
 
