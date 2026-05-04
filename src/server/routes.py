@@ -22,16 +22,14 @@ from typing import Optional
 from fastapi import UploadFile, File, BackgroundTasks, Query
 from fastapi.responses import JSONResponse
 from lightrag.api.config import global_args
-from lightrag.base import DocStatus
-from lightrag.utils import compute_mdhash_id
 from raganything.callbacks import ProcessingCallback
 
 from src.core import get_settings
+from src.server.document_processing import process_document_with_semantic_inference as run_document_processing
 from src.server.scan_routes import create_scan_endpoint as register_scan_endpoint
 from src.server.upload_staging import (
     save_upload_to_workspace,
 )
-from src.utils.time_utils import now_local_iso
 
 logger = logging.getLogger(__name__)
 
@@ -217,225 +215,13 @@ async def process_document_with_semantic_inference(
     rag_instance,
     llm_func
 ) -> dict:
-    """
-    Integrated document processing with semantic relationship inference.
-    
-    Works with ALL RFP formats (UCF, task orders, quotes, FOPRs, embedded formats).
-    No format detection needed - LLM handles structure semantically.
-    
-    Pipeline:
-    1. RAG-Anything multimodal processing (MinerU parser)
-    2. Native LightRAG entity extraction (18 govcon types)
-    3. Semantic post-processing - Auto-triggered on batch completion via callback
-    """
-    logger.info(f"📄 Processing {file_name}")
-    
-    settings = get_settings()
-    mineru_backend = settings.mineru_backend
-    
-    start_time = datetime.now()
-    doc_id: Optional[str] = None
-    
-    try:
-        content_list, doc_id = await rag_instance.parse_document(
-            file_path=file_path,
-            parse_method="auto",
-            backend=mineru_backend
-        )
-        
-        parse_duration = (datetime.now() - start_time).total_seconds()
-        
-        # Dispatch parse_complete event (sync — dispatch calls handlers synchronously)
-        rag_instance.callback_manager.dispatch(
-            "on_parse_complete",
-            file_path=file_path,
-            content_blocks=len(content_list),
-            doc_id=doc_id,
-            duration_seconds=parse_duration
-        )
-        
-        # Filter out MinerU discarded content types
-        DISCARDED_TYPES = {
-            "discarded", "header", "footer", "page_number",
-            "aside_text", "page_footnote",
-        }
-        
-        original_count = len(content_list)
-        filtered_content = [
-            item for item in content_list
-            if item.get("type") not in DISCARDED_TYPES
-        ]
-        discarded_count = original_count - len(filtered_content)
-        
-        if discarded_count > 0:
-            logger.info(f"🚫 Filtered {discarded_count} discarded content blocks "
-                        f"(keeping {len(filtered_content)}/{original_count})")
-        
-        llm_timeout = settings.llm_timeout
-        logger.info("🚀 Using RAG-Anything native end-to-end pipeline")
-        logger.info(f"   Ontology: 33 govcon entity types | Timeout: {llm_timeout}s")
-        
-        await rag_instance.insert_content_list(
-            content_list=filtered_content,
-            file_path=file_path,
-            doc_id=doc_id
-        )
-        
-        total_duration = (datetime.now() - start_time).total_seconds()
-        logger.info("✅ RAG-Anything processing complete")
-        
-        # Backfill doc_status for tabular/image-only docs.
-        # RAG-Anything's insert_content_list only writes a doc_status row when
-        # the document has text-bearing blocks that flow through LightRAG's
-        # ainsert() path. Pure-tabular spreadsheets (e.g. staffing matrices) get
-        # their chunks/embeddings written directly and never appear in doc_status,
-        # so the UI silently undercounts processed docs. Probe and backfill here.
-        await _ensure_doc_status_processed(
-            rag_instance, file_path, file_name, doc_id, filtered_content, total_duration
-        )
-        
-        # Dispatch document_complete event — triggers batch detection (sync)
-        rag_instance.callback_manager.dispatch(
-            "on_document_complete",
-            file_path=file_path,
-            doc_id=doc_id,
-            duration_seconds=total_duration
-        )
-        
-        stats = await _callback.get_stats()
-        logger.info(f"⏭️  Queue: {stats['processing']} processing, {stats['completed']} completed")
-        
-        return {
-            "status": "success",
-            "relationships_inferred": 0,
-            "method": "native_rag_anything",
-            "message": "✅ Document processed via RAG-Anything native pipeline.",
-        }
-    
-    except Exception as e:
-        # Record failure in doc_status so it surfaces in the UI Failed card
-        # (without this, errors are silent — neither the success nor failed path
-        # writes a status entry, so the UI shows nothing).
-        await _record_failed_doc(rag_instance, file_path, file_name, doc_id, str(e))
-        
-        # Dispatch error event so batch detection still works (sync)
-        rag_instance.callback_manager.dispatch(
-            "on_document_error",
-            file_path=file_path,
-            doc_id=doc_id,
-            error=str(e)
-        )
-        raise
-
-
-async def _record_failed_doc(
-    rag_instance,
-    file_path: str,
-    file_name: str,
-    doc_id: Optional[str],
-    error_msg: str,
-) -> None:
-    """
-    Write a `failed` doc_status entry so the failure is visible in the UI.
-    
-    If parse succeeded and we have the real content-hash doc_id, use it (so the
-    failed entry overwrites any prior `processing` row). If parse failed before
-    a doc_id was assigned, derive a stable `failed-<md5(file_path)>` id so retries
-    can find/replace the entry.
-    """
-    try:
-        if not doc_id:
-            doc_id = compute_mdhash_id(file_path, prefix="failed-")
-        now = now_local_iso()
-        truncated_err = error_msg[:500]
-        await rag_instance.lightrag.doc_status.upsert({
-            doc_id: {
-                "content_summary": f"[FAILED] {file_name}",
-                "content_length": 0,
-                "file_path": file_name,
-                "status": DocStatus.FAILED.value,
-                "created_at": now,
-                "updated_at": now,
-                "chunks_count": 0,
-                "error_msg": truncated_err,
-            }
-        })
-        logger.warning(
-            f"📛 Recorded FAILED doc_status for {file_name} (doc_id={doc_id}): {truncated_err}"
-        )
-    except Exception as record_err:
-        logger.error(
-            f"⚠️  Could not record failed doc_status for {file_name}: {record_err}"
-        )
-
-
-async def _ensure_doc_status_processed(
-    rag_instance,
-    file_path: str,
-    file_name: str,
-    doc_id: Optional[str],
-    filtered_content: list,
-    duration_seconds: float,
-) -> None:
-    """
-    Backfill a `processed` doc_status row when RAG-Anything's pipeline didn't
-    write one. This happens for tabular/image-only documents (no text blocks),
-    where insert_content_list bypasses LightRAG.ainsert() and the doc never
-    enters the standard pending → processed lifecycle.
-
-    Idempotent: if a row already exists for this doc_id, leaves it alone.
-    """
-    if not doc_id:
-        return
-    try:
-        existing = await rag_instance.lightrag.doc_status.get_by_id(doc_id)
-        if existing:
-            return  # Already tracked by the standard pipeline — nothing to do.
-
-        # Derive a content_summary: first text-ish block if any, else type breakdown.
-        summary = None
-        for block in filtered_content:
-            if block.get("type") == "text":
-                text = (block.get("text") or "").strip()
-                if text:
-                    summary = text[:200]
-                    break
-        if not summary:
-            type_counts: dict[str, int] = {}
-            for block in filtered_content:
-                t = block.get("type", "unknown")
-                type_counts[t] = type_counts.get(t, 0) + 1
-            breakdown = ", ".join(f"{n} {t}" for t, n in sorted(type_counts.items()))
-            summary = f"[NON-TEXT] {file_name} ({breakdown})"
-
-        now = now_local_iso()
-        await rag_instance.lightrag.doc_status.upsert({
-            doc_id: {
-                "content_summary": summary,
-                "content_length": sum(
-                    len((b.get("text") or "")) for b in filtered_content
-                ),
-                "file_path": file_name,
-                "status": DocStatus.PROCESSED.value,
-                "created_at": now,
-                "updated_at": now,
-                "chunks_count": len(filtered_content),
-                "metadata": {
-                    "backfilled": True,
-                    "reason": "tabular_or_image_only",
-                    "duration_seconds": round(duration_seconds, 2),
-                },
-            }
-        })
-        logger.info(
-            f"📝 Backfilled PROCESSED doc_status for {file_name} "
-            f"(doc_id={doc_id}, blocks={len(filtered_content)}) — "
-            f"non-text content bypassed standard tracking"
-        )
-    except Exception as backfill_err:
-        logger.error(
-            f"⚠️  Could not backfill doc_status for {file_name}: {backfill_err}"
-        )
+    return await run_document_processing(
+        file_path,
+        file_name,
+        rag_instance,
+        llm_func,
+        callback=_callback,
+    )
 
 
 def create_insert_endpoint(app, rag_instance):
