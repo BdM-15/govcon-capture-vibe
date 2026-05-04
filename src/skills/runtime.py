@@ -17,158 +17,24 @@ from __future__ import annotations
 
 import json
 import logging
-import time
-from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 from src.skills.llm_chat import ChatResponse, ChatToolCall, chat_with_tools
+from src.skills.runtime_support import (
+    ToolLoopResult,
+    append_transcript,
+    compose_system_prompt,
+    dispatch_tool_call,
+    now_ms,
+    persist_transcript,
+)
 from src.skills.tools import (
     ToolContext,
-    ToolError,
-    ToolSpec,
     build_mcp_tool_specs,
     build_tool_specs,
-    serialize_tool_payload_for_model,
 )
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Result shape
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class ToolLoopResult:
-    """Outcome of one ``run_tool_loop`` call."""
-
-    response: str
-    transcript: list[dict[str, Any]]
-    turns: int
-    tool_calls: int
-    finish_reason: str
-    usage_total: dict[str, int] = field(default_factory=dict)
-    warnings: list[str] = field(default_factory=list)
-
-
-# ---------------------------------------------------------------------------
-# System prompt assembly
-# ---------------------------------------------------------------------------
-
-
-def _compose_system_prompt(
-    skill_name: str,
-    skill_body: str,
-    workspace_name: str,
-    tool_names: list[str],
-) -> str:
-    """Assemble the system message that orients the model for this run.
-
-    The skill body IS the workflow contract — we don't paraphrase it, we just
-    frame it with operational discipline (tool names available, citation
-    rules, when to stop).
-    """
-    return (
-        f"You are executing the agent skill `{skill_name}` against Project "
-        f"Theseus workspace `{workspace_name}`.\n"
-        "\n"
-        "## Skill Instructions (authoritative)\n"
-        f"{skill_body.strip()}\n"
-        "\n"
-        "## Operating Rules\n"
-        f"- Tools available this run: {', '.join(tool_names)}.\n"
-        "- Use the tools to fetch every fact you need — do not guess about "
-        "the workspace contents. Pull entity slices with `kg_entities`, "
-        "free-text searches with `kg_chunks`, deterministic graph queries "
-        "with `kg_query`, bundled prompts/templates with `read_file`, and "
-        "deliverables with `write_file`.\n"
-        "- When `run_script` accepts CLI `args`, the placeholders "
-        "`{run_dir}`, `{artifacts}`, and `{skill_dir}` are substituted with "
-        "absolute paths so cross-skill renderers can write into this run's "
-        "artifacts/ folder without you knowing the absolute layout.\n"
-        "- Cite sources by chunk_id (e.g. `chunk-7f3a…`) or entity name in "
-        "every claim that came from workspace data. If a chunk_id is not "
-        "available, say so explicitly rather than inventing one.\n"
-        "- Stop calling tools and produce your final answer once you have "
-        "enough evidence. The final assistant message (no tool calls) is "
-        "what the user sees.\n"
-        "- If a tool returns an error, read the error and adjust — do not "
-        "retry the same call unchanged.\n"
-    )
-
-
-# ---------------------------------------------------------------------------
-# Transcript helpers
-# ---------------------------------------------------------------------------
-
-
-def _now_ms() -> float:
-    return time.monotonic() * 1000.0
-
-
-def _append(transcript: list[dict[str, Any]], entry: dict[str, Any]) -> None:
-    transcript.append(entry)
-
-
-def _persist_transcript(run_dir: Path, transcript: list[dict[str, Any]]) -> None:
-    """Write ``transcript.json`` next to ``run.md`` for audit + UI replay."""
-    try:
-        path = run_dir / "transcript.json"
-        path.write_text(
-            json.dumps(transcript, ensure_ascii=False, indent=2, default=str),
-            encoding="utf-8",
-        )
-    except OSError as exc:
-        logger.warning("Failed to persist transcript at %s: %s", run_dir, exc)
-
-
-# ---------------------------------------------------------------------------
-# Tool dispatch
-# ---------------------------------------------------------------------------
-
-
-async def _dispatch_tool_call(
-    call: ChatToolCall,
-    specs_by_name: dict[str, ToolSpec],
-    ctx: ToolContext,
-) -> tuple[str, dict[str, Any]]:
-    """Invoke one tool call. Returns ``(payload_str_for_model, transcript_extra)``.
-
-    Errors are caught and serialized as a structured error payload so the
-    model can recover (per the skill body's instructions).
-    """
-    spec = specs_by_name.get(call.name)
-    if spec is None:
-        err = {"error": f"unknown tool {call.name!r}"}
-        return json.dumps(err), {"error": err["error"]}
-
-    try:
-        args = json.loads(call.arguments_json or "{}")
-        if not isinstance(args, dict):
-            raise ValueError("arguments must be a JSON object")
-    except (ValueError, json.JSONDecodeError) as exc:
-        err = {"error": f"invalid arguments JSON: {exc}", "raw": call.arguments_json}
-        return json.dumps(err), {"error": err["error"]}
-
-    try:
-        result = await spec.handler(ctx, **args)
-    except ToolError as exc:
-        err = {"error": str(exc)}
-        return json.dumps(err), {"error": str(exc)}
-    except TypeError as exc:
-        # bad argument signature
-        err = {"error": f"argument error: {exc}"}
-        return json.dumps(err), {"error": str(exc)}
-    except Exception as exc:  # noqa: BLE001 — last-ditch so loop survives
-        logger.exception("tool %s raised unexpectedly", call.name)
-        err = {"error": f"unhandled tool exception: {exc.__class__.__name__}: {exc}"}
-        return json.dumps(err), {"error": str(exc)}
-
-    payload_str = serialize_tool_payload_for_model(result)
-    extra = {"truncated": result.truncated, **(result.transcript_extra or {})}
-    return payload_str, extra
 
 
 # ---------------------------------------------------------------------------
@@ -212,7 +78,7 @@ async def run_tool_loop(
     specs_by_name = {s.name: s for s in specs}
     tool_schemas = [s.to_openai() for s in specs]
 
-    system_msg = _compose_system_prompt(
+    system_msg = compose_system_prompt(
         skill_name=skill_name,
         skill_body=skill_body,
         workspace_name=ctx.workspace_name,
@@ -239,7 +105,7 @@ async def run_tool_loop(
     for turn in range(1, max_turns + 1):
         turns = turn
         ctx.call_seq[0] = tool_calls_total
-        t0 = _now_ms()
+        t0 = now_ms()
         try:
             chat: ChatResponse = await chat_with_tools(
                 messages=messages,
@@ -256,11 +122,11 @@ async def run_tool_loop(
             finish_reason = "error"
             break
 
-        elapsed_ms = _now_ms() - t0
+        elapsed_ms = now_ms() - t0
         for k, v in (chat.usage or {}).items():
             usage_total[k] = usage_total.get(k, 0) + int(v or 0)
 
-        _append(
+        append_transcript(
             transcript,
             {
                 "kind": "assistant",
@@ -288,9 +154,9 @@ async def run_tool_loop(
         for call in chat.tool_calls:
             tool_calls_total += 1
             ctx.call_seq[0] = tool_calls_total
-            tool_t0 = _now_ms()
-            payload_str, extra = await _dispatch_tool_call(call, specs_by_name, ctx)
-            tool_elapsed = _now_ms() - tool_t0
+            tool_t0 = now_ms()
+            payload_str, extra = await dispatch_tool_call(call, specs_by_name, ctx)
+            tool_elapsed = now_ms() - tool_t0
             # Extract chunk-<32hex> ids from the FULL payload before we
             # truncate the preview, so the reasoning drawer can deep-link to
             # the originating chunk even when the id sits past the 500-char
@@ -308,7 +174,7 @@ async def run_tool_loop(
                             break
             except Exception:
                 pass
-            _append(
+            append_transcript(
                 transcript,
                 {
                     "kind": "tool",
@@ -331,7 +197,7 @@ async def run_tool_loop(
                 }
             )
         # Persist after each turn so a crash leaves a usable transcript.
-        _persist_transcript(ctx.run_dir, transcript)
+        persist_transcript(ctx.run_dir, transcript)
 
     else:
         # Hit the turn cap without a final answer — force one closing call
@@ -353,7 +219,7 @@ async def run_tool_loop(
             finish_reason = "max_turns"
             for k, v in (chat.usage or {}).items():
                 usage_total[k] = usage_total.get(k, 0) + int(v or 0)
-            _append(
+            append_transcript(
                 transcript,
                 {
                     "kind": "assistant",
@@ -370,7 +236,7 @@ async def run_tool_loop(
             final_response = "⚠️ Skill exhausted its tool budget without a final answer."
             finish_reason = "max_turns_no_summary"
 
-    _persist_transcript(ctx.run_dir, transcript)
+            persist_transcript(ctx.run_dir, transcript)
 
     return ToolLoopResult(
         response=final_response,
