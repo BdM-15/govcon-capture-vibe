@@ -1,0 +1,224 @@
+"""Core in-process tool registry for the skill runtime."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Awaitable, Callable
+
+from src.skills.tool_filesystem import tool_read_file, tool_run_script, tool_write_file
+from src.skills.tool_kg import tool_kg_chunks, tool_kg_entities, tool_kg_query
+from src.skills.tool_types import ToolResult
+
+
+@dataclass
+class ToolSpec:
+    name: str
+    description: str
+    parameters: dict[str, Any]
+    handler: Callable[..., Awaitable[ToolResult]]
+
+    def to_openai(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": self.parameters,
+            },
+        }
+
+
+def build_tool_specs() -> list[ToolSpec]:
+    """Return core six-tool registry used by tools-mode skills."""
+    return [
+        ToolSpec(
+            name="read_file",
+            description=(
+                "Read a UTF-8 text file from the skill folder. Allowed roots: "
+                "SKILL.md, references/, assets/, scripts/. Use this to load "
+                "schemas, prompt templates, or example payloads bundled with "
+                "the skill."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Skill-relative path, e.g. 'references/methodology.md'.",
+                    },
+                },
+                "required": ["path"],
+                "additionalProperties": False,
+            },
+            handler=tool_read_file,
+        ),
+        ToolSpec(
+            name="run_script",
+            description=(
+                "Execute a script (.py, .sh, .mjs, .js) under the skill's "
+                "scripts/ folder OR any directory declared in this skill's "
+                "metadata.script_paths frontmatter (typically a sibling "
+                "utility skill like ../huashu-design/scripts for HTML→PPTX/"
+                "PDF rendering). Subprocess sandboxed: cwd locked to the "
+                "owning skill, time-limited. Returns stdout, stderr, exit code."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": (
+                            "Path relative to this skill's directory. Either "
+                            "'scripts/<file>' for own scripts, or "
+                            "'../<other_skill>/scripts/<file>' for a "
+                            "cross-skill script declared in metadata.script_paths."
+                        ),
+                    },
+                    "args": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "Optional CLI arguments appended after the script path, "
+                            "e.g. ['--slides', '{artifacts}/slides', '--out', "
+                            "'{artifacts}/deck.pdf']. Each entry must be a string; "
+                            "capped at 32 entries. No shell expansion is performed. "
+                            "Placeholders {run_dir}, {artifacts}, {skill_dir} are "
+                            "substituted with absolute paths so you can reference "
+                            "the run's artifacts/ folder without knowing the layout."
+                        ),
+                        "maxItems": 32,
+                    },
+                    "stdin": {
+                        "type": "string",
+                        "description": "Optional stdin to pipe to the script.",
+                    },
+                    "timeout": {
+                        "type": "integer",
+                        "description": "Max seconds before SIGKILL. Capped by the runtime.",
+                        "minimum": 1,
+                        "maximum": 60,
+                    },
+                },
+                "required": ["path"],
+                "additionalProperties": False,
+            },
+            handler=tool_run_script,
+        ),
+        ToolSpec(
+            name="write_file",
+            description=(
+                "Persist a UTF-8 text artifact to <run_dir>/artifacts/. Use "
+                "this for proposal drafts, compliance matrices, infographic "
+                "HTML, or any deliverable the user should download. Path is "
+                "relative to the artifacts/ root."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Artifact path relative to artifacts/, e.g. 'volume-1-outline.md'.",
+                    },
+                    "content": {"type": "string", "description": "File body."},
+                },
+                "required": ["path", "content"],
+                "additionalProperties": False,
+            },
+            handler=tool_write_file,
+        ),
+        ToolSpec(
+            name="kg_query",
+            description=(
+                "Run a read-only Cypher query against the active workspace's "
+                "Neo4j graph. Mutating clauses (CREATE/MERGE/DELETE/SET) are "
+                "rejected. Returns up to 100 rows. If the workspace uses "
+                "NetworkXStorage instead of Neo4j, the call returns "
+                "available=false and the model should use kg_entities or "
+                "kg_chunks instead."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "cypher": {
+                        "type": "string",
+                        "description": "Read-only Cypher query (MATCH/RETURN style).",
+                    },
+                },
+                "required": ["cypher"],
+                "additionalProperties": False,
+            },
+            handler=tool_kg_query,
+        ),
+        ToolSpec(
+            name="kg_entities",
+            description=(
+                "Slice the active workspace's knowledge graph by entity type. "
+                "Returns a deterministic bucket of entities with their "
+                "descriptions, source chunk IDs, and connecting relationships. "
+                "Use when you know which entity types you need (e.g. "
+                "['proposal_instruction', 'evaluation_factor'])."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "types": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Entity types to include. Omit to get all non-noise types.",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max entities per type (capped by runtime).",
+                        "minimum": 1,
+                        "maximum": 50,
+                    },
+                    "max_chunks_per_entity": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 5,
+                        "description": "Per-entity cap on returned source chunk IDs.",
+                    },
+                    "max_relationships_per_entity": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 20,
+                        "description": "Per-entity cap on returned KG relationships.",
+                    },
+                },
+                "additionalProperties": False,
+            },
+            handler=tool_kg_entities,
+        ),
+        ToolSpec(
+            name="kg_chunks",
+            description=(
+                "Run chat-grade hybrid retrieval (Phase 1.6) over the active "
+                "workspace. Returns ranked entity names + chunk IDs scored "
+                "against the query. Use when you don't know which entity "
+                "types to ask for, or when answering a free-text user question."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Natural-language retrieval query.",
+                    },
+                    "top_k": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 30,
+                        "description": "Number of entity hits to return.",
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["hybrid", "local", "global", "naive", "mix"],
+                        "description": "Retrieval mode (default 'hybrid').",
+                    },
+                },
+                "required": ["query"],
+                "additionalProperties": False,
+            },
+            handler=tool_kg_chunks,
+        ),
+    ]

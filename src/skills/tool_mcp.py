@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.skills.tool_registry import ToolSpec
 from src.skills.tool_types import ToolContext, ToolError, ToolResult
-from src.skills.tools import ToolSpec
 
 
 def build_mcp_tool_specs(sessions: dict[str, Any]) -> list[ToolSpec]:
