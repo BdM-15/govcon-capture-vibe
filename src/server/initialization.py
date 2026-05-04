@@ -33,6 +33,7 @@ from raganything import RAGAnything, RAGAnythingConfig
 from src.ontology.schema import VALID_ENTITY_TYPES
 from src.core import get_settings
 from src.server.doc_status_compat import apply_doc_status_compatibility_shim
+from src.server.llm_routing import build_role_llm_routing
 from src.server.multimodal_setup import configure_multimodal_stack
 from src.utils.time_utils import to_local_iso
 
@@ -148,169 +149,15 @@ async def initialize_raganything():
     logger.info(f"   - include_captions: {config.include_captions}")
     logger.info(f"   - context_filter_content_types: {getattr(config, 'context_filter_content_types', ['text'])}")
     
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # NATIVE PER-ROLE LLM ROUTING (LightRAG 1.5.0 role_llm_configs)
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # LightRAG 1.5.0 ships first-class per-role LLM dispatch via the role_llm_configs
-    # dataclass field. Four roles ship with the library:
-    #   extract  — entity/relationship extraction (literal format compliance)
-    #   query    — RAG query answering (nuanced synthesis, Shipley mentor persona)
-    #   keyword  — keyword extraction for retrieval (small JSON output)
-    #   vlm      — vision/multimodal table+image+equation analysis
-    #
-    # This replaces the legacy heuristic-based routing (is_extraction_task() +
-    # EXTRACTION_MARKERS). Each role gets a dedicated wrapper so token budgets,
-    # timeouts, and model selection are explicit per-role rather than inferred.
-    #
-    # Token budget rationale (Phase 1.0 plan, see issue #125):
-    #   extract  → 32000  (full chunk extraction, dense entity tables)
-    #   query    → 131072 (128K mentor responses, full Shipley reasoning chains)
-    #   keyword  → 4096   (small JSON keyword lists; large budgets cause HTTP 500)
-    #   vlm      → 8000   (table/image descriptions are bounded)
-    #
-    # POST_PROCESSING and REVIEWER are NOT LightRAG roles — they are invoked by
-    # src/inference/* and src/utils/llm_client.py respectively (outside the
-    # LightRAG extraction pipeline).
-    # ═══════════════════════════════════════════════════════════════════════════════
-    extraction_model = settings.extraction_llm_name
-    reasoning_model = settings.reasoning_llm_name
-
-    # Per-role token budgets (#125 acceptance: explicit per-role config)
-    EXTRACT_MAX_TOKENS = 32000
-    QUERY_MAX_TOKENS = settings.llm_max_output_tokens  # 128000 from .env
-    KEYWORD_MAX_TOKENS = 4096
-    VLM_MAX_TOKENS = 8000
-
-    # Per-role timeouts (seconds)
-    EXTRACT_TIMEOUT = settings.llm_timeout  # 600s default
-    QUERY_TIMEOUT = 900
-    KEYWORD_TIMEOUT = 60
-    VLM_TIMEOUT = 300
-
-    use_strict_schema = os.environ.get("ENTITY_EXTRACTION_STRICT_SCHEMA", "false").strip().lower() in ("1", "true", "yes", "on")
-    strict_extraction_response_format = None
-    if use_strict_schema:
-        from src.ontology.extraction_schema import build_response_format
-        strict_extraction_response_format = build_response_format()
-        strict_schema = strict_extraction_response_format["json_schema"]["schema"]
-        strict_entity_types = strict_schema["properties"]["entities"]["items"]["properties"]["type"]["enum"]
-        logger.info("=" * 88)
-        logger.info("✅ STRICT JSON SCHEMA STARTUP CHECK: ENABLED")
-        logger.info(
-            "   ENTITY_EXTRACTION_STRICT_SCHEMA=%s",
-            os.environ.get("ENTITY_EXTRACTION_STRICT_SCHEMA"),
-        )
-        logger.info(
-            "   response_format=%s | schema=%s | entity_type_enum=%d | additionalProperties=%s",
-            strict_extraction_response_format.get("type"),
-            strict_extraction_response_format["json_schema"].get("name"),
-            len(strict_entity_types),
-            strict_schema.get("additionalProperties"),
-        )
-        logger.info(
-            "   extract role will override LightRAG JSON-mode response_format={type: json_object} at provider boundary"
-        )
-        logger.info("   extract cache identity marker: host suffix #strict-jsonschema")
-        logger.info("=" * 88)
-    else:
-        logger.warning("=" * 88)
-        logger.warning("⚠️  STRICT JSON SCHEMA STARTUP CHECK: DISABLED")
-        logger.warning(
-            "   ENTITY_EXTRACTION_STRICT_SCHEMA=%s",
-            os.environ.get("ENTITY_EXTRACTION_STRICT_SCHEMA"),
-        )
-        logger.warning("   Extraction will run in prompt-only JSON mode")
-        logger.warning("=" * 88)
-
-    async def _extract_llm_func(prompt, system_prompt=None, history_messages=[], **kwargs):
-        kwargs.setdefault("max_tokens", EXTRACT_MAX_TOKENS)
-        # LightRAG's native JSON extraction path passes response_format={"type": "json_object"}
-        # at the call site. For Phase 1.3 strict mode, the extract role must replace
-        # that looser setting with xAI's json_schema envelope immediately before the
-        # provider call; RoleLLMConfig.kwargs alone is overwritten by the call-time value.
-        if strict_extraction_response_format is not None:
-            kwargs["response_format"] = strict_extraction_response_format
-        return await openai_complete_if_cache(
-            extraction_model, prompt,
-            system_prompt=system_prompt, history_messages=history_messages,
-            api_key=xai_api_key, base_url=xai_base_url, **kwargs,
-        )
-
-    async def _query_llm_func(prompt, system_prompt=None, history_messages=[], **kwargs):
-        kwargs.setdefault("max_tokens", QUERY_MAX_TOKENS)
-        return await openai_complete_if_cache(
-            reasoning_model, prompt,
-            system_prompt=system_prompt, history_messages=history_messages,
-            api_key=xai_api_key, base_url=xai_base_url, **kwargs,
-        )
-
-    async def _keyword_llm_func(prompt, system_prompt=None, history_messages=[], **kwargs):
-        # Keyword extraction always returns small structured JSON — large budgets
-        # trigger HTTP 500 on grok-4-1 endpoints for structured-format requests.
-        kwargs["max_tokens"] = KEYWORD_MAX_TOKENS
-        return await openai_complete_if_cache(
-            extraction_model, prompt,
-            system_prompt=system_prompt, history_messages=history_messages,
-            api_key=xai_api_key, base_url=xai_base_url, **kwargs,
-        )
-
-    async def _vlm_llm_func(prompt, system_prompt=None, history_messages=[], image_data=None, messages=None, **kwargs):
-        kwargs.setdefault("max_tokens", VLM_MAX_TOKENS)
-        if messages:
-            return await openai_complete_if_cache(
-                extraction_model, "", system_prompt=None, history_messages=[],
-                messages=messages, api_key=xai_api_key, base_url=xai_base_url, **kwargs,
-            )
-        if image_data:
-            built_messages = [{
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}},
-                ],
-            }]
-            if system_prompt:
-                built_messages.insert(0, {"role": "system", "content": system_prompt})
-            return await openai_complete_if_cache(
-                extraction_model, "", system_prompt=None, history_messages=[],
-                messages=built_messages, api_key=xai_api_key, base_url=xai_base_url, **kwargs,
-            )
-        # No image data — fall back to plain text completion via extract model.
-        return await openai_complete_if_cache(
-            extraction_model, prompt,
-            system_prompt=system_prompt, history_messages=history_messages,
-            api_key=xai_api_key, base_url=xai_base_url, **kwargs,
-        )
-
-    async def _modal_llm_func(prompt, system_prompt=None, history_messages=[], **kwargs):
-        kwargs.setdefault("max_tokens", VLM_MAX_TOKENS)
-        response_format = kwargs.get("response_format") or {}
-        json_schema = response_format.get("json_schema") if isinstance(response_format, dict) else None
-        if isinstance(json_schema, dict) and json_schema.get("name") == "GovConExtractionResult":
-            kwargs.pop("response_format", None)
-        return await openai_complete_if_cache(
-            extraction_model, prompt,
-            system_prompt=system_prompt, history_messages=history_messages,
-            api_key=xai_api_key, base_url=xai_base_url, **kwargs,
-        )
-
-    # llm_model_func is the LEGACY single-callable RAGAnything still expects at
-    # the top level. We point it at the query func — it's the safest fallback for
-    # any callsite that bypasses role routing (debug scripts, ad-hoc helpers).
-    # All real extraction/query/keyword/vlm traffic flows through role_llm_configs.
-    llm_model_func = _query_llm_func
-
-    # Vision function for RAGAnything modal processors (kept as a separate top-level
-    # callable because RAGAnything's RAGAnything(...) constructor takes vision_model_func
-    # explicitly, distinct from LightRAG's vlm role).
-    vision_model_func = _vlm_llm_func
-
-    logger.info("✅ Native LightRAG 1.5.0 role_llm_configs routing enabled")
-    _extract_mode_label = "JSON strict schema" if use_strict_schema else "JSON prompt-only"
-    logger.info(f"   extract  → {extraction_model:40s}  max_tokens={EXTRACT_MAX_TOKENS:>6}  timeout={EXTRACT_TIMEOUT}s  ({_extract_mode_label})")
-    logger.info(f"   query    → {reasoning_model:40s}  max_tokens={QUERY_MAX_TOKENS:>6}  timeout={QUERY_TIMEOUT}s")
-    logger.info(f"   keyword  → {extraction_model:40s}  max_tokens={KEYWORD_MAX_TOKENS:>6}  timeout={KEYWORD_TIMEOUT}s")
-    logger.info(f"   vlm      → {extraction_model:40s}  max_tokens={VLM_MAX_TOKENS:>6}  timeout={VLM_TIMEOUT}s")
+    role_routing = build_role_llm_routing(
+        settings,
+        xai_api_key=xai_api_key,
+        xai_base_url=xai_base_url,
+    )
+    llm_model_func = role_routing.llm_model_func
+    vision_model_func = role_routing.vision_model_func
+    llm_model_func_wrapped = role_routing.modal_llm_func
+    use_strict_schema = role_routing.use_strict_schema
     
     # Embedding function: use LightRAG's native openai_embed with built-in truncation
     # LightRAG 1.4.13 openai_embed.func accepts max_token_size for auto-truncation.
@@ -394,48 +241,7 @@ async def initialize_raganything():
     # JSON-Schema `pattern`, so relationship keyword canonicalization remains prompt
     # + downstream normalization. Toggle via ENTITY_EXTRACTION_STRICT_SCHEMA=true.
     # ═══════════════════════════════════════════════════════════════════════════════
-    extract_kwargs: dict = {"max_tokens": EXTRACT_MAX_TOKENS}
-    if use_strict_schema:
-        extract_kwargs["response_format"] = strict_extraction_response_format
-        logger.info("✅ Strict JSON schema enforcement ENABLED for `extract` role (xAI json_schema strict=true)")
-    else:
-        logger.info("ℹ️  Strict JSON schema NOT enabled — using prompt-only JSON mode (set ENTITY_EXTRACTION_STRICT_SCHEMA=true to enforce)")
-
-    extract_metadata = {"model": extraction_model, "host": xai_base_url, "binding": "openai"}
-    if use_strict_schema:
-        # LightRAG's cache identity currently includes only role/binding/model/host.
-        # Add a non-provider host suffix in metadata (not the actual base_url used by
-        # _extract_llm_func) so strict-schema responses never reuse prompt-only JSON
-        # cache entries from the same workspace/chunk.
-        extract_metadata["host"] = f"{xai_base_url}#strict-jsonschema"
-
-    # Build per-role LightRAG configs (1.5.0 native role dispatch).
-    role_llm_configs = {
-        "extract": RoleLLMConfig(
-            func=_extract_llm_func,
-            kwargs=extract_kwargs,
-            timeout=EXTRACT_TIMEOUT,
-            metadata=extract_metadata,
-        ),
-        "query": RoleLLMConfig(
-            func=_query_llm_func,
-            kwargs={"max_tokens": QUERY_MAX_TOKENS},
-            timeout=QUERY_TIMEOUT,
-            metadata={"model": reasoning_model, "host": xai_base_url, "binding": "openai"},
-        ),
-        "keyword": RoleLLMConfig(
-            func=_keyword_llm_func,
-            kwargs={"max_tokens": KEYWORD_MAX_TOKENS},
-            timeout=KEYWORD_TIMEOUT,
-            metadata={"model": extraction_model, "host": xai_base_url, "binding": "openai"},
-        ),
-        "vlm": RoleLLMConfig(
-            func=_vlm_llm_func,
-            kwargs={"max_tokens": VLM_MAX_TOKENS},
-            timeout=VLM_TIMEOUT,
-            metadata={"model": extraction_model, "host": xai_base_url, "binding": "openai"},
-        ),
-    }
+    role_llm_configs = role_routing.role_llm_configs
 
     lightrag_kwargs = {
         "addon_params": {
@@ -480,7 +286,6 @@ async def initialize_raganything():
     # ({detailed_description, entity_info}); do NOT route them through the strict
     # GovCon extraction schema ({entities, relationships}) or every table falls
     # back with "Missing required fields in response".
-    llm_model_func_wrapped = _modal_llm_func
     logger.info("✅ RAG-Anything modal LLM uses non-strict table/equation parser path")
     
     _rag_anything = RAGAnything(
