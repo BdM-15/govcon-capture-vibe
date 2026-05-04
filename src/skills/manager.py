@@ -49,6 +49,7 @@ from typing import Any, Awaitable, Callable, Optional
 
 from src.skills.skill_catalog import SkillCatalog
 from src.skills.skill_emitters import auto_emit_artifacts
+from src.skills.skill_legacy_runner import run_legacy_skill
 from src.skills.skill_models import (
     Skill,
     SkillFrontmatter,
@@ -224,67 +225,17 @@ class SkillManager:
         max_payload_chars: Optional[int],
         workspace_root: Optional[Path],
     ) -> SkillInvocationResult:
-        """Original single-shot dispatch — pre-builds briefing book and calls llm once."""
-        name = skill.name
-        warnings: list[str] = []
-        budget = max_payload_chars if max_payload_chars is not None else DEFAULT_SKILL_MAX_PAYLOAD_CHARS
-        payload_json = json.dumps(entity_payload, ensure_ascii=False, indent=2)
-        if len(payload_json) > budget:
-            payload_json = payload_json[:budget] + "\n…[truncated]"
-            warnings.append(
-                f"briefing book truncated at {budget} chars (SKILL_MAX_PAYLOAD_CHARS); "
-                "raise the env var, narrow entity_types, or lower max_chunks_per_entity"
-            )
-
-        # Phase 1.5: ``entity_payload`` is now a briefing-book dict whose
-        # ``entities`` sub-dict holds the type buckets. Older callers may pass
-        # the flat shape — detect both and surface a single, accurate list.
-        if isinstance(entity_payload.get("entities"), dict):
-            entities_used = sorted(entity_payload["entities"].keys())
-        else:
-            entities_used = sorted(
-                k for k in entity_payload.keys()
-                if k not in {"source_chunks", "relationships", "retrieval_metadata"}
-            )
-        composed = compose_skill_prompt(skill, workspace, user_prompt, payload_json)
-
-        started = datetime.now(timezone.utc)
-        response = await llm(composed)
-        elapsed_ms = int((datetime.now(timezone.utc) - started).total_seconds() * 1000)
-
-        # Telemetry: stamp last-invoked timestamp.
-        self._touch_invocation(name)
-
-        run_id = ""
-        run_dir = ""
-        if workspace_root is not None:
-            try:
-                run_id, run_dir = self._persist_run(
-                    workspace_root=workspace_root,
-                    skill_name=name,
-                    workspace=workspace,
-                    user_prompt=user_prompt,
-                    composed_prompt=composed,
-                    response=response,
-                    entities_used=entities_used,
-                    warnings=warnings,
-                    elapsed_ms=elapsed_ms,
-                    started_at=started,
-                )
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Failed to persist skill run for %s: %s", name, exc)
-                warnings.append(f"persistence failed: {exc}")
-
-        return SkillInvocationResult(
-            skill=name,
+        return await run_legacy_skill(
+            skill=skill,
             workspace=workspace,
-            response=response,
-            entities_used=entities_used,
-            warnings=warnings,
-            elapsed_ms=elapsed_ms,
-            prompt_tokens_estimate=len(composed) // 4,  # rough
-            run_id=run_id,
-            run_dir=run_dir,
+            user_prompt=user_prompt,
+            entity_payload=entity_payload,
+            llm=llm,
+            max_payload_chars=max_payload_chars,
+            default_max_payload_chars=DEFAULT_SKILL_MAX_PAYLOAD_CHARS,
+            workspace_root=workspace_root,
+            persist_run=self._persist_run,
+            touch_invocation=self._touch_invocation,
         )
 
     # ---- Tools-mode multi-turn loop (2.1) -----------------------------
