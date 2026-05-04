@@ -10,13 +10,12 @@ frontmatter with a small inline parser to avoid pulling in ``PyYAML``.
 
 from __future__ import annotations
 
-from .manager import (
+from .manager import SkillManager, get_skill_manager
+from .skill_models import (
     Skill,
     SkillFrontmatter,
     SkillInvocationResult,
-    SkillManager,
     SkillRunSummary,
-    get_skill_manager,
 )
 
 __all__ = [

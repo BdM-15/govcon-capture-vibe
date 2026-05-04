@@ -38,29 +38,16 @@ Design choices:
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
+from src.skills.runs import SkillRunStore
 from src.skills.skill_catalog import SkillCatalog
-from src.skills.skill_legacy_runner import run_legacy_skill
+from src.skills.skill_execution import SkillExecutor
 from src.skills.skill_models import (
     Skill,
-    SkillFrontmatter,
     SkillInvocationResult,
-    SkillRunSummary,
-)
-from src.skills.skill_tools_runner import run_tools_skill
-from src.skills.runs import (
-    STUDIO_EXTRA_MIME as _STUDIO_EXTRA_MIME,
-    SkillRunStore,
-    resolve_artifact_mime,
-)
-from src.skills.settings import (
-    DEFAULT_SKILL_MAX_PAYLOAD_CHARS,
-    resolve_skill_runtime_mode,
 )
 
 logger = logging.getLogger(__name__)
@@ -105,6 +92,11 @@ class SkillManager:
         if mcps_root is None:
             mcps_root = _REPO_ROOT / "tools" / "mcps"
         self._mcp_registry = MCPRegistry.from_root(mcps_root)
+        self._executor = SkillExecutor(
+            catalog=self._catalog,
+            run_store=self._run_store,
+            mcp_registry=self._mcp_registry,
+        )
 
     # ---- Discovery ----------------------------------------------------
 
@@ -176,120 +168,17 @@ class SkillManager:
                 of what the skill's ``metadata.runtime`` declares. Used by the
                 env var ``SKILL_RUNTIME_MODE`` and tests.
         """
-        skill = self.get_skill(name)
-        if skill is None:
-            raise KeyError(f"Unknown skill: {name}")
-
-        # Resolve runtime mode: explicit override > env var > frontmatter > default.
-        mode = resolve_skill_runtime_mode(
-            skill.frontmatter.runtime_mode,
-            runtime_mode_override=runtime_mode_override,
-        )
-
-        if mode == "tools":
-            return await self._invoke_tools_mode(
-                skill=skill,
-                workspace=workspace,
-                user_prompt=user_prompt,
-                workspace_root=workspace_root,
-                slice_fn=slice_fn,
-                retrieve_fn=retrieve_fn,
-            )
-        return await self._invoke_legacy_mode(
-            skill=skill,
+        return await self._executor.invoke(
+            name,
             workspace=workspace,
             user_prompt=user_prompt,
             entity_payload=entity_payload,
             llm=llm,
             max_payload_chars=max_payload_chars,
-            workspace_root=workspace_root,
-        )
-
-    # ---- Legacy single-shot path (pre-2.1) ---------------------------
-
-    async def _invoke_legacy_mode(
-        self,
-        *,
-        skill: "Skill",
-        workspace: str,
-        user_prompt: str,
-        entity_payload: dict[str, Any],
-        llm: Callable[[str], Awaitable[str]],
-        max_payload_chars: Optional[int],
-        workspace_root: Optional[Path],
-    ) -> SkillInvocationResult:
-        return await run_legacy_skill(
-            skill=skill,
-            workspace=workspace,
-            user_prompt=user_prompt,
-            entity_payload=entity_payload,
-            llm=llm,
-            max_payload_chars=max_payload_chars,
-            default_max_payload_chars=DEFAULT_SKILL_MAX_PAYLOAD_CHARS,
-            workspace_root=workspace_root,
-            persist_run=self._persist_run,
-            touch_invocation=self._touch_invocation,
-        )
-
-    # ---- Tools-mode multi-turn loop (2.1) -----------------------------
-
-    async def _invoke_tools_mode(
-        self,
-        *,
-        skill: "Skill",
-        workspace: str,
-        user_prompt: str,
-        workspace_root: Optional[Path],
-        slice_fn: Optional[Callable[..., dict[str, Any]]],
-        retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]],
-    ) -> SkillInvocationResult:
-        return await run_tools_skill(
-            skill=skill,
-            workspace=workspace,
-            user_prompt=user_prompt,
             workspace_root=workspace_root,
             slice_fn=slice_fn,
             retrieve_fn=retrieve_fn,
-            run_store=self._run_store,
-            mcp_registry=self._mcp_registry,
-            touch_invocation=self._touch_invocation,
-        )
-
-    # ---- Run persistence ----------------------------------------------
-
-    @staticmethod
-    def _runs_root(workspace_root: Path, skill_name: str) -> Path:
-        return SkillRunStore.runs_root(workspace_root, skill_name)
-
-    @staticmethod
-    def _is_safe_run_id(run_id: str) -> bool:
-        return SkillRunStore.is_safe_run_id(run_id)
-
-    def _persist_run(
-        self,
-        *,
-        workspace_root: Path,
-        skill_name: str,
-        workspace: str,
-        user_prompt: str,
-        composed_prompt: str,
-        response: str,
-        entities_used: list[str],
-        warnings: list[str],
-        elapsed_ms: int,
-        started_at: datetime,
-    ) -> tuple[str, str]:
-        return self._run_store.persist_legacy_run(
-            workspace_root=workspace_root,
-            skill_name=skill_name,
-            workspace=workspace,
-            user_prompt=user_prompt,
-            composed_prompt=composed_prompt,
-            response=response,
-            entities_used=entities_used,
-            warnings=warnings,
-            elapsed_ms=elapsed_ms,
-            started_at=started_at,
+            runtime_mode_override=runtime_mode_override,
         )
 
     def list_runs(
@@ -329,10 +218,6 @@ class SkillManager:
             run_id,
             filename,
         )
-
-    def _touch_invocation(self, name: str) -> None:
-        self._catalog.touch_invocation(name)
-
 
 # ---------------------------------------------------------------------------
 # Singleton accessor
