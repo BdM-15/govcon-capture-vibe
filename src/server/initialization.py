@@ -33,13 +33,9 @@ from raganything import RAGAnything, RAGAnythingConfig
 from src.ontology.schema import VALID_ENTITY_TYPES
 from src.core import get_settings
 from src.server.initialization_support import (
-    build_embedding_function,
-    build_govcon_lightrag_setup,
-    build_lightrag_runtime_kwargs,
-    build_raganything_config,
+    build_raganything_runtime,
     configure_mineru_environment,
 )
-from src.server.llm_routing import build_role_llm_routing
 from src.server.rag_post_init import finalize_rag_initialization
 from src.utils.time_utils import to_local_iso
 
@@ -68,10 +64,6 @@ async def initialize_raganything():
     # Get validated settings from centralized config
     settings = get_settings()
     
-    # API credentials from centralized config
-    xai_api_key = settings.llm_binding_api_key
-    xai_base_url = settings.llm_binding_host
-    openai_api_key = settings.embedding_binding_api_key
     working_dir = global_args.working_dir
     
     # Government contracting entity types - SINGLE SOURCE OF TRUTH:
@@ -81,16 +73,6 @@ async def initialize_raganything():
     # via `entity_types_guidance`.
     logger.info(f"📋 Loaded {len(VALID_ENTITY_TYPES)} entity types from govcon_entity_types.yaml")
     
-    # MinerU configuration from centralized settings
-    parser = settings.parser
-    parse_method = settings.parse_method
-    enable_image = settings.enable_image_processing
-    enable_table = settings.enable_table_processing
-    enable_equation = settings.enable_equation_processing
-    device = settings.mineru_device_mode
-    
-    # CRITICAL: MinerU reads MINERU_DEVICE_MODE / MINERU_TABLE_MERGE_ENABLE from env.
-    configure_mineru_environment(settings)
     logger.info(f"✅ MinerU table merge: {'ENABLED' if settings.mineru_table_merge_enable else 'DISABLED (preserves per-page data)'}")
     
     # Note: All other MinerU variables (MINERU_LANG, MINERU_FORMULA_ENABLE,
@@ -119,11 +101,19 @@ async def initialize_raganything():
     # workspace state stays readable for humans: canonical LightRAG stores remain
     # at rag_storage/{workspace}/ while per-document MinerU artifacts live under
     # rag_storage/{workspace}/mineru/.
-    config, mineru_output_dir = build_raganything_config(
+    runtime = build_raganything_runtime(
         settings,
         working_dir=working_dir,
+        xai_api_key=settings.llm_binding_api_key,
+        xai_base_url=settings.llm_binding_host,
+        openai_api_key=settings.embedding_binding_api_key,
         config_cls=RAGAnythingConfig,
+        embed_factory=openai_embed,
+        embedding_func_cls=EmbeddingFunc,
+        graph_storage=getattr(global_args, "graph_storage", None),
     )
+    config = runtime.config
+    mineru_output_dir = runtime.mineru_output_dir
     logger.info(f"📁 MinerU parser output → {mineru_output_dir}")
     
     # Log context-aware processing configuration (read from config after env var loading)
@@ -135,24 +125,6 @@ async def initialize_raganything():
     logger.info(f"   - include_headers: {config.include_headers}")
     logger.info(f"   - include_captions: {config.include_captions}")
     logger.info(f"   - context_filter_content_types: {getattr(config, 'context_filter_content_types', ['text'])}")
-    
-    role_routing = build_role_llm_routing(
-        settings,
-        xai_api_key=xai_api_key,
-        xai_base_url=xai_base_url,
-    )
-    llm_model_func = role_routing.llm_model_func
-    vision_model_func = role_routing.vision_model_func
-    llm_model_func_wrapped = role_routing.modal_llm_func
-    use_strict_schema = role_routing.use_strict_schema
-    
-    # Embedding function: use LightRAG's native openai_embed with built-in truncation.
-    embedding_func = build_embedding_function(
-        settings,
-        openai_api_key=openai_api_key,
-        embed_factory=openai_embed,
-        embedding_func_cls=EmbeddingFunc,
-    )
     
     # ═══════════════════════════════════════════════════════════════════════════════
     # Prompt Configuration (govcon_prompt.py architecture)
@@ -167,20 +139,10 @@ async def initialize_raganything():
     # Prompts are applied via PROMPTS.update(GOVCON_PROMPTS) after RAG-Anything init
     # ═══════════════════════════════════════════════════════════════════════════════
     
-    # Build lightrag_kwargs with configuration
-    # LLM timeout configuration for complex chunks (360s default was insufficient for chunk 8)
-    llm_timeout = settings.llm_timeout
-
-    govcon_runtime = build_govcon_lightrag_setup(
-        settings,
-        llm_timeout=llm_timeout,
-        role_llm_configs=role_routing.role_llm_configs,
-        graph_storage=getattr(global_args, "graph_storage", None),
-    )
     logger.info("=" * 88)
     logger.info("✅ GOVCON DOCUMENT CLASSIFIER STARTUP CHECK: CONFIGURED")
-    logger.info("   chunking_func=%s", govcon_runtime["chunking_func_name"])
-    logger.info("   banner_template=%s", govcon_runtime["banner_template"])
+    logger.info("   chunking_func=%s", runtime.chunking_func_name)
+    logger.info("   banner_template=%s", runtime.banner_template)
     logger.info("   labels=solicitation | pws | cdrl_exhibit | template | unknown")
     logger.info("   LightRAG provides the chunking_func hook; GovCon template/solicitation labeling is Theseus-owned")
     logger.info("=" * 88)
@@ -196,7 +158,7 @@ async def initialize_raganything():
     # JSON-Schema `pattern`, so relationship keyword canonicalization remains prompt
     # + downstream normalization. Toggle via ENTITY_EXTRACTION_STRICT_SCHEMA=true.
     # ═══════════════════════════════════════════════════════════════════════════════
-    lightrag_kwargs = govcon_runtime["lightrag_kwargs"]
+    lightrag_kwargs = runtime.lightrag_kwargs
     
     # LLM function for RAGAnything top-level + modal processors. RAGAnything's
     # TableModalProcessor / EquationModalProcessor parse their own JSON shape
@@ -207,9 +169,9 @@ async def initialize_raganything():
     
     _rag_anything = RAGAnything(
         config=config,
-        llm_model_func=llm_model_func_wrapped,
-        vision_model_func=vision_model_func,
-        embedding_func=embedding_func,
+        llm_model_func=runtime.modal_llm_func,
+        vision_model_func=runtime.vision_model_func,
+        embedding_func=runtime.embedding_func,
         lightrag_kwargs=lightrag_kwargs,
     )
     
@@ -226,9 +188,9 @@ async def initialize_raganything():
         _rag_anything,
         settings=settings,
         working_dir=working_dir,
-        modal_llm_func=llm_model_func_wrapped,
-        vision_model_func=vision_model_func,
-        use_strict_schema=use_strict_schema,
+        modal_llm_func=runtime.modal_llm_func,
+        vision_model_func=runtime.vision_model_func,
+        use_strict_schema=runtime.use_strict_schema,
     )
     
     return _rag_anything

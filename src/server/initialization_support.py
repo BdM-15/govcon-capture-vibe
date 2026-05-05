@@ -3,8 +3,24 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable
+
+
+@dataclass
+class GovconInitializationRuntime:
+    """Assembled runtime inputs needed to build and finalize RAGAnything."""
+
+    config: Any
+    mineru_output_dir: str
+    modal_llm_func: Any
+    vision_model_func: Any
+    use_strict_schema: bool
+    embedding_func: Any
+    lightrag_kwargs: dict[str, Any]
+    banner_template: str
+    chunking_func_name: str
 
 
 def configure_mineru_environment(settings, *, environ: dict[str, str] | None = None) -> None:
@@ -149,3 +165,63 @@ def build_govcon_lightrag_setup(
         "rerank_func": rerank_func,
         "lightrag_kwargs": lightrag_kwargs,
     }
+
+
+def build_raganything_runtime(
+    settings,
+    *,
+    working_dir: str,
+    xai_api_key: str,
+    xai_base_url: str,
+    openai_api_key: str,
+    config_cls,
+    embed_factory,
+    embedding_func_cls,
+    graph_storage: str | None,
+    configure_mineru_environment_fn=configure_mineru_environment,
+    build_raganything_config_fn=build_raganything_config,
+    build_role_llm_routing_fn: Callable[..., Any] | None = None,
+    build_embedding_function_fn=build_embedding_function,
+    build_govcon_lightrag_setup_fn=build_govcon_lightrag_setup,
+) -> GovconInitializationRuntime:
+    """Assemble config, routing, embedding, runtime kwargs for initialization."""
+
+    if build_role_llm_routing_fn is None:
+        from src.server.llm_routing import build_role_llm_routing as _build_role_llm_routing
+
+        build_role_llm_routing_fn = _build_role_llm_routing
+
+    configure_mineru_environment_fn(settings)
+    config, mineru_output_dir = build_raganything_config_fn(
+        settings,
+        working_dir=working_dir,
+        config_cls=config_cls,
+    )
+    role_routing = build_role_llm_routing_fn(
+        settings,
+        xai_api_key=xai_api_key,
+        xai_base_url=xai_base_url,
+    )
+    embedding_func = build_embedding_function_fn(
+        settings,
+        openai_api_key=openai_api_key,
+        embed_factory=embed_factory,
+        embedding_func_cls=embedding_func_cls,
+    )
+    govcon_runtime = build_govcon_lightrag_setup_fn(
+        settings,
+        llm_timeout=settings.llm_timeout,
+        role_llm_configs=role_routing.role_llm_configs,
+        graph_storage=graph_storage,
+    )
+    return GovconInitializationRuntime(
+        config=config,
+        mineru_output_dir=mineru_output_dir,
+        modal_llm_func=role_routing.modal_llm_func,
+        vision_model_func=role_routing.vision_model_func,
+        use_strict_schema=role_routing.use_strict_schema,
+        embedding_func=embedding_func,
+        lightrag_kwargs=govcon_runtime["lightrag_kwargs"],
+        banner_template=govcon_runtime["banner_template"],
+        chunking_func_name=govcon_runtime["chunking_func_name"],
+    )

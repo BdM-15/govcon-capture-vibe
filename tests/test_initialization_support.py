@@ -1,9 +1,11 @@
 from types import SimpleNamespace
 
 from src.server.initialization_support import (
+    GovconInitializationRuntime,
     build_embedding_function,
     build_govcon_lightrag_setup,
     build_lightrag_runtime_kwargs,
+    build_raganything_runtime,
     build_raganything_config,
     configure_mineru_environment,
 )
@@ -176,3 +178,71 @@ def test_build_govcon_lightrag_setup_assembles_runtime_inputs() -> None:
         "min_rerank_score": 0.33,
         "graph_storage": "Neo4JStorage",
     }
+
+
+def test_build_raganything_runtime_assembles_runtime_bundle() -> None:
+    calls = []
+
+    def fake_configure_mineru_environment(settings) -> None:
+        calls.append(("configure_mineru_environment", settings.workspace))
+
+    def fake_build_raganything_config(settings, *, working_dir, config_cls):
+        calls.append(("build_raganything_config", working_dir, config_cls))
+        return ("config-obj", working_dir + "/mineru")
+
+    def fake_build_role_llm_routing(settings, *, xai_api_key, xai_base_url):
+        calls.append(("build_role_llm_routing", xai_api_key, xai_base_url))
+        return SimpleNamespace(
+            modal_llm_func="modal-llm",
+            vision_model_func="vision-llm",
+            use_strict_schema=True,
+            role_llm_configs={"extract": "cfg"},
+        )
+
+    def fake_build_embedding_function(settings, *, openai_api_key, embed_factory, embedding_func_cls):
+        calls.append(("build_embedding_function", openai_api_key, embed_factory, embedding_func_cls))
+        return "embedding-func"
+
+    def fake_build_govcon_lightrag_setup(settings, *, llm_timeout, role_llm_configs, graph_storage):
+        calls.append(("build_govcon_lightrag_setup", llm_timeout, role_llm_configs, graph_storage))
+        return {
+            "lightrag_kwargs": {"entity_extraction_use_json": True},
+            "banner_template": "[GOVCON_DOC]",
+            "chunking_func_name": "govcon_chunking_func",
+        }
+
+    runtime = build_raganything_runtime(
+        _settings(llm_timeout=700),
+        working_dir="./rag_storage/demo",
+        xai_api_key="xai-key",
+        xai_base_url="https://api.x.ai/v1",
+        openai_api_key="openai-key",
+        config_cls=_FakeConfig,
+        embed_factory="embed-factory",
+        embedding_func_cls=_FakeEmbeddingFunc,
+        graph_storage="Neo4JStorage",
+        configure_mineru_environment_fn=fake_configure_mineru_environment,
+        build_raganything_config_fn=fake_build_raganything_config,
+        build_role_llm_routing_fn=fake_build_role_llm_routing,
+        build_embedding_function_fn=fake_build_embedding_function,
+        build_govcon_lightrag_setup_fn=fake_build_govcon_lightrag_setup,
+    )
+
+    assert runtime == GovconInitializationRuntime(
+        config="config-obj",
+        mineru_output_dir="./rag_storage/demo/mineru",
+        modal_llm_func="modal-llm",
+        vision_model_func="vision-llm",
+        use_strict_schema=True,
+        embedding_func="embedding-func",
+        lightrag_kwargs={"entity_extraction_use_json": True},
+        banner_template="[GOVCON_DOC]",
+        chunking_func_name="govcon_chunking_func",
+    )
+    assert calls == [
+        ("configure_mineru_environment", "demo"),
+        ("build_raganything_config", "./rag_storage/demo", _FakeConfig),
+        ("build_role_llm_routing", "xai-key", "https://api.x.ai/v1"),
+        ("build_embedding_function", "openai-key", "embed-factory", _FakeEmbeddingFunc),
+        ("build_govcon_lightrag_setup", 700, {"extract": "cfg"}, "Neo4JStorage"),
+    ]
