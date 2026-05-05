@@ -27,7 +27,7 @@ ARCHITECTURE:
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from src.ontology.schema import normalize_relationship_type
 
@@ -194,83 +194,3 @@ def _get_inferred_relationships(neo4j_io) -> List[Dict]:
         
         logger.info(f"  📊 Found {len(relationships)} inferred relationships in Neo4j")
         return relationships
-
-
-async def sync_all_relationships_to_vdb(neo4j_io) -> Dict:
-    """
-    Sync ALL relationships (not just inferred) from Neo4j to LightRAG VDBs.
-    
-    Useful for recovery scenarios or when VDBs are out of sync.
-    
-    Args:
-        neo4j_io: Neo4jGraphIO instance
-        
-    Returns:
-        Dict with sync statistics
-    """
-    from src.server.initialization import get_rag_instance
-    
-    rag_instance = get_rag_instance()
-    if not rag_instance or not rag_instance.lightrag:
-        return {"status": "error", "error": "RAG instance not available"}
-    
-    lightrag = rag_instance.lightrag
-    
-    try:
-        # Get ALL relationships from Neo4j
-        all_relationships = neo4j_io.get_all_relationships()
-        
-        if not all_relationships:
-            return {"status": "success", "relationships_synced": 0}
-        
-        logger.info(f"🔄 Full sync: {len(all_relationships)} relationships to LightRAG VDBs...")
-        
-        # Build custom_kg with all relationships
-        # Need to get entity names for src_id/tgt_id
-        entities = neo4j_io.get_all_entities()
-        id_to_name = {e['id']: e['entity_name'] for e in entities}
-        
-        source_label = "neo4j_sync"
-        
-        custom_kg = {
-            # Synthetic chunk to satisfy LightRAG's chunk_to_source_map lookup
-            "chunks": [
-                {
-                    "content": "Relationships synchronized from Neo4j graph database.",
-                    "source_id": source_label,
-                    "file_path": "neo4j_sync"
-                }
-            ],
-            "entities": [],
-            "relationships": []
-        }
-        
-        for rel in all_relationships:
-            source_name = id_to_name.get(rel['source'])
-            target_name = id_to_name.get(rel['target'])
-            
-            if source_name and target_name:
-                custom_kg["relationships"].append({
-                    "src_id": source_name,
-                    "tgt_id": target_name,
-                    "description": rel.get("description", ""),
-                    "keywords": normalize_relationship_type(
-                        rel.get("keywords", rel.get("type", "RELATED_TO"))
-                    ),
-                    "weight": rel.get("weight", 1.0),
-                    "source_id": source_label
-                })
-        
-        # NOTE: Must use ainsert_custom_kg (async) not insert_custom_kg (sync wrapper)
-        await lightrag.ainsert_custom_kg(custom_kg)
-        
-        logger.info(f"✅ Full sync complete: {len(custom_kg['relationships'])} relationships")
-        
-        return {
-            "status": "success",
-            "relationships_synced": len(custom_kg["relationships"])
-        }
-        
-    except Exception as e:
-        logger.error(f"❌ Full VDB sync failed: {e}", exc_info=True)
-        return {"status": "error", "error": str(e)}
