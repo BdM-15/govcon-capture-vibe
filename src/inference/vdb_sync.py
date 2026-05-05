@@ -3,6 +3,16 @@ VDB Sync Module - Syncs algorithm-discovered relationships to LightRAG VDBs
 
 Issue #65: P0 - Critical architecture gap fix
 
+May 2026 cleanup note:
+- Commit ``5f4c5b8`` removed an unused full-resync helper
+    (``sync_all_relationships_to_vdb``).
+- Active runtime path remains ``sync_discoveries_to_vdb()`` only, invoked from
+    semantic post-processing Phase 5.
+- If future regressions show inferred relationships present in Neo4j but missing
+    from LightRAG VDB/query results, investigate this removal as one rollback or
+    repair candidate. Preferred recovery shape: explicit admin/CLI repair action,
+    not an uncalled internal helper.
+
 PROBLEM:
 The 8 semantic post-processing algorithms discover relationships and write them
 to Neo4j only. LightRAG's VDBs (entity_vdb, relationships_vdb) are NOT updated.
