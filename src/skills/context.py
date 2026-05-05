@@ -20,124 +20,113 @@ QueryDataFunc = Callable[
 ]
 
 
-def build_skill_briefing_book(
-    workspace_dir: Path,
-    entity_types: Optional[list[str]],
-    max_per_type: int,
-    max_chunks_per_entity: int = 2,
-    max_relationships_per_entity: int = 5,
-    relevant_entity_names: Optional[set[str]] = None,
-) -> dict[str, Any]:
-    """Build the source-grounded briefing book for a skill invocation.
+class SkillWorkspaceEvidenceStore:
+    """Own workspace VDB file layout + evidence shaping for skills."""
 
-    Returns a dict with three top-level keys:
+    _NOISE_BUCKETS = {"concept", "unknown"}
 
-    * ``entities``: ``{entity_type: [{name, description, source_chunks}]}``
-    * ``source_chunks``: verbatim chunk text for cited entities
-    * ``relationships``: typed KG edges connected to sliced entities
+    def __init__(self, workspace_dir: Path) -> None:
+        self.workspace_dir = Path(workspace_dir)
 
-    ``relevant_entity_names`` is a lowercased whitelist from retrieval. When it
-    is present, only matching entities survive; otherwise framework-noise
-    buckets are dropped so bulk slices stay focused on solicitation content.
-    """
-    workspace_dir = Path(workspace_dir)
-    entities_path = workspace_dir / "vdb_entities.json"
-    if not entities_path.exists():
-        return {"entities": {}, "source_chunks": [], "relationships": []}
+    def build_briefing_book(
+        self,
+        entity_types: Optional[list[str]],
+        max_per_type: int,
+        max_chunks_per_entity: int = 2,
+        max_relationships_per_entity: int = 5,
+        relevant_entity_names: Optional[set[str]] = None,
+    ) -> dict[str, Any]:
+        """Build source-grounded evidence payload for one skill run."""
 
-    try:
-        raw = json.loads(entities_path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Failed to read entity store for skill context: %s", exc)
-        return {"entities": {}, "source_chunks": [], "relationships": []}
+        records = self._read_records("vdb_entities.json")
+        if not records:
+            return {"entities": {}, "source_chunks": [], "relationships": []}
 
-    records: list[dict[str, Any]] = []
-    if isinstance(raw, dict) and isinstance(raw.get("data"), list):
-        records = [record for record in raw["data"] if isinstance(record, dict)]
-    elif isinstance(raw, list):
-        records = [record for record in raw if isinstance(record, dict)]
+        wanted = {entity_type.lower() for entity_type in entity_types} if entity_types else None
+        bucketed: dict[str, list[dict[str, Any]]] = {}
+        entity_chunk_map: dict[str, list[str]] = {}
+        entity_name_set: set[str] = set()
 
-    noise_buckets = {"concept", "unknown"}
-    wanted = {entity_type.lower() for entity_type in entity_types} if entity_types else None
-    bucketed: dict[str, list[dict[str, Any]]] = {}
-    entity_chunk_map: dict[str, list[str]] = {}
-    entity_name_set: set[str] = set()
-
-    for entity in records:
-        entity_type = str(entity.get("entity_type", "")).lower()
-        name = entity.get("entity_name") or entity.get("name") or ""
-        name_lc = str(name).strip().lower()
-        if relevant_entity_names is not None:
-            if not name_lc or name_lc not in relevant_entity_names:
+        for entity in records:
+            entity_type = str(entity.get("entity_type", "")).lower()
+            name = entity.get("entity_name") or entity.get("name") or ""
+            name_lc = str(name).strip().lower()
+            if relevant_entity_names is not None:
+                if not name_lc or name_lc not in relevant_entity_names:
+                    continue
+            elif wanted is None and entity_type in self._NOISE_BUCKETS:
                 continue
-        else:
-            if wanted is None and entity_type in noise_buckets:
+            if wanted and entity_type not in wanted:
                 continue
-        if wanted and entity_type not in wanted:
-            continue
-        bucket = bucketed.setdefault(entity_type or "unknown", [])
-        if len(bucket) >= max_per_type:
-            continue
-        raw_src = str(entity.get("source_id") or "")
-        chunk_ids = [chunk.strip() for chunk in raw_src.split("<SEP>") if chunk.strip()]
-        bucket.append(
-            {
-                "name": name,
-                "description": (entity.get("description") or "")[:400],
-                "source_chunks": (
-                    chunk_ids[:max_chunks_per_entity]
-                    if max_chunks_per_entity > 0
-                    else []
-                ),
-            }
-        )
-        if name:
-            entity_chunk_map[name] = chunk_ids
-            entity_name_set.add(name_lc)
 
-    source_chunks = _load_source_chunks(
-        workspace_dir,
-        entity_chunk_map,
-        max_chunks_per_entity,
-    )
-    relationships = _load_relationships(
-        workspace_dir,
-        entity_name_set,
-        max_relationships_per_entity,
-    )
+            bucket = bucketed.setdefault(entity_type or "unknown", [])
+            if len(bucket) >= max_per_type:
+                continue
 
-    return {
-        "entities": bucketed,
-        "source_chunks": source_chunks,
-        "relationships": relationships,
-    }
+            raw_src = str(entity.get("source_id") or "")
+            chunk_ids = [chunk.strip() for chunk in raw_src.split("<SEP>") if chunk.strip()]
+            bucket.append(
+                {
+                    "name": name,
+                    "description": (entity.get("description") or "")[:400],
+                    "source_chunks": (
+                        chunk_ids[:max_chunks_per_entity]
+                        if max_chunks_per_entity > 0
+                        else []
+                    ),
+                }
+            )
+            if name:
+                entity_chunk_map[name] = chunk_ids
+                entity_name_set.add(name_lc)
 
+        return {
+            "entities": bucketed,
+            "source_chunks": self._load_source_chunks(
+                entity_chunk_map,
+                max_chunks_per_entity,
+            ),
+            "relationships": self._load_relationships(
+                entity_name_set,
+                max_relationships_per_entity,
+            ),
+        }
 
-def _load_source_chunks(
-    workspace_dir: Path,
-    entity_chunk_map: dict[str, list[str]],
-    max_chunks_per_entity: int,
-) -> list[dict[str, Any]]:
-    wanted_chunk_ids: set[str] = set()
-    if max_chunks_per_entity > 0:
-        for chunk_ids in entity_chunk_map.values():
-            for chunk_id in chunk_ids[:max_chunks_per_entity]:
-                wanted_chunk_ids.add(chunk_id)
+    def _read_records(self, file_name: str) -> list[dict[str, Any]]:
+        """Read one VDB JSON file, normalized to list[dict]."""
 
-    if not wanted_chunk_ids:
+        file_path = self.workspace_dir / file_name
+        if not file_path.exists():
+            return []
+
+        try:
+            raw = json.loads(file_path.read_text(encoding="utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to read %s for skill context: %s", file_name, exc)
+            return []
+
+        if isinstance(raw, dict) and isinstance(raw.get("data"), list):
+            return [record for record in raw["data"] if isinstance(record, dict)]
+        if isinstance(raw, list):
+            return [record for record in raw if isinstance(record, dict)]
         return []
 
-    chunks_path = workspace_dir / "vdb_chunks.json"
-    if not chunks_path.exists():
-        return []
+    def _load_source_chunks(
+        self,
+        entity_chunk_map: dict[str, list[str]],
+        max_chunks_per_entity: int,
+    ) -> list[dict[str, Any]]:
+        wanted_chunk_ids: set[str] = set()
+        if max_chunks_per_entity > 0:
+            for chunk_ids in entity_chunk_map.values():
+                for chunk_id in chunk_ids[:max_chunks_per_entity]:
+                    wanted_chunk_ids.add(chunk_id)
 
-    source_chunks: list[dict[str, Any]] = []
-    try:
-        chunks_raw = json.loads(chunks_path.read_text(encoding="utf-8"))
-        chunk_records: list[dict[str, Any]] = []
-        if isinstance(chunks_raw, dict) and isinstance(chunks_raw.get("data"), list):
-            chunk_records = [record for record in chunks_raw["data"] if isinstance(record, dict)]
-        for record in chunk_records:
+        if not wanted_chunk_ids:
+            return []
+
+        source_chunks: list[dict[str, Any]] = []
+        for record in self._read_records("vdb_chunks.json"):
             chunk_id = record.get("__id__")
             if chunk_id not in wanted_chunk_ids:
                 continue
@@ -148,31 +137,19 @@ def _load_source_chunks(
                     "content": (record.get("content") or "")[:1500],
                 }
             )
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Failed to read chunk store for skill context: %s", exc)
-    return source_chunks
+        return source_chunks
 
+    def _load_relationships(
+        self,
+        entity_name_set: set[str],
+        max_relationships_per_entity: int,
+    ) -> list[dict[str, Any]]:
+        if max_relationships_per_entity <= 0 or not entity_name_set:
+            return []
 
-def _load_relationships(
-    workspace_dir: Path,
-    entity_name_set: set[str],
-    max_relationships_per_entity: int,
-) -> list[dict[str, Any]]:
-    if max_relationships_per_entity <= 0 or not entity_name_set:
-        return []
-
-    rels_path = workspace_dir / "vdb_relationships.json"
-    if not rels_path.exists():
-        return []
-
-    relationships: list[dict[str, Any]] = []
-    try:
-        rels_raw = json.loads(rels_path.read_text(encoding="utf-8"))
-        rel_records: list[dict[str, Any]] = []
-        if isinstance(rels_raw, dict) and isinstance(rels_raw.get("data"), list):
-            rel_records = [record for record in rels_raw["data"] if isinstance(record, dict)]
+        relationships: list[dict[str, Any]] = []
         edge_count: dict[str, int] = {name: 0 for name in entity_name_set}
-        for record in rel_records:
+        for record in self._read_records("vdb_relationships.json"):
             source = str(record.get("src_id") or "")
             target = str(record.get("tgt_id") or "")
             source_lc = source.lower()
@@ -199,9 +176,36 @@ def _load_relationships(
                 edge_count[source_lc] = edge_count.get(source_lc, 0) + 1
             if target_in:
                 edge_count[target_lc] = edge_count.get(target_lc, 0) + 1
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Failed to read relationship store for skill context: %s", exc)
-    return relationships
+        return relationships
+
+
+def build_skill_briefing_book(
+    workspace_dir: Path,
+    entity_types: Optional[list[str]],
+    max_per_type: int,
+    max_chunks_per_entity: int = 2,
+    max_relationships_per_entity: int = 5,
+    relevant_entity_names: Optional[set[str]] = None,
+) -> dict[str, Any]:
+    """Build the source-grounded briefing book for a skill invocation.
+
+    Returns a dict with three top-level keys:
+
+    * ``entities``: ``{entity_type: [{name, description, source_chunks}]}``
+    * ``source_chunks``: verbatim chunk text for cited entities
+    * ``relationships``: typed KG edges connected to sliced entities
+
+    ``relevant_entity_names`` is a lowercased whitelist from retrieval. When it
+    is present, only matching entities survive; otherwise framework-noise
+    buckets are dropped so bulk slices stay focused on solicitation content.
+    """
+    return SkillWorkspaceEvidenceStore(workspace_dir).build_briefing_book(
+        entity_types=entity_types,
+        max_per_type=max_per_type,
+        max_chunks_per_entity=max_chunks_per_entity,
+        max_relationships_per_entity=max_relationships_per_entity,
+        relevant_entity_names=relevant_entity_names,
+    )
 
 
 async def retrieve_relevant_entities_for_skill(
