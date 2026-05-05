@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 
-from src.server.ui_query_bridge import make_ui_query_bridges
+from src.raganything_server import make_ui_query_bridges
 
 
 @dataclass

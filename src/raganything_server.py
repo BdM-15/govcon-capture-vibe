@@ -25,7 +25,8 @@ import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
 from dotenv import load_dotenv
-from typing import Any, Callable, Iterator
+from importlib.metadata import PackageNotFoundError, version as package_version
+from typing import Any, Awaitable, Callable, Iterator
 load_dotenv(override=True)
 
 # Windows MAX_PATH mitigation for MinerU document processing
@@ -54,6 +55,20 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
+KG_MODULES = [
+    ("Shipley Methodology", "proposal mechanics · writing craft · color teams"),
+    (
+        "Evaluation",
+        "Evaluation factors / SSEB / source-selection mechanics (UCF Section M or equiv)",
+    ),
+    ("Regulations", "FAR / DFARS clauses · compliance anchors"),
+    ("Workload & Pricing", "BOE · indirect rates · pricing discipline"),
+    ("Lessons Learned", "anti-patterns · explicit benefit linkage rule"),
+    ("Company Capabilities", "KBR platforms · proof points · past performance"),
+    ("Capture (Phase 0-3)", "pre-RFP terminology · upstream reference only"),
+]
+
+
 @dataclass
 class ServerRuntime:
     """Built FastAPI app plus resolved host/port."""
@@ -61,6 +76,187 @@ class ServerRuntime:
     app: Any
     host: str
     port: int
+
+
+@dataclass
+class UIQueryBridges:
+    query: Callable[[str, str, list[dict], bool, dict | None], Awaitable[Any]]
+    query_data: Callable[[str, str, list[dict], dict | None], Awaitable[Any]]
+    llm: Callable[[str], Awaitable[str]]
+
+
+def resolve_package_version(pkg: str) -> str:
+    try:
+        return package_version(pkg)
+    except PackageNotFoundError:
+        return "unknown"
+
+
+def format_reranker_line(settings: Any, colors: Any) -> str:
+    """Format the reranker status line for the startup banner."""
+    if not settings.enable_rerank:
+        return f"{colors.DIM}disabled{colors.RESET}"
+    rerank_device = settings.rerank_device
+    rerank_device_color = colors.GREEN if rerank_device.lower() == "cuda" else colors.YELLOW
+    fp_mode = "FP16" if settings.rerank_use_fp16 else "FP32"
+    return (
+        f"{colors.CYAN}{settings.rerank_model}{colors.RESET}  "
+        f"·  Device: {colors.BOLD}{rerank_device_color}{rerank_device.upper()}{colors.RESET}  "
+        f"·  {colors.YELLOW}{fp_mode}{colors.RESET}  "
+        f"·  Min Score: {colors.DIM}{settings.min_rerank_score}{colors.RESET}"
+    )
+
+
+def build_startup_banner_items(
+    settings: Any,
+    *,
+    host: str,
+    port: int,
+    graph_storage: str,
+    working_dir: str,
+    entity_count: int,
+    relationship_count: int,
+    colors: Any,
+    version_resolver: Callable[[str], str] = resolve_package_version,
+) -> list[tuple[str, str]]:
+    """Build the startup banner rows for log_banner()."""
+    mineru_version = version_resolver("mineru")
+    device = settings.mineru_device_mode.upper()
+    device_color = colors.GREEN if device == "CUDA" else colors.YELLOW
+
+    startup_items = [
+        ("Workspace", f"{colors.BOLD}{colors.WHITE}{settings.workspace}{colors.RESET}"),
+        (
+            "Storage",
+            f"{colors.YELLOW}{graph_storage}{colors.RESET}  ·  {colors.DIM}{working_dir}{colors.RESET}",
+        ),
+        ("", ""),
+        ("Extract  (LightRAG)", f"{colors.CYAN}{settings.extraction_llm_name}{colors.RESET}"),
+        ("Keyword  (LightRAG)", f"{colors.CYAN}{settings.keyword_llm_name}{colors.RESET}"),
+        ("VLM      (LightRAG)", f"{colors.CYAN}{settings.vlm_llm_name}{colors.RESET}"),
+        ("Query    (LightRAG)", f"{colors.MAGENTA}{settings.reasoning_llm_name}{colors.RESET}"),
+        ("Post-Process", f"{colors.YELLOW}{settings.post_processing_llm_name}{colors.RESET}"),
+        (
+            "Embeddings",
+            f"{colors.CYAN}{settings.embedding_model}{colors.RESET}  {colors.DIM}({settings.embedding_dim}D){colors.RESET}",
+        ),
+        ("Reranker", format_reranker_line(settings, colors)),
+        ("", ""),
+        ("LightRAG", f"{colors.DIM}{version_resolver('lightrag-hku')}{colors.RESET}"),
+        ("RAG-Anything", f"{colors.DIM}{version_resolver('raganything')}{colors.RESET}"),
+        (
+            "MinerU",
+            f"{colors.DIM}{mineru_version}{colors.RESET}  ·  Device: {colors.BOLD}{device_color}{device}{colors.RESET}  ·  Method: {colors.YELLOW}{settings.parse_method.upper()}{colors.RESET}",
+        ),
+        ("Multimodal", f"Images · Tables · Equations · Formulas  {colors.GREEN}▸ ENABLED{colors.RESET}"),
+        ("", ""),
+        (
+            "Schema",
+            f"{colors.BOLD}{colors.YELLOW}{entity_count}{colors.RESET} entity types  ·  {colors.BOLD}{colors.YELLOW}{relationship_count}{colors.RESET} relationship types",
+        ),
+        (
+            "Inference",
+            f"{colors.CYAN}3 LLM algorithms{colors.RESET}  {colors.DIM}(instruction↔evaluation mapping · document structure · orphan resolution){colors.RESET}",
+        ),
+        ("", ""),
+        (
+            "Knowledge KG",
+            f"{colors.BOLD}{colors.MAGENTA}{len(KG_MODULES)} domain ontologies{colors.RESET}  {colors.DIM}injected for query enrichment{colors.RESET}",
+        ),
+    ]
+    startup_items.extend(
+        (f"  {colors.MAGENTA}▸{colors.RESET} {name}", f"{colors.DIM}{description}{colors.RESET}")
+        for name, description in KG_MODULES
+    )
+    startup_items.extend(
+        [
+            (
+                "Scope",
+                f"{colors.DIM}Shipley Phase 4-6 — Proposal Planning → Proposal Development → Post-Submittal Activities{colors.RESET}",
+            ),
+            ("", ""),
+            ("WebUI", f"{colors.BLUE}http://{host}:{port}/webui{colors.RESET}"),
+            (
+                "Capture UI",
+                f"{colors.BOLD}{colors.CYAN}http://{host}:{port}/ui{colors.RESET}  {colors.DIM}(new){colors.RESET}",
+            ),
+            ("API Docs", f"{colors.BLUE}http://{host}:{port}/docs{colors.RESET}"),
+        ]
+    )
+    if graph_storage == "Neo4JStorage":
+        startup_items.append(("Neo4j", f"{colors.BLUE}http://localhost:7474{colors.RESET}"))
+    return startup_items
+
+
+def make_ui_query_bridges(
+    rag_instance: Any,
+    *,
+    logger: Any,
+    query_param_factory: Any | None = None,
+) -> UIQueryBridges:
+    """Build the UI-facing query/data/LLM bridge callables."""
+    if query_param_factory is None:
+        from lightrag import QueryParam as query_param_factory
+
+    valid_fields = {f.name for f in query_param_factory.__dataclass_fields__.values()}
+
+    async def _ui_query(
+        text: str,
+        mode: str,
+        history: list[dict],
+        stream: bool,
+        overrides: dict | None = None,
+    ):
+        overrides = dict(overrides or {})
+        min_score = overrides.pop("min_rerank_score", None)
+        if min_score is not None:
+            try:
+                rag_instance.lightrag.min_rerank_score = float(min_score)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed setting min_rerank_score=%r: %s", min_score, exc)
+        param_kwargs = {key: value for key, value in overrides.items() if key in valid_fields}
+        return await rag_instance.lightrag.aquery(
+            text,
+            param=query_param_factory(
+                mode=mode,
+                stream=stream,
+                conversation_history=history or [],
+                **param_kwargs,
+            ),
+        )
+
+    async def _ui_query_data(
+        text: str,
+        mode: str,
+        history: list[dict],
+        overrides: dict | None = None,
+    ):
+        overrides = dict(overrides or {})
+        min_score = overrides.pop("min_rerank_score", None)
+        if min_score is not None:
+            try:
+                rag_instance.lightrag.min_rerank_score = float(min_score)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed setting min_rerank_score=%r: %s", min_score, exc)
+        param_kwargs = {key: value for key, value in overrides.items() if key in valid_fields}
+        param_kwargs.pop("stream", None)
+        return await rag_instance.lightrag.aquery_data(
+            text,
+            param=query_param_factory(
+                mode=mode,
+                conversation_history=history or [],
+                **param_kwargs,
+            ),
+        )
+
+    async def _ui_llm(prompt: str) -> str:
+        llm = getattr(rag_instance.lightrag, "llm_model_func", None)
+        if llm is None:
+            raise RuntimeError("LightRAG instance has no llm_model_func configured")
+        result = await llm(prompt, system_prompt=None, history_messages=[])
+        return result if isinstance(result, str) else str(result)
+
+    return UIQueryBridges(query=_ui_query, query_data=_ui_query_data, llm=_ui_llm)
 
 
 @contextmanager
@@ -195,8 +391,6 @@ async def main():
     from src.server.config import configure_raganything_args
     from src.server.initialization import initialize_raganything, get_rag_instance
     from src.server.routes import register_custom_ingestion_routes
-    from src.server.startup_banner import build_startup_banner_items
-    from src.server.ui_query_bridge import make_ui_query_bridges
     from src.server.ui_routes import register_ui
     import uvicorn
 

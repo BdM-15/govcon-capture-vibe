@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.server.startup_banner import build_startup_banner_items, format_reranker_line
+from src.raganything_server import build_startup_banner_items, format_reranker_line
 
 
 class _Colors:
