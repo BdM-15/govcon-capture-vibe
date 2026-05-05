@@ -44,6 +44,35 @@ from src.ontology.schema import normalize_relationship_type
 logger = logging.getLogger(__name__)
 
 
+def _pair_key(source_name: str, target_name: str) -> tuple[str, str]:
+    """Normalize relationship endpoints to the pair identity LightRAG uses in the VDB."""
+    return tuple(sorted((source_name, target_name)))
+
+
+def _build_sync_audit(
+    relationships: List[Dict],
+    directed_pairs: set[tuple[str, str]] | None = None,
+) -> Dict[str, int | None]:
+    """Summarize how many inferred edges survive pair-level VDB dedupe semantics."""
+    unique_pairs = {
+        _pair_key(rel["source_name"], rel["target_name"]) for rel in relationships
+    }
+    overlap_with_directed = None
+    estimated_new_vdb_pairs = None
+
+    if directed_pairs is not None:
+        overlap_with_directed = len(unique_pairs & directed_pairs)
+        estimated_new_vdb_pairs = len(unique_pairs) - overlap_with_directed
+
+    return {
+        "inferred_relationship_count": len(relationships),
+        "unique_pair_count": len(unique_pairs),
+        "duplicate_pair_count": len(relationships) - len(unique_pairs),
+        "overlapping_directed_pair_count": overlap_with_directed,
+        "estimated_new_vdb_pair_count": estimated_new_vdb_pairs,
+    }
+
+
 async def sync_discoveries_to_vdb(
     neo4j_io,
     relationships_inferred: int = 0
@@ -99,6 +128,22 @@ async def sync_discoveries_to_vdb(
                 "message": "No relationships to sync"
             }
         
+        directed_pairs = _get_directed_relationship_pairs(neo4j_io)
+        audit = _build_sync_audit(new_relationships, directed_pairs)
+
+        logger.info(
+            "📊 VDB sync audit: %s inferred, %s unique pairs, %s duplicate pairs",
+            audit["inferred_relationship_count"],
+            audit["unique_pair_count"],
+            audit["duplicate_pair_count"],
+        )
+        if audit["overlapping_directed_pair_count"] is not None:
+            logger.info(
+                "📊 VDB pair overlap: %s overlap existing DIRECTED pairs, %s estimated new pair ids",
+                audit["overlapping_directed_pair_count"],
+                audit["estimated_new_vdb_pair_count"],
+            )
+
         logger.info(f"🔄 Syncing {len(new_relationships)} inferred relationships to LightRAG VDBs...")
         
         # Build custom_kg structure for LightRAG's insert_custom_kg()
@@ -155,7 +200,8 @@ async def sync_discoveries_to_vdb(
         return {
             "status": "success",
             "relationships_synced": len(new_relationships),
-            "message": f"Synced {len(new_relationships)} relationships to VDBs"
+            "message": f"Synced {len(new_relationships)} relationships to VDBs",
+            **audit,
         }
         
     except Exception as e:
@@ -204,3 +250,20 @@ def _get_inferred_relationships(neo4j_io) -> List[Dict]:
         
         logger.info(f"  📊 Found {len(relationships)} inferred relationships in Neo4j")
         return relationships
+
+
+def _get_directed_relationship_pairs(neo4j_io) -> set[tuple[str, str]]:
+    """Fetch endpoint pairs for extracted DIRECTED edges already present in the workspace graph."""
+    query = f"""
+    MATCH (source:`{neo4j_io.workspace}`)-[r:DIRECTED]->(target:`{neo4j_io.workspace}`)
+    RETURN source.entity_id as source_name,
+           target.entity_id as target_name
+    """
+
+    with neo4j_io.driver.session(database=neo4j_io.database) as session:
+        result = session.run(query)
+        return {
+            _pair_key(record["source_name"], record["target_name"])
+            for record in result
+            if record["source_name"] and record["target_name"]
+        }
