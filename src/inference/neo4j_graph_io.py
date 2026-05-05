@@ -6,35 +6,174 @@ Provides clean interfaces for semantic relationship inference and post-processin
 """
 
 import logging
-from typing import List, Dict
+from collections import defaultdict
+from typing import Any, Dict, List
 
 from neo4j import GraphDatabase
 
 from src.core import get_settings
-from src.inference.neo4j_records import (
-    count_from_record,
-    entity_names_from_records,
-    entity_record_to_dict,
-    group_entities_by_type,
-    partition_entities_by_name,
-    relationship_record_to_dict,
-    type_counts_from_records,
-)
-from src.inference.neo4j_query_support import (
-    run_count_query,
-    run_mapped_query,
-    run_projected_query,
-)
-from src.inference.neo4j_write_support import (
-    log_rejected_entities,
-    log_rejected_relationships,
-)
 from src.inference.relationship_payloads import (
     group_retype_updates,
     partition_relationships_by_type,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def entity_record_to_dict(record: Any) -> dict[str, Any]:
+    """Convert a Neo4j entity row into the post-processing entity contract."""
+    return {
+        "id": record["id"],
+        "entity_name": record["entity_name"],
+        "entity_type": record["entity_type"],
+        "description": record["description"],
+        "source_id": record["source_id"],
+    }
+
+
+def relationship_record_to_dict(record: Any) -> dict[str, Any]:
+    """Convert a Neo4j relationship row into the post-processing edge contract."""
+    return {
+        "source": record["source"],
+        "target": record["target"],
+        "type": record["rel_type"],
+        "weight": record["weight"],
+        "description": record["description"],
+        "keywords": record["keywords"],
+    }
+
+
+def type_counts_from_records(records: Any) -> dict[str, int]:
+    """Convert rows with type/count fields into a count mapping."""
+    return {record["type"]: record["count"] for record in records}
+
+
+def entity_names_from_records(records: Any) -> list[str]:
+    """Extract entity_name values from Neo4j rows."""
+    return [record["entity_name"] for record in records]
+
+
+def count_from_record(record: Any | None, key: str) -> int:
+    """Read an integer count from a single Neo4j row."""
+    if not record:
+        return 0
+    return int(record[key] or 0)
+
+
+def partition_entities_by_name(
+    entities: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split entity payloads into named and rejected groups."""
+    valid: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    for entity in entities:
+        if entity.get("entity_name"):
+            valid.append(entity)
+        else:
+            rejected.append(entity)
+    return valid, rejected
+
+
+def group_entities_by_type(
+    entities: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    """Group entities by lowercase entity type for efficient batching."""
+    grouped: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
+    for entity in entities:
+        entity_type = str(entity.get("entity_type") or "").lower()
+        grouped[entity_type].append(entity)
+    return dict(grouped)
+
+
+def run_mapped_query(
+    driver: Any,
+    database: str,
+    query: str,
+    row_mapper: Any,
+    **params: Any,
+) -> list[Any]:
+    """Run query and map each row through ``row_mapper``."""
+    with driver.session(database=database) as session:
+        result = session.run(query, **params)
+        return [row_mapper(record) for record in result]
+
+
+def run_projected_query(
+    driver: Any,
+    database: str,
+    query: str,
+    projector: Any,
+    **params: Any,
+) -> Any:
+    """Run query and project full result through ``projector``."""
+    with driver.session(database=database) as session:
+        result = session.run(query, **params)
+        return projector(result)
+
+
+def run_count_query(
+    driver: Any,
+    database: str,
+    query: str,
+    count_reader: Any,
+    result_key: str,
+    **params: Any,
+) -> int:
+    """Run query returning one count row and read it with ``count_reader``."""
+    with driver.session(database=database) as session:
+        result = session.run(query, **params)
+        return count_reader(result.single(), result_key)
+
+
+def log_rejected_relationships(
+    relationships: list[dict[str, Any]],
+    rejected_relationships: list[dict[str, Any]],
+    *,
+    logger: logging.Logger,
+) -> None:
+    """Log malformed inferred relationships rejected before DB write."""
+    if not rejected_relationships:
+        return
+
+    logger.error("=" * 80)
+    logger.error("❌ CRITICAL: REJECTED MALFORMED RELATIONSHIPS (DATA LOSS)")
+    logger.error("=" * 80)
+    logger.error(
+        "Rejected %s of %s relationships due to null/empty 'relationship_type'",
+        len(rejected_relationships),
+        len(relationships),
+    )
+    logger.error("")
+    logger.error("REJECTED RELATIONSHIPS:")
+    for index, relationship in enumerate(rejected_relationships, 1):
+        logger.error("  [%s] Source: %s", index, relationship.get("source_id", "MISSING"))
+        logger.error("      Target: %s", relationship.get("target_id", "MISSING"))
+        logger.error("      Type:   %r", relationship.get("relationship_type", "MISSING"))
+        logger.error("      Reason: %s", relationship.get("reasoning", "N/A")[:100])
+        logger.error("      Full:   %s", relationship)
+        logger.error("")
+    logger.error("=" * 80)
+    logger.error("⚠️  INVESTIGATE: Check inference algorithms for null type generation")
+    logger.error("=" * 80)
+
+
+def log_rejected_entities(
+    rejected_entities: list[dict[str, Any]],
+    *,
+    logger: logging.Logger,
+) -> None:
+    """Log malformed entities rejected before DB write."""
+    for entity in rejected_entities:
+        logger.error(
+            "❌ Critical Error: Entity reached Neo4j without a name! Dropping to prevent DB corruption. Entity: %s",
+            entity,
+        )
+
+    if rejected_entities:
+        logger.warning(
+            "⚠️ Skipped %s entities with missing names in Neo4j creation",
+            len(rejected_entities),
+        )
 
 
 class Neo4jGraphIO:
