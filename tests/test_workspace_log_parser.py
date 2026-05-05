@@ -1,4 +1,4 @@
-from src.server.workspace_log_parser import (
+from src.server.document_routes import (
     classify_workspace_log_event,
     parse_workspace_log_lines,
 )

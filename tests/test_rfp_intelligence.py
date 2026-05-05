@@ -3,7 +3,7 @@ import json
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.server.rfp_intelligence import compute_intel, load_vdb, register_intelligence_routes, split_keywords
+from src.server.workspace_routes import compute_intel, load_vdb, register_intelligence_routes, split_keywords
 
 
 def _write_vdb(path, data) -> None:

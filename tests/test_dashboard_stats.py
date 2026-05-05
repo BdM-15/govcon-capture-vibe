@@ -7,8 +7,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.ontology.schema import VALID_ENTITY_TYPES, VALID_RELATIONSHIP_TYPES
-from src.server import dashboard_stats
-from src.server.dashboard_stats import (
+from src.server import admin_routes as dashboard_stats
+from src.server.admin_routes import (
     gather_stats,
     register_dashboard_stats_routes,
     release_version,
