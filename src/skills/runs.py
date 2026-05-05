@@ -10,19 +10,16 @@ from typing import Any, Optional
 
 from src.skills.run_metadata import (
     STUDIO_EXTRA_MIME,
-    list_run_artifacts,
-    list_tool_outputs,
-    parse_run_envelope,
-    read_run_metadata,
-    read_run_transcript,
     resolve_artifact_mime,
     slugify_for_filename,
 )
 from src.skills.run_store_helpers import (
+    SkillRunIndex,
     build_legacy_run_envelope,
     build_tools_run_envelope,
     list_deliverables_under_base,
     list_runs_under_base,
+    read_run_under_base,
 )
 
 _SAFE_RUN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")
@@ -133,8 +130,7 @@ class SkillRunStore:
     def list_runs(
         self, workspace_root: Path, skill_name: Optional[str] = None, limit: int = 50
     ) -> list[dict[str, Any]]:
-        return list_runs_under_base(
-            Path(workspace_root) / "skill_runs",
+        return SkillRunIndex(Path(workspace_root) / "skill_runs").list_runs(
             skill_name=skill_name,
             limit=limit,
         )
@@ -143,37 +139,12 @@ class SkillRunStore:
         self, workspace_root: Path, skill_name: str, run_id: str
     ) -> Optional[dict[str, Any]]:
         """Return the full content of a single persisted run, or None."""
-        if not self.is_safe_run_id(run_id):
-            return None
-        run_dir = self.runs_root(workspace_root, skill_name) / run_id
-        if not run_dir.is_dir():
-            return None
-        envelope_path = run_dir / "run.md"
-        response_path = run_dir / "response.md"
-        prompt_path = run_dir / "prompt.md"
-        meta = (
-            parse_run_envelope(envelope_path.read_text(encoding="utf-8"))
-            if envelope_path.exists()
-            else {}
+        return read_run_under_base(
+            Path(workspace_root) / "skill_runs",
+            skill_name=skill_name,
+            run_id=run_id,
+            is_safe_run_id=self.is_safe_run_id,
         )
-        artifacts = list_run_artifacts(run_dir)
-        transcript = read_run_transcript(run_dir)
-        tool_outputs = list_tool_outputs(run_dir)
-        return {
-            "run_id": run_id,
-            "skill": skill_name,
-            "run_dir": str(run_dir.resolve()),
-            "metadata": meta,
-            "response": response_path.read_text(encoding="utf-8")
-            if response_path.exists()
-            else "",
-            "prompt": prompt_path.read_text(encoding="utf-8")
-            if prompt_path.exists()
-            else "",
-            "artifacts": artifacts,
-            "transcript": transcript,
-            "tool_outputs": tool_outputs,
-        }
 
     def delete_run(self, workspace_root: Path, skill_name: str, run_id: str) -> bool:
         if not self.is_safe_run_id(run_id):
@@ -187,8 +158,7 @@ class SkillRunStore:
     def list_deliverables(
         self, workspace_root: Path, limit: int = 500
     ) -> list[dict[str, Any]]:
-        return list_deliverables_under_base(
-            Path(workspace_root) / "skill_runs",
+        return SkillRunIndex(Path(workspace_root) / "skill_runs").list_deliverables(
             is_safe_run_id=self.is_safe_run_id,
             limit=limit,
         )
