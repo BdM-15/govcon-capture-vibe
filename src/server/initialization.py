@@ -158,7 +158,10 @@ async def initialize_raganything():
     # JSON-Schema `pattern`, so relationship keyword canonicalization remains prompt
     # + downstream normalization. Toggle via ENTITY_EXTRACTION_STRICT_SCHEMA=true.
     # ═══════════════════════════════════════════════════════════════════════════════
-    lightrag_kwargs = runtime.lightrag_kwargs
+    lightrag_kwargs = {
+        **runtime.lightrag_kwargs,
+        "entity_extraction_use_json": True,
+    }
     
     # LLM function for RAGAnything top-level + modal processors. RAGAnything's
     # TableModalProcessor / EquationModalProcessor parse their own JSON shape
