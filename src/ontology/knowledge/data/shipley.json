@@ -1,0 +1,469 @@
+{
+  "source_id": "govcon_ontology_shipley",
+  "file_path": "shipley_methodology",
+  "entities": [
+    {
+      "entity_name": "Shipley Business Development Lifecycle",
+      "entity_type": "concept",
+      "description": "Shipley Associates' 7-phase process for winning government contracts: (1) Opportunity Identification - assess strategic fit and market alignment; (2) Pursuit Decision - bid/no-bid analysis with Pwin threshold evaluation; (3) Capture Planning - develop win strategy, customer relationships, teaming; (4) Proposal Planning - create outline, compliance matrix, schedule; (5) Proposal Development - writing, reviews, graphics, production; (6) Negotiation - pricing discussions, BAFOs, contract negotiations; (7) Contract Execution - transition planning, performance delivery. Key principle: Win before the RFP through early positioning and customer intimacy.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Opportunity Identification Phase",
+      "entity_type": "concept",
+      "description": "Phase 1 of Shipley BD Lifecycle. Evaluate new opportunities against strategic criteria: Does this align with our core competencies? Is the customer in our target market? Do we have or can we build the required past performance? Outputs: Opportunity assessment, initial Pwin estimate, resource requirements. Gate decision: Pursue to qualification or decline early to conserve resources.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Pursuit Decision Phase",
+      "entity_type": "concept",
+      "description": "Phase 2 of Shipley BD Lifecycle. Formal bid/no-bid decision using structured criteria: Pwin threshold (typically >40-50%), resource availability, competitive landscape analysis, customer relationship strength, contract value vs. B&P cost. Involves Bid/No-Bid Checklist scoring. Gate decision: Commit capture resources or decline with documented rationale for lessons learned.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Capture Planning Phase",
+      "entity_type": "concept",
+      "description": "Phase 3 of Shipley BD Lifecycle. Develop comprehensive capture strategy: customer engagement plan, competitive analysis (Black Hat), teaming strategy, win theme development, price-to-win analysis, solution shaping. Key activities: customer calls, industry days, draft RFP comments, teammate selection, capability demonstrations. Outputs: Capture Plan, Win Strategy, Ghost Plan.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Proposal Planning Phase",
+      "entity_type": "concept",
+      "description": "Phase 4 of Shipley BD Lifecycle. Translate capture strategy into proposal execution plan: annotated outline mapping to Section L/M, compliance matrix, proposal schedule with color team milestones, author assignments, graphics concepts, data calls for past performance and resumes. Pink Team readiness check ensures outline addresses all requirements.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Proposal Development Phase",
+      "entity_type": "concept",
+      "description": "Phase 5 of Shipley BD Lifecycle. Execute proposal writing with iterative reviews: draft sections per annotated outline, integrate graphics and proof points, conduct color team reviews (Pink\u2192Red\u2192Gold), resolve action items, final production and compliance verification. Focus on evaluation criteria responsiveness and discriminator emphasis. Outputs: Compliant, compelling proposal.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Color Team Reviews",
+      "entity_type": "concept",
+      "description": "Shipley proposal quality gates using color-coded review milestones: Pink Team (compliance review of outline/storyboards), Red Team (strategy review of full draft for persuasiveness and win theme integration), Gold Team (final polish review for production readiness). Each review has specific criteria, independent reviewers, and mandatory action item resolution. Best practice: Schedule reviews with adequate recovery time before submission.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Pink Team Review",
+      "entity_type": "concept",
+      "description": "First color team review focused on COMPLIANCE. Reviews annotated outline, section storyboards, and compliance matrix against Section L instructions and Section M evaluation criteria. Questions: Does outline address every requirement? Are win themes planned for each section? Is page allocation appropriate for evaluation weights? Occurs before writing begins. Deliverable: Pink Team Report with compliance gaps and outline revisions.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Red Team Review",
+      "entity_type": "concept",
+      "description": "Primary color team review focused on STRATEGY and PERSUASIVENESS. Reviews complete proposal draft as evaluators would see it. Criteria: Is solution compliant? Are win themes compelling and substantiated? Do discriminators differentiate us? Is pricing realistic? Would this score Outstanding/Excellent? Red Team simulates Source Selection Evaluation Board perspective. Deliverable: Red Team Report with section scores and improvement actions.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Gold Team Review",
+      "entity_type": "concept",
+      "description": "Final color team review focused on PRODUCTION QUALITY. Reviews camera-ready proposal for professional presentation: formatting consistency, graphics quality, cross-reference accuracy, page count compliance, executive summary impact. No substantive content changes at this stage. Also reviews pricing volume for arithmetic accuracy and cost narrative consistency. Deliverable: Gold Team signoff for production and submission.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Black Hat Review",
+      "entity_type": "concept",
+      "description": "Competitive analysis tool simulating competitors' likely proposal strategies. Team role-plays as each major competitor answering: What are their strengths? What solution will they propose? How will they price? What are their weaknesses we can ghost? Results inform win themes, discriminators, and price-to-win. Conduct mid-capture with updated intel. Ideation prompt: 'If I were [Competitor], what would I bid and how would I attack the incumbent?'",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Compliance Matrix",
+      "entity_type": "concept",
+      "description": "Traceability tool mapping RFP requirements to proposal responses. Columns: Requirement ID, Section L instruction, Section M criterion, Proposal section, Page number, Compliance status (Full/Partial/Exception). Critical for avoiding disqualification from non-responsiveness. Pink Team validates completeness. Maintained throughout proposal development. Links to requirements database for large proposals. Also called Requirements Traceability Matrix (RTM).",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Section L M Mapping",
+      "entity_type": "concept",
+      "description": "Analysis technique aligning proposal submission instructions (Section L) with evaluation criteria (Section M) to identify: (1) Requirements with no evaluation criteria - compliance-only, (2) Evaluation criteria with no instructions - hidden requirements, (3) Weight mismatches - instructions emphasize different content than evaluation weights suggest. Informs page allocation and emphasis strategy. Best practice: Create mapping table before writing annotated outline.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Annotated Outline",
+      "entity_type": "concept",
+      "description": "Detailed proposal outline with embedded guidance for writers. Includes: section number and title per RFP, assigned author, page allocation, applicable requirements/instructions (verbatim), evaluation criteria addressed, win themes to emphasize, proof points to include, graphics concepts, boilerplate references. Serves as writing blueprint ensuring consistent messaging. Created during Proposal Planning, validated at Pink Team, guides all subsequent writing.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Win Theme Development",
+      "entity_type": "strategic_theme",
+      "description": "Shipley methodology for creating compelling proposal messages. Win themes follow Feature-Benefit-Proof pattern: Feature (what we offer), Benefit (value to customer), Proof (evidence/past performance). Effective themes are customer-focused, discriminating, provable, and evaluation-criteria aligned. Typically 3-5 themes per proposal, woven throughout all volumes. Themes answer: 'Why should we win?'",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology",
+      "theme_type": "WIN_THEME"
+    },
+    {
+      "entity_name": "Ghost Strategy",
+      "entity_type": "strategic_theme",
+      "description": "Technique for neutralizing competitor strengths without naming them. Ghosting raises evaluator concerns about competitors through positive self-positioning: 'Unlike approaches that require lengthy transition periods, our proven team delivers Day 1 capability.' Effective ghosting is factual, professional, and highlights discriminators. Identified through Black Hat analysis. Never disparage competitors directly - focus on our superior approach to customer hot buttons.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology",
+      "theme_type": "DISCRIMINATOR"
+    },
+    {
+      "entity_name": "Proposal Development Worksheet",
+      "entity_type": "concept",
+      "description": "Shipley PDW \u2014 the standard one-page-per-section planning artifact authors complete BEFORE writing prose. Required fields: (1) Section Outline mapped to RFP requirements (e.g., 2.2 Performance \u2192 2.2.1 Flight Control, 2.2.2 Stability), (2) Relevant Proposal/Volume Strategies (which win themes apply), (3) Defining Your Solution \u2192 Major Issues (customer pain points being solved), (4) Key Visuals with Action Captions (figure number, title that asserts a benefit, caption explaining the proof). PDWs are the bridge from Annotated Outline to draft text and feed Pink Team review. Per Shipley Proposal Guide model docs (pp. 314-316).",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Storyboard Content Plan",
+      "entity_type": "concept",
+      "description": "High-level, bullet-form outline a contributor builds BEFORE prose drafting to ensure the customer requirement is answered directly. Distinct from the Annotated Outline (proposal-wide blueprint) \u2014 Storyboard is per-section/per-author. Includes informative section headings (e.g., '2.5 Account Team Structure, Project Management, and Relationship Management (10 pages)'), planned graphics, themes to weave in, and proof points. Shipley Content Plan Template emphasizes flexibility \u2014 bullets and notes, not full sentences. Catches non-responsiveness early.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Executive Summary Writing Rules",
+      "entity_type": "concept",
+      "description": "Shipley rules for government-proposal Executive Summaries (per Proposal Guide model doc 4, p. 309): (1) Open with theme that names the CUSTOMER FIRST, then links to seller's most unique benefit; (2) State the customer NEED extracted from the RFP \u2014 do not paraphrase; (3) Frame the CHALLENGE as both current position and future requirement; (4) List capabilities word-for-word from the RFP to prove compliance at a glance; (5) Highlight DISCRIMINATORS that may not be obvious to less-knowledgeable readers; (6) Keep customer focus \u2014 the word 'you' should appear more often than 'we'. Often written LAST but reviewed FIRST by evaluators.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Government Cover Letter Structure",
+      "entity_type": "concept",
+      "description": "Shipley structure for cover letters on FORMALLY SOLICITED government proposals (per model doc 7, p. 312): (1) Subject line must begin with signal word 'Proposal' and include solicitation number + date for sorting; (2) Opening sentence uses a short setup phrase, not a long preamble; (3) Customer's evaluation criteria or objectives are stated in the SECOND paragraph to set up relevance for the third; (4) Exactly ONE selling paragraph \u2014 last sentence states the seller's most unique discriminator; (5) A dedicated paragraph asserts the proposal is COMPLIANT and RESPONSIVE; (6) Final paragraph names key managers with point-of-contact info. Length target: one page. Cultural and audience adjustments allowed but format holds.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Action Caption",
+      "entity_type": "concept",
+      "description": "Shipley graphics convention: every figure has a Figure Number, a Figure TITLE that asserts a BENEFIT (not just describes the image), and a Caption that delivers the PROOF. Example from Shipley model doc (p. 315): Figure 2.2-1, title 'Superior Glide Ratio', caption 'An 8:1 glide ratio gives the UQ601 longer unpowered range than other commercially available ultralights.' Evaluators skim figures first \u2014 action captions let a graphic sell even when the body text isn't read. Anti-pattern: neutral titles like 'System Architecture Diagram' that miss the persuasive moment.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Proposal Schedule",
+      "entity_type": "concept",
+      "description": "Time-phased plan working BACKWARD from submission deadline through Gold Team, Red Team, draft completion, Pink Team, PDW completion, and kickoff. Standard buffers: min 3-5 days from Red Team to submission for action item resolution, min 1 day from Gold Team to production lock. Identifies critical path activities (graphics production, past performance data calls, pricing inputs from teammates) and owners. Slipping color team dates is a leading indicator of submission risk \u2014 Shipley recommends rescheduling the review rather than truncating recovery time.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "entity_name": "Orange Team Review",
+      "entity_type": "concept",
+      "description": "Optional pre-Pink solution review used when the technical or management approach is novel or risky. Reviews the PROPOSED SOLUTION (architecture, staffing model, transition plan) against customer hot buttons and competitive landscape BEFORE the team commits to writing. Questions: Is the solution win-able? Is it executable at proposed price? Does it discriminate? Often run by capture team with subject matter experts not on the proposal team. Gate decision: green-light the solution baseline or pivot before sunk-cost commitment to writing.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    }
+  ],
+  "relationships": [
+    {
+      "src_id": "Shipley Business Development Lifecycle",
+      "tgt_id": "Opportunity Identification Phase",
+      "description": "BD Lifecycle begins with Opportunity Identification as Phase 1",
+      "keywords": "CONTAINS PHASE_OF",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Shipley Business Development Lifecycle",
+      "tgt_id": "Pursuit Decision Phase",
+      "description": "BD Lifecycle includes Pursuit Decision as Phase 2 gate",
+      "keywords": "CONTAINS PHASE_OF",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Shipley Business Development Lifecycle",
+      "tgt_id": "Capture Planning Phase",
+      "description": "BD Lifecycle includes Capture Planning as Phase 3",
+      "keywords": "CONTAINS PHASE_OF",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Shipley Business Development Lifecycle",
+      "tgt_id": "Proposal Planning Phase",
+      "description": "BD Lifecycle includes Proposal Planning as Phase 4",
+      "keywords": "CONTAINS PHASE_OF",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Shipley Business Development Lifecycle",
+      "tgt_id": "Proposal Development Phase",
+      "description": "BD Lifecycle includes Proposal Development as Phase 5",
+      "keywords": "CONTAINS PHASE_OF",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Color Team Reviews",
+      "tgt_id": "Pink Team Review",
+      "description": "Pink Team is first color review in sequence",
+      "keywords": "INCLUDES SEQUENCE",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Color Team Reviews",
+      "tgt_id": "Red Team Review",
+      "description": "Red Team is primary color review after Pink Team",
+      "keywords": "INCLUDES SEQUENCE",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Color Team Reviews",
+      "tgt_id": "Gold Team Review",
+      "description": "Gold Team is final color review before submission",
+      "keywords": "INCLUDES SEQUENCE",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Proposal Development Phase",
+      "tgt_id": "Color Team Reviews",
+      "description": "Proposal Development phase requires Color Team Reviews for quality",
+      "keywords": "REQUIRES USES",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Capture Planning Phase",
+      "tgt_id": "Black Hat Review",
+      "description": "Capture Planning uses Black Hat Review for competitive analysis",
+      "keywords": "USES INFORMS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Black Hat Review",
+      "tgt_id": "Ghost Strategy",
+      "description": "Black Hat Review identifies competitor weaknesses for ghosting",
+      "keywords": "INFORMS SUPPORTS",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Black Hat Review",
+      "tgt_id": "Win Theme Development",
+      "description": "Black Hat Review informs discriminators for win themes",
+      "keywords": "INFORMS SUPPORTS",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Proposal Planning Phase",
+      "tgt_id": "Compliance Matrix",
+      "description": "Proposal Planning creates Compliance Matrix for traceability",
+      "keywords": "CREATES USES",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Proposal Planning Phase",
+      "tgt_id": "Annotated Outline",
+      "description": "Proposal Planning creates Annotated Outline for writers",
+      "keywords": "CREATES PRODUCES",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Proposal Planning Phase",
+      "tgt_id": "Section L M Mapping",
+      "description": "Proposal Planning requires Section L/M Mapping for compliance",
+      "keywords": "REQUIRES USES",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Pink Team Review",
+      "tgt_id": "Compliance Matrix",
+      "description": "Pink Team validates Compliance Matrix completeness",
+      "keywords": "VALIDATES USES",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Pink Team Review",
+      "tgt_id": "Annotated Outline",
+      "description": "Pink Team reviews Annotated Outline for requirements coverage",
+      "keywords": "VALIDATES REVIEWS",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Win Theme Development",
+      "tgt_id": "Red Team Review",
+      "description": "Red Team evaluates Win Theme persuasiveness and integration",
+      "keywords": "EVALUATED_BY VALIDATED_BY",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Proposal Planning Phase",
+      "tgt_id": "Proposal Development Worksheet",
+      "description": "Proposal Planning produces a PDW per section before drafting",
+      "keywords": "PRODUCES REQUIRES",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Annotated Outline",
+      "tgt_id": "Proposal Development Worksheet",
+      "description": "Annotated Outline drives PDW content for each section",
+      "keywords": "INFORMS PRECEDES",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Proposal Development Worksheet",
+      "tgt_id": "Storyboard Content Plan",
+      "description": "PDW outputs roll up into per-section Storyboard Content Plans",
+      "keywords": "FEEDS PRECEDES",
+      "weight": 0.8,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Pink Team Review",
+      "tgt_id": "Storyboard Content Plan",
+      "description": "Pink Team reviews Storyboard Content Plans for compliance",
+      "keywords": "VALIDATES REVIEWS",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Executive Summary Writing Rules",
+      "tgt_id": "Win Theme Development",
+      "description": "Exec Summary opens with customer-first theme \u2014 applies Win Theme rules",
+      "keywords": "USES APPLIES",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Government Cover Letter Structure",
+      "tgt_id": "Compliance Matrix",
+      "description": "Cover letter compliance/responsiveness paragraph references the Compliance Matrix",
+      "keywords": "REFERENCES SUPPORTS",
+      "weight": 0.75,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Action Caption",
+      "tgt_id": "Proposal Development Worksheet",
+      "description": "PDW Key Visuals section requires Action Captions for every figure",
+      "keywords": "REQUIRES USED_IN",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Proposal Planning Phase",
+      "tgt_id": "Proposal Schedule",
+      "description": "Proposal Planning produces the time-phased Proposal Schedule",
+      "keywords": "PRODUCES CREATES",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Proposal Schedule",
+      "tgt_id": "Color Team Reviews",
+      "description": "Proposal Schedule sequences Color Team Review milestones",
+      "keywords": "SEQUENCES CONTAINS",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Capture Planning Phase",
+      "tgt_id": "Orange Team Review",
+      "description": "Capture Planning may run Orange Team to vet solution before commit",
+      "keywords": "USES OPTIONAL",
+      "weight": 0.7,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "src_id": "Orange Team Review",
+      "tgt_id": "Pink Team Review",
+      "description": "Orange Team precedes Pink Team \u2014 solution baseline before compliance review",
+      "keywords": "PRECEDES SEQUENCE",
+      "weight": 0.75,
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    }
+  ],
+  "chunks": [
+    {
+      "content": "Shipley Business Development Lifecycle Overview: The Shipley methodology defines a structured 7-phase process for pursuing and winning government contracts. Phases progress from Opportunity Identification through Contract Execution, with gate reviews at each transition. Key principle: 'Win before the RFP' through early positioning, customer engagement, and solution shaping during the pre-RFP capture phases. Organizations that engage customers early have 60-80% higher win rates than those who wait for RFP release.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "content": "Color Team Review Best Practices: Pink Team (compliance focus) should occur when annotated outline is complete but before significant writing begins. Red Team (strategy focus) requires 80% complete draft with integrated graphics. Gold Team (production focus) reviews camera-ready final document. Allow minimum 3-5 days between Red Team and submission for action item resolution. Independent reviewers from outside the proposal team provide most valuable feedback. Document all action items and track to closure.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "content": "Win Theme Formula (Feature-Benefit-Proof): Effective win themes follow a structured pattern: FEATURE (specific capability or approach you offer) \u2192 BENEFIT (quantified value to the customer) \u2192 PROOF (evidence from past performance or credentials). Example: 'Our CMMI Level 3 certified development process [Feature] reduces defect rates by 40% compared to industry average [Benefit], as demonstrated on the XYZ program where we delivered 99.2% defect-free code [Proof].' Themes must address customer hot buttons and discriminate from competitors.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "content": "Black Hat Competitive Analysis Process: (1) Identify 2-4 most likely competitors based on incumbent status, announced teaming, and market intelligence. (2) Assign team members to role-play each competitor. (3) Each 'competitor team' develops their likely win strategy, solution approach, pricing strategy, and strengths/weaknesses. (4) Present findings to capture team. (5) Identify ghosting opportunities and discriminator emphasis areas. Update Black Hat analysis when new intelligence emerges. Use findings to refine price-to-win and solution differentiation.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "content": "Government Executive Summary Pattern (annotated from Shipley Proposal Guide model document 4, p. 309): Open the lead theme with the CUSTOMER NAME first to establish customer focus, then immediately link a broad benefit to the seller's MOST UNIQUE DISCRIMINATOR \u2014 discriminators are often invisible to less-knowledgeable evaluators and must be made obvious. State the customer NEED verbatim from the RFP. Frame the CHALLENGE as both current position AND future requirement. List required capabilities word-for-word from the RFP \u2014 this lets the evaluator confirm compliance at a glance. Anti-pattern: opening with seller history or 'company overview' content. The Executive Summary is read FIRST and scored heavily, even when it is written LAST.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "content": "Government Cover Letter Template (annotated from Shipley Proposal Guide model document 7, p. 312 \u2014 formally solicited proposal): Subject line MUST start with signal word 'Proposal' followed by solicitation number and date for buyer sorting. Opening sentence is a short setup \u2014 not a long preamble. SECOND paragraph states the customer's evaluation criteria/objectives so the third paragraph reads as directly relevant. Limit to ONE selling paragraph; its LAST sentence must state the seller's most unique discriminator. Dedicate one paragraph to asserting the proposal is COMPLIANT and RESPONSIVE. Final paragraph names key managers with POC details. Target one page. Anti-pattern: padding with company history, multiple selling paragraphs, or omitting the compliance/responsiveness assertion.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    },
+    {
+      "content": "Proposal Development Worksheet (PDW) workflow (annotated from Shipley Proposal Guide model document, pp. 314-316): For each section, the author completes \u2014 BEFORE drafting prose \u2014 a one-page worksheet with: (1) SECTION OUTLINE mapped to RFP requirements (e.g., 2.2 Performance \u2192 2.2.1 Flight Control, 2.2.2 Aerodynamic Stability, 2.2.3 Glider Capability); (2) RELEVANT VOLUME STRATEGIES (which capture-derived themes apply, e.g., 'Emphasize proven 20-year performance and extensive testing'); (3) MAJOR ISSUES describing the customer pain solved (e.g., 'Easy to use; positive stability for self-corrective flying enhancing training; high glide ratio for extended range and quiet operation'); (4) KEY VISUALS with Action Caption pattern \u2014 Figure Number, Figure TITLE that asserts a benefit (e.g., 'Superior Glide Ratio'), and caption delivering the proof ('An 8:1 glide ratio gives the UQ601 longer unpowered range than other commercially available ultralights'). PDWs feed Pink Team review and become the source of truth for prose drafting. Skipping the PDW stage is a leading indicator of non-compliant first drafts and ballooning Red Team action items.",
+      "source_id": "govcon_ontology_shipley",
+      "file_path": "shipley_methodology"
+    }
+  ]
+}

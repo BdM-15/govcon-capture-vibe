@@ -45,3 +45,18 @@ def load_knowledge_parts(bundle_name: str) -> tuple[list[dict], list[dict], list
 
     bundle = load_knowledge_bundle(bundle_name)
     return bundle["entities"], bundle["relationships"], bundle["chunks"]
+
+
+def load_knowledge_exports(
+    bundle_name: str,
+) -> tuple[str, str, list[dict], list[dict], list[dict]]:
+    """Load the public exports expected from one knowledge module."""
+
+    bundle = load_knowledge_bundle(bundle_name)
+    return (
+        bundle["source_id"],
+        bundle["file_path"],
+        bundle["entities"],
+        bundle["relationships"],
+        bundle["chunks"],
+    )

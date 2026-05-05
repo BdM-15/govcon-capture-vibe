@@ -1,0 +1,735 @@
+{
+  "source_id": "govcon_ontology_company_kbr",
+  "file_path": "company_capabilities_kbr",
+  "entities": [
+    {
+      "entity_name": "KBR Inc",
+      "entity_type": "organization",
+      "description": "KBR, Inc. (NYSE: KBR) is a global engineering, technology, and government services company headquartered in Houston, TX. Two principal business areas relevant to federal proposals: (1) Government Solutions / Mission Technology Solutions \u2014 defense, intelligence, space, and federal civilian services with a long history of expeditionary logistics and sustainment; (2) Sustainable Technology Solutions \u2014 engineering, technology licensing, and industrial consulting. Note: KBR has publicly announced strategic intent to spin off Mission Technology Solutions; track for impact on parent-company past performance citations and OCI considerations.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "KBR Readiness and Sustainment",
+      "entity_type": "concept",
+      "description": "KBR's federal services line covering base operations support (BOS), contingency logistics, equipment readiness, facility O&M, fuels and transportation, supply chain, and expeditionary support. Built on KBR's LOGCAP heritage (incumbent / former incumbent across multiple LOGCAP iterations) and AFCAP performance. Directly applicable to RFPs from: U.S. Army (LOGCAP V task orders, IMCOM BOS), U.S. Air Force (AFCAP, AFCAPV BOS), Defense Logistics Agency, Combatant Commands (contingency), and installation management commands across the DoD.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "KBR Digital Accelerators Portfolio",
+      "entity_type": "concept",
+      "description": "KBR's portfolio of proprietary digital products and platforms, organized into six capability domains: Digital Engineering, Artificial Intelligence, Data Analytics, Cybersecurity, Autonomous Systems, and Enterprise Technology. KBR publicly states the portfolio supports 100+ active client initiatives across defense, national security, space, energy, and industrial sectors. These named products are the most defensible discriminators in proposals because they are owned IP with real deployments, not generic claims of 'AI capability' or 'cloud expertise.'",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Digital Engineering Capability",
+      "entity_type": "concept",
+      "description": "Model-based engineering, digital twin, and engineering automation. Anchored by ENCOMPASS-powered digital twin, RESAN compliance modeling, automated engineering toolchains, and a hybrid-cloud Digital Engineering Environment for distributed model-based systems engineering. Applicable to RFPs requiring MBSE, digital thread, configuration management, or model-driven sustainment of safety-critical systems (nuclear, aerospace, DoD acquisition lifecycle support).",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Artificial Intelligence Capability",
+      "entity_type": "concept",
+      "description": "AI/ML services anchored by KBRain (large language models, generative AI for operations automation), NLP/ML toolsets for data quality and tagging, and Intelligent Asset Management (IAM) for predictive maintenance. KBR's stated positioning is 'AI integrated to deliver results, not AI for AI's sake' \u2014 useful framing when an RFP calls for AI but cautions against unbounded R&D scope. Strongest applicability: knowledge management, decision support, predictive maintenance, and document/text-heavy operational workflows.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Data Analytics Capability",
+      "entity_type": "concept",
+      "description": "Large-scale data integration, analytics, and visualization. Named platforms: Athena (large-scale data management and reporting), HAL (adaptive learning / M&S exploration), CSOM (enterprise scheduling optimization), VIAverse (estates intelligence), CleanSpend (lifecycle carbon analysis). Applicable to RFPs requiring enterprise analytics platforms, M&S support, scheduling optimization, or sustainability/ESG reporting. Honest limit: most platforms originated in industrial/oil-and-gas contexts; federal applicability requires explicit mapping to the agency mission in proposal narrative.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Cybersecurity Capability",
+      "entity_type": "concept",
+      "description": "Cyber operations, range-based testing, secure tactical fabrics, and edge compute. Anchored by Cyber Range (virtual cyber test/training environment), CRYSTALVISTA (secure warfighting mesh fabric), and Quantum Pantheon (edge HPC nodes). KBR publicly cites a 'highly cleared and skilled workforce' \u2014 useful in proposals requiring TS/SCI personnel scale. Applicable to RFPs from USCYBERCOM, service cyber components, IC, and DoD T&E ranges.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Autonomous Systems Capability",
+      "entity_type": "concept",
+      "description": "End-to-end autonomy from RDT&E environments to fielded UAS. Named platforms: Autonomy Digital RDT&E Environment (cloud-based autonomy development), Artemis sub-25kg multirotor UAS (BVLOS-capable, GNSS-denied operations), Skypath (assured containment for autonomous platforms), TTMT (multi-target tracking with onboard CNN+CV), Dash C3 (multi-sensor situational awareness GUI). Applicable to RFPs from Army Futures Command, AFRL, Navy/Marine autonomy programs, and DoD ISR/counter-UAS contracts.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Enterprise Technology Capability",
+      "entity_type": "concept",
+      "description": "Federal cloud, large-scale data migration, and SaaS mission platforms. Anchored by Vaault (FedRAMP High + DoD IL5 authorized SaaS mission platform). KBR publicly cites end-to-end cloud migration at petabyte scale including power/cooling and legacy data center exit. Applicable to RFPs requiring FedRAMP High or IL5 hosting, large-scale archive migration to GovCloud, or mission-specific SaaS development with stringent FISMA / DoD SRG controls.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "KBR Vaault",
+      "entity_type": "technology",
+      "description": "KBR's proprietary SaaS mission platform for hosting client-specific solutions across multiple commercial cloud providers. Publicly attested as aligned with FedRAMP High and DoD SRG Impact Level 5 (IL5) baselines. This is one of the few KBR Digital Accelerators with hard, citable compliance accreditations \u2014 making it directly responsive to FedRAMP-mandated or IL5-mandated RFPs. Use in proposals: cite Vaault when the RFP requires controlled unclassified information (CUI) hosting, mission system SaaS, or accelerated ATO.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "KBRain",
+      "entity_type": "technology",
+      "description": "KBR's generative AI / LLM platform for streamlining text-heavy operational workflows and knowledge management. Public positioning emphasizes operational automation rather than novel model development. Applicable when an RFP calls for AI-augmented document review, requirements analysis, knowledge graph construction, or natural-language interface to enterprise data.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "ENCOMPASS Digital Twin Platform",
+      "entity_type": "technology",
+      "description": "KBR's data-model-driven project and digital twin delivery platform. Used across both project planning and lifecycle O&M. Underpins the CleanSpend carbon-analysis solution. Applicable to RFPs requiring digital twin delivery, infrastructure lifecycle modeling, or facility/asset configuration management.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "RESAN",
+      "entity_type": "technology",
+      "description": "Proprietary compliance-management platform that links requirement updates to constraint-based system models and 3D engineering models, visually flagging review areas. Validated in safety-critical environments including nuclear. Applicable to RFPs in nuclear sustainment, aerospace certification, FAA, NRC, DOE NNSA, or any program with requirements traceability gates.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Intelligent Asset Management IAM",
+      "entity_type": "technology",
+      "description": "Cloud-based AI/ML asset performance platform integrating predictive analytics with KBR domain expertise. Reduces downtime and identifies operational inefficiencies. Applicable to facility/installation O&M RFPs, fleet sustainment, and industrial asset support contracts. Honest applicability limit: federal references for IAM are less prominent than commercial; verify fit before citing as a primary discriminator in DoD proposals.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "INSITE Remote Operations Platform",
+      "entity_type": "technology",
+      "description": "Remote technical and advisory services platform for operating plants and facilities; gathers data securely and delivers process-performance insights. KBR has stated expansion into aircraft systems operations. Applicable to remote O&M RFPs, condition-based maintenance contracts, and OCONUS facility support where on-site labor is constrained.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Iron Stallion",
+      "entity_type": "technology",
+      "description": "KBR's enterprise software for space situational awareness (SSA) \u2014 a persistent analytical platform for data integration, automated analytics, and command-and-control workflows. Publicly stated customer base includes the U.S. Space Force, coalition partners, and commercial entities. Strongest applicable RFP context: USSF SSA/SDA, Space Systems Command, Space Development Agency, and combatant command space cells.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "WRAITH",
+      "entity_type": "technology",
+      "description": "Warfighter Real-time Analysis and Interoperability with Truth \u2014 a real-time visualization suite for tactical, commercial, and instrumentation data with runtime-loadable interface and algorithm components. Applicable to DoD T&E ranges, live/virtual/constructive integration RFPs, and tactical data fusion programs.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Athena Data Management Suite",
+      "entity_type": "technology",
+      "description": "Large-scale data management, analysis, visualization, and reporting platform for team environments. Applicable to enterprise analytics RFPs and data-engineering-heavy task orders where structured ingest, transformation, and dashboarding scale is required.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "HAL Adaptive Learning Framework",
+      "entity_type": "technology",
+      "description": "Harness for Adaptive Learning \u2014 automates exploration of M&S tools through advanced experimental design, adaptive sampling, and ML. Designed to extract insight from black-box simulation models. Applicable to RFPs for M&S modernization, AFRL/ARL/NRL research support, and digital engineering of complex systems where simulation campaigns dominate cost.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "CSOM Scheduling Optimization Module",
+      "entity_type": "technology",
+      "description": "Center Scheduling Optimization Module \u2014 automated enterprise scheduling that optimizes mission asset and infrastructure utilization across the full project solution space. Applicable to range scheduling, test facility utilization, training center management, and any large/labor-intensive scheduling problem.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "KBR Cyber Range",
+      "entity_type": "technology",
+      "description": "Virtual cyber range for incident response practice, defense tactic development, and tool testing without impacting mission systems. Applicable to RFPs for cyber training, blue/red team exercises, certification ranges, and DoD/IC cyber workforce development contracts.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "CRYSTALVISTA",
+      "entity_type": "technology",
+      "description": "Secure warfighting fabric \u2014 data, system, platform, and cloud agnostic \u2014 that creates a global encrypted mesh network across diverse data paths including commercial internet. Modular open systems approach supports JADC2/CJADC2 themes. Applicable to RFPs for tactical communications, multi-domain operations, and DoD enterprise IT modernization with edge-to-cloud requirements.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Quantum Pantheon",
+      "entity_type": "technology",
+      "description": "High-performance edge compute nodes designed to process and contextualize data where it is created. Pairs with CRYSTALVISTA. Applicable to RFPs requiring tactical edge compute, denied/disconnected operations support, or onboard ML inference for ISR/sensor platforms.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Artemis UAS",
+      "entity_type": "technology",
+      "description": "KBR's complete sub-25kg multirotor unmanned aircraft system. Features include GNSS-denied operations, BVLOS-capable radios, in-house EO/IR cameras and 2DOF gimbal, human-portable carriage. Applicable to RFPs for small UAS procurement, expeditionary ISR, force protection, and counter-UAS test target requirements.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Skypath Assured Containment",
+      "entity_type": "technology",
+      "description": "Onboard autonomy assurance system for UAS and maritime platforms providing encrypted heartbeat, assurable geofencing (static and dynamic), propulsion interruption, and kinetic energy recovery. Platform and bearer agnostic. Applicable to RFPs requiring safety-of-flight assurance for autonomous operations, BVLOS waivers, or hazardous-environment UAS deployments.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "TTMT Tracking and Targeting",
+      "entity_type": "technology",
+      "description": "Tracking and Targeting Moving Things \u2014 proprietary closed-loop offboard UAS control algorithms operating in 8DOF (including gimbal). Combines CNN-based and classical CV tracking for multi-target identification at high frame rate. Enables GNSS-denied object-of-interest tracking on land and sea. Applicable to RFPs for autonomous ISR, manned-unmanned teaming, and edge-AI tracking payloads.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Dash C3 Decision Support",
+      "entity_type": "technology",
+      "description": "Interactive GUI for real-time situational awareness from multi-sensor uncooperative-object observation. Dynamic display configuration by feature or target. Applicable to RFPs for sensor fusion C2, range safety operations, and operator decision-support interface development.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "VIAverse Estates Intelligence Platform",
+      "entity_type": "technology",
+      "description": "Estates and facilities intelligence platform delivering data validation and strategic insights for cost, performance, and sustainability optimization. Applicable to facility O&M RFPs, energy management contracts, and federal real-property optimization programs (GSA PBS, DoD installation support).",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "CleanSpend Carbon Analysis",
+      "entity_type": "technology",
+      "description": "Lifecycle carbon analysis solution (powered by ENCOMPASS) calculating scope 1/2/3 emissions over project lifetime. Originally targeted at offshore oil and gas. Applicable to federal RFPs with FAR sustainability requirements, Federal Sustainability Plan reporting, or scope 3 supply chain emissions disclosure mandates. Honest applicability limit: federal references thinner than commercial \u2014 confirm fit before featuring.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "FedRAMP High Authorization (Vaault)",
+      "entity_type": "compliance_artifact",
+      "description": "KBR Vaault is publicly stated as aligned with the FedRAMP High baseline. FedRAMP High covers the most sensitive unclassified federal data including law enforcement, emergency services, financial systems, and health systems where loss of CIA could have severe or catastrophic adverse effect. Cite this when an RFP requires FedRAMP authorization at the High impact level \u2014 it is one of KBR's strongest, hardest-to-replicate compliance discriminators.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "DoD SRG Impact Level 5 Authorization (Vaault)",
+      "entity_type": "compliance_artifact",
+      "description": "KBR Vaault is publicly stated as aligned with DoD SRG Impact Level 5 (IL5). IL5 covers Controlled Unclassified Information (CUI) and unclassified National Security Systems including mission-critical DoD information. Required for many DoD mission system RFPs. Cite alongside FedRAMP High for DoD cloud-hosted SaaS opportunities.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Cleared Workforce",
+      "entity_type": "compliance_artifact",
+      "description": "KBR publicly cites a 'highly cleared and skilled workforce' across cybersecurity and government services. For proposals requiring cleared personnel at scale (TS/SCI, TS/SCI w/ poly), this is a citable advantage over competitors that rely on subcontract clearance flow-down. TODO: Insert exact cleared-headcount, FSO information, and facility clearance level (e.g., TS facility) before final use in any proposal.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "CMMC Certification Status",
+      "entity_type": "compliance_artifact",
+      "description": "TODO: Insert KBR's current CMMC level (Level 1 self-assessed, Level 2 C3PAO, or Level 3) and assessment date. CMMC is increasingly required in DoD solicitations; missing or outdated certification status is a common compliance gap. Also document subcontractor flow-down posture.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Quality Management System Certification",
+      "entity_type": "compliance_artifact",
+      "description": "TODO: Insert specific certifications (ISO 9001, ISO 20000-1, ISO 27001, CMMI-DEV, CMMI-SVC level) with assessment dates and certifying body. Most large federal RFPs request quality management certification as either a mandatory or evaluated factor.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "LOGCAP V Contract",
+      "entity_type": "past_performance_reference",
+      "description": "KBR is one of the prime awardees of the U.S. Army's LOGCAP V (Logistics Civil Augmentation Program V) IDIQ contract \u2014 the largest contingency logistics support vehicle in DoD. KBR has substantial historical performance across multiple LOGCAP iterations dating to the 1990s. Most credible past performance reference for: contingency operations, expeditionary BOS, OCONUS sustainment, large-scale subcontract management, and rapid global mobilization. TODO: Insert current LOGCAP V CPARS ratings and specific task order references for proposal use.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "AFCAP Contract Heritage",
+      "entity_type": "past_performance_reference",
+      "description": "KBR has prime contractor heritage on the U.S. Air Force's AFCAP (Air Force Contract Augmentation Program) for contingency and base operations support. Applicable past performance for AF-customer BOS, civil engineering, fuels, transportation, and contingency RFPs. TODO: Insert current AFCAP iteration, active task orders, CPARS ratings, and KBR-specific scope cited in active performance.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "U.S. Space Force SSA Performance (Iron Stallion)",
+      "entity_type": "past_performance_reference",
+      "description": "KBR's Iron Stallion platform is publicly cited as deployed for the U.S. Space Force for space situational awareness command-and-control. Most credible past performance reference for USSF, Space Systems Command, Space Operations Command, and Space Development Agency proposals involving SSA, SDA, or C2 software. TODO: Insert specific contract numbers, dollar values, and performance period for proposal citation.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "Active GWAC and IDIQ Holdings",
+      "entity_type": "program",
+      "description": "TODO: Catalog KBR's current contract vehicle holdings, e.g.: GSA OASIS+, Alliant 3 (if awarded), SeaPort-NxG, ITES-3S/4S, GSA MAS schedules with specific SIN coverage, NASA SEWP V/VI subcontract positions, NIH CIO-SP3/4, NITAAC, and any agency-specific BPAs. Each vehicle accelerates pursuit timing and constrains/enables which RFPs are addressable. Update quarterly as vehicles are won, recompeted, or expired.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "entity_name": "FedRAMP High Plus IL5 Discriminator",
+      "entity_type": "strategic_theme",
+      "description": "Discriminator: KBR Vaault holds both FedRAMP High AND DoD SRG IL5 alignment \u2014 a combination relatively few competitors can claim simultaneously. For any RFP requiring CUI-grade DoD cloud hosting, this is a hard, citable, evaluator-verifiable strength. Pairs naturally with proof point: 'authorized platform reduces ATO timeline by [X] months versus building from scratch' (quantify with KBR-internal data before use).",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr",
+      "theme_type": "DISCRIMINATOR"
+    },
+    {
+      "entity_name": "Proven Sustainment Scale Discriminator",
+      "entity_type": "strategic_theme",
+      "description": "Discriminator: KBR's LOGCAP/AFCAP heritage represents one of the few sustainment performance records that demonstrates simultaneous global, multi-installation, contingency-capable execution. For BOS, contingency, and large-scale O&M RFPs, this scale is genuinely difficult for mid-tier competitors to ghost. Apply only when the RFP is in this lane \u2014 irrelevant for niche IT services or small-scale advisory work.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr",
+      "theme_type": "DISCRIMINATOR"
+    },
+    {
+      "entity_name": "Owned IP Digital Accelerators Discriminator",
+      "entity_type": "strategic_theme",
+      "description": "Discriminator: KBR brings owned-IP digital products (Vaault, KBRain, Iron Stallion, CRYSTALVISTA, Artemis, etc.) rather than reselling third-party tooling. Owned IP enables: customer-specific roadmap influence, no per-seat license escalation in option years, and persistent improvement across the customer base. Substantiate with the specific platform that fits the RFP \u2014 do not list all 19+ products in proposal narrative; that signals breadth without depth.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr",
+      "theme_type": "DISCRIMINATOR"
+    },
+    {
+      "entity_name": "Cleared Workforce at Scale Discriminator",
+      "entity_type": "strategic_theme",
+      "description": "Discriminator: KBR's cleared workforce supports rapid staffing of cleared billets without the lag of new clearance processing. For RFPs with cleared-personnel start-date constraints (typical in IC, Cyber, SOF, and SAP work), this directly mitigates transition risk \u2014 a frequent evaluator concern. TODO: Substantiate with current cleared-headcount and average time-to-staff for cleared positions.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr",
+      "theme_type": "DISCRIMINATOR"
+    },
+    {
+      "entity_name": "Petabyte Scale Cloud Migration Proof Point",
+      "entity_type": "strategic_theme",
+      "description": "Proof point: KBR publicly cites delivery of large-scale cloud migrations at petabyte scale, including legacy archive migration, end-to-end power and cooling engineering, and reduction in aging-data-center reliance. Use as proof for IT modernization and data center exit RFPs. TODO: Insert specific customer name, dataset volume, and migration window for proposal citation.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr",
+      "theme_type": "PROOF_POINT"
+    },
+    {
+      "entity_name": "Hundred Plus Digital Initiatives Proof Point",
+      "entity_type": "strategic_theme",
+      "description": "Proof point: KBR publicly cites 100+ active client initiatives running on Digital Accelerator platforms across defense, national security, space, energy, and infrastructure. Use as breadth proof when an RFP questions depth of digital portfolio adoption. Pair with a specific named program (e.g., USSF Iron Stallion deployment) so the breadth claim is not abstract.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr",
+      "theme_type": "PROOF_POINT"
+    },
+    {
+      "entity_name": "Safety Critical Compliance Proof Point",
+      "entity_type": "strategic_theme",
+      "description": "Proof point: RESAN has been deployed in nuclear and other safety-critical environments where requirement-to-model traceability under changing constraints is mandatory. Use for RFPs in nuclear sustainment, aerospace certification, and any program with formal requirements management gates. TODO: Add specific program reference (e.g., NNSA, naval reactors) before external use.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr",
+      "theme_type": "PROOF_POINT"
+    }
+  ],
+  "relationships": [
+    {
+      "src_id": "KBR Inc",
+      "tgt_id": "KBR Readiness and Sustainment",
+      "description": "KBR delivers the Readiness and Sustainment service line",
+      "keywords": "CONTAINS",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "KBR Inc",
+      "tgt_id": "KBR Digital Accelerators Portfolio",
+      "description": "KBR maintains the Digital Accelerators portfolio of proprietary platforms",
+      "keywords": "CONTAINS",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "KBR Digital Accelerators Portfolio",
+      "tgt_id": "Digital Engineering Capability",
+      "description": "Digital Accelerators portfolio includes Digital Engineering capability domain",
+      "keywords": "CONTAINS",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "KBR Digital Accelerators Portfolio",
+      "tgt_id": "Artificial Intelligence Capability",
+      "description": "Digital Accelerators portfolio includes AI capability domain",
+      "keywords": "CONTAINS",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "KBR Digital Accelerators Portfolio",
+      "tgt_id": "Data Analytics Capability",
+      "description": "Digital Accelerators portfolio includes Data Analytics capability domain",
+      "keywords": "CONTAINS",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "KBR Digital Accelerators Portfolio",
+      "tgt_id": "Cybersecurity Capability",
+      "description": "Digital Accelerators portfolio includes Cybersecurity capability domain",
+      "keywords": "CONTAINS",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "KBR Digital Accelerators Portfolio",
+      "tgt_id": "Autonomous Systems Capability",
+      "description": "Digital Accelerators portfolio includes Autonomous Systems capability domain",
+      "keywords": "CONTAINS",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "KBR Digital Accelerators Portfolio",
+      "tgt_id": "Enterprise Technology Capability",
+      "description": "Digital Accelerators portfolio includes Enterprise Technology capability domain",
+      "keywords": "CONTAINS",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Digital Engineering Capability",
+      "tgt_id": "ENCOMPASS Digital Twin Platform",
+      "description": "Digital Engineering capability anchored by ENCOMPASS digital twin platform",
+      "keywords": "CONTAINS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Digital Engineering Capability",
+      "tgt_id": "RESAN",
+      "description": "Digital Engineering capability includes RESAN compliance modeling platform",
+      "keywords": "CONTAINS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Artificial Intelligence Capability",
+      "tgt_id": "KBRain",
+      "description": "AI capability anchored by KBRain LLM/generative AI platform",
+      "keywords": "CONTAINS",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Artificial Intelligence Capability",
+      "tgt_id": "Intelligent Asset Management IAM",
+      "description": "AI capability includes IAM for predictive asset management",
+      "keywords": "CONTAINS",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Data Analytics Capability",
+      "tgt_id": "Athena Data Management Suite",
+      "description": "Data Analytics capability includes Athena for large-scale data management",
+      "keywords": "CONTAINS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Data Analytics Capability",
+      "tgt_id": "HAL Adaptive Learning Framework",
+      "description": "Data Analytics capability includes HAL for adaptive learning and M&S exploration",
+      "keywords": "CONTAINS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Data Analytics Capability",
+      "tgt_id": "CSOM Scheduling Optimization Module",
+      "description": "Data Analytics capability includes CSOM scheduling optimization",
+      "keywords": "CONTAINS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Data Analytics Capability",
+      "tgt_id": "Iron Stallion",
+      "description": "Data Analytics capability includes Iron Stallion for space situational awareness",
+      "keywords": "CONTAINS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Data Analytics Capability",
+      "tgt_id": "WRAITH",
+      "description": "Data Analytics capability includes WRAITH real-time analysis suite",
+      "keywords": "CONTAINS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Data Analytics Capability",
+      "tgt_id": "VIAverse Estates Intelligence Platform",
+      "description": "Data Analytics capability includes VIAverse for estates intelligence",
+      "keywords": "CONTAINS",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Data Analytics Capability",
+      "tgt_id": "CleanSpend Carbon Analysis",
+      "description": "Data Analytics capability includes CleanSpend lifecycle carbon analysis",
+      "keywords": "CONTAINS",
+      "weight": 0.8,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Data Analytics Capability",
+      "tgt_id": "INSITE Remote Operations Platform",
+      "description": "Data Analytics capability includes INSITE remote operations advisory",
+      "keywords": "CONTAINS",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Cybersecurity Capability",
+      "tgt_id": "KBR Cyber Range",
+      "description": "Cybersecurity capability anchored by Cyber Range platform",
+      "keywords": "CONTAINS",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Cybersecurity Capability",
+      "tgt_id": "CRYSTALVISTA",
+      "description": "Cybersecurity capability includes CRYSTALVISTA secure warfighting fabric",
+      "keywords": "CONTAINS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Cybersecurity Capability",
+      "tgt_id": "Quantum Pantheon",
+      "description": "Cybersecurity capability includes Quantum Pantheon edge HPC",
+      "keywords": "CONTAINS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Autonomous Systems Capability",
+      "tgt_id": "Artemis UAS",
+      "description": "Autonomous Systems capability includes Artemis sub-25kg UAS",
+      "keywords": "CONTAINS",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Autonomous Systems Capability",
+      "tgt_id": "Skypath Assured Containment",
+      "description": "Autonomous Systems capability includes Skypath autonomy assurance",
+      "keywords": "CONTAINS",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Autonomous Systems Capability",
+      "tgt_id": "TTMT Tracking and Targeting",
+      "description": "Autonomous Systems capability includes TTMT tracking algorithms",
+      "keywords": "CONTAINS",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Autonomous Systems Capability",
+      "tgt_id": "Dash C3 Decision Support",
+      "description": "Autonomous Systems capability includes Dash C3 multi-sensor situational awareness",
+      "keywords": "CONTAINS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Enterprise Technology Capability",
+      "tgt_id": "KBR Vaault",
+      "description": "Enterprise Technology capability anchored by Vaault SaaS mission platform",
+      "keywords": "CONTAINS",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "KBR Vaault",
+      "tgt_id": "FedRAMP High Authorization (Vaault)",
+      "description": "Vaault holds FedRAMP High alignment per public KBR statement",
+      "keywords": "EVIDENCES",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "KBR Vaault",
+      "tgt_id": "DoD SRG Impact Level 5 Authorization (Vaault)",
+      "description": "Vaault holds DoD SRG IL5 alignment per public KBR statement",
+      "keywords": "EVIDENCES",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "LOGCAP V Contract",
+      "tgt_id": "KBR Readiness and Sustainment",
+      "description": "LOGCAP V is KBR's flagship past performance for sustainment service line",
+      "keywords": "EVIDENCES",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "AFCAP Contract Heritage",
+      "tgt_id": "KBR Readiness and Sustainment",
+      "description": "AFCAP heritage is past performance for Air Force sustainment work",
+      "keywords": "EVIDENCES",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "U.S. Space Force SSA Performance (Iron Stallion)",
+      "tgt_id": "Iron Stallion",
+      "description": "USSF deployment is the named past performance reference for Iron Stallion",
+      "keywords": "EVIDENCES",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "FedRAMP High Plus IL5 Discriminator",
+      "tgt_id": "FedRAMP High Authorization (Vaault)",
+      "description": "FedRAMP High + IL5 discriminator substantiated by Vaault FedRAMP High authorization",
+      "keywords": "EVIDENCES",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "FedRAMP High Plus IL5 Discriminator",
+      "tgt_id": "DoD SRG Impact Level 5 Authorization (Vaault)",
+      "description": "FedRAMP High + IL5 discriminator substantiated by Vaault IL5 authorization",
+      "keywords": "EVIDENCES",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Proven Sustainment Scale Discriminator",
+      "tgt_id": "LOGCAP V Contract",
+      "description": "Sustainment scale discriminator substantiated by LOGCAP V performance",
+      "keywords": "EVIDENCES",
+      "weight": 1.0,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Proven Sustainment Scale Discriminator",
+      "tgt_id": "AFCAP Contract Heritage",
+      "description": "Sustainment scale discriminator also substantiated by AFCAP heritage",
+      "keywords": "EVIDENCES",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Owned IP Digital Accelerators Discriminator",
+      "tgt_id": "KBR Digital Accelerators Portfolio",
+      "description": "Owned IP discriminator substantiated by the Digital Accelerators portfolio",
+      "keywords": "EVIDENCES",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Cleared Workforce at Scale Discriminator",
+      "tgt_id": "Cleared Workforce",
+      "description": "Cleared workforce discriminator substantiated by KBR cleared workforce posture",
+      "keywords": "EVIDENCES",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Petabyte Scale Cloud Migration Proof Point",
+      "tgt_id": "Enterprise Technology Capability",
+      "description": "Petabyte cloud migration proof point belongs to Enterprise Technology capability",
+      "keywords": "SUPPORTS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Hundred Plus Digital Initiatives Proof Point",
+      "tgt_id": "KBR Digital Accelerators Portfolio",
+      "description": "100+ initiatives proof point belongs to Digital Accelerators portfolio",
+      "keywords": "SUPPORTS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "src_id": "Safety Critical Compliance Proof Point",
+      "tgt_id": "RESAN",
+      "description": "Safety-critical compliance proof point evidenced by RESAN nuclear deployments",
+      "keywords": "EVIDENCES",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    }
+  ],
+  "chunks": [
+    {
+      "content": "Applicability of KBR Capabilities to a DoD Sustainment / BOS RFP: When the ingested RFP is in the LOGCAP / AFCAP / IMCOM BOS lane, the strongest discriminators to surface are (1) Proven Sustainment Scale (LOGCAP V incumbency), (2) Cleared Workforce at Scale, and (3) global mobilization heritage. Digital Accelerators are SECONDARY in this context \u2014 only cite VIAverse (estates), INSITE (remote ops), or IAM (asset performance) if the RFP explicitly calls for digital transformation of sustainment. Do NOT lead a sustainment proposal with Iron Stallion or Artemis \u2014 they are off-thesis and signal misreading the customer.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "content": "Applicability to a Federal Cloud / IT Modernization RFP: When the RFP requires FedRAMP High or DoD IL5 hosting, KBR Vaault is the primary discriminator and its public FedRAMP High + IL5 alignment is the primary proof. Pair with the petabyte-scale migration proof point. KBRain is a secondary discriminator if the RFP includes AI/automation themes. Honest limit: if the RFP requires a specific commercial cloud (e.g., AWS GovCloud only) verify Vaault's underlying provider stack matches the RFP before claiming responsiveness.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "content": "Applicability to a Space Force / SSA / SDA RFP: Iron Stallion is the named, customer-validated platform for USSF SSA C2. When the ingested RFP is from USSF, SSC, SpOC, or SDA and involves space domain awareness, satellite catalog management, or space C2 software, Iron Stallion is the primary discriminator and the USSF deployment is the named past performance. WRAITH and Athena are supporting platforms for data fusion and large-scale data management aspects of space mission systems.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "content": "Applicability to a DoD Autonomy / UAS / ISR RFP: KBR's autonomy stack (Artemis UAS + Skypath assured containment + TTMT tracking + Dash C3 GUI) is a complete, owned-IP solution for sub-25kg autonomous platforms in GNSS-denied / BVLOS environments. Strongest fit: Army FTUAS-class requirements, AFRL autonomy research, Navy MUM-T programs, and counter-UAS test-target procurements. Honest limit: KBR is not a Group 4/5 UAS prime \u2014 do not pursue MQ-class or larger requirements with this stack.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    },
+    {
+      "content": "When Applicability is Weak \u2014 Honest Decline Indicators: Some RFPs are outside KBR's addressable lane. The bootstrapped capabilities module will still load, but if Phase 4 inference produces few links between company entities and extracted RFP requirements, the system is correctly signaling weak fit. Examples of weak fit: pure professional services advisory without sustainment or technology overlap, niche scientific R&D outside KBR's space/defense/energy domains, small business set-asides where KBR is ineligible, and Group 4/5 UAS or major weapon system primes. Use sparse inference results as a data signal in bid/no-bid analysis, not as a defect.",
+      "source_id": "govcon_ontology_company_kbr",
+      "file_path": "company_capabilities_kbr"
+    }
+  ]
+}

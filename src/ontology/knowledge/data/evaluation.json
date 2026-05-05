@@ -1,0 +1,345 @@
+{
+  "source_id": "govcon_ontology_evaluation",
+  "file_path": "evaluation_methodology",
+  "entities": [
+    {
+      "entity_name": "Adjectival Rating Scale Patterns",
+      "entity_type": "concept",
+      "description": "Government evaluators use standardized adjectival scales to rate proposals. Common 5-level scale: Outstanding (significantly exceeds requirements with exceptional benefit), Good (exceeds requirements with benefit), Acceptable (meets requirements), Marginal (fails to meet some requirements, correctable), Unacceptable (fails to meet requirements, not correctable). Alternative 4-level: Exceptional, Acceptable, Marginal, Unacceptable. Understanding rating definitions guides discriminator development - 'Acceptable' is minimum; 'Outstanding' requires exceeding requirements with quantified benefits. Target discriminators that move ratings from Acceptable to Good/Outstanding.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "Confidence Rating Patterns",
+      "entity_type": "concept",
+      "description": "Performance risk assessment uses confidence ratings indicating evaluator's belief in offeror's ability to perform. Scale: High Confidence (no doubt offeror can perform), Significant Confidence (little doubt), Satisfactory Confidence (some doubt but acceptable risk), Limited Confidence (substantial doubt, risk mitigation needed), No Confidence (extreme doubt, likely failure). Past performance and management approach primarily drive confidence ratings. Proposal strategy: Provide proof points reducing evaluator doubt about execution capability. Relevant past performance is strongest confidence builder.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "Color Rating System",
+      "entity_type": "concept",
+      "description": "Some agencies use color codes for evaluation ratings. Common pattern: Blue/Purple (Exceptional - exceeds requirements with significant benefit), Green (Acceptable - meets requirements), Yellow (Marginal - potentially correctable deficiencies), Red (Unacceptable - material deficiencies). May combine with risk colors: Green (low), Yellow (moderate), Red (high). Color ratings often converted to point scores for tradeoff analysis. Strategy: Target 'Blue' ratings on highest-weighted factors where discrimination justifies potential price premium.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "Technical Approach Evaluation Factor",
+      "entity_type": "evaluation_factor",
+      "description": "Technical Approach evaluates solution quality, methodology, and innovation. Common subfactors: Understanding of requirements (demonstrates grasp of customer needs), Technical solution (approach to meeting requirements), Staffing (qualifications and availability of proposed personnel), Management (organization, processes, quality control). Outstanding ratings require: innovative solutions beyond minimum requirements, quantified benefits, risk mitigation approaches, and proof points from similar work. This factor typically carries highest weight in best-value procurements (30-50%).",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology",
+      "weight": "30-50%",
+      "importance": "Often most heavily weighted"
+    },
+    {
+      "entity_name": "Past Performance Evaluation Factor",
+      "entity_type": "evaluation_factor",
+      "description": "Past Performance evaluates historical contractor performance as predictor of future performance. Evaluation criteria: relevance (similarity to current requirement in scope, size, complexity), recency (typically within 3-5 years), quality (CPARS ratings, customer satisfaction). Evaluators contact references and review CPARS database. Neutral rating given to offerors with no relevant past performance - not negative, but not positive. Strategy: Select most relevant references, pre-brief reference POCs, address any performance issues with corrective action narrative. Typically 15-30% of evaluation weight.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology",
+      "weight": "15-30%",
+      "importance": "Critical predictor of future success"
+    },
+    {
+      "entity_name": "Management Approach Evaluation Factor",
+      "entity_type": "evaluation_factor",
+      "description": "Management Approach evaluates organizational capability to execute contract. Common subfactors: Program management (structure, reporting, governance), Quality assurance (QC/QA processes, continuous improvement), Risk management (identification, mitigation, monitoring), Transition planning (mobilization, knowledge transfer). Outstanding ratings require: detailed management plans with proven processes, organizational charts with named personnel, risk registers with quantified mitigation, realistic schedules with dependencies. Often evaluated alongside Technical Approach or as separate factor (15-25%).",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology",
+      "weight": "15-25%",
+      "importance": "Demonstrates execution capability"
+    },
+    {
+      "entity_name": "Price Cost Evaluation Factor",
+      "entity_type": "evaluation_factor",
+      "description": "Price/Cost evaluation assesses proposed pricing for reasonableness, realism, and balance. Not rated adjectivally - evaluated numerically and analyzed for: Price reasonableness (comparison to IGCE, other offers, market rates), Cost realism (for cost-reimbursement - can work be done for proposed cost?), Price balance (no front-loading or material unbalancing). For LPTA: lowest technically acceptable price wins. For tradeoff: price premium must be justified by technical superiority. Include credible Basis of Estimate (BOE) documentation. Unrealistically low prices raise performance risk concerns.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology",
+      "weight": "Varies by award type",
+      "importance": "LPTA: Determines winner; Tradeoff: Weighed against technical"
+    },
+    {
+      "entity_name": "Evaluation Strengths",
+      "entity_type": "concept",
+      "description": "Strengths are proposal aspects that exceed requirements or increase confidence in successful performance. Evaluators document strengths with specific citations to proposal content. Types: Significant Strengths (appreciably exceed requirements with substantial benefit), Strengths (exceed requirements or offer some benefit). Strategy for earning strengths: (1) Exceed stated requirements with quantified benefits, (2) Offer innovative approaches reducing risk, (3) Provide exceptional proof points from past performance, (4) Demonstrate deep customer understanding. Strengths justify higher adjectival ratings and price premiums in tradeoff.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "Evaluation Weaknesses",
+      "entity_type": "concept",
+      "description": "Weaknesses are proposal aspects that increase risk but do not preclude award. Weakness indicates lack of information or documentation, or unclear approach that raises evaluator concern. Weaknesses may be discussed during negotiations and corrected in final proposal revisions. Categories: Significant Weakness (appreciably increases risk of unsuccessful performance), Weakness (flaw or concern increasing risk). Strategy: Review proposal from evaluator perspective to identify potential weaknesses before submission. Address concerns preemptively with additional detail, proof points, or risk mitigation plans.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "Evaluation Deficiencies",
+      "entity_type": "concept",
+      "description": "Deficiencies are material failures to meet requirements that are not correctable or would require major proposal revision. A single deficiency typically results in 'Unacceptable' rating for that factor. Types of deficiencies: (1) Non-responsive - fails to address requirement, (2) Non-compliant - violates stated requirement, (3) Material misrepresentation - false or misleading information. Deficiencies usually cannot be discussed during negotiations without creating unfair advantage. Prevention: Rigorous compliance review at Pink Team ensuring every requirement is addressed. Red Team should flag any potential deficiencies for correction.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "LPTA Award Methodology",
+      "entity_type": "concept",
+      "description": "Lowest Price Technically Acceptable (LPTA) awards contract to lowest-priced offeror meeting minimum technical standards. No tradeoff between price and technical quality - either you meet the bar or you don't. LPTA appropriate when: requirements are well-defined, risk is minimal, and little value in exceeding requirements. Strategy: (1) Focus on compliance - meet but don't exceed, (2) Price to win - lowest compliant price wins, (3) Eliminate discriminators that add cost without evaluation benefit, (4) Ensure no weaknesses/deficiencies that would render proposal unacceptable. Innovation unrewarded in LPTA.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "Best Value Tradeoff Methodology",
+      "entity_type": "concept",
+      "description": "Best Value Tradeoff allows government to pay more for higher-quality proposals when benefits justify premium. Source Selection Authority (SSA) conducts tradeoff analysis comparing offers' strengths, weaknesses, and prices. Higher-rated but higher-priced offer may win if SSA documents that benefits warrant cost delta. Strategy: (1) Maximize strengths on highest-weighted factors, (2) Develop clear discriminators with quantified benefits, (3) Price realistically - not necessarily lowest but must be fair/reasonable, (4) Help evaluators justify your selection with concrete benefit statements. Understanding evaluation weights critical.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "Source Selection Team Structure",
+      "entity_type": "organization",
+      "description": "FAR 15.303 source selection organization for negotiated procurements: (1) SOURCE SELECTION AUTHORITY (SSA) \u2014 single decision-maker who selects the winning offer, owns the Source Selection Decision Document (SSDD), and is the subject of any GAO protest of the award rationale; (2) SOURCE SELECTION ADVISORY COUNCIL (SSAC) \u2014 senior advisors providing comparative assessment to the SSA, used on larger/complex acquisitions; (3) SOURCE SELECTION EVALUATION BOARD (SSEB) \u2014 working-level evaluators applying the criteria in Section M, documenting strengths/weaknesses/deficiencies, often split into Technical, Past Performance, and Cost/Price teams. The Contracting Officer (CO) runs the process and signs the award. Proposals must be written for the SSEB (detailed, evidence-based) AND for the SSA (clear summaries that justify selection).",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "Competitive Range Determination",
+      "entity_type": "concept",
+      "description": "Per FAR 15.306(c), after initial evaluation the CO may establish a competitive range comprising the most highly rated proposals \u2014 others are eliminated from the competition without further consideration. CO may further limit the competitive range for efficient competition (FAR 15.306(c)(2)). Implication: weaknesses or deficiencies that drop the proposal out of the competitive range remove the chance to fix them in discussions or FPRs. Conversely, being IN the competitive range triggers discussions opportunity. Strategy: write to clear the bar to enter the competitive range BEFORE optimizing for highest score.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "Discussions and Final Proposal Revisions",
+      "entity_type": "concept",
+      "description": "FAR 15.306(d) discussions: meaningful exchanges between government and offerors in the competitive range to resolve uncertainties and allow proposal improvement. CO must indicate to each offeror its deficiencies, significant weaknesses, and adverse past performance information that the offeror has not had a prior opportunity to respond to. Offerors then submit Final Proposal Revisions (FPRs) by a common cutoff date. Award without discussions allowed (FAR 15.306(a)) \u2014 RFP will state if government intends to award on initial proposals. Strategy: treat the initial proposal as if it were the final \u2014 do not bank on discussions.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "Oral Presentations",
+      "entity_type": "concept",
+      "description": "Per FAR 15.102, agencies may require oral presentations as part of the proposal. Often used for: key personnel demonstration, technical approach walkthroughs, scenario-based problem-solving exercises, management discussions. Recordings/slides become part of the official offer. Common rules: named team members must present (no substitutions), time-boxed sections, no Q&A or limited Q&A, no slide updates after submission. Strategy: rehearse to time, anchor on win themes and discriminators, ensure presenters can speak credibly to past performance specifics. Critical for evaluation factors scored on personnel quality or solution depth.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "Relative Importance Language",
+      "entity_type": "concept",
+      "description": "Section M language signals factor weighting even when numerical weights are not stated. Decoder: 'significantly more important than' = ~2x weight; 'more important than' = ~1.3-1.5x weight; 'approximately equal to' = same weight; 'when combined, non-price factors are significantly more important than price' = best-value tradeoff with strong technical preference; 'when combined, approximately equal to price' = price will likely decide between technically close offers; 'price is the least important factor' does NOT mean price is unimportant \u2014 it means technical differentiation must be substantial to overcome price delta. Misreading these phrases is a top capture-strategy error.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "entity_name": "Small Business Participation Evaluation Factor",
+      "entity_type": "evaluation_factor",
+      "description": "Common evaluation factor for unrestricted procurements requiring small business subcontracting commitments (FAR 19.7, FAR 52.219-9 Small Business Subcontracting Plan). Evaluators assess: percentage commitments by socioeconomic category (SDB, WOSB, HUBZone, SDVOSB, ANC/Indian Tribes), specificity of subcontracting opportunities, named small business teammates with binding commitments, past performance meeting prior subcontracting goals. Failing to meet subcontracting goals during performance can become Past Performance issues on next bid. Strategy: name small business teammates with signed teaming agreements; commit to specific scope, not just dollars; cite prior CPARS for subcontracting attainment.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology",
+      "weight": "5-15%",
+      "importance": "Often go/no-go threshold; rarely outcome-determinative on its own"
+    },
+    {
+      "entity_name": "Source Selection Decision Document",
+      "entity_type": "concept",
+      "description": "FAR 15.308 SSDD \u2014 written rationale by the SSA explaining the integrated assessment and award decision, including comparative assessment of proposals and reasoning for any tradeoff. The SSDD is the primary document GAO reviews in a bid protest of the award rationale. Implication for proposal writing: make the SSA's job easy \u2014 provide clear, quotable benefit statements the SSA can paste into the SSDD to justify selecting your higher-priced offer over a lower-priced competitor. Generic claims and unquantified benefits force the SSA to invent justification, which is protestable. Concrete proof points ARE the tradeoff narrative.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    }
+  ],
+  "relationships": [
+    {
+      "src_id": "Adjectival Rating Scale Patterns",
+      "tgt_id": "Evaluation Strengths",
+      "description": "Strengths drive higher adjectival ratings on evaluation factors",
+      "keywords": "DETERMINES INFLUENCES",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Adjectival Rating Scale Patterns",
+      "tgt_id": "Evaluation Weaknesses",
+      "description": "Weaknesses lower adjectival ratings and increase risk assessment",
+      "keywords": "DETERMINES INFLUENCES",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Evaluation Deficiencies",
+      "tgt_id": "Adjectival Rating Scale Patterns",
+      "description": "Deficiencies result in Unacceptable ratings",
+      "keywords": "RESULTS_IN CAUSES",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Technical Approach Evaluation Factor",
+      "tgt_id": "Evaluation Strengths",
+      "description": "Technical approach strengths from innovation and risk mitigation",
+      "keywords": "EVALUATED_BY GENERATES",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Past Performance Evaluation Factor",
+      "tgt_id": "Confidence Rating Patterns",
+      "description": "Past performance primarily drives confidence/risk ratings",
+      "keywords": "DETERMINES INFLUENCES",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Management Approach Evaluation Factor",
+      "tgt_id": "Confidence Rating Patterns",
+      "description": "Management approach affects confidence in execution capability",
+      "keywords": "INFLUENCES SUPPORTS",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "LPTA Award Methodology",
+      "tgt_id": "Price Cost Evaluation Factor",
+      "description": "LPTA awards based on lowest price among acceptable offers",
+      "keywords": "DETERMINED_BY PRIORITIZES",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Best Value Tradeoff Methodology",
+      "tgt_id": "Evaluation Strengths",
+      "description": "Tradeoff analysis weighs strengths against price premium",
+      "keywords": "WEIGHS CONSIDERS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Best Value Tradeoff Methodology",
+      "tgt_id": "Technical Approach Evaluation Factor",
+      "description": "Best value tradeoff rewards technical superiority",
+      "keywords": "REWARDS ENABLES",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Source Selection Team Structure",
+      "tgt_id": "Source Selection Decision Document",
+      "description": "SSA produces the Source Selection Decision Document",
+      "keywords": "PRODUCES OWNS",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Source Selection Team Structure",
+      "tgt_id": "Competitive Range Determination",
+      "description": "Contracting Officer establishes competitive range during source selection",
+      "keywords": "EXECUTES OWNS",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Competitive Range Determination",
+      "tgt_id": "Discussions and Final Proposal Revisions",
+      "description": "Only offerors in the competitive range receive discussions and submit FPRs",
+      "keywords": "ENABLES PRECEDES",
+      "weight": 0.95,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Evaluation Deficiencies",
+      "tgt_id": "Competitive Range Determination",
+      "description": "Deficiencies risk elimination from the competitive range",
+      "keywords": "RISKS CAUSES",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Discussions and Final Proposal Revisions",
+      "tgt_id": "Evaluation Weaknesses",
+      "description": "Discussions allow correction of weaknesses identified during evaluation",
+      "keywords": "ADDRESSES MITIGATES",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Best Value Tradeoff Methodology",
+      "tgt_id": "Source Selection Decision Document",
+      "description": "Tradeoff analysis is documented in the SSDD",
+      "keywords": "DOCUMENTED_IN PRODUCES",
+      "weight": 0.9,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Relative Importance Language",
+      "tgt_id": "Best Value Tradeoff Methodology",
+      "description": "Section M relative importance language signals tradeoff parameters",
+      "keywords": "SIGNALS DEFINES",
+      "weight": 0.85,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Oral Presentations",
+      "tgt_id": "Technical Approach Evaluation Factor",
+      "description": "Oral presentations frequently evaluate Technical Approach factor depth",
+      "keywords": "EVALUATES SUPPORTS",
+      "weight": 0.8,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "src_id": "Small Business Participation Evaluation Factor",
+      "tgt_id": "Past Performance Evaluation Factor",
+      "description": "Prior subcontracting goal attainment becomes Past Performance evidence",
+      "keywords": "INFORMS RELATES_TO",
+      "weight": 0.75,
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    }
+  ],
+  "chunks": [
+    {
+      "content": "Achieving Outstanding Ratings: To receive 'Outstanding' or 'Exceptional' ratings, proposals must significantly exceed requirements with quantified benefits and minimal risk. Strategies: (1) Exceed stated metrics by measurable amounts (e.g., '99.9% availability vs. required 99%'), (2) Offer innovative approaches that reduce customer risk or cost, (3) Provide exceptional past performance demonstrating similar achievements, (4) Include value-adds not required but beneficial to customer. Each strength must be specific, provable, and aligned with evaluation criteria. Generic claims without proof points won't generate documented strengths in evaluation reports.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "content": "Evaluation Factor Weighting Strategy: When RFP states evaluation weights, allocate proposal resources proportionally. Example: Technical Approach 50%, Past Performance 25%, Price 25%. This means: (1) Technical volume gets most pages and strongest writers, (2) Past performance references carefully selected for relevance, (3) Price competitive but not necessarily lowest if technical superiority justifies premium. When weights unstated but order given (Technical more important than Past Performance more important than Price), apply decreasing weight estimate. When factors are 'equal,' treat Technical and Past Performance as 35-40% each, Price 20-30%. Always optimize for highest-weighted factors first.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "content": "LPTA vs Best Value Decision Framework: Before developing proposal strategy, determine award basis from Section M. LPTA indicators: 'lowest price technically acceptable,' 'no tradeoff,' requirements clearly defined, commodity-like services. Best Value indicators: 'may pay more for higher quality,' 'tradeoff analysis,' technical factors 'significantly more important' than price, complex requirements. Hybrid approaches possible - some factors LPTA-like (meet threshold) while others allow tradeoff. Misreading award basis causes strategic errors: over-investing in LPTA (wasted cost) or under-investing in tradeoff (missed discriminators).",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "content": "Reading Section M Relative Importance Language: When Section M does not assign numerical weights, the wording itself is the weight. Decoder reference: 'significantly more important than' implies roughly a 2:1 weight ratio; 'more important than' implies roughly 1.3-1.5:1; 'approximately equal to' is 1:1; the bundled phrase 'when combined, non-price factors are significantly more important than price' signals a strong best-value tradeoff posture where technical superiority can overcome a meaningful price premium; 'when combined, approximately equal to price' means price will likely be decisive between technically close offers; 'price is the least important factor' does NOT mean price is unimportant. Always cross-check the wording against any factor ordering in Section M and the presence/absence of an LPTA statement.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "content": "Writing for the SSA's Source Selection Decision Document: Per FAR 15.308, the Source Selection Authority must produce a written rationale (SSDD) for the award decision, including the comparative assessment and tradeoff reasoning. The SSDD is the primary document GAO reviews in a protest of the award decision. Implication for proposal writing: every claimed strength should give the SSA a quotable, evidence-backed sentence she can paste into the SSDD to justify selecting your higher-priced offer. Anti-pattern: vague claims ('best-in-class', 'world-class', 'unparalleled') force the SSA to invent the justification, which is protestable. Strong pattern: 'Offeror X's [specific approach] is projected to reduce [specific metric] by [quantified amount] based on [cited past performance reference], warranting the [dollar amount] price premium.'",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    },
+    {
+      "content": "Source Selection Process Flow (FAR 15.3): (1) Initial proposal evaluation by SSEB against Section M factors \u2192 strengths, weaknesses, deficiencies, risk assessments, ratings; (2) CO establishes COMPETITIVE RANGE of most highly rated proposals (FAR 15.306(c)) \u2014 others are out; (3) DISCUSSIONS with offerors in the competitive range, where CO must surface deficiencies, significant weaknesses, and adverse past performance the offeror has not had a chance to address (FAR 15.306(d)(3)); (4) FINAL PROPOSAL REVISIONS (FPRs) due by common cutoff; (5) Final SSEB evaluation; (6) SSAC comparative assessment if used; (7) SSA decision documented in the SSDD (FAR 15.308); (8) Award and unsuccessful-offeror debriefs (FAR 15.505/15.506). Note: 'award without discussions' is permitted under FAR 15.306(a) when the RFP states the government intends to do so \u2014 never rely on a discussion round to fix a weak initial proposal.",
+      "source_id": "govcon_ontology_evaluation",
+      "file_path": "evaluation_methodology"
+    }
+  ]
+}
