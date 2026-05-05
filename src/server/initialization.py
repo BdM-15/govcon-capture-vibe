@@ -34,6 +34,7 @@ from src.ontology.schema import VALID_ENTITY_TYPES
 from src.core import get_settings
 from src.server.initialization_support import (
     build_embedding_function,
+    build_govcon_lightrag_setup,
     build_lightrag_runtime_kwargs,
     build_raganything_config,
     configure_mineru_environment,
@@ -170,38 +171,19 @@ async def initialize_raganything():
     # LLM timeout configuration for complex chunks (360s default was insufficient for chunk 8)
     llm_timeout = settings.llm_timeout
 
-    # Import the GovCon chunking function (non-invasive doc-type classifier + banner
-    # injection). LightRAG's API server constructs LightRAG without passing
-    # chunking_func, so setting global_args.chunking_func has no effect — we must
-    # inject it via lightrag_kwargs. See src/extraction/govcon_chunking.py.
-    from src.extraction.govcon_chunking import BANNER_TEMPLATE, govcon_chunking_func
+    govcon_runtime = build_govcon_lightrag_setup(
+        settings,
+        llm_timeout=llm_timeout,
+        role_llm_configs=role_routing.role_llm_configs,
+        graph_storage=getattr(global_args, "graph_storage", None),
+    )
     logger.info("=" * 88)
     logger.info("✅ GOVCON DOCUMENT CLASSIFIER STARTUP CHECK: CONFIGURED")
-    logger.info("   chunking_func=src.extraction.govcon_chunking.govcon_chunking_func")
-    logger.info("   banner_template=%s", BANNER_TEMPLATE)
+    logger.info("   chunking_func=%s", govcon_runtime["chunking_func_name"])
+    logger.info("   banner_template=%s", govcon_runtime["banner_template"])
     logger.info("   labels=solicitation | pws | cdrl_exhibit | template | unknown")
     logger.info("   LightRAG provides the chunking_func hook; GovCon template/solicitation labeling is Theseus-owned")
     logger.info("=" * 88)
-
-    # Local BGE reranker (optional — gated by ENABLE_RERANK env var).
-    # Returns None when disabled, in which case LightRAG skips reranking entirely.
-    from src.extraction.govcon_reranker import make_govcon_rerank_func
-    rerank_func = make_govcon_rerank_func()
-
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # entity_types_guidance — rendered from prompts/extraction/govcon_entity_types.yaml
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # LightRAG 1.5.0 dropped the `entity_types: list` shape (and hard-fails the
-    # ENTITY_TYPES env var). The substitution token is `{entity_types_guidance}`,
-    # a single string injected into the extraction prompt at the PART D anchor.
-    #
-    # Phase 1.1c (#126) of epic #124: the full Part D markdown is generated from
-    # the canonical YAML catalog (single source of truth shared with schema.py's
-    # `VALID_ENTITY_TYPES`). The inline Part D copy was deleted from
-    # `prompts/extraction/govcon_lightrag_json.txt` to eliminate drift risk.
-    # ═══════════════════════════════════════════════════════════════════════════════
-    from src.ontology.entity_catalog import get_default_catalog
-    entity_types_guidance = get_default_catalog().render_part_d()
 
     # ═══════════════════════════════════════════════════════════════════════════════
     # Phase 1.3 (issue #124): xAI strict json_schema response_format for `extract`.
@@ -214,23 +196,7 @@ async def initialize_raganything():
     # JSON-Schema `pattern`, so relationship keyword canonicalization remains prompt
     # + downstream normalization. Toggle via ENTITY_EXTRACTION_STRICT_SCHEMA=true.
     # ═══════════════════════════════════════════════════════════════════════════════
-    role_llm_configs = role_routing.role_llm_configs
-
-    lightrag_kwargs = {
-        # Phase 1.2 (issue #124): native JSON structured-output extraction.
-        # LightRAG uses entity_extraction_json_* prompt keys and
-        # _process_json_extraction_result (json_repair-based parser).
-        "entity_extraction_use_json": True,
-        **build_lightrag_runtime_kwargs(
-            entity_types_guidance=entity_types_guidance,
-            chunking_func=govcon_chunking_func,
-            llm_timeout=llm_timeout,
-            role_llm_configs=role_llm_configs,
-            rerank_func=rerank_func,
-            min_rerank_score=settings.min_rerank_score,
-            graph_storage=getattr(global_args, "graph_storage", None),
-        ),
-    }
+    lightrag_kwargs = govcon_runtime["lightrag_kwargs"]
     
     # LLM function for RAGAnything top-level + modal processors. RAGAnything's
     # TableModalProcessor / EquationModalProcessor parse their own JSON shape

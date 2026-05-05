@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from functools import partial
-from typing import Any
+from typing import Any, Callable
 
 
 def configure_mineru_environment(settings, *, environ: dict[str, str] | None = None) -> None:
@@ -92,3 +92,60 @@ def build_lightrag_runtime_kwargs(
         kwargs["graph_storage"] = graph_storage
 
     return kwargs
+
+
+def build_govcon_lightrag_setup(
+    settings,
+    *,
+    llm_timeout: int,
+    role_llm_configs,
+    graph_storage: str | None,
+    get_default_catalog: Callable[[], Any] | None = None,
+    make_rerank_func: Callable[[], Any] | None = None,
+    chunking_func=None,
+    banner_template: str | None = None,
+) -> dict[str, Any]:
+    """Assemble GovCon-specific LightRAG runtime pieces for init."""
+    if get_default_catalog is None:
+        from src.ontology.entity_catalog import get_default_catalog as _get_default_catalog
+
+        get_default_catalog = _get_default_catalog
+
+    if make_rerank_func is None:
+        from src.extraction.govcon_reranker import (
+            make_govcon_rerank_func as _make_govcon_rerank_func,
+        )
+
+        make_rerank_func = _make_govcon_rerank_func
+
+    if chunking_func is None or banner_template is None:
+        from src.extraction.govcon_chunking import (
+            BANNER_TEMPLATE as _banner_template,
+            govcon_chunking_func as _chunking_func,
+        )
+
+        chunking_func = _chunking_func
+        banner_template = _banner_template
+
+    entity_types_guidance = get_default_catalog().render_part_d()
+    rerank_func = make_rerank_func()
+    lightrag_kwargs = {
+        "entity_extraction_use_json": True,
+        **build_lightrag_runtime_kwargs(
+            entity_types_guidance=entity_types_guidance,
+            chunking_func=chunking_func,
+            llm_timeout=llm_timeout,
+            role_llm_configs=role_llm_configs,
+            rerank_func=rerank_func,
+            min_rerank_score=settings.min_rerank_score,
+            graph_storage=graph_storage,
+        ),
+    }
+    return {
+        "banner_template": banner_template,
+        "chunking_func": chunking_func,
+        "chunking_func_name": getattr(chunking_func, "__name__", repr(chunking_func)),
+        "entity_types_guidance": entity_types_guidance,
+        "rerank_func": rerank_func,
+        "lightrag_kwargs": lightrag_kwargs,
+    }

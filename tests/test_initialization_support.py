@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 from src.server.initialization_support import (
     build_embedding_function,
+    build_govcon_lightrag_setup,
     build_lightrag_runtime_kwargs,
     build_raganything_config,
     configure_mineru_environment,
@@ -136,4 +137,42 @@ def test_build_lightrag_runtime_kwargs_omits_optional_features_when_disabled() -
         "chunking_func": "chunker",
         "default_llm_timeout": 300,
         "role_llm_configs": {"query": "cfg"},
+    }
+
+
+def test_build_govcon_lightrag_setup_assembles_runtime_inputs() -> None:
+    def fake_chunker():
+        return None
+
+    fake_chunker.__name__ = "govcon_chunking_func"
+
+    setup = build_govcon_lightrag_setup(
+        _settings(min_rerank_score=0.33),
+        llm_timeout=700,
+        role_llm_configs={"extract": "cfg"},
+        graph_storage="Neo4JStorage",
+        get_default_catalog=lambda: SimpleNamespace(render_part_d=lambda: "PART D"),
+        make_rerank_func=lambda: "rerank",
+        chunking_func=fake_chunker,
+        banner_template="[GOVCON_DOC]",
+    )
+
+    assert setup["banner_template"] == "[GOVCON_DOC]"
+    assert setup["chunking_func"] is fake_chunker
+    assert setup["chunking_func_name"] == "govcon_chunking_func"
+    assert setup["entity_types_guidance"] == "PART D"
+    assert setup["rerank_func"] == "rerank"
+    assert setup["lightrag_kwargs"] == {
+        "entity_extraction_use_json": True,
+        "addon_params": {
+            "entity_types_guidance": "PART D",
+            "entity_type_prompt_file": "govcon.yaml",
+            "language": "English",
+        },
+        "chunking_func": fake_chunker,
+        "default_llm_timeout": 700,
+        "role_llm_configs": {"extract": "cfg"},
+        "rerank_model_func": "rerank",
+        "min_rerank_score": 0.33,
+        "graph_storage": "Neo4JStorage",
     }
