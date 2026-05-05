@@ -59,7 +59,7 @@ from src.server.admin_routes import (
 )
 from src.server.document_routes import register_processing_log_routes
 from src.server.prompt_library import register_prompt_library_routes
-from src.server.skill_ui_routes import register_skill_ui_routes
+from src.server.skill_routes import register_skill_ui_routes
 from src.server.workspace_routes import (
     register_entity_chunk_routes,
     register_graph_routes,
@@ -163,6 +163,75 @@ def build_ui_route_context(
     )
 
 
+def _register_feature_routes(
+    app: FastAPI,
+    *,
+    context: UIRouteContext,
+    query_func: QueryFunc,
+    data_func: QueryDataFunc | None,
+    llm_func: "LlmFunc" | None,
+) -> None:
+    """Register all feature-owner route modules behind the UI shell."""
+    register_dashboard_stats_routes(
+        app,
+        workspace_dir=context.workspace_dir,
+        chats_dir=context.chats_dir,
+        settings_provider=get_settings,
+        graph_storage=context.graph_storage,
+        now=context.now,
+    )
+
+    register_processing_log_routes(app)
+    register_prompt_library_routes(app)
+
+    register_chat_routes(
+        app,
+        chat_store=context.chat_store,
+        query_settings=context.query_settings,
+        query_func=query_func,
+        data_func=data_func,
+        now=context.now,
+    )
+
+    register_entity_chunk_routes(app, workspace_dir=context.workspace_dir)
+    register_intelligence_routes(app, workspace_dir=context.workspace_dir)
+
+    register_graph_routes(
+        app,
+        workspace_name=context.workspace_name,
+        graph_storage=context.graph_storage,
+        working_dir=context.working_dir,
+    )
+
+    register_workspace_ui_routes(
+        app,
+        workspace_name=context.workspace_name,
+        working_dir=context.working_dir,
+        graph_storage=context.graph_storage,
+        set_env_var_func=context.set_env_var,
+        schedule_restart=context.schedule_restart,
+    )
+
+    register_query_settings_routes(
+        app,
+        workspace_name=context.workspace_name,
+        store=context.query_settings,
+    )
+
+    register_skill_ui_routes(
+        app,
+        workspace_dir=context.workspace_dir,
+        data_func=data_func,
+        llm_func=llm_func,
+    )
+
+    register_mcp_ui_routes(
+        app,
+        set_env_var=context.set_env_var,
+        schedule_restart=context.schedule_restart,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Registration
 # ---------------------------------------------------------------------------
@@ -213,65 +282,12 @@ def register_ui(
         name="theseus-ui",
     )
 
-    register_dashboard_stats_routes(
+    _register_feature_routes(
         app,
-        workspace_dir=context.workspace_dir,
-        chats_dir=context.chats_dir,
-        settings_provider=get_settings,
-        graph_storage=context.graph_storage,
-        now=context.now,
-    )
-
-    register_processing_log_routes(app)
-
-    register_prompt_library_routes(app)
-
-    register_chat_routes(
-        app,
-        chat_store=context.chat_store,
-        query_settings=context.query_settings,
+        context=context,
         query_func=query_func,
         data_func=data_func,
-        now=context.now,
-    )
-
-    register_entity_chunk_routes(app, workspace_dir=context.workspace_dir)
-
-    register_intelligence_routes(app, workspace_dir=context.workspace_dir)
-
-    register_graph_routes(
-        app,
-        workspace_name=context.workspace_name,
-        graph_storage=context.graph_storage,
-        working_dir=context.working_dir,
-    )
-
-    register_workspace_ui_routes(
-        app,
-        workspace_name=context.workspace_name,
-        working_dir=context.working_dir,
-        graph_storage=context.graph_storage,
-        set_env_var_func=context.set_env_var,
-        schedule_restart=context.schedule_restart,
-    )
-
-    register_query_settings_routes(
-        app,
-        workspace_name=context.workspace_name,
-        store=context.query_settings,
-    )
-
-    register_skill_ui_routes(
-        app,
-        workspace_dir=context.workspace_dir,
-        data_func=data_func,
         llm_func=llm_func,
-    )
-
-    register_mcp_ui_routes(
-        app,
-        set_env_var=context.set_env_var,
-        schedule_restart=context.schedule_restart,
     )
 
     logger.info("✅ Project Theseus UI mounted at /ui (static: %s)", _STATIC_DIR)
