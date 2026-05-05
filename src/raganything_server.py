@@ -50,18 +50,18 @@ logging.getLogger("raganything").setLevel(logging.WARNING)
 logging.getLogger("lightrag").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-# Import LightRAG server
-from lightrag.api.lightrag_server import create_app
 from lightrag.api.config import global_args
 import uvicorn
 
 # Import modular components (AFTER load_dotenv() so they see environment variables)
 from src.server.config import configure_raganything_args
 from src.server.initialization import initialize_raganything, get_rag_instance
+from src.server.app_runtime import build_server_runtime
 from src.server.routes import register_custom_ingestion_routes
 from src.server.startup_banner import build_startup_banner_items
 from src.server.ui_query_bridge import make_ui_query_bridges
 from src.server.ui_routes import register_ui
+from lightrag.api.lightrag_server import create_app
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -92,77 +92,21 @@ async def main():
     if not rag_instance:
         raise RuntimeError("Failed to initialize RAG-Anything instance")
     
-    host = global_args.host
-    port = global_args.port
-    
-    # Step 3-pre: Monkey-patch LightRAG inside lightrag.api.lightrag_server so that
-    # when create_app() constructs ITS internal LightRAG instance (separate from
-    # RAGAnything's _rag_anything.lightrag), the local BGE reranker is auto-injected.
-    # The stock API server only supports remote rerank bindings (cohere, jina, ali);
-    # this hook adds first-class local FlagReranker support without forking LightRAG.
-    from src.extraction.govcon_reranker import make_govcon_rerank_func
-    _local_rerank = make_govcon_rerank_func()
-    if _local_rerank is not None:
-        import lightrag.api.lightrag_server as _lr_api_mod
-        _OriginalLightRAG = _lr_api_mod.LightRAG
-
-        class _LightRAGWithLocalRerank(_OriginalLightRAG):
-            def __init__(self, *args, **kwargs):
-                if kwargs.get("rerank_model_func") is None:
-                    kwargs["rerank_model_func"] = _local_rerank
-                    logger.info(
-                        "🎯 Auto-injecting local BGE reranker into API server's "
-                        "LightRAG (workspace=%s)",
-                        kwargs.get("workspace", "?"),
-                    )
-                # LightRAG._normalize_addon_params injects ENTITY_TYPE_PROMPT_FILE from env into
-                # every LightRAG instance. The govcon.yaml profile only defines
-                # entity_extraction_json_examples (JSON mode); if entity_extraction_use_json
-                # defaults to False the text-mode validator raises ValueError.
-                kwargs.setdefault("entity_extraction_use_json", True)
-                super().__init__(*args, **kwargs)
-
-        _lr_api_mod.LightRAG = _LightRAGWithLocalRerank
-
-    # Step 3: Create LightRAG server (WebUI + query endpoints)
-    app = create_app(global_args)
-
-    # Restore original class to avoid affecting any later code paths
-    if _local_rerank is not None:
-        _lr_api_mod.LightRAG = _OriginalLightRAG
-
-    # Log the effective model configuration the WebUI /query endpoint will use.
-    # LightRAG's API server passes `args.llm_model` directly into openai_complete_if_cache(...)
-    # (see: lightrag/api/lightrag_server.py -> create_optimized_openai_llm_func).
     settings = get_settings()
-
-    # Step 4: Override endpoints to use RAG-Anything + semantic post-processing
-    register_custom_ingestion_routes(app, rag_instance, logger=logger)
-
-    # Project Theseus custom UI (cyberpunk capture workbench at /ui)
-    ui_bridges = make_ui_query_bridges(rag_instance, logger=logger)
-    register_ui(app, ui_bridges.query, ui_bridges.query_data, llm_func=ui_bridges.llm)
-
-    # Consolidated startup banner — full pipeline detail in docs/ARCHITECTURE.md
-    graph_storage = global_args.graph_storage if hasattr(global_args, 'graph_storage') else "NetworkXStorage"
-    from src.utils.logging_config import log_banner, Colors
-    from src.ontology.schema import VALID_ENTITY_TYPES, VALID_RELATIONSHIP_TYPES
-    c = Colors
-    startup_items = build_startup_banner_items(
-        settings,
-        host=host,
-        port=port,
-        graph_storage=graph_storage,
-        working_dir=global_args.working_dir,
-        entity_count=len(VALID_ENTITY_TYPES),
-        relationship_count=len(VALID_RELATIONSHIP_TYPES),
-        colors=c,
+    runtime = build_server_runtime(
+        rag_instance,
+        settings=settings,
+        global_args_obj=global_args,
+        logger=logger,
+        create_app_fn=create_app,
+        register_custom_ingestion_routes_fn=register_custom_ingestion_routes,
+        make_ui_query_bridges_fn=make_ui_query_bridges,
+        register_ui_fn=register_ui,
+        build_startup_banner_items_fn=build_startup_banner_items,
     )
 
-    log_banner(f"{c.BOLD}✅ PROJECT THESEUS — READY{c.RESET}", items=startup_items, logger=logger, force_print=True)
-
     # Step 5: Start server
-    config = uvicorn.Config(app=app, host=host, port=port, log_level="info")
+    config = uvicorn.Config(app=runtime.app, host=runtime.host, port=runtime.port, log_level="info")
     server_instance = uvicorn.Server(config)
     await server_instance.serve()
 
