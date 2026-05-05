@@ -1,6 +1,6 @@
 [project]
 name = "govcon-capture-vibe"
-version = "1.1.0"
+version = "1.7.0"
 description = "Cloud-optimized government contracting RFP analysis using RAG-Anything + LightRAG with xAI Grok"
 readme = "README.md"
 requires-python = ">=3.13"
