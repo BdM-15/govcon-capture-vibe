@@ -26,7 +26,8 @@ Usage:
 
 import logging
 import time
-from typing import Dict, Callable, Awaitable, List
+from dataclasses import dataclass, field
+from typing import Any, Awaitable, Callable, Dict
 
 from src.core import get_settings
 from src.inference.neo4j_graph_io import Neo4jGraphIO, group_entities_by_type
@@ -79,75 +80,93 @@ MAX_CONCURRENT_LLM_CALLS = _settings.get_effective_post_processing_max_async()
 
 
 
-async def _semantic_post_processor_neo4j(
-    llm_model_name: str = None,
-    temperature: float = 0.1,
-    rag_storage_path: str = "./rag_storage",
-) -> Dict:
-    """
-    Neo4j-native semantic post-processing using Cypher queries.
-    
-    This function:
-    1. Reads entities/relationships from Neo4j
-    2. Corrects entity types using LLM inference
-    3. Infers missing relationships using LLM inference
-    4. Writes updates back to Neo4j via Cypher
-    
-    Args:
-        llm_model_name: Name of LLM model to use
-        temperature: Temperature for LLM inference
-        
-    Returns:
-        Dict with processing statistics
-    """
-    settings = get_settings()
-    if llm_model_name is None:
-        # Use REASONING model for post-processing (grok-4-1 series)
-        llm_model_name = settings.post_processing_llm_name
-    
-    start_time = time.time()
-    phase_times = {}  # Track per-phase durations
-    
-    # Initialize Neo4j I/O
-    logger.info("\n📊 Initializing Neo4j connection...")
-    neo4j_io = Neo4jGraphIO()
-    
-    try:
-        # Phase 1: Load entities and relationships
-        phase_start = time.time()
-        logger.info("\n📥 Phase 1 · Data Loading: Reading knowledge graph from Neo4j...")
-        entities = neo4j_io.get_all_entities()
-        relationships = neo4j_io.get_all_relationships()
-        
-        # Capture the graph as it enters post-processing. Final reported counts
-        # are taken only after Phase 5 so logs do not mix pre/post snapshots.
-        starting_entity_count = len(entities)
-        starting_rel_count = len(relationships)
-        phase_times['Phase 1 · Data Loading'] = time.time() - phase_start
-        logger.info(f"  📊 Starting graph snapshot: {starting_entity_count} entities, {starting_rel_count} relationships")
-        logger.info(f"  ⏱️  Phase 1 completed in {phase_times['Phase 1 · Data Loading']:.1f}s")
-        
-        if not entities:
-            logger.warning("⚠️  No entities found in Neo4j workspace")
+@dataclass
+class SemanticPostProcessingRun:
+    """Own one semantic post-processing run end-to-end."""
+
+    rag_storage_path: str
+    llm_model_name: str
+    temperature: float = 0.1
+    neo4j_io_factory: Callable[[], Neo4jGraphIO] = Neo4jGraphIO
+    algorithm_runner: Callable[..., Awaitable[list[dict[str, Any]]]] = run_all_algorithms_parallel
+    sync_discoveries_to_vdb_fn: Callable[..., Awaitable[dict[str, Any]]] | None = None
+    start_time: float = field(default_factory=time.time, init=False)
+    phase_times: dict[str, float] = field(default_factory=dict, init=False)
+    starting_entity_count: int = field(default=0, init=False)
+    starting_relationship_count: int = field(default=0, init=False)
+    entities_corrected: int = field(default=0, init=False)
+    relationships_retyped: int = field(default=0, init=False)
+    relationships_inferred: int = field(default=0, init=False)
+    relationships_synced: int = field(default=0, init=False)
+    vdb_sync_stats: dict[str, Any] = field(default_factory=dict, init=False)
+    neo4j_io: Neo4jGraphIO | None = field(default=None, init=False)
+
+    async def run(self) -> Dict:
+        logger.info("\n📊 Initializing Neo4j connection...")
+        self.neo4j_io = self.neo4j_io_factory()
+
+        try:
+            entities, relationships = self._load_graph()
+            if not entities:
+                logger.warning("⚠️  No entities found in Neo4j workspace")
+                return {
+                    "status": "skipped",
+                    "reason": "no_entities",
+                    "entities_corrected": 0,
+                    "relationships_inferred": 0,
+                    "processing_time": 0,
+                }
+
+            await self._normalize_entities(entities)
+            entities, relationships, grouped = self._normalize_relationships()
+            await self._infer_relationships(entities, relationships, grouped)
+            await self._sync_vdb()
+            result = self._build_result()
+            self._log_summary(result)
+            return result
+        except Exception as exc:
+            logger.error("❌ Error during Neo4j post-processing: %s", exc, exc_info=True)
             return {
-                "status": "skipped",
-                "reason": "no_entities",
+                "status": "error",
+                "error": str(exc),
                 "entities_corrected": 0,
                 "relationships_inferred": 0,
-                "processing_time": 0
+                "processing_time": time.time() - self.start_time,
             }
-        
-        # Phase 2: Lightweight Entity Type Cleanup (NO LLM INFERENCE)
-        # ========================================================================
-        # With native LightRAG extraction, most types are valid from our ontology.
-        # This phase ONLY handles edge cases:
-        # 1. "table" from RAG-Anything's multimodal processors (generic type)
-        # 2. Hash-prefixed types (#requirement) from LightRAG internal markers
-        # 
-        # NO LLM calls needed - all corrections are heuristic/deterministic.
-        # ========================================================================
+        finally:
+            if self.neo4j_io is not None:
+                self.neo4j_io.close()
+
+    def _io(self) -> Neo4jGraphIO:
+        if self.neo4j_io is None:
+            raise RuntimeError("Neo4j I/O not initialized")
+        return self.neo4j_io
+
+    def _complete_phase(self, phase_name: str, phase_start: float) -> None:
+        self.phase_times[phase_name] = time.time() - phase_start
+        logger.info(f"  ⏱️  {phase_name} completed in {self.phase_times[phase_name]:.1f}s")
+
+    def _load_graph(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        phase_name = "Phase 1 · Data Loading"
+        phase_start = time.time()
+        logger.info("\n📥 Phase 1 · Data Loading: Reading knowledge graph from Neo4j...")
+        entities = self._io().get_all_entities()
+        relationships = self._io().get_all_relationships()
+        self.starting_entity_count = len(entities)
+        self.starting_relationship_count = len(relationships)
+        logger.info(
+            "  📊 Starting graph snapshot: %s entities, %s relationships",
+            self.starting_entity_count,
+            self.starting_relationship_count,
+        )
+        self._complete_phase(phase_name, phase_start)
+        return entities, relationships
+
+    async def _normalize_entities(self, entities: list[dict[str, Any]]) -> None:
+        phase_name = "Phase 2 · Entity Normalization"
         phase_start = time.time()
         logger.info("\n🔧 Phase 2 · Entity Normalization: Lightweight type cleanup...")
+
         grouped = group_entities_by_type(entities)
         entity_updates, unknown_entities, table_mapped, hash_cleaned = plan_entity_type_updates(
             grouped,
@@ -156,218 +175,230 @@ async def _semantic_post_processor_neo4j(
         )
 
         if table_mapped > 0:
-            logger.info(f"  📊 Processing {table_mapped} table entities (from RAG-Anything)...")
-        
-        if table_mapped > 0:
-            logger.info(f"  ✅ Heuristically mapped {table_mapped} table entities")
+            logger.info("  📊 Processing %s table entities (from RAG-Anything)...", table_mapped)
+            logger.info("  ✅ Heuristically mapped %s table entities", table_mapped)
         if hash_cleaned > 0:
-            logger.info(f"  ✅ Cleaned {hash_cleaned} prefixed entity types (#, #|, |)")
-        
-        # CASE 3 Processing: LLM retype UNKNOWN entities (could be critical workload drivers)
-        unknown_retyped = 0
-        if unknown_entities:
-            logger.info(f"  🔍 Retyping {len(unknown_entities)} UNKNOWN entities with LLM...")
-            from src.inference.entity_operations import retype_entities_batch
-            from src.utils.llm_client import call_llm_async
-            
-            # LLM function wrapper for retyping
-            async def llm_func(prompt: str, system_prompt: str) -> str:
-                return await call_llm_async(
-                    prompt=prompt,
-                    model=llm_model_name,
-                    system_prompt=system_prompt,
-                    temperature=0.1  # Low temp for consistent typing
-                )
-            
-            # Process in batches of 20 to avoid token limits
-            batch_size = 20
-            for i in range(0, len(unknown_entities), batch_size):
-                batch = unknown_entities[i:i+batch_size]
-                try:
-                    retyped = await retype_entities_batch(batch, llm_func)
-                    for entity in batch:
-                        entity_name = entity.get('entity_name')
-                        if entity_name in retyped:
-                            new_type = retyped[entity_name]
-                            if new_type and new_type.lower() != 'unknown':
-                                entity_updates.append({
-                                    'id': entity['id'],
-                                    'new_entity_type': new_type.lower()
-                                })
-                                unknown_retyped += 1
-                                logger.debug(f"    Retyped '{entity_name}': UNKNOWN → {new_type}")
-                except Exception as e:
-                    logger.warning(f"  ⚠️ Failed to retype batch {i//batch_size + 1}: {e}")
-            
-            if unknown_retyped > 0:
-                logger.info(f"  ✅ LLM retyped {unknown_retyped}/{len(unknown_entities)} UNKNOWN entities")
-        
-        entities_corrected = 0
+            logger.info("  ✅ Cleaned %s prefixed entity types (#, #|, |)", hash_cleaned)
+
+        unknown_retyped = await self._retype_unknown_entities(unknown_entities, entity_updates)
+        if unknown_retyped > 0:
+            logger.info(
+                "  ✅ LLM retyped %s/%s UNKNOWN entities",
+                unknown_retyped,
+                len(unknown_entities),
+            )
+
         if entity_updates:
-            logger.info(f"\n💾 Updating {len(entity_updates)} entity types in Neo4j...")
-            entities_corrected = neo4j_io.update_entity_types(entity_updates)
+            logger.info("\n💾 Updating %s entity types in Neo4j...", len(entity_updates))
+            self.entities_corrected = self._io().update_entity_types(entity_updates)
         else:
             logger.info("\n✅ No entity type corrections needed (native LightRAG extraction working)")
 
-        phase_times['Phase 2 · Entity Normalization'] = time.time() - phase_start
-        logger.info(f"  ⏱️  Phase 2 completed in {phase_times['Phase 2 · Entity Normalization']:.1f}s")
-        
-        # Phase 3: Generic Relationship Type Resolution (NO LLM)
-        # ========================================================================
-        # After entity types are corrected (table→requirement, etc.), re-type
-        # RELATED_TO relationships using entity-pair lookup. These RELATED_TO rels
-        # originate from LLM-produced belongs_to/contained_in/part_of that were
-        # normalized to RELATED_TO by schema.normalize_relationship_type().
-        # ========================================================================
+        self._complete_phase(phase_name, phase_start)
+
+    async def _retype_unknown_entities(
+        self,
+        unknown_entities: list[dict[str, Any]],
+        entity_updates: list[dict[str, Any]],
+    ) -> int:
+        if not unknown_entities:
+            return 0
+
+        logger.info("  🔍 Retyping %s UNKNOWN entities with LLM...", len(unknown_entities))
+        from src.inference.entity_operations import retype_entities_batch
+        from src.utils.llm_client import call_llm_async
+
+        async def llm_func(prompt: str, system_prompt: str) -> str:
+            return await call_llm_async(
+                prompt=prompt,
+                model=self.llm_model_name,
+                system_prompt=system_prompt,
+                temperature=0.1,
+            )
+
+        unknown_retyped = 0
+        batch_size = 20
+        for index in range(0, len(unknown_entities), batch_size):
+            batch = unknown_entities[index : index + batch_size]
+            try:
+                retyped = await retype_entities_batch(batch, llm_func)
+                for entity in batch:
+                    entity_name = entity.get("entity_name")
+                    if entity_name not in retyped:
+                        continue
+                    new_type = retyped[entity_name]
+                    if new_type and new_type.lower() != "unknown":
+                        entity_updates.append(
+                            {"id": entity["id"], "new_entity_type": new_type.lower()}
+                        )
+                        unknown_retyped += 1
+                        logger.debug("    Retyped '%s': UNKNOWN → %s", entity_name, new_type)
+            except Exception as exc:
+                logger.warning(
+                    "  ⚠️ Failed to retype batch %s: %s",
+                    index // batch_size + 1,
+                    exc,
+                )
+
+        return unknown_retyped
+
+    def _normalize_relationships(
+        self,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, list[dict[str, Any]]]]:
+        phase_name = "Phase 3 · Rel Normalization"
         phase_start = time.time()
-        logger.info("\n🔗 Phase 3 · Relationship Normalization: Resolving generic types (entity-pair lookup)...")
+        logger.info(
+            "\n🔗 Phase 3 · Relationship Normalization: Resolving generic types (entity-pair lookup)..."
+        )
 
-        # Reload entities with corrected types
-        entities = neo4j_io.get_all_entities()
-        relationships = neo4j_io.get_all_relationships()
-        
-        # Build entity lookup by elementId
-        entity_by_id = {e['id']: e for e in entities}
-
+        entities = self._io().get_all_entities()
+        relationships = self._io().get_all_relationships()
+        entity_by_id = {entity["id"]: entity for entity in entities}
         retype_updates = collect_relationship_retype_updates(relationships, entity_by_id)
-        
-        relationships_retyped = 0
+
         if retype_updates:
-            logger.info(f"  Found {len(retype_updates)} generic relationships to retype")
-            relationships_retyped = neo4j_io.retype_relationships(retype_updates)
+            logger.info("  Found %s generic relationships to retype", len(retype_updates))
+            self.relationships_retyped = self._io().retype_relationships(retype_updates)
         else:
             logger.info("  ✅ No generic relationships need retyping")
-        
-        # Refresh grouped entities for algorithm phase
+
         grouped = group_entities_by_type(entities)
-        
-        phase_times['Phase 3 · Rel Normalization'] = time.time() - phase_start
-        logger.info(f"  ⏱️  Phase 3 completed in {phase_times['Phase 3 · Rel Normalization']:.1f}s")
-        
-        # Phase 4: Infer missing relationships using PARALLEL modular algorithms
+        self._complete_phase(phase_name, phase_start)
+        return entities, relationships, grouped
+
+    async def _infer_relationships(
+        self,
+        entities: list[dict[str, Any]],
+        relationships: list[dict[str, Any]],
+        grouped: dict[str, list[dict[str, Any]]],
+    ) -> None:
+        phase_name = "Phase 4 · Rel Inference"
         phase_start = time.time()
         logger.info("\n🔗 Phase 4 · Relationship Inference: Running parallel algorithms...")
-        
-        # Build lookups for algorithm orchestrator
-        entities_by_type = grouped  # Already built from step 2
-        id_to_entity = {e['id']: e for e in entities}
-        
-        new_relationships = await run_all_algorithms_parallel(
+
+        new_relationships = await self.algorithm_runner(
             entities=entities,
-            entities_by_type=entities_by_type,
-            id_to_entity=id_to_entity,
-            neo4j_io=neo4j_io,
-            model=llm_model_name,
-            temperature=temperature,
-            existing_relationships=relationships  # Issue #56: Pass for conditional algo execution
+            entities_by_type=grouped,
+            id_to_entity={entity["id"]: entity for entity in entities},
+            neo4j_io=self._io(),
+            model=self.llm_model_name,
+            temperature=self.temperature,
+            existing_relationships=relationships,
         )
-        
-        relationships_inferred = 0
+
         if new_relationships:
-            logger.info(f"\n💾 Creating {len(new_relationships)} new relationships in Neo4j...")
-            relationships_inferred = neo4j_io.create_relationships(new_relationships)
+            logger.info("\n💾 Creating %s new relationships in Neo4j...", len(new_relationships))
+            self.relationships_inferred = self._io().create_relationships(new_relationships)
         else:
             logger.info("\n✅ No new relationships inferred")
-        
-        phase_times['Phase 4 · Rel Inference'] = time.time() - phase_start
-        logger.info(f"  ⏱️  Phase 4 completed in {phase_times['Phase 4 · Rel Inference']:.1f}s")
 
-        # Phase 5: Sync inferred relationships to LightRAG VDBs (Issue #65 - Critical Fix)
-        # Without this, agent queries via /query miss algorithm-discovered relationships
+        self._complete_phase(phase_name, phase_start)
+
+    async def _sync_vdb(self) -> None:
+        phase_name = "Phase 5 · VDB Sync"
         phase_start = time.time()
         logger.info("\n🔄 Phase 5 · VDB Synchronization: Syncing inferred relationships...")
-        from src.inference.vdb_sync import sync_discoveries_to_vdb
-        
-        vdb_sync_stats = await sync_discoveries_to_vdb(
-            neo4j_io=neo4j_io,
-            relationships_inferred=relationships_inferred
-        )
-        
-        relationships_synced = vdb_sync_stats.get("relationships_synced", 0)
-        if vdb_sync_stats.get("status") == "success":
-            logger.info(f"✅ VDB sync complete: {relationships_synced} relationships now queryable")
-        elif vdb_sync_stats.get("status") == "skipped":
-            logger.warning(f"⚠️ VDB sync skipped: {vdb_sync_stats.get('reason', 'unknown')}")
-        else:
-            logger.error(f"❌ VDB sync failed: {vdb_sync_stats.get('error', 'unknown')}")
-        
-        phase_times['Phase 5 · VDB Sync'] = time.time() - phase_start
-        logger.info(f"  ⏱️  Phase 5 completed in {phase_times['Phase 5 · VDB Sync']:.1f}s")
 
-        # Authoritative final counts: capture only after every processing phase,
-        # including VDB sync side effects, has finished.
-        type_counts = neo4j_io.get_entity_count_by_type()
-        rel_counts = neo4j_io.get_relationship_count_by_type()
-        result = build_post_processing_result(
-            rag_storage_path=rag_storage_path,
-            type_counts=type_counts,
-            rel_counts=rel_counts,
-            entities_corrected=entities_corrected,
-            relationships_inferred=relationships_inferred,
-            relationships_synced=relationships_synced,
-            processing_time=processing_time,
-            starting_entity_count=starting_entity_count,
-            starting_relationship_count=starting_rel_count,
-            vdb_sync_status=vdb_sync_stats.get("status", "unknown"),
+        sync_fn = self.sync_discoveries_to_vdb_fn
+        if sync_fn is None:
+            from src.inference.vdb_sync import sync_discoveries_to_vdb as sync_fn
+
+        self.vdb_sync_stats = await sync_fn(
+            neo4j_io=self._io(),
+            relationships_inferred=self.relationships_inferred,
         )
-        final_entity_count = result["final_entity_count"]
-        final_relationship_count = result["final_relationship_count"]
-        vdb_entity_count = result["vdb_entity_count"]
-        vdb_relationship_count = result["vdb_relationship_count"]
-        
-        # Summary statistics
-        processing_time = time.time() - start_time
-        logger.info("\n" + "="*80)
+        self.relationships_synced = self.vdb_sync_stats.get("relationships_synced", 0)
+
+        if self.vdb_sync_stats.get("status") == "success":
+            logger.info(
+                "✅ VDB sync complete: %s relationships now queryable",
+                self.relationships_synced,
+            )
+        elif self.vdb_sync_stats.get("status") == "skipped":
+            logger.warning(
+                "⚠️ VDB sync skipped: %s",
+                self.vdb_sync_stats.get("reason", "unknown"),
+            )
+        else:
+            logger.error(
+                "❌ VDB sync failed: %s",
+                self.vdb_sync_stats.get("error", "unknown"),
+            )
+
+        self._complete_phase(phase_name, phase_start)
+
+    def _build_result(self) -> dict[str, Any]:
+        processing_time = time.time() - self.start_time
+        return build_post_processing_result(
+            rag_storage_path=self.rag_storage_path,
+            type_counts=self._io().get_entity_count_by_type(),
+            rel_counts=self._io().get_relationship_count_by_type(),
+            entities_corrected=self.entities_corrected,
+            relationships_inferred=self.relationships_inferred,
+            relationships_synced=self.relationships_synced,
+            processing_time=processing_time,
+            starting_entity_count=self.starting_entity_count,
+            starting_relationship_count=self.starting_relationship_count,
+            vdb_sync_status=self.vdb_sync_stats.get("status", "unknown"),
+        )
+
+    def _log_summary(self, result: dict[str, Any]) -> None:
+        processing_time = result["processing_time"]
+        type_counts = result["entity_type_counts"]
+        rel_counts = result["relationship_type_counts"]
+
+        logger.info("\n" + "=" * 80)
         logger.info("✅ SEMANTIC POST-PROCESSING COMPLETE")
-        logger.info("="*80)
+        logger.info("=" * 80)
         logger.info(f"  Total time:              {processing_time:.1f}s")
-        for phase_name, phase_duration in phase_times.items():
+        for phase_name, phase_duration in self.phase_times.items():
             logger.info(f"    {phase_name:30s}  {phase_duration:6.1f}s")
-        logger.info(f"  Entities corrected:      {entities_corrected}")
-        logger.info(f"  Relationships retyped:   {relationships_retyped}")
-        logger.info(f"  Relationships inferred:  {relationships_inferred}")
-        logger.info(f"  Relationships synced:    {relationships_synced}")
+        logger.info(f"  Entities corrected:      {self.entities_corrected}")
+        logger.info(f"  Relationships retyped:   {self.relationships_retyped}")
+        logger.info(f"  Relationships inferred:  {self.relationships_inferred}")
+        logger.info(f"  Relationships synced:    {self.relationships_synced}")
         logger.info(f"  Processing time:         {processing_time:.2f}s")
-        logger.info("="*80)
-        
+        logger.info("=" * 80)
+
         logger.info("\n📊 Entity Type Distribution (ALL 18 types):")
-        # Show all types, sorted by count
-        for entity_type, count in sorted(type_counts.items(), key=lambda x: x[1], reverse=True):
+        for entity_type, count in sorted(type_counts.items(), key=lambda item: item[1], reverse=True):
             logger.info(f"  {entity_type:30s}: {count:4d}")
 
         logger.info("\n📊 Relationship Type Distribution (final Neo4j graph):")
-        for relationship_type, count in sorted(rel_counts.items(), key=lambda x: x[1], reverse=True):
+        for relationship_type, count in sorted(rel_counts.items(), key=lambda item: item[1], reverse=True):
             logger.info(f"  {relationship_type:30s}: {count:4d}")
-        
-        # Show summary counts
-        logger.info("\n" + "="*60)
+
+        logger.info("\n" + "=" * 60)
         logger.info("📈 FINAL COUNTS (after all processing complete):")
-        logger.info("="*60)
-        logger.info(f"  Final Neo4j Entities:          {final_entity_count}")
-        logger.info(f"  Final Neo4j Relationships:     {final_relationship_count}")
-        if vdb_entity_count is not None:
-            logger.info(f"  Final VDB Entity Entries:      {vdb_entity_count}")
-        if vdb_relationship_count is not None:
-            logger.info(f"  Final VDB Relationship Entries: {vdb_relationship_count}")
+        logger.info("=" * 60)
+        logger.info(f"  Final Neo4j Entities:          {result['final_entity_count']}")
+        logger.info(f"  Final Neo4j Relationships:     {result['final_relationship_count']}")
+        if result["vdb_entity_count"] is not None:
+            logger.info(f"  Final VDB Entity Entries:      {result['vdb_entity_count']}")
+        if result["vdb_relationship_count"] is not None:
+            logger.info(f"  Final VDB Relationship Entries: {result['vdb_relationship_count']}")
         logger.info(f"  ─────────────────────────────────────")
-        logger.info(f"  Post-Processing Retyped Rels:  {relationships_retyped}")
-        logger.info(f"  Post-Processing Added Rels:    {relationships_inferred}")
-        logger.info(f"  VDB Synced Relationships:      {relationships_synced}")
-        logger.info("="*60)
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"❌ Error during Neo4j post-processing: {e}", exc_info=True)
-        return {
-            "status": "error",
-            "error": str(e),
-            "entities_corrected": 0,
-            "relationships_inferred": 0,
-            "processing_time": time.time() - start_time
-        }
-    finally:
-        neo4j_io.close()
+        logger.info(f"  Post-Processing Retyped Rels:  {self.relationships_retyped}")
+        logger.info(f"  Post-Processing Added Rels:    {self.relationships_inferred}")
+        logger.info(f"  VDB Synced Relationships:      {self.relationships_synced}")
+        logger.info("=" * 60)
+
+
+async def _semantic_post_processor_neo4j(
+    llm_model_name: str = None,
+    temperature: float = 0.1,
+    rag_storage_path: str = "./rag_storage",
+) -> Dict:
+    """Run semantic post-processing against Neo4j-backed workspace graph."""
+    settings = get_settings()
+    if llm_model_name is None:
+        llm_model_name = settings.post_processing_llm_name
+
+    return await SemanticPostProcessingRun(
+        rag_storage_path=rag_storage_path,
+        llm_model_name=llm_model_name,
+        temperature=temperature,
+    ).run()
 
 
 async def enhance_knowledge_graph(
