@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.server import multimodal_setup
+from src.server import rag_post_init as multimodal_setup
 
 
 class _Processor:
