@@ -1,4 +1,4 @@
-from src.inference.neo4j_records import (
+from src.inference.neo4j_graph_io import (
     count_from_record,
     entity_names_from_records,
     entity_record_to_dict,

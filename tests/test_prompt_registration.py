@@ -1,4 +1,4 @@
-from src.server.prompt_registration import (
+from src.server.rag_post_init import (
     activate_govcon_multimodal_prompts,
     apply_lightrag_govcon_prompts,
 )

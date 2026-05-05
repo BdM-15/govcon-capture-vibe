@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.server.initialization_support import (
+from src.server.initialization import (
     GovconInitializationRuntime,
     build_embedding_function,
     build_govcon_lightrag_setup,

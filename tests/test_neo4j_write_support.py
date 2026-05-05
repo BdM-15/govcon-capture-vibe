@@ -1,4 +1,4 @@
-from src.inference.neo4j_write_support import (
+from src.inference.neo4j_graph_io import (
     log_rejected_entities,
     log_rejected_relationships,
 )
@@ -9,10 +9,14 @@ class _Logger:
         self.error_messages: list[str] = []
         self.warning_messages: list[str] = []
 
-    def error(self, message: str) -> None:
+    def error(self, message: str, *args: object) -> None:
+        if args:
+            message = message % args
         self.error_messages.append(message)
 
-    def warning(self, message: str) -> None:
+    def warning(self, message: str, *args: object) -> None:
+        if args:
+            message = message % args
         self.warning_messages.append(message)
 
 

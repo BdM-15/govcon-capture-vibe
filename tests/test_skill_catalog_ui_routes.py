@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.server.skill_catalog_ui_routes import register_skill_catalog_ui_routes
+from src.server.skill_ui_routes import register_skill_catalog_ui_routes
 
 
 class _SkillSummary:
