@@ -1,17 +1,14 @@
-"""
-FastAPI Routes Module
+"""Ingestion route registration for the Theseus server.
 
-Custom endpoints for RAG-Anything + LightRAG server:
-- /insert: Document upload with automatic semantic post-processing
-- /documents/upload: WebUI document upload (also triggers post-processing)
-
-Architecture:
-1. Document Upload → process_document_with_semantic_inference()
-2. RAG-Anything Processing → MinerU multimodal parsing
-3. Native LightRAG Extraction → Entity/relationship extraction (18 types)
-4. GovConProcessingCallback → Detects batch completion via RAG-Anything callbacks
-5. Auto-Enhancement → Semantic post-processing runs ONCE after last document
+Owns the custom document-ingestion seam:
+- callback-aware document processing adapter
+- endpoint registration for /insert, /documents/upload, /scan-rfp
+- replacement of LightRAG's stock POST upload routes
 """
+
+from __future__ import annotations
+
+from typing import Any, Callable, Iterable
 
 from src.server.document_processing import process_document_with_semantic_inference as run_document_processing
 from src.server.processing_callback import get_processing_callback
@@ -20,6 +17,8 @@ from src.server.upload_routes import (
     create_documents_upload_endpoint as register_documents_upload_endpoint,
     create_insert_endpoint as register_insert_endpoint,
 )
+
+_OVERRIDDEN_POST_PATHS = frozenset({"/insert", "/documents/upload"})
 _callback = get_processing_callback()
 
 
@@ -38,7 +37,21 @@ async def process_document_with_semantic_inference(
     )
 
 
-def create_insert_endpoint(app, rag_instance):
+def _preserve_non_overridden_post_routes(routes: Iterable[Any]) -> list[Any]:
+    kept_routes: list[Any] = []
+    for route in routes:
+        if (
+            hasattr(route, "path")
+            and hasattr(route, "methods")
+            and "POST" in route.methods
+            and route.path in _OVERRIDDEN_POST_PATHS
+        ):
+            continue
+        kept_routes.append(route)
+    return kept_routes
+
+
+def create_insert_endpoint(app, rag_instance) -> None:
     register_insert_endpoint(
         app,
         rag_instance,
@@ -47,7 +60,7 @@ def create_insert_endpoint(app, rag_instance):
     )
 
 
-def create_documents_upload_endpoint(app, rag_instance):
+def create_documents_upload_endpoint(app, rag_instance) -> None:
     register_documents_upload_endpoint(
         app,
         rag_instance,
@@ -56,12 +69,33 @@ def create_documents_upload_endpoint(app, rag_instance):
     )
 
 
-def create_scan_endpoint(app, rag_instance):
+def create_scan_endpoint(app, rag_instance) -> None:
     register_scan_endpoint(
         app,
         rag_instance,
         process_document_func=process_document_with_semantic_inference,
         callback=_callback,
+    )
+
+
+def register_custom_ingestion_routes(
+    app: Any,
+    rag_instance: Any,
+    *,
+    logger: Any,
+    create_insert: Callable[[Any, Any], None] = create_insert_endpoint,
+    create_upload: Callable[[Any, Any], None] = create_documents_upload_endpoint,
+    create_scan: Callable[[Any, Any], None] = create_scan_endpoint,
+) -> None:
+    """Replace LightRAG upload routes with Theseus multimodal handlers."""
+    app.router.routes = _preserve_non_overridden_post_routes(app.router.routes)
+
+    create_insert(app, rag_instance)
+    create_upload(app, rag_instance)
+    create_scan(app, rag_instance)
+    logger.info("✅ Custom endpoints registered: /insert, /documents/upload, /scan-rfp")
+    logger.info(
+        "✅ Use LightRAG's native /query/data endpoint for structured data retrieval (agent workflows)"
     )
 
 

@@ -336,7 +336,7 @@ ALL development happens on feature branches. `main` is updated only via fast-for
 
 **Active integration branches:**
 
-- **`164-codebase-architecture-cleanup-epic`** — Codebase architecture cleanup and modularization. Work happens directly on this epic branch unless a slice becomes risky enough to split out. `164` only merges to `main` after the cleanup pass is complete, tests are green, and the user approves final integration. Prior epics: skills + MCP → `v1.2.0`; skills E2E hardening (`142`) → `v1.3.0`; LightRAG JSON extraction (`149`) → `v1.4.0`.
+- **`168-codebase-architecture-deepening-epic`** — Current architecture deepening pass. Work happens directly on this epic branch unless a slice becomes risky enough to split out. `168` merges to `main` only after the pass is complete, tests are green, and the user approves final integration. Prior architecture epics: `164-codebase-architecture-cleanup-epic`, `165-architecture-cleanup-round-2-epic`; skills execution architecture epic `166` landed as `v1.6.0`.
 
 **Standard fast-forward sequence** (after the user says "merge it" / "ship it" / "continue"):
 

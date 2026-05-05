@@ -58,7 +58,7 @@ import uvicorn
 # Import modular components (AFTER load_dotenv() so they see environment variables)
 from src.server.config import configure_raganything_args
 from src.server.initialization import initialize_raganything, get_rag_instance
-from src.server.route_overrides import register_custom_ingestion_routes
+from src.server.routes import register_custom_ingestion_routes
 from src.server.startup_banner import build_startup_banner_items
 from src.server.ui_query_bridge import make_ui_query_bridges
 from src.server.ui_routes import register_ui
