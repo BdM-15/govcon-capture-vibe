@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.core.config_policy import (
+from src.core.config import (
     effective_async,
     missing_required_settings_errors,
     validate_required_settings,
