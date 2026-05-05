@@ -47,7 +47,11 @@ QueryDataFunc = Callable[
 
 from src.core import get_settings
 from src.server.chat_store import ChatStore
-from src.server.chat_ui_routes import register_chat_ui_routes
+from src.server.chat_routes import (
+    QuerySettingsStore,
+    register_chat_routes,
+    register_query_settings_routes,
+)
 from src.server.dashboard_stats import (
     register_dashboard_stats_routes,
     ui_chat_history_pairs,
@@ -58,10 +62,6 @@ from src.server.mcp_ui_routes import register_mcp_ui_routes
 from src.server.processing_log_routes import register_processing_log_routes
 from src.server.prompt_library import register_prompt_library_routes
 from src.server.rfp_intelligence import register_intelligence_routes
-from src.server.query_settings import (
-    QuerySettingsStore,
-    register_query_settings_routes,
-)
 from src.server.skill_ui_routes import register_skill_ui_routes
 from src.server.workspace_ui_routes import (
     register_workspace_ui_routes,
@@ -226,7 +226,7 @@ def register_ui(
 
     register_prompt_library_routes(app)
 
-    register_chat_ui_routes(
+    register_chat_routes(
         app,
         chat_store=context.chat_store,
         query_settings=context.query_settings,

@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.server.query_settings import (
+from src.server.chat_routes import (
     QuerySettingsStore,
     register_query_settings_routes,
 )

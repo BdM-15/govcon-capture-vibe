@@ -4,8 +4,8 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.server.chat_routes import register_chat_routes, trim_sources
 from src.server.chat_store import ChatStore
-from src.server.chat_ui_routes import register_chat_ui_routes, trim_sources
 
 
 class _QuerySettings:
@@ -26,7 +26,7 @@ def _client(tmp_path, *, query_func=None, data_func=None) -> tuple[TestClient, l
         now=lambda: "now",
         history_pairs=lambda: 5,
     )
-    register_chat_ui_routes(
+    register_chat_routes(
         app,
         chat_store=store,
         query_settings=_QuerySettings(),
