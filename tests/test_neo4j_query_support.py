@@ -1,4 +1,4 @@
-from src.inference.neo4j_query_support import (
+from src.inference.neo4j_graph_io import (
     run_count_query,
     run_mapped_query,
     run_projected_query,
