@@ -1,7 +1,7 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-from src.server.ui_support import build_ui_route_context
+from src.server.ui_routes import build_ui_route_context
 
 
 class _FakeQuerySettings:
