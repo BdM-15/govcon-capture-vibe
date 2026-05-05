@@ -6,7 +6,9 @@ This module consolidates all modular knowledge files into a single
 
 Architecture Explanation:
 -------------------------
-We use a MODULAR design where each knowledge domain is a separate Python file:
+We use a modular knowledge package where each domain exports the same public
+constants, regardless of whether the payload is backed by Python or a content
+bundle on disk:
 
   src/ontology/knowledge/
     ├── shipley.py         # Shipley BD Lifecycle, Color Teams
@@ -23,7 +25,7 @@ Each module exports three lists:
   - CHUNKS: List of chunk dicts with content for vector DB
 
 This consolidator:
-  1. Imports all modules via __init__.py
+    1. Imports all modules via __init__.py
   2. Merges all ENTITIES, RELATIONSHIPS, CHUNKS into combined lists
   3. Transforms combined lists into LightRAG's custom_kg format:
      {
@@ -40,12 +42,12 @@ This consolidator:
 
 Why This Architecture?
 ----------------------
-1. **Maintainability**: Each domain expert can edit their module independently
-2. **Scalability**: Adding new knowledge = adding new module + import
-3. **Testability**: Each module can be unit tested in isolation
+1. **Maintainability**: each domain expert can edit one knowledge slice independently
+2. **Scalability**: adding new knowledge can be a new content bundle instead of a new Python blob
+3. **Testability**: the consolidator can validate the real merged shape regardless of backing store
 4. **Versioning**: Git history shows which knowledge changed when
-5. **Clarity**: 200-line focused modules > 2000-line monolith
-6. **Reusability**: Modules can be cherry-picked for different applications
+5. **Clarity**: content-heavy slices can live as data while consolidation logic stays in code
+6. **Reusability**: modules can be cherry-picked for different applications
 
 The consolidator runs at bootstrap time, merging into ONE knowledge graph
 that gets injected into the workspace's LightRAG instance.

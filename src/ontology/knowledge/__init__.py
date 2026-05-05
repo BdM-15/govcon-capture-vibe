@@ -3,6 +3,7 @@ GovCon Domain Ontology Knowledge Modules
 
 Modular architecture for evergreen domain knowledge:
 - Each module exports ENTITIES and RELATIONSHIPS lists
+- A knowledge slice may be backed by Python constants or a file-backed bundle
 - govcon_kg.py consolidates all modules into single custom_kg dict
 - bootstrap.py injects consolidated KG into LightRAG via insert_custom_kg()
 
