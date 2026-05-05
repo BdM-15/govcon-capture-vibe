@@ -18,15 +18,17 @@ def test_neo4j_graph_io_write_methods_keep_workspace_context(monkeypatch) -> Non
 
     assert graph_io.update_entity_types([{"id": "1"}]) == 1
     assert graph_io.update_entity_properties([{"id": "1"}]) == 2
-    assert graph_io.create_entities([{"entity_name": "REQ-1", "entity_type": "requirement"}]) == 3
-    assert graph_io.create_typed_relationships([{"source_entity": "REQ-1", "target_entity": "REQ-2", "relationship_type": "GUIDES"}]) == 4
+    assert graph_io.update_entity_names([{"id": "1", "new_entity_name": "REQ-1"}]) == 3
+    assert graph_io.create_entities([{"entity_name": "REQ-1", "entity_type": "requirement"}]) == 4
+    assert graph_io.create_typed_relationships([{"source_entity": "REQ-1", "target_entity": "REQ-2", "relationship_type": "GUIDES"}]) == 5
 
     assert all(call[0] == "neo4j" for call in calls)
     assert all("workspace" in call[1] for call in calls)
     assert calls[0][2] == {"updates": [{"id": "1"}]}
     assert calls[1][2] == {"updates": [{"id": "1"}]}
-    assert calls[2][2] == {"entities": [{"entity_name": "REQ-1", "entity_type": "requirement"}]}
-    assert calls[3][2] == {
+    assert calls[2][2] == {"updates": [{"id": "1", "new_entity_name": "REQ-1"}]}
+    assert calls[3][2] == {"entities": [{"entity_name": "REQ-1", "entity_type": "requirement"}]}
+    assert calls[4][2] == {
         "relationships": [
             {"source_entity": "REQ-1", "target_entity": "REQ-2", "relationship_type": "GUIDES"}
         ]

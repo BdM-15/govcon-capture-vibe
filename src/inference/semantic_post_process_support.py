@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
+
+from src.inference.relationship_inference_support import normalize_entity_name
 
 
 logger = logging.getLogger(__name__)
+_FACTOR_LIKE_PATTERN = re.compile(r"^(subfactor|factor)\s+([^:]+?)\s*:?[ \t]*(.+)$", re.IGNORECASE)
 
 
 ENTITY_PAIR_REL_MAP = {
@@ -74,6 +78,195 @@ def count_vdb_entries(rag_storage_path: str, filename: str) -> int | None:
     if isinstance(data, (list, dict)):
         return len(data)
     return None
+
+
+def sync_entity_metadata_to_vdb(
+    rag_storage_path: str,
+    entity_records: list[dict[str, Any]],
+) -> int:
+    """Mirror normalized Neo4j entity metadata back into ``vdb_entities.json``.
+
+    LightRAG persists entity embeddings separately from Neo4j. Phase 2 type cleanup
+    mutates Neo4j only, so query-time graph reads and file-based VDB reads can drift.
+    This helper updates VDB metadata in-place without touching vectors.
+    """
+    if not rag_storage_path or not entity_records:
+        return 0
+
+    path = Path(rag_storage_path) / "vdb_entities.json"
+    if not path.exists():
+        return 0
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Could not read %s for entity metadata sync: %s", path, exc)
+        return 0
+
+    rows = payload.get("data") if isinstance(payload, dict) else payload
+    if not isinstance(rows, list):
+        return 0
+
+    entity_by_name = {
+        str(record.get("entity_name") or "").strip(): record
+        for record in entity_records
+        if isinstance(record, dict) and record.get("entity_name")
+    }
+    if not entity_by_name:
+        return 0
+
+    updated = 0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("entity_name") or "").strip()
+        current = entity_by_name.get(name)
+        if current is None:
+            continue
+
+        current_type = current.get("entity_type")
+        if current_type and row.get("entity_type") != current_type:
+            row["entity_type"] = current_type
+            updated += 1
+
+        current_source = current.get("source_id")
+        if current_source and row.get("source_id") != current_source:
+            row["source_id"] = current_source
+
+        current_desc = current.get("description")
+        if current_desc and row.get("description") != current_desc:
+            row["description"] = current_desc
+
+    if updated <= 0:
+        return 0
+
+    try:
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError as exc:
+        logger.warning("Could not write %s after entity metadata sync: %s", path, exc)
+        return 0
+
+    return updated
+
+
+def apply_entity_name_updates_to_vdb(
+    rag_storage_path: str,
+    canonical_mapping: dict[str, str],
+) -> dict[str, int]:
+    """Rewrite canonicalized entity names in LightRAG entity and relationship VDB JSON."""
+    if not rag_storage_path or not canonical_mapping:
+        return {"entities_updated": 0, "relationships_updated": 0}
+
+    entity_path = Path(rag_storage_path) / "vdb_entities.json"
+    relationship_path = Path(rag_storage_path) / "vdb_relationships.json"
+    entities_updated = 0
+    relationships_updated = 0
+
+    if entity_path.exists():
+        try:
+            payload = json.loads(entity_path.read_text(encoding="utf-8"))
+            rows = payload.get("data") if isinstance(payload, dict) else payload
+            if isinstance(rows, list):
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    current = str(row.get("entity_name") or "").strip()
+                    mapped = canonical_mapping.get(current)
+                    if mapped and mapped != current:
+                        row["entity_name"] = mapped
+                        entities_updated += 1
+                if entities_updated > 0:
+                    entity_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Could not sync canonical entity names into %s: %s", entity_path, exc)
+
+    if relationship_path.exists():
+        try:
+            payload = json.loads(relationship_path.read_text(encoding="utf-8"))
+            rows = payload.get("data") if isinstance(payload, dict) else payload
+            if isinstance(rows, list):
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    src_id = str(row.get("src_id") or "").strip()
+                    tgt_id = str(row.get("tgt_id") or "").strip()
+                    mapped_src = canonical_mapping.get(src_id, src_id)
+                    mapped_tgt = canonical_mapping.get(tgt_id, tgt_id)
+                    if mapped_src != src_id:
+                        row["src_id"] = mapped_src
+                        relationships_updated += 1
+                    if mapped_tgt != tgt_id:
+                        row["tgt_id"] = mapped_tgt
+                        relationships_updated += 1
+                if relationships_updated > 0:
+                    relationship_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Could not sync canonical relationship names into %s: %s", relationship_path, exc)
+
+    return {
+        "entities_updated": entities_updated,
+        "relationships_updated": relationships_updated,
+    }
+
+
+def canonicalize_factor_like_name(name: str) -> str:
+    """Normalize common Factor/Subfactor punctuation drift to one readable form."""
+    value = str(name or "").strip()
+    match = _FACTOR_LIKE_PATTERN.match(value)
+    if not match:
+        return value
+
+    prefix = match.group(1).title()
+    ordinal = " ".join(match.group(2).split())
+    label = " ".join(match.group(3).split())
+    if not ordinal or not label:
+        return value
+    return f"{prefix} {ordinal}: {label}"
+
+
+def plan_entity_name_updates(
+    grouped: dict[str, list[dict[str, Any]]],
+) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    """Plan low-risk canonical name updates for factor/subfactor punctuation drift."""
+    name_updates: list[dict[str, Any]] = []
+    canonical_mapping: dict[str, str] = {}
+
+    duplicates: dict[str, list[dict[str, Any]]] = {}
+    for entity in grouped.get("evaluation_factor", []):
+        raw_name = str(entity.get("entity_name") or "").strip()
+        if not raw_name:
+            continue
+        normalized = normalize_entity_name(raw_name.lower())
+        duplicates.setdefault(normalized, []).append(entity)
+
+    for entities in duplicates.values():
+        if len(entities) < 2:
+            continue
+
+        canonical_name = max(
+            (canonicalize_factor_like_name(str(entity.get("entity_name") or "")) for entity in entities),
+            key=lambda name: (":" in name, len(name)),
+        )
+        if not canonical_name:
+            continue
+
+        for entity in entities:
+            raw_name = str(entity.get("entity_name") or "").strip()
+            entity_id = entity.get("id")
+            if not raw_name or not entity_id:
+                continue
+            if raw_name == canonical_name:
+                continue
+            canonical_mapping[raw_name] = canonical_name
+            name_updates.append(
+                {
+                    "id": entity_id,
+                    "new_entity_name": canonical_name,
+                    "old_entity_name": raw_name,
+                }
+            )
+
+    return name_updates, canonical_mapping
 
 
 def resolve_generic_relationship(rel_type: str, src_type: str, tgt_type: str) -> str:
@@ -202,6 +395,29 @@ def heuristic_table_type_mapping(entity: Dict) -> str:
     name = (entity.get("entity_name") or "").lower()
     desc = (entity.get("description") or entity.get("content") or "").lower()
     text = f"{name} {desc}"
+
+    # Section L tables often mention evaluation consequences in their description,
+    # but they still function as proposal instructions. Prefer those signals first.
+    if any(
+        keyword in text
+        for keyword in [
+            "page limit",
+            "page limits",
+            "page allocation",
+            "page allocations",
+            "proposal structure",
+            "proposal format",
+            "volume structure",
+            "volume ii",
+            "volume iii",
+            "submission",
+            "sbpcd",
+            "subcontracting goals",
+            "instructions to offerors",
+            "formatting and submission",
+        ]
+    ):
+        return "proposal_instruction"
 
     if any(keyword in text for keyword in ["cdrl", "contract data", "deliverable", "dd form 1423", "data item"]):
         return "deliverable"
