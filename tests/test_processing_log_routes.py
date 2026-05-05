@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.server.processing_log_routes import register_processing_log_routes
+from src.server.document_routes import register_processing_log_routes
 
 
 def test_processing_log_snapshot_route_uses_injected_reader() -> None:
