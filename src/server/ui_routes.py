@@ -62,6 +62,7 @@ from src.server.query_settings import (
     register_query_settings_routes,
 )
 from src.server.skill_ui_routes import register_skill_ui_routes
+from src.server.ui_support import build_ui_route_context
 from src.server.workspace_ui_routes import (
     register_workspace_ui_routes,
     self_restart as _self_restart,
@@ -136,14 +137,15 @@ def register_ui(
         logger.warning("UI static dir missing: %s — UI will not be mounted", _STATIC_DIR)
         return
 
-    query_settings = QuerySettingsStore(
+    context = build_ui_route_context(
         workspace_dir=_workspace_dir,
-        settings_provider=get_settings,
-    )
-    chat_store = ChatStore(
-        workspace_dir=_workspace_dir,
+        chats_dir=_chats_dir,
         now=_now_iso,
+        settings_provider=get_settings,
         history_pairs=ui_chat_history_pairs,
+        global_args_obj=global_args,
+        set_env_var_func=lambda key, value: _set_env_var(key, value),
+        restart_func=lambda: _self_restart(),
     )
 
     # ---- Static SPA at /ui ------------------------------------------------
@@ -155,11 +157,11 @@ def register_ui(
 
     register_dashboard_stats_routes(
         app,
-        workspace_dir=_workspace_dir,
-        chats_dir=_chats_dir,
+        workspace_dir=context.workspace_dir,
+        chats_dir=context.chats_dir,
         settings_provider=get_settings,
-        graph_storage=lambda: getattr(global_args, "graph_storage", "NetworkXStorage"),
-        now=_now_iso,
+        graph_storage=context.graph_storage,
+        now=context.now,
     )
 
     register_processing_log_routes(app)
@@ -168,54 +170,50 @@ def register_ui(
 
     register_chat_ui_routes(
         app,
-        chat_store=chat_store,
-        query_settings=query_settings,
+        chat_store=context.chat_store,
+        query_settings=context.query_settings,
         query_func=query_func,
         data_func=data_func,
-        now=_now_iso,
+        now=context.now,
     )
 
-    register_entity_chunk_routes(app, workspace_dir=_workspace_dir)
+    register_entity_chunk_routes(app, workspace_dir=context.workspace_dir)
 
-    register_intelligence_routes(app, workspace_dir=_workspace_dir)
+    register_intelligence_routes(app, workspace_dir=context.workspace_dir)
 
     register_graph_routes(
         app,
-        workspace_name=lambda: get_settings().workspace,
-        graph_storage=lambda: getattr(global_args, "graph_storage", "") or "",
-        working_dir=lambda: Path(global_args.working_dir),
+        workspace_name=context.workspace_name,
+        graph_storage=context.graph_storage,
+        working_dir=context.working_dir,
     )
 
     register_workspace_ui_routes(
         app,
-        workspace_name=lambda: get_settings().workspace,
-        working_dir=lambda: Path(global_args.working_dir),
-        graph_storage=lambda: getattr(global_args, "graph_storage", "") or "",
-        set_env_var_func=_set_env_var,
-        schedule_restart=lambda delay: asyncio.get_event_loop().call_later(
-            delay, _self_restart
-        ),
+        workspace_name=context.workspace_name,
+        working_dir=context.working_dir,
+        graph_storage=context.graph_storage,
+        set_env_var_func=context.set_env_var,
+        schedule_restart=context.schedule_restart,
     )
 
     register_query_settings_routes(
         app,
-        workspace_name=lambda: get_settings().workspace,
-        store=query_settings,
+        workspace_name=context.workspace_name,
+        store=context.query_settings,
     )
 
     register_skill_ui_routes(
         app,
-        workspace_dir=_workspace_dir,
+        workspace_dir=context.workspace_dir,
         data_func=data_func,
         llm_func=llm_func,
     )
 
     register_mcp_ui_routes(
         app,
-        set_env_var=lambda key, value: _set_env_var(key, value),
-        schedule_restart=lambda delay: asyncio.get_event_loop().call_later(
-            delay, _self_restart
-        ),
+        set_env_var=context.set_env_var,
+        schedule_restart=context.schedule_restart,
     )
 
     logger.info("✅ Project Theseus UI mounted at /ui (static: %s)", _STATIC_DIR)
