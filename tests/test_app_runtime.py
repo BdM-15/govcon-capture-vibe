@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.server.app_runtime import (
+from src.raganything_server import (
     ServerRuntime,
     build_server_runtime,
     patch_api_server_lightrag_for_local_rerank,
