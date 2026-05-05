@@ -1,9 +1,9 @@
 import asyncio
 from pathlib import Path
 
+from src.skills.manager import SkillExecutor
 from src.skills.runs import SkillRunStore
 from src.skills.skill_catalog import SkillCatalog
-from src.skills.skill_execution import SkillExecutor
 from src.skills.skill_models import Skill, SkillFrontmatter, SkillInvocationResult
 
 
