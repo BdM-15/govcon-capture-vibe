@@ -52,12 +52,12 @@ from src.server.chat_routes import (
     register_chat_routes,
     register_query_settings_routes,
 )
-from src.server.dashboard_stats import (
+from src.server.admin_routes import (
     register_dashboard_stats_routes,
+    register_mcp_ui_routes,
     ui_chat_history_pairs,
 )
 from src.server.document_routes import register_processing_log_routes
-from src.server.mcp_ui_routes import register_mcp_ui_routes
 from src.server.prompt_library import register_prompt_library_routes
 from src.server.skill_ui_routes import register_skill_ui_routes
 from src.server.workspace_routes import (
