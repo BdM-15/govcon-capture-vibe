@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from src.core import get_settings
 from src.core.env import env_int
 from src.ontology.schema import VALID_ENTITY_TYPES, VALID_RELATIONSHIP_TYPES
-from src.server.storage_counts import safe_count_json_keys
+from src.server.workspace_routes import safe_count_json_keys
 from src.utils.time_utils import now_local_iso
 
 _STACK_CACHE: Optional[dict[str, Optional[str]]] = None

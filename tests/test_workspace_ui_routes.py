@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.server.workspace_ui_routes import (
+from src.server.workspace_routes import (
     discover_workspaces,
     register_workspace_ui_routes,
     safe_count_json_keys,
@@ -168,7 +168,7 @@ def test_inventory_delete_wipe_and_restart_routes_are_injected(tmp_path) -> None
 
 
 def test_set_env_var_updates_env_file_and_process_env(tmp_path, monkeypatch) -> None:
-    import src.server.workspace_ui_routes as workspace_routes
+    import src.server.workspace_routes as workspace_routes
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(workspace_routes, "reset_settings", lambda: None)

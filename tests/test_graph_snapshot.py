@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.server.graph_snapshot import json_safe, load_graph_networkx, register_graph_routes
+from src.server.workspace_routes import json_safe, load_graph_networkx, register_graph_routes
 
 
 class _IsoFormatOnly:
