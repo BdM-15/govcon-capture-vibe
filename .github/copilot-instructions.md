@@ -336,8 +336,8 @@ ALL development happens on feature branches. `main` is updated only via fast-for
 
 **Active integration branches:**
 
-- `169-architecture-locality-epic` is ACTIVE. Current architecture locality/depth work must land there, not `main`.
-- Most recent completed architecture epic `168-codebase-architecture-deepening-epic` landed on `main` as `v1.7.0`. Prior architecture epics: `164-codebase-architecture-cleanup-epic`, `165-architecture-cleanup-round-2-epic`; skills execution architecture epic `166` landed as `v1.6.0`.
+- No active integration epic currently.
+- Most recent completed architecture epic `169-architecture-locality-epic` landed on `main` as `v1.8.0`. Prior architecture epics: `168-codebase-architecture-deepening-epic` landed as `v1.7.0`; `164-codebase-architecture-cleanup-epic`, `165-architecture-cleanup-round-2-epic`; skills execution architecture epic `166` landed as `v1.6.0`.
 
 **Standard fast-forward sequence** (after the user says "merge it" / "ship it" / "continue"):
 
