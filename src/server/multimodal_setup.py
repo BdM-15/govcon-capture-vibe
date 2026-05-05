@@ -11,24 +11,19 @@ from raganything.modalprocessors import (
     TableModalProcessor,
 )
 from raganything.prompt_manager import register_prompt_language, set_prompt_language
+from src.server.prompt_registration import activate_govcon_multimodal_prompts
 
 logger = logging.getLogger(__name__)
 
 
 def register_govcon_multimodal_prompts() -> None:
     """Register and activate govcon prompt language for multimodal analysis."""
-    register_prompt_language("govcon", GOVCON_MULTIMODAL_PROMPTS)
-    set_prompt_language("govcon")
-    logger.info(
-        "✅ Registered and activated 'govcon' prompt language (%d prompt overrides)",
-        len(GOVCON_MULTIMODAL_PROMPTS),
+    activate_govcon_multimodal_prompts(
+        multimodal_prompts=GOVCON_MULTIMODAL_PROMPTS,
+        register_prompt_language_func=register_prompt_language,
+        set_prompt_language_func=set_prompt_language,
+        log=logger,
     )
-    logger.info("   - TABLE_ANALYSIS_SYSTEM: federal acquisition analyst + workload/CLIN/CDRL focus")
-    logger.info("   - table_prompt(_with_context): multi-page continuation detection, govcon directives")
-    logger.info("   - IMAGE_ANALYSIS_SYSTEM: org charts, facility layouts, CDRL hierarchies")
-    logger.info("   - vision_prompt(_with_context): all visible text + contractual element extraction")
-    logger.info("   - EQUATION prompts: performance formulas, incentive calculations")
-    logger.info("   - QUERY_TABLE/IMAGE prompts: govcon analyst framing for query-time VLM")
 
 
 def register_native_modal_processors(rag_anything, *, llm_model_func, vision_model_func) -> None:

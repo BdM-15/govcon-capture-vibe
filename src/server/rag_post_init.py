@@ -11,6 +11,7 @@ from prompts.govcon_prompt import GOVCON_PROMPTS
 from src.server.doc_status_compat import apply_doc_status_compatibility_shim
 from src.server.multimodal_setup import configure_multimodal_stack
 from src.server.processing_callback import get_processing_callback
+from src.server.prompt_registration import apply_lightrag_govcon_prompts
 
 logger = logging.getLogger(__name__)
 
@@ -69,27 +70,10 @@ def extend_vdb_meta_fields(lightrag_instance) -> None:
 
 def apply_govcon_prompt_overrides() -> None:
     """Replace LightRAG prompts with the GovCon prompt set."""
-    PROMPTS.update(GOVCON_PROMPTS)
-    extraction_prompt = GOVCON_PROMPTS.get("entity_extraction_json_system_prompt", "")
-    extraction_chars = len(extraction_prompt)
-    extraction_lines = extraction_prompt.count("\n")
-    logger.info("✅ REPLACED LightRAG prompt system with GovCon prompt overrides")
-    logger.info(
-        "   Extraction prompt: %s chars (~%s tokens), %s lines",
-        f"{extraction_chars:,}",
-        f"{extraction_chars // 4:,}",
-        f"{extraction_lines:,}",
-    )
-    logger.info("   Source: V8 compact frame (govcon_prompt.py builder)")
-    logger.info("   Domain Intelligence:")
-    logger.info("     • Entity catalog rendered dynamically from govcon_entity_types.yaml")
-    logger.info("     • Relationship guidance rendered from schema.py 26-type canonical set")
-    logger.info("     • 7 annotated RFP examples injected from prompts/entity_type/govcon.yaml")
-    logger.info("     • Quantitative preservation rules for BOE development")
-    logger.info("     • Compact frame + quality checks (Parts A-H)")
-    logger.info(
-        "   Keywords examples: %d GovCon-specific",
-        len(GOVCON_PROMPTS.get("keywords_extraction_examples", [])),
+    apply_lightrag_govcon_prompts(
+        prompt_map=PROMPTS,
+        govcon_prompts=GOVCON_PROMPTS,
+        log=logger,
     )
 
 
