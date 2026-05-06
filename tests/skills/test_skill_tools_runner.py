@@ -79,7 +79,7 @@ def test_run_tools_skill_wires_context_mcp_and_persistence(tmp_path: Path) -> No
         assert isinstance(kwargs["ctx"], ToolContext)
         assert kwargs["ctx"].mcp_sessions == {"demo-mcp": FakeStartup.sessions["demo-mcp"]}
         return SimpleNamespace(
-            response="done",
+            response="done — with smart quotes ‘ok’ and ellipsis…",
             warnings=["loop warning"],
             turns=2,
             tool_calls=3,
@@ -104,11 +104,12 @@ def test_run_tools_skill_wires_context_mcp_and_persistence(tmp_path: Path) -> No
         )
     )
 
-    assert result.response == "done"
+    assert result.response == "done - with smart quotes 'ok' and ellipsis..."
     assert result.run_id == "run-1"
     assert touched == ["demo-skill"]
     assert emitted == [("demo-skill", run_dir)]
     assert captured["start_run_sessions"] == {"run_id": "run-1", "requested": ["demo-mcp"]}
+    assert captured["persist_tools_run"]["response"] == "done - with smart quotes 'ok' and ellipsis..."
     assert captured["persist_tools_run"]["warnings"][0] == "script_paths: skipping non-string entry 7"
     assert "startup warning" in captured["persist_tools_run"]["warnings"]
     assert "loop warning" in captured["persist_tools_run"]["warnings"]

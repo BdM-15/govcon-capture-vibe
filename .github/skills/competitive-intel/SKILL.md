@@ -9,15 +9,13 @@ metadata:
   shipley_phases: [pursuit, capture, strategy]
   capability: research
   category: intel
-  version: 0.6.0
+  version: 0.8.2
   status: active
   runtime: tools
-  # This skill walks 10 numbered steps with 6+ MCP calls and 3+ KG calls
-  # per run. The default 12-turn budget (SKILL_TOOLS_MAX_TURNS) is too
-  # tight — runs hit the cap before reaching the final write_file step.
-  # The runtime treats this as a floor and uses the larger of env vs
-  # skill value. See issue #120 for the future decomposition epic that
-  # will let us drop this back to the default once sub-skills exist.
+  # Workflow A still walks a multi-call MCP + KG path. Workflow B now
+  # delegates the expensive parent/child/transaction expansion to a
+  # deterministic in-process tool, but black-hat runs still benefit from
+  # a higher floor than the global minimum.
   max_turns: 20
   # Phase 4b: declare which vendored MCP servers this skill needs. The
   # runtime exposes only these MCPs to the agent loop, namespaced as
@@ -29,10 +27,11 @@ metadata:
 
 # Competitive Intel — Black-Hat + Obligation Intel
 
-You are a **federal capture analyst** working multi-turn against the active Theseus workspace knowledge graph PLUS live USASpending.gov award data (via the `usaspending` MCP). This skill has two modes:
+You are a **federal capture analyst** working multi-turn against the active Theseus workspace knowledge graph PLUS live USASpending.gov award data (via the `usaspending` MCP). This skill has three modes:
 
 - **Workflow A (Black-Hat)**: Convert workspace RFP context into a defensible black-hat brief on incumbent and likely competitors.
-- **Workflow B (Obligation Intel)**: Start from a contract number and build an obligation rollup, parent/child vehicle context, and competitor set completeness check.
+- **Workflow B (Vehicle Obligation Intel)**: Start from a contract number and build a parent-level obligation rollup, child-order accumulation, sibling-awardee context, and vehicle-wide insights.
+- **Workflow C (Single Award / Order Burn Intel)**: Start from one contract or order number and produce a clean by-award burn read with grouped modifications, POP windows, and localized insights.
 
 Every claim must trace either to a `chunk_id` you fetched via `kg_chunks` or to a USAspending award you fetched via an `mcp__usaspending__*` tool.
 
@@ -55,6 +54,7 @@ Every claim must trace either to a `chunk_id` you fetched via `kg_chunks` or to 
 - **Rank by obligated dollars, not transaction count.** A vendor with one $400M IDV beats a vendor with 200 $50K POs.
 - **Linkage precedence for vehicle analysis.** For multiple-award IDIQs, resolve relationships in this order: parent IDV linkage, explicit child-order listing, PIID-family context, then solicitation identifier as a fallback signal.
 - **Reject anti-patterns.** Inventing competitors not in award history. Pricing ranges with no underlying award sample. Generic SWOT bullets ("strong past performance"). Unsupported claims about CPARS or protests (no MCP source for those yet — say so).
+- **Treat deterministic rosters as authoritative.** If `parent_vehicle_awardees` is present in the collector result or artifact, that is the complete parent-level prime roster for the answer. Do not add extra vehicle holders from memory, loose keyword matches, or workspace hints. The number you state in prose must equal `parent_vehicle_awardee_count` / `len(parent_vehicle_awardees)`.
 - **Fail loudly.** If the workspace is missing NAICS / PSC / agency, halt with a `GAP` rather than guess.
 
 ## Workflow Selector
@@ -63,10 +63,14 @@ Pick exactly one workflow before running tools:
 
 - **Workflow A: Black-Hat Competitor Intel (default)**
   Trigger: incumbent/competitor/theming/pricing benchmark questions anchored on NAICS/agency/program context.
-- **Workflow B: Contract-Number Obligation Intel**
-  Trigger: user provides a contract number/PIID and asks for burn-rate, obligation trend, IDIQ hierarchy, parent/child rollups, or competitor completeness from vehicle context.
+- **Workflow B: Vehicle Obligation Intel**
+  Trigger: user provides a contract number/PIID and asks for parent-level burn-rate, obligation trend, IDIQ hierarchy, child-order rollups, sibling awardees, vehicle competitors, or an overarching view of how the whole vehicle is burning.
+- **Workflow C: Single Award / Order Burn Intel**
+  Trigger: user provides one contract or order number and primarily wants that one award's mods, POP, burn-rate, option pattern, or a clean single-award read rather than a vehicle aggregation.
 
-If both are requested, run Workflow B first and feed its `competitor_discovery` result into Workflow A.
+If both black-hat and obligation analysis are requested, run Workflow B or C first and feed its `competitor_discovery` result into Workflow A.
+
+If the user wants both parent-level vehicle context and one-order detail, choose **Workflow B** and use the collector's grouped `award_rollups` / artifact `obligations.by_award` to write the order-specific portion. Do not narrate every order modification in the parent-level summary.
 
 ---
 
@@ -266,13 +270,26 @@ When the cover note is written, suggest the user run `proposal-generator` next s
 
 ---
 
-## Workflow B Checklist (Contract-Number Obligation Intel)
+## Workflow B Checklist (Vehicle Obligation Intel)
 
-Execute in order. The output is an obligation-focused envelope that still includes competitor completeness findings.
+Execute in order. The output is a **parent-level vehicle summary** backed by child-order accumulation, grouped award data, and competitor completeness findings.
 
 ### 1. Resolve the contract number
 
-Input may be contract/order number only. Normalize and resolve using `mcp__usaspending__lookup_piid`.
+Input may be contract/order number only. **Do not hand-walk the USAspending hierarchy anymore.**
+
+Call `collect_competitive_obligation_intel` once with the raw contract number and `scope="vehicle"`. That tool deterministically:
+
+- resolves the PIID,
+- classifies `standalone_contract | parent_idiq | idiq_order`,
+- expands child orders / sibling orders without spending more model turns,
+- pulls all transaction pages needed for the rollup,
+- computes period-of-performance, fiscal-year, burn-rate, competitor-completeness, and PTW seed fields,
+- computes `insights.headline` plus deterministic story blocks you should use in prose before free-writing,
+- returns compact `award_rollups` so you can reason about one order without re-walking the hierarchy,
+- writes `artifacts/competitive_intel_obligation.json` directly.
+
+Only fall back to manual `mcp__usaspending__*` calls if the deterministic collector returns an explicit tool error or warns that linkage is incomplete.
 
 Record:
 
@@ -285,17 +302,17 @@ If no match, return `GAP: contract number not found in USAspending lookup_piid`.
 
 ### 2. Classify scenario
 
-Call `mcp__usaspending__get_award_detail` for the resolved award and classify into one of:
+The deterministic collector already classifies the resolved award into one of:
 
 - `standalone_contract`
 - `parent_idiq`
 - `idiq_order`
 
-Classification must cite the detail fields used. Never infer vehicle class from PIID format alone.
+Classification in the artifact must cite the detail fields used. Never infer vehicle class from PIID format alone.
 
 ### 3. Build hierarchy and obligation rollup
 
-Apply scenario-specific logic:
+The deterministic collector already applies the scenario-specific logic below and persists the output contract for you. Treat this section as the behavior contract the collector must satisfy:
 
 - **Standalone contract**:
   - Call `mcp__usaspending__get_transactions` on the resolved award.
@@ -319,6 +336,7 @@ For all scenarios:
 - Prefer **period-of-performance breakdowns over fiscal-year rollups** in the narrative and the artifact. Fiscal years are still required, but POP windows are the primary burn-rate lens.
 - Build `obligations.by_period_of_performance` from award-detail and child-activity dates. Use the strongest available fields such as start date, current end date, and potential end date. If only a single current POP window is available, still emit it.
 - For each item in `obligations.by_transaction`, include human-readable transaction metadata. If the transaction payload does not expose a narrative description, set `modification_description` to `null` and add a warning rather than inventing one.
+- Keep `obligations.by_award` clean and grouped. This is the primary structure for single-award or per-order reading. `by_transaction` is the whole-vehicle flattened audit trail.
 
 **Derived fields — compute from fetched data (no additional MCP calls required):**
 
@@ -353,6 +371,8 @@ Emit `competitor_discovery.completeness_status` as:
 - `medium` when partial child coverage exists,
 - `low` when only fallback solicitation clustering was possible.
 
+Also surface `competitor_discovery.parent_vehicle_awardees` when available. This is the parent-level prime roster for the vehicle and is different from active order holders.
+
 ### 5. Produce PTW seed outputs
 
 Compute and include:
@@ -365,7 +385,7 @@ Compute and include:
 
 ### 6. Write the obligation envelope (MANDATORY)
 
-Call `write_file` to save `artifacts/competitive_intel_obligation.json` before final summary.
+`collect_competitive_obligation_intel` already writes `artifacts/competitive_intel_obligation.json` before it returns. Do not rebuild the JSON envelope by hand unless you are intentionally creating a smaller derivative artifact.
 
 ```json
 {
@@ -472,6 +492,93 @@ Summarize:
 - competitor completeness status,
 - PTW seed recommendation,
 - warnings.
+
+Start from `insights.headline` and `insights.blocks` from the collector result or artifact. Treat them as the deterministic spine of the cover note, not optional garnish.
+
+For **Workflow B**, keep the cover note parent-level and insight-driven:
+
+- open with `insights.headline` verbatim or nearly verbatim,
+- use `burn_posture` as the quantitative lead,
+- use `vehicle_concentration` to decide which 1-3 child orders matter most,
+- use `competitive_context` for the exact parent-awardee roster / completeness sentence,
+- surface `caveats` directly instead of paraphrasing warnings into mush,
+- lead with vehicle-wide burn and what it implies,
+- mention the sibling parent-awardee roster when relevant, using `parent_vehicle_awardees` as the exact roster,
+- if you state a parent-awardee count in prose, copy the exact deterministic count from `parent_vehicle_awardee_count` and make the listed roster match it,
+- call out the 1-3 most important child orders or burn inflection points,
+- avoid itemizing every order unless the user explicitly asks for that level of detail.
+
+Reference the saved artifact path from the deterministic tool result.
+
+---
+
+## Workflow C Checklist (Single Award / Order Burn Intel)
+
+Execute in order. The output is a **single-award read**, not a vehicle-wide narrative.
+
+### 1. Resolve the contract or order number
+
+Call `collect_competitive_obligation_intel` once with the raw contract number and `scope="single_award"`.
+
+Use the tool result first. It already gives you:
+
+- `resolved` scenario,
+- `award_rollups` for clean grouped per-award analysis,
+- `insights` with a deterministic headline plus burn/award-story blocks,
+- aggregate competitor context if the award sits inside a larger vehicle,
+- `vehicle_context` when the resolved award sits inside a larger vehicle.
+
+Do not re-walk `get_transactions` manually unless the collector fails. Do not call `read_file` on `artifacts/competitive_intel_obligation.json`; the runtime `read_file` tool cannot open run artifacts. Use the collector result fields directly.
+
+### 2. Select the focus award
+
+Pick one focus award and stay on it:
+
+- `standalone_contract` -> the resolved award
+- `idiq_order` -> the resolved order
+- `parent_idiq` -> only stay in Workflow C if the user explicitly wants one child order or one award's burn; otherwise switch to Workflow B
+
+Use `award_rollups` / `obligations.by_award` as the canonical grouped structure. Do not reconstruct a single-award view from the flattened `by_transaction` list unless a grouped row is missing.
+
+### 3. Write the single-award burn read
+
+For the selected award, summarize:
+
+- award id / PIID / role,
+- POP start/end,
+- gross + net obligations,
+- fiscal-year pattern,
+- important modifications and option events,
+- current burn-rate,
+- warnings or data quality limits.
+
+This prose should read like one clean contract story. Keep mods grouped under that award. Do not drift into sibling or whole-vehicle narrative except a short context sentence when useful.
+
+### 4. Optional parent-vehicle context
+
+If the focus award belongs to a multiple-award vehicle, add a short context block only:
+
+- parent IDIQ identity,
+- sibling parent-awardee count,
+- whether competitor completeness is high / medium / low.
+
+Keep this to orientation, not the main answer.
+
+### 5. Final cover note
+
+Summarize the one award:
+
+- scenario,
+- selected award id / PIID,
+- POP,
+- total/net obligations,
+- monthly / daily burn,
+- biggest one or two modification inflection points,
+- warnings.
+
+Open with `insights.headline`. Then use `award_story` as the contract-story paragraph, `burn_posture` as the rate paragraph, optional `competitive_context` for brief parent-vehicle orientation, and `caveats` for blunt warnings. Do not ignore these blocks and rebuild the story from raw `by_transaction` unless an insight block is missing.
+
+Reference the saved artifact path. If deeper detail exists for adjacent awards, mention that grouped `by_award` data is available in the artifact.
 
 ## References
 

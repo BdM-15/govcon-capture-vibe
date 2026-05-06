@@ -66,6 +66,7 @@ def test_list_deliverables_flattens_across_skills(tmp_path: Path) -> None:
 
     # Newest-first ordering by created_at.
     assert rows[0]["filename"] == "brief.md"
+    assert rows[0]["display_name"] == "Brief"
     assert rows[0]["skill"] == "competitive-intel"
     assert rows[0]["created_at"] == "2025-04-28T13:00:00"
 
@@ -75,6 +76,26 @@ def test_list_deliverables_flattens_across_skills(tmp_path: Path) -> None:
     for row in rows[1:]:
         assert row["skill"] == "proposal-generator"
         assert row["run_id"] == "20250428_120000_first"
+
+
+def test_list_deliverables_prefers_manifest_display_name(tmp_path: Path) -> None:
+    mgr = SkillManager()
+    run_dir = _seed_run(
+        tmp_path,
+        skill="competitive-intel",
+        run_id="20250428_130000_second",
+        artifacts={"competitive_intel_obligation.json": b"{}"},
+        created_at="2025-04-28T13:00:00",
+    )
+    (run_dir / "artifacts_manifest.json").write_text(
+        '{\n  "competitive_intel_obligation.json": {\n    "display_name": "AFCAP V Parent Vehicle Burn Intel"\n  }\n}\n',
+        encoding="utf-8",
+    )
+
+    rows = mgr.list_deliverables(tmp_path)
+
+    assert rows[0]["filename"] == "competitive_intel_obligation.json"
+    assert rows[0]["display_name"] == "AFCAP V Parent Vehicle Burn Intel"
 
 
 def test_list_deliverables_resolves_office_mimes(tmp_path: Path) -> None:

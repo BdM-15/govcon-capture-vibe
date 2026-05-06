@@ -13,8 +13,10 @@ from src.skills.run_metadata import (
     list_run_artifacts,
     list_tool_outputs,
     parse_run_envelope,
+    read_artifact_manifest,
     read_run_metadata,
     read_run_transcript,
+    resolve_artifact_display_name,
     resolve_artifact_mime,
     slugify_for_filename,
 )
@@ -118,6 +120,7 @@ class SkillRunIndex:
                 continue
 
             meta = read_run_metadata(run_dir)
+            manifest = read_artifact_manifest(run_dir)
             created_at = meta.get("created_at") or ""
             title = meta.get("title")
 
@@ -128,11 +131,16 @@ class SkillRunIndex:
                     stat = artifact.stat()
                 except OSError:
                     continue
+                rel = artifact.relative_to(artifacts_dir).as_posix()
                 rows.append(
                     {
                         "skill": skill_name,
                         "run_id": run_dir.name,
                         "filename": artifact.name,
+                        "display_name": resolve_artifact_display_name(
+                            artifact.name,
+                            manifest.get(rel),
+                        ),
                         "mime": resolve_artifact_mime(artifact.name),
                         "size": stat.st_size,
                         "created_at": created_at

@@ -10,6 +10,7 @@ from src.skills.settings import (
     mcp_tool_call_timeout,
     resolve_skill_runtime_mode,
     skill_tools_max_turns,
+    skill_tools_runtime_limits,
 )
 
 
@@ -56,10 +57,35 @@ def test_resolve_skill_runtime_mode_precedence(monkeypatch) -> None:
 
 
 def test_skill_tools_max_turns_uses_larger_skill_budget(monkeypatch) -> None:
-    monkeypatch.setenv("SKILL_TOOLS_MAX_TURNS", "8")
-    assert skill_tools_max_turns({"max_turns": 12}) == 12
-    assert skill_tools_max_turns({"max_turns": 4}) == 8
-    assert skill_tools_max_turns({"max_turns": "12"}) == 8
+    monkeypatch.setenv("SKILL_TOOLS_MAX_TURNS", "16")
+    assert skill_tools_max_turns({"max_turns": 12}) == 16
+    assert skill_tools_max_turns({"max_turns": 20}) == 20
+    assert skill_tools_max_turns({"max_turns": 4}) == 16
+    assert skill_tools_max_turns({"max_turns": "12"}) == 16
+
+
+def test_skill_tools_runtime_limits_are_env_backed(monkeypatch) -> None:
+    monkeypatch.setenv("SKILL_TOOLS_LLM_TIMEOUT", "222")
+    monkeypatch.setenv("SKILL_TOOLS_MAX_TOOL_RESULT_CHARS", "13000")
+    monkeypatch.setenv("SKILL_TOOLS_MAX_READ_BYTES", "210000")
+    monkeypatch.setenv("SKILL_TOOLS_MAX_WRITE_BYTES", "1100000")
+    monkeypatch.setenv("SKILL_TOOLS_MAX_SCRIPT_SECONDS", "175")
+    monkeypatch.setenv("SKILL_TOOLS_MAX_KG_ENTITIES_PER_TYPE", "61")
+    monkeypatch.setenv("SKILL_TOOLS_MAX_KG_CHUNKS", "44")
+    monkeypatch.setenv("SKILL_TOOLS_MAX_CHUNKS_PER_ENTITY", "7")
+    monkeypatch.setenv("SKILL_TOOLS_MAX_RELATIONSHIPS_PER_ENTITY", "21")
+
+    limits = skill_tools_runtime_limits()
+
+    assert limits.llm_timeout_seconds == 222.0
+    assert limits.max_tool_result_chars == 13000
+    assert limits.max_read_bytes == 210000
+    assert limits.max_write_bytes == 1100000
+    assert limits.max_script_seconds == 175
+    assert limits.max_kg_entities_per_type == 61
+    assert limits.max_kg_chunks == 44
+    assert limits.max_kg_chunks_per_entity == 7
+    assert limits.max_kg_relationships_per_entity == 21
 
 
 def test_skill_settings_store_merges_workspace_overrides(
@@ -86,7 +112,7 @@ def test_skill_settings_store_merges_workspace_overrides(
     settings = store.read()
 
     assert settings["max_entities_per_type"] == 7
-    assert settings["max_chunks_per_entity"] == 2
+    assert settings["max_chunks_per_entity"] == 3
     assert settings["retrieval_mode"] == "hybrid"
     assert settings["retrieval_top_k"] == 9
     assert "ignored" not in settings

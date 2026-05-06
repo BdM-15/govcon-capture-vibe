@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 import subprocess
 from pathlib import Path
 from typing import Optional
 
+from src.skills.run_metadata import (
+    read_artifact_manifest,
+    sanitize_artifact_display_name,
+    write_artifact_manifest,
+)
 from src.skills.tool_types import ToolContext, ToolError, ToolResult
 
 
@@ -182,7 +188,12 @@ async def tool_run_script(
     )
 
 
-async def tool_write_file(ctx: ToolContext, path: str, content: str) -> ToolResult:
+async def tool_write_file(
+    ctx: ToolContext,
+    path: str,
+    content: str,
+    label: Optional[str] = None,
+) -> ToolResult:
     if not isinstance(content, str):
         raise ToolError("content must be a string")
     if len(content.encode("utf-8")) > ctx.max_write_bytes:
@@ -198,4 +209,21 @@ async def tool_write_file(ctx: ToolContext, path: str, content: str) -> ToolResu
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(content, encoding="utf-8")
     rel = target.relative_to(ctx.run_dir.resolve()).as_posix()
-    return ToolResult(payload={"path": rel, "bytes_written": len(content.encode("utf-8"))})
+    artifact_rel = target.relative_to(artifacts_root.resolve()).as_posix()
+    display_name = sanitize_artifact_display_name(label)
+    if label is not None and display_name is None:
+        raise ToolError("label must be a non-empty string when provided")
+    if display_name:
+        manifest = read_artifact_manifest(ctx.run_dir)
+        entry = dict(manifest.get(artifact_rel) or {})
+        entry["display_name"] = display_name
+        manifest[artifact_rel] = entry
+        write_artifact_manifest(ctx.run_dir, manifest)
+
+    payload = {
+        "path": rel,
+        "bytes_written": len(content.encode("utf-8")),
+    }
+    if display_name:
+        payload["display_name"] = display_name
+    return ToolResult(payload=payload)

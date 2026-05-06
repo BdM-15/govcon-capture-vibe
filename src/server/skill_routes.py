@@ -21,6 +21,9 @@ from src.skills.settings import (
     SkillSettingsStore,
     VALID_SKILL_RETRIEVAL_MODES,
     resolve_skill_runtime_mode,
+    skill_tools_runtime_defaults,
+    skill_tools_runtime_settings,
+    SKILL_TOOLS_RUNTIME_ENV_KEYS,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,6 +57,24 @@ class SkillSettingsUpdate(BaseModel):
     retrieval_top_k: Optional[int] = Field(default=None, ge=5, le=500)
 
 
+class SkillRuntimeSettingsUpdate(BaseModel):
+    """Global tools-mode runtime ceilings persisted into `.env`."""
+
+    max_turns: Optional[int] = Field(default=None, ge=1, le=500)
+    llm_timeout_seconds: Optional[float] = Field(default=None, ge=1, le=3600)
+    mcp_handshake_timeout: Optional[float] = Field(default=None, ge=0.1, le=3600)
+    mcp_tool_call_timeout: Optional[float] = Field(default=None, ge=0.1, le=3600)
+    mcp_shutdown_timeout: Optional[float] = Field(default=None, ge=0.1, le=3600)
+    max_tool_result_chars: Optional[int] = Field(default=None, ge=500, le=2_000_000)
+    max_read_bytes: Optional[int] = Field(default=None, ge=1_000, le=5_000_000)
+    max_write_bytes: Optional[int] = Field(default=None, ge=1_000, le=20_000_000)
+    max_script_seconds: Optional[int] = Field(default=None, ge=1, le=86_400)
+    max_kg_entities_per_type: Optional[int] = Field(default=None, ge=1, le=5_000)
+    max_kg_chunks: Optional[int] = Field(default=None, ge=1, le=5_000)
+    max_kg_chunks_per_entity: Optional[int] = Field(default=None, ge=0, le=500)
+    max_kg_relationships_per_entity: Optional[int] = Field(default=None, ge=0, le=500)
+
+
 def _skill_response_payload(
     result: Any,
     *,
@@ -70,6 +91,7 @@ def _skill_response_payload(
         "prompt_tokens_estimate": result.prompt_tokens_estimate,
         "run_id": result.run_id,
         "run_dir": result.run_dir,
+        "finish_reason": getattr(result, "finish_reason", ""),
         "runtime_mode": runtime_mode,
         "retrieval": retrieval,
     }
@@ -129,6 +151,7 @@ def register_skill_settings_ui_routes(
     *,
     settings_store: SkillSettingsStore,
     workspace_name: Callable[[], str] | None = None,
+    set_env_var: Callable[[str, str], None] | None = None,
 ) -> None:
     """Register skill settings read/update/reset routes."""
     if workspace_name is None:
@@ -169,6 +192,44 @@ def register_skill_settings_ui_routes(
         except OSError as exc:
             raise HTTPException(500, f"Failed resetting settings: {exc}") from exc
         return JSONResponse({"settings": settings_store.defaults()})
+
+    @app.get("/api/ui/settings/skills/runtime", tags=["theseus-ui"])
+    async def get_skill_runtime_settings() -> JSONResponse:
+        return JSONResponse(
+            {
+                "workspace": workspace_name(),
+                "settings": skill_tools_runtime_settings(),
+                "defaults": skill_tools_runtime_defaults(),
+            }
+        )
+
+    @app.put("/api/ui/settings/skills/runtime", tags=["theseus-ui"])
+    async def update_skill_runtime_settings(
+        payload: SkillRuntimeSettingsUpdate,
+    ) -> JSONResponse:
+        if set_env_var is None:
+            raise HTTPException(503, "Global skill runtime settings are unavailable")
+        updates = payload.model_dump(exclude_none=True)
+        for key, value in updates.items():
+            env_key = SKILL_TOOLS_RUNTIME_ENV_KEYS[key]
+            try:
+                set_env_var(env_key, str(value))
+            except Exception as exc:
+                raise HTTPException(500, f"Failed updating {env_key}: {exc}") from exc
+        return JSONResponse({"settings": skill_tools_runtime_settings()})
+
+    @app.post("/api/ui/settings/skills/runtime/reset", tags=["theseus-ui"])
+    async def reset_skill_runtime_settings() -> JSONResponse:
+        if set_env_var is None:
+            raise HTTPException(503, "Global skill runtime settings are unavailable")
+        defaults = skill_tools_runtime_defaults()
+        for key, value in defaults.items():
+            env_key = SKILL_TOOLS_RUNTIME_ENV_KEYS[key]
+            try:
+                set_env_var(env_key, str(value))
+            except Exception as exc:
+                raise HTTPException(500, f"Failed resetting {env_key}: {exc}") from exc
+        return JSONResponse({"settings": skill_tools_runtime_settings()})
 
 
 def register_skill_invoke_ui_routes(
@@ -294,6 +355,40 @@ def register_skill_invoke_ui_routes(
         effective_mode = resolve_skill_runtime_mode(frontmatter_mode)
 
         if effective_mode == "tools":
+            def _tools_slice_workspace_entities(
+                entity_types: Optional[list[str]],
+                max_per_type: int,
+                max_chunks_per_entity: int = 2,
+                max_relationships_per_entity: int = 5,
+                relevant_entity_names: Optional[set[str]] = None,
+            ) -> dict[str, Any]:
+                return _slice_workspace_entities(
+                    entity_types,
+                    min(max_per_type, payload.max_entities_per_type),
+                    max_chunks_per_entity=min(
+                        max_chunks_per_entity,
+                        payload.max_chunks_per_entity,
+                    ),
+                    max_relationships_per_entity=min(
+                        max_relationships_per_entity,
+                        payload.max_relationships_per_entity,
+                    ),
+                    relevant_entity_names=relevant_entity_names,
+                )
+
+            async def _tools_retrieve_relevant_entities_for_skill(
+                prompt: str,
+                skill_description: str,
+                mode: str,
+                top_k: int,
+            ) -> dict[str, Any]:
+                return await _retrieve_relevant_entities_for_skill(
+                    prompt,
+                    skill_description,
+                    payload.retrieval_mode,
+                    min(top_k, payload.retrieval_top_k),
+                )
+
             try:
                 result = await mgr.invoke(
                     name,
@@ -302,8 +397,8 @@ def register_skill_invoke_ui_routes(
                     entity_payload={},
                     llm=llm_func,
                     workspace_root=workspace_dir(),
-                    slice_fn=_slice_workspace_entities,
-                    retrieve_fn=_retrieve_relevant_entities_for_skill,
+                    slice_fn=_tools_slice_workspace_entities,
+                    retrieve_fn=_tools_retrieve_relevant_entities_for_skill,
                 )
             except KeyError as exc:
                 raise HTTPException(404, str(exc)) from exc
@@ -312,9 +407,13 @@ def register_skill_invoke_ui_routes(
                     result,
                     runtime_mode="tools",
                     retrieval={
-                        "mode": "tools",
-                        "used": True,
+                        "mode": payload.retrieval_mode,
+                        "top_k": payload.retrieval_top_k,
+                        "used": payload.retrieval_mode != "off",
                         "reason": "tools-mode runtime",
+                        "max_entities_per_type": payload.max_entities_per_type,
+                        "max_chunks_per_entity": payload.max_chunks_per_entity,
+                        "max_relationships_per_entity": payload.max_relationships_per_entity,
                     },
                 )
             )
@@ -491,6 +590,7 @@ def register_skill_ui_routes(
     workspace_dir: Callable[[], Path],
     data_func: Optional[QueryDataFunc],
     llm_func: Optional[LlmFunc],
+    set_env_var: Callable[[str, str], None] | None = None,
 ) -> None:
     """Register skill, run, Studio, and chunk-preview UI endpoints."""
 
@@ -501,6 +601,7 @@ def register_skill_ui_routes(
         app,
         settings_store=settings_store,
         workspace_name=current_workspace,
+        set_env_var=set_env_var,
     )
     register_skill_catalog_ui_routes(app, manager_factory=get_skill_manager)
     register_skill_invoke_ui_routes(

@@ -53,7 +53,9 @@ Why: solicitation identifier can over-cluster unrelated actions and under-link
 cross-agency ordering behavior. Parent/child linkage is the strongest evidence
 for competitor completeness in multiple-award vehicles.
 
-### Scenario handling (Workflow B)
+### Scenario handling (Workflow B / C)
+
+Theseus exposes a deterministic obligation helper named `collect_competitive_obligation_intel`. It orchestrates the sequence below, writes `artifacts/competitive_intel_obligation.json`, and returns a compact summary to the model so large child-order rollups no longer depend on turn budget or tool-payload truncation. Workflow B uses it for parent-level synthesis. Workflow C uses the same data for one-award grouped analysis. The collector also emits `insights.headline` plus ordered `insights.blocks[]` so the final cover note can start from deterministic story seeds instead of only raw rollups.
 
 | Scenario            | Primary path                                                                                                              | Required outputs                                                 |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
@@ -63,6 +65,8 @@ for competitor completeness in multiple-award vehicles.
 
 Always preserve negative obligation periods (deobligations). Report both gross
 and net totals.
+
+The collector also emits grouped `award_rollups` in tool output and `obligations.by_award` in the artifact so order-level prose can stay clean without re-sorting the flattened transaction list.
 
 ### Known detail quality limits
 
@@ -74,11 +78,12 @@ and net totals.
 
 These fields do **not** come from MCP calls — the skill computes them from fetched data:
 
-| Derived field              | How computed                                                                                                            |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `cumulative_obligated_usd` | Running sum of `amount_usd` across `by_transaction`, sorted by `action_date` ascending. Respects negative deobligations. |
+| Derived field              | How computed                                                                                                                                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cumulative_obligated_usd` | Running sum of `amount_usd` across `by_transaction`, sorted by `action_date` ascending. Respects negative deobligations.                                                                                           |
 | `inferred_pop_segment`     | First transaction → `base_year`. Each action-type `G` in sequence → `option_year_1`, `option_year_2`, etc. Action-type `B`/`J` within a segment → `supplemental`. `M`/`X`/`R` → `admin`. Null/unknown → `unknown`. |
-| `rate_analysis`            | Computed from `net_obligated_usd` and the strongest POP window in `by_period_of_performance`. `monthly_burn_usd` = net / months. `by_option_year` uses G-type action dates as segment boundaries. |
+| `rate_analysis`            | Computed from `net_obligated_usd` and the strongest POP window in `by_period_of_performance`. `monthly_burn_usd` = net / months. `by_option_year` uses G-type action dates as segment boundaries.                  |
+| `insights`                 | Deterministic narrative seed built from `rate_analysis`, `award_rollups`, child-order concentration, competitor completeness, PTW baseline, and warnings. `headline` is opener. `blocks[]` provide ordered prose anchors. |
 
 Always include `derivation_notes` in `rate_analysis` to document which POP window and assumptions were used.
 

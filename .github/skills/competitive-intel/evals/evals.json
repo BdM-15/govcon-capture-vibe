@@ -1,7 +1,7 @@
 {
   "skill": "competitive-intel",
-  "version": "0.4.0",
-  "notes": "Phase 4e — black-hat plus contract-number obligation mode, now requiring period-of-performance breakdowns, richer by-transaction metadata, cumulative running totals, inferred POP segment labels, and rate_analysis block for manual rate analysis. Run from a workspace whose KG has at least program/agency/NAICS context OR provide contract number inputs directly. Live MCP eval requires THESEUS_LIVE_MCP=1.",
+  "version": "0.6.2",
+  "notes": "Phase 4e+ — black-hat plus contract-number obligation modes. Workflow B now calls collect_competitive_obligation_intel with vehicle scope for parent-level synthesis. Workflow C calls the same collector with single_award scope so idiq_order artifacts stay order-only while still carrying compact parent-vehicle context. Run from a workspace whose KG has at least program/agency/NAICS context OR provide contract number inputs directly. Live MCP eval requires THESEUS_LIVE_MCP=1.",
   "evals": [
     {
       "id": "eval-001-incumbent-active-window",
@@ -118,15 +118,7 @@
         },
         {
           "kind": "transcript_tool_called",
-          "tool": "mcp__usaspending__lookup_piid"
-        },
-        {
-          "kind": "transcript_tool_called",
-          "tool": "mcp__usaspending__get_award_detail"
-        },
-        {
-          "kind": "transcript_tool_called",
-          "tool": "mcp__usaspending__get_transactions"
+          "tool": "collect_competitive_obligation_intel"
         },
         {
           "kind": "json_path_in_set",
@@ -167,6 +159,15 @@
         {
           "kind": "json_path_set",
           "path": "obligations.rate_analysis.by_option_year"
+        },
+        {
+          "kind": "json_path_set",
+          "path": "insights.headline"
+        },
+        {
+          "kind": "json_path_array_min_length",
+          "path": "insights.blocks",
+          "min": 2
         }
       ]
     },
@@ -179,11 +180,8 @@
           "path": "competitive_intel_obligation.json"
         },
         {
-          "kind": "transcript_tool_called_any",
-          "tools": [
-            "mcp__usaspending__get_idv_children",
-            "mcp__usaspending__get_idv_activity"
-          ]
+          "kind": "transcript_tool_called",
+          "tool": "collect_competitive_obligation_intel"
         },
         {
           "kind": "json_path_in_set",
@@ -213,6 +211,15 @@
           "kind": "json_path_in_set",
           "path": "competitor_discovery.completeness_status",
           "values": ["high", "medium", "low"]
+        },
+        {
+          "kind": "json_path_set",
+          "path": "insights.headline"
+        },
+        {
+          "kind": "json_path_array_min_length",
+          "path": "insights.blocks",
+          "min": 3
         }
       ]
     },
@@ -223,6 +230,10 @@
         {
           "kind": "artifact_exists",
           "path": "competitive_intel_obligation.json"
+        },
+        {
+          "kind": "transcript_tool_called",
+          "tool": "collect_competitive_obligation_intel"
         },
         {
           "kind": "json_path_in_set",
@@ -251,6 +262,93 @@
           "kind": "json_path_in_set",
           "path": "competitor_discovery.linkage_method_used",
           "values": ["parent_child", "piid_family", "solicitation_fallback"]
+        },
+        {
+          "kind": "json_path_set",
+          "path": "insights.headline"
+        },
+        {
+          "kind": "json_path_array_min_length",
+          "path": "insights.blocks",
+          "min": 3
+        }
+      ]
+    },
+    {
+      "id": "eval-008-single-order-burn-intel",
+      "prompt": "I only care about this one order. Give me a clean single-award burn read with grouped mods, POP, burn rate, and only brief parent vehicle context.",
+      "expectations": [
+        {
+          "kind": "artifact_exists",
+          "path": "competitive_intel_obligation.json"
+        },
+        {
+          "kind": "transcript_tool_called",
+          "tool": "collect_competitive_obligation_intel"
+        },
+        {
+          "kind": "json_path_array_min_length",
+          "path": "obligations.by_award",
+          "min": 1
+        },
+        {
+          "kind": "json_path_set",
+          "path": "obligations.by_award[0].by_transaction"
+        },
+        {
+          "kind": "json_path_set",
+          "path": "obligations.by_award[0].net_obligated_usd"
+        },
+        {
+          "kind": "json_path_in_set",
+          "path": "scope",
+          "values": ["single_award"]
+        },
+        {
+          "kind": "json_path_set",
+          "path": "insights.headline"
+        },
+        {
+          "kind": "json_path_array_min_length",
+          "path": "insights.blocks",
+          "min": 2
+        },
+        {
+          "kind": "json_path_set",
+          "path": "vehicle_context.parent_award_id"
+        }
+      ]
+    },
+    {
+      "id": "eval-009-order-only-explicit-contract-only",
+      "prompt": "Provide me an obligation rate on this contract only: FA805122F0001",
+      "expectations": [
+        {
+          "kind": "artifact_exists",
+          "path": "competitive_intel_obligation.json"
+        },
+        {
+          "kind": "transcript_tool_called",
+          "tool": "collect_competitive_obligation_intel"
+        },
+        {
+          "kind": "json_path_in_set",
+          "path": "scope",
+          "values": ["single_award"]
+        },
+        {
+          "kind": "json_path_in_set",
+          "path": "resolved.scenario",
+          "values": ["idiq_order", "standalone_contract"]
+        },
+        {
+          "kind": "json_path_in_set",
+          "path": "obligations.by_award[0].role",
+          "values": ["current_order", "resolved_award"]
+        },
+        {
+          "kind": "json_path_set",
+          "path": "vehicle_context.child_order_count"
         }
       ]
     }

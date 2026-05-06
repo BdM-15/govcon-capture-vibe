@@ -81,6 +81,7 @@ def test_list_runs_under_base_and_deliverables_under_base(tmp_path) -> None:
             "skill": "proposal-generator",
             "run_id": "20260102_030405_demo",
             "filename": "draft.docx",
+            "display_name": "Draft",
             "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "size": 1,
             "created_at": "2026-01-02T03:04:05+00:00",

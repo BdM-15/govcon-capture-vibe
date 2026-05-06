@@ -198,7 +198,7 @@
               font-weight="700"
               fill="#0a0e1a"
             >
-              Î˜
+              Θ
             </text>
           </svg>
         </div>
@@ -215,8 +215,7 @@
         <span
           x-text="stats.version || 'v0.0.0'"
           class="ml-1 px-2 py-0.5 text-[10px] font-mono text-neon-cyan border border-neon-cyan/30 rounded-full"
-          ></span
-        >
+        ></span>
       </div>
 
       <!-- Global search / Ctrl-K -->
@@ -1395,7 +1394,7 @@
                     <span
                       x-show="graph.stats.truncated"
                       class="ml-2 text-neon-amber"
-                      >âš  truncated</span
+                      >⚠ truncated</span
                     >
                   </span>
                 </div>
@@ -2163,7 +2162,7 @@
                             <span
                               x-show="!row.factors.length"
                               class="pill bg-neon-red/10 text-neon-red border border-neon-red/30"
-                              >âš  unmapped</span
+                              >⚠ unmapped</span
                             >
                           </td>
                           <td class="px-5 py-3 text-right">
@@ -2275,7 +2274,7 @@
                             <span
                               x-show="!row.deliverables.length"
                               class="pill bg-neon-red/10 text-neon-red border border-neon-red/30"
-                              >âš  gap</span
+                              >⚠ gap</span
                             >
                           </td>
                           <td class="px-5 py-3 text-xs">
@@ -2904,6 +2903,15 @@
                       <span
                         x-text="skills.invokeMeta?.elapsed_ms + 'ms'"
                       ></span>
+                      <template x-if="skills.invokeMeta?.finish_reason">
+                        <span>
+                          ·
+                          <span
+                            class="text-neon-amber"
+                            x-text="'stop=' + skills.invokeMeta.finish_reason"
+                          ></span>
+                        </span>
+                      </template>
                       <template x-if="skills.invokeMeta?.run_id">
                         <span>
                           ·
@@ -3026,7 +3034,14 @@
                                 :data-lucide="artifactIcon(f.mime, f.name)"
                                 class="w-3 h-3"
                               ></i>
-                              <span class="font-mono" x-text="f.name"></span>
+                              <span class="min-w-0 flex flex-col">
+                                <span x-text="f.display_name || f.name"></span>
+                                <span
+                                  x-show="f.display_name && f.display_name !== f.name"
+                                  class="text-[11px] text-slate-500 font-mono"
+                                  x-text="f.name"
+                                ></span>
+                              </span>
                             </a>
                             <span
                               class="skill-transcript-size"
@@ -3036,7 +3051,7 @@
                               type="button"
                               class="studio-action"
                               title="Why this artifact? (reasoning view)"
-                              @click="openReasoning({ skill: skills.current?.name, run_id: skills.run.run_id, filename: f.name, title: skills.run.title || '', created_at: skills.run.created_at || '' })"
+                              @click="openReasoning({ skill: skills.current?.name, run_id: skills.run.run_id, filename: f.name, display_name: f.display_name || '', title: (f.display_name || skills.run.title || ''), created_at: skills.run.created_at || '' })"
                             >
                               <i
                                 data-lucide="brain-circuit"
@@ -3409,6 +3424,7 @@
                 <label class="text-xs uppercase text-slate-500">Search</label>
                 <input
                   type="text"
+                  placeholder="filename, label, or title…"
                   class="bg-ink-800 border border-edge text-slate-200 text-sm rounded px-2 py-1.5 flex-1"
                   placeholder="filename or title…"
                   x-model="studio.search"
@@ -3478,11 +3494,12 @@
                       <td>
                         <button
                           type="button"
-                          class="studio-filename-btn font-mono text-neon-cyan"
+                          class="studio-filename-btn text-neon-cyan"
                           @click="openStudioPreview(d)"
-                          :title="`Preview ${d.filename}`"
-                          x-text="d.filename"
-                        ></button>
+                          :title="`Preview ${d.display_name || d.filename}`"
+                        >
+                          <span x-text="d.display_name || d.filename"></span>
+                        </button>
                       </td>
                       <td>
                         <span class="studio-pill" x-text="d.skill"></span>
@@ -3510,14 +3527,6 @@
                           @click="toggleStudioPin(d)"
                         >
                           <i data-lucide="anchor" class="w-3.5 h-3.5"></i>
-                        </button>
-                        <button
-                          type="button"
-                          class="studio-action"
-                          title="Preview inline"
-                          @click="openStudioPreview(d)"
-                        >
-                          <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                         </button>
                         <a
                           :href="studioDownloadHref(d)"
@@ -4210,6 +4219,8 @@
                   (LightRAG <code>aquery_data</code>), then the result is
                   packaged with verbatim source chunks and KG relationships.
                   Saved per workspace; takes effect on the next skill run.
+                  Tools-mode hard caps live in the global section below and are
+                  backed by <code>.env</code>.
                 </p>
                 <template x-if="!skillSettings.loaded">
                   <div class="text-xs text-slate-500 font-mono">loading…</div>
@@ -4325,6 +4336,254 @@
                         to the Phase 1.5 bulk slice (file order, entity_types
                         only) — useful for diagnosing whether retrieval is
                         helping or hurting.
+                      </div>
+                      <div class="mt-1">
+                        This panel tunes retrieval. It does not own hard stop
+                        limits like turns, LLM timeout, or MCP timeout.
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </details>
+
+            <details class="acc accent-magenta" data-acc-key="skill-runtime">
+              <summary>
+                <div class="flex items-center gap-3 min-w-0">
+                  <i
+                    data-lucide="chevron-right"
+                    class="acc-chevron w-4 h-4"
+                  ></i>
+                  <i
+                    data-lucide="timer-reset"
+                    class="w-4 h-4 text-neon-magenta shrink-0"
+                  ></i>
+                  <div class="min-w-0">
+                    <div class="font-semibold">Global Skill Runtime Caps</div>
+                    <div
+                      class="text-[11px] font-mono text-slate-500 truncate"
+                      x-text="skillRuntimeSettings.loaded ? `turns=${skillRuntimeSettings.values.max_turns} · llm=${skillRuntimeSettings.values.llm_timeout_seconds}s · mcp=${skillRuntimeSettings.values.mcp_tool_call_timeout}s · tool=${skillRuntimeSettings.values.max_tool_result_chars} chars` : 'loading…'"
+                    ></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2" @click.stop>
+                  <button
+                    class="btn btn-ghost text-xs"
+                    @click="resetSkillRuntimeSettings()"
+                    :disabled="!skillRuntimeSettings.loaded || skillRuntimeSettings.saving"
+                    title="Reset global tools-mode caps"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    Reset
+                  </button>
+                  <button
+                    class="btn btn-primary text-xs"
+                    @click="saveSkillRuntimeSettings()"
+                    :disabled="!skillRuntimeSettings.loaded || skillRuntimeSettings.saving"
+                  >
+                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                    <span
+                      x-text="skillRuntimeSettings.saving ? 'Saving…' : 'Save'"
+                    ></span>
+                  </button>
+                </div>
+              </summary>
+              <div class="acc-body">
+                <p class="text-xs text-slate-500 mb-4 max-w-2xl">
+                  Global tools-mode ceilings for agent skills. Backed by
+                  <code>.env</code>, shared across all workspaces, and used by
+                  competitive-intel, compliance-auditor, price-to-win, and other
+                  tools-mode skills. Use this for hard stop budgets.
+                </p>
+                <template x-if="!skillRuntimeSettings.loaded">
+                  <div class="text-xs text-slate-500 font-mono">loading…</div>
+                </template>
+                <template x-if="skillRuntimeSettings.loaded">
+                  <div class="space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Max Turns</span
+                        >
+                        <input
+                          type="number"
+                          min="1"
+                          max="500"
+                          x-model.number="skillRuntimeSettings.values.max_turns"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >LLM Timeout (s)</span
+                        >
+                        <input
+                          type="number"
+                          min="1"
+                          max="3600"
+                          x-model.number="skillRuntimeSettings.values.llm_timeout_seconds"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >MCP Handshake (s)</span
+                        >
+                        <input
+                          type="number"
+                          min="0.1"
+                          max="3600"
+                          step="0.1"
+                          x-model.number="skillRuntimeSettings.values.mcp_handshake_timeout"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >MCP Tool Call (s)</span
+                        >
+                        <input
+                          type="number"
+                          min="0.1"
+                          max="3600"
+                          step="0.1"
+                          x-model.number="skillRuntimeSettings.values.mcp_tool_call_timeout"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >MCP Shutdown (s)</span
+                        >
+                        <input
+                          type="number"
+                          min="0.1"
+                          max="3600"
+                          step="0.1"
+                          x-model.number="skillRuntimeSettings.values.mcp_shutdown_timeout"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Tool Result Chars</span
+                        >
+                        <input
+                          type="number"
+                          min="500"
+                          max="2000000"
+                          x-model.number="skillRuntimeSettings.values.max_tool_result_chars"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Max Read Bytes</span
+                        >
+                        <input
+                          type="number"
+                          min="1000"
+                          max="5000000"
+                          x-model.number="skillRuntimeSettings.values.max_read_bytes"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Max Write Bytes</span
+                        >
+                        <input
+                          type="number"
+                          min="1000"
+                          max="20000000"
+                          x-model.number="skillRuntimeSettings.values.max_write_bytes"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Script Timeout (s)</span
+                        >
+                        <input
+                          type="number"
+                          min="1"
+                          max="86400"
+                          x-model.number="skillRuntimeSettings.values.max_script_seconds"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >KG Entities / Type</span
+                        >
+                        <input
+                          type="number"
+                          min="1"
+                          max="5000"
+                          x-model.number="skillRuntimeSettings.values.max_kg_entities_per_type"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >KG Chunks</span
+                        >
+                        <input
+                          type="number"
+                          min="1"
+                          max="5000"
+                          x-model.number="skillRuntimeSettings.values.max_kg_chunks"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Chunks / Entity</span
+                        >
+                        <input
+                          type="number"
+                          min="0"
+                          max="500"
+                          x-model.number="skillRuntimeSettings.values.max_kg_chunks_per_entity"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <label class="block md:col-span-1">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Relationships / Entity</span
+                        >
+                        <input
+                          type="number"
+                          min="0"
+                          max="500"
+                          x-model.number="skillRuntimeSettings.values.max_kg_relationships_per_entity"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                    </div>
+
+                    <div
+                      class="text-[11px] text-slate-500 leading-relaxed bg-ink-900/40 border border-edge rounded-lg px-3 py-2 font-mono"
+                    >
+                      <div>
+                        Use this panel for hard ceilings: turns, timeouts, tool
+                        truncation, KG caps.
+                      </div>
+                      <div class="mt-1">
+                        Use
+                        <span class="text-neon-magenta"
+                          >Agent Skills Retrieval</span
+                        >
+                        above for per-workspace retrieval tuning only.
                       </div>
                     </div>
                   </div>
@@ -5272,8 +5531,8 @@
               ></span>
             </div>
             <h2
-              class="text-lg font-semibold text-neon-cyan break-words mt-1 font-mono"
-              x-text="studioPreview.deliverable && studioPreview.deliverable.filename"
+              class="text-lg font-semibold text-neon-cyan break-words mt-1"
+              x-text="studioPreview.deliverable && (studioPreview.deliverable.display_name || studioPreview.deliverable.filename)"
             ></h2>
             <p
               class="text-xs text-slate-400 mt-1"
@@ -5355,7 +5614,7 @@
             >
               <img
                 :src="studioPreview.href"
-                :alt="studioPreview.deliverable && studioPreview.deliverable.filename"
+                :alt="studioPreview.deliverable && (studioPreview.deliverable.display_name || studioPreview.deliverable.filename)"
                 class="max-w-full max-h-[75vh]"
               />
             </div>
@@ -5748,7 +6007,7 @@
                 <div class="text-[11px] text-slate-500">
                   KV stores, VDBs, chats, processing log, MinerU cache —
                   <span
-                    x-text="deleteModal.target?.storage_mb !== null ? deleteModal.target.storage_mb + ' MB' : 'not present'"
+                    x-text="deleteModal.target?.storage_mb != null ? deleteModal.target.storage_mb + ' MB' : 'not present'"
                   ></span>
                 </div>
               </div>

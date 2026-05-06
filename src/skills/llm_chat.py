@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
 from src.core.config import Settings, get_settings
+from src.skills.settings import skill_tools_runtime_limits
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ async def chat_with_tools(
     temperature: float = 0.2,
     max_tokens: Optional[int] = None,
     model: Optional[str] = None,
-    timeout: float = 120.0,
+    timeout: Optional[float] = None,
 ) -> ChatResponse:
     """Single chat-completion turn against the configured OpenAI-compatible endpoint.
 
@@ -97,7 +98,8 @@ async def chat_with_tools(
         temperature: Sampling temperature.
         max_tokens: Optional cap on completion length.
         model: Override ``LLM_MODEL`` env var.
-        timeout: Per-request timeout in seconds.
+        timeout: Per-request timeout in seconds. When omitted, uses the
+            centralized ``SKILL_TOOLS_LLM_TIMEOUT`` env setting.
 
     Returns:
         A :class:`ChatResponse` with parsed content + tool-call requests.
@@ -115,7 +117,12 @@ async def chat_with_tools(
             "openai package required for skill tool runtime — install with `pip install openai`"
         ) from exc
 
-    client = AsyncOpenAI(**_client_kwargs(), timeout=timeout)
+    effective_timeout = (
+        float(timeout)
+        if timeout is not None
+        else skill_tools_runtime_limits().llm_timeout_seconds
+    )
+    client = AsyncOpenAI(**_client_kwargs(), timeout=effective_timeout)
     chosen_model = model or _resolve_model()
 
     payload: dict[str, Any] = {

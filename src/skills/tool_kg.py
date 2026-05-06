@@ -92,8 +92,11 @@ async def tool_kg_entities(
     if ctx.slice_fn is None:
         raise ToolError("kg_entities is unavailable (no slice_fn wired)")
     safe_limit = max(1, min(int(limit or 25), ctx.max_kg_entities_per_type))
-    safe_chunks = max(0, min(int(max_chunks_per_entity or 0), 5))
-    safe_rels = max(0, min(int(max_relationships_per_entity or 0), 20))
+    safe_chunks = max(0, min(int(max_chunks_per_entity or 0), ctx.max_kg_chunks_per_entity))
+    safe_rels = max(
+        0,
+        min(int(max_relationships_per_entity or 0), ctx.max_kg_relationships_per_entity),
+    )
     types_list: Optional[list[str]] = None
     if types:
         if not isinstance(types, list):

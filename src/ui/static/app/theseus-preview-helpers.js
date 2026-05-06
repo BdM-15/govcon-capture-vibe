@@ -313,6 +313,7 @@ window.theseusStudioFiltered = function theseusStudioFiltered(app) {
     }
     if (
       query &&
+      !(deliverable.display_name || "").toLowerCase().includes(query) &&
       !(deliverable.filename || "").toLowerCase().includes(query) &&
       !(deliverable.title || "").toLowerCase().includes(query)
     ) {
