@@ -21,6 +21,15 @@ _MAX_TRANSACTION_PAGES = 50
 _MAX_RECIPIENT_PROFILES = 50
 
 
+def _artifact_display_name(resolved_piid: str, scenario: str) -> str:
+    suffix = {
+        "parent_idiq": "Vehicle Burn Intel",
+        "idiq_order": "Order Burn Intel",
+        "standalone_contract": "Contract Burn Intel",
+    }.get(scenario, "Obligation Intel")
+    return f"{resolved_piid} {suffix}"
+
+
 async def tool_collect_competitive_obligation_intel(
     ctx: ToolContext,
     contract_number: str,
@@ -317,7 +326,12 @@ async def tool_collect_competitive_obligation_intel(
     }
 
     artifact_json = json.dumps(envelope, ensure_ascii=False, indent=2)
-    artifact_result = await tool_write_file(ctx, _ARTIFACT_PATH, artifact_json)
+    artifact_result = await tool_write_file(
+        ctx,
+        _ARTIFACT_PATH,
+        artifact_json,
+        label=_artifact_display_name(resolved_piid, scenario),
+    )
 
     child_count = len(child_orders)
     summary = {

@@ -3035,7 +3035,14 @@
                                 :data-lucide="artifactIcon(f.mime, f.name)"
                                 class="w-3 h-3"
                               ></i>
-                              <span class="font-mono" x-text="f.name"></span>
+                              <span class="min-w-0 flex flex-col">
+                                <span x-text="f.display_name || f.name"></span>
+                                <span
+                                  x-show="f.display_name && f.display_name !== f.name"
+                                  class="text-[11px] text-slate-500 font-mono"
+                                  x-text="f.name"
+                                ></span>
+                              </span>
                             </a>
                             <span
                               class="skill-transcript-size"
@@ -3045,7 +3052,7 @@
                               type="button"
                               class="studio-action"
                               title="Why this artifact? (reasoning view)"
-                              @click="openReasoning({ skill: skills.current?.name, run_id: skills.run.run_id, filename: f.name, title: skills.run.title || '', created_at: skills.run.created_at || '' })"
+                              @click="openReasoning({ skill: skills.current?.name, run_id: skills.run.run_id, filename: f.name, display_name: f.display_name || '', title: (f.display_name || skills.run.title || ''), created_at: skills.run.created_at || '' })"
                             >
                               <i
                                 data-lucide="brain-circuit"
@@ -3418,6 +3425,7 @@
                 <label class="text-xs uppercase text-slate-500">Search</label>
                 <input
                   type="text"
+                  placeholder="filename, label, or title…"
                   class="bg-ink-800 border border-edge text-slate-200 text-sm rounded px-2 py-1.5 flex-1"
                   placeholder="filename or title…"
                   x-model="studio.search"
@@ -3487,11 +3495,17 @@
                       <td>
                         <button
                           type="button"
-                          class="studio-filename-btn font-mono text-neon-cyan"
+                          class="studio-filename-btn text-neon-cyan"
                           @click="openStudioPreview(d)"
-                          :title="`Preview ${d.filename}`"
-                          x-text="d.filename"
-                        ></button>
+                          :title="`Preview ${d.display_name || d.filename}`"
+                        >
+                          <span x-text="d.display_name || d.filename"></span>
+                          <span
+                            x-show="d.display_name && d.display_name !== d.filename"
+                            class="block text-[11px] text-slate-500 font-mono"
+                            x-text="d.filename"
+                          ></span>
+                        </button>
                       </td>
                       <td>
                         <span class="studio-pill" x-text="d.skill"></span>
@@ -5417,9 +5431,14 @@
               ></span>
             </div>
             <h2
-              class="text-lg font-semibold text-neon-cyan break-words mt-1 font-mono"
-              x-text="studioPreview.deliverable && studioPreview.deliverable.filename"
+              class="text-lg font-semibold text-neon-cyan break-words mt-1"
+              x-text="studioPreview.deliverable && (studioPreview.deliverable.display_name || studioPreview.deliverable.filename)"
             ></h2>
+            <p
+              class="text-[11px] text-slate-500 mt-1 font-mono"
+              x-show="studioPreview.deliverable && studioPreview.deliverable.display_name && studioPreview.deliverable.display_name !== studioPreview.deliverable.filename"
+              x-text="studioPreview.deliverable && studioPreview.deliverable.filename"
+            ></p>
             <p
               class="text-xs text-slate-400 mt-1"
               x-show="studioPreview.deliverable"
@@ -5500,7 +5519,7 @@
             >
               <img
                 :src="studioPreview.href"
-                :alt="studioPreview.deliverable && studioPreview.deliverable.filename"
+                :alt="studioPreview.deliverable && (studioPreview.deliverable.display_name || studioPreview.deliverable.filename)"
                 class="max-w-full max-h-[75vh]"
               />
             </div>

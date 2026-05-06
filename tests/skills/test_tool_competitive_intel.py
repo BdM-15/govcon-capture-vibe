@@ -124,8 +124,16 @@ def test_collect_competitive_obligation_intel_writes_standalone_artifact(tmp_pat
             encoding="utf-8"
         )
     )
+    manifest = json.loads(
+        (ctx.run_dir / "artifacts_manifest.json").read_text(encoding="utf-8")
+    )
     assert artifact["obligations"]["total_obligated_usd"] == 150.0
     assert artifact["obligations"]["net_obligated_usd"] == 140.0
+    assert manifest == {
+        "competitive_intel_obligation.json": {
+            "display_name": "ABC-123 Contract Burn Intel"
+        }
+    }
     assert [
         row["cumulative_obligated_usd"] for row in artifact["obligations"]["by_transaction"]
     ] == [100.0, 150.0, 140.0]
