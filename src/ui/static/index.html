@@ -5912,7 +5912,7 @@
                 <div class="text-[11px] text-slate-500">
                   KV stores, VDBs, chats, processing log, MinerU cache —
                   <span
-                    x-text="deleteModal.target?.storage_mb !== null ? deleteModal.target.storage_mb + ' MB' : 'not present'"
+                    x-text="deleteModal.target?.storage_mb != null ? deleteModal.target.storage_mb + ' MB' : 'not present'"
                   ></span>
                 </div>
               </div>
