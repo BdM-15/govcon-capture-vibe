@@ -429,3 +429,271 @@ def test_collect_competitive_obligation_intel_rolls_up_parent_idiq(tmp_path: Pat
         "parent_vehicle_awardee_count"
     ] == 2
     assert artifact["ptw_seed"]["recommended_baseline_usd"] == 500.0
+
+
+def test_collect_competitive_obligation_intel_keeps_idiq_order_scope_single_award(tmp_path: Path) -> None:
+    responses = {
+        "lookup_piid": [
+            {
+                "award_type": "contract",
+                "results": [
+                    {
+                        "Award ID": "ORDER-001",
+                        "generated_internal_id": "CONT_AWD_ORDER001_2044_PARENT001_2044",
+                    }
+                ],
+            }
+        ],
+        "get_award_detail": [
+            {
+                "piid": "ORDER-001",
+                "description": "Focused order",
+                "parent_award": {"generated_unique_award_id": "CONT_IDV_PARENT001_2044"},
+                "period_of_performance": {
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-12-31",
+                    "potential_end_date": "2025-12-31",
+                },
+                "recipient": {"name": "Order Prime LLC", "recipient_id": "recipient-order"},
+                "latest_transaction_contract_data": {
+                    "referenced_idv_agency_iden": "PARENT-001"
+                },
+            },
+            {
+                "piid": "PARENT-001",
+                "description": "Parent vehicle",
+                "parent_award": {},
+                "period_of_performance": {
+                    "start_date": "2023-01-01",
+                    "end_date": "2027-12-31",
+                    "potential_end_date": "2029-12-31",
+                },
+                "recipient": {"name": "Vehicle Owner"},
+                "latest_transaction_contract_data": {},
+            },
+        ],
+        "get_transactions": [
+            {
+                "results": [
+                    {
+                        "id": "order-tx-0",
+                        "action_date": "2024-01-01",
+                        "action_type": None,
+                        "action_type_description": None,
+                        "modification_number": "0",
+                        "description": "Base",
+                        "federal_action_obligation": 100.0,
+                    },
+                    {
+                        "id": "order-tx-1",
+                        "action_date": "2024-06-01",
+                        "action_type": "G",
+                        "action_type_description": "EXERCISE AN OPTION",
+                        "modification_number": "P00001",
+                        "description": "Option",
+                        "federal_action_obligation": 50.0,
+                    },
+                ],
+                "page_metadata": {"hasNext": False},
+            },
+            {
+                "results": [
+                    {
+                        "id": "sib-1",
+                        "action_date": "2024-02-01",
+                        "action_type": None,
+                        "action_type_description": None,
+                        "modification_number": "0",
+                        "description": "Sibling one",
+                        "federal_action_obligation": 300.0,
+                    }
+                ],
+                "page_metadata": {"hasNext": False},
+            },
+            {
+                "results": [
+                    {
+                        "id": "sib-2",
+                        "action_date": "2024-03-01",
+                        "action_type": None,
+                        "action_type_description": None,
+                        "modification_number": "0",
+                        "description": "Sibling two",
+                        "federal_action_obligation": 400.0,
+                    }
+                ],
+                "page_metadata": {"hasNext": False},
+            },
+        ],
+        "get_idv_children": [
+            {
+                "results": [
+                    {
+                        "generated_unique_award_id": "CONT_AWD_ORDER001_2044_PARENT001_2044",
+                        "piid": "ORDER-001",
+                        "description": "Focused order",
+                        "obligated_amount": 150.0,
+                        "period_of_performance_start_date": "2024-01-01",
+                        "period_of_performance_current_end_date": "2024-12-31",
+                    },
+                    {
+                        "generated_unique_award_id": "CONT_AWD_ORDER002_2044_PARENT001_2044",
+                        "piid": "ORDER-002",
+                        "description": "Sibling order one",
+                        "obligated_amount": 300.0,
+                        "period_of_performance_start_date": "2024-02-01",
+                        "period_of_performance_current_end_date": "2024-09-30",
+                    },
+                    {
+                        "generated_unique_award_id": "CONT_AWD_ORDER003_2044_PARENT001_2044",
+                        "piid": "ORDER-003",
+                        "description": "Sibling order two",
+                        "obligated_amount": 400.0,
+                        "period_of_performance_start_date": "2024-03-01",
+                        "period_of_performance_current_end_date": "2024-10-31",
+                    },
+                ],
+                "page_metadata": {"hasNext": False},
+            }
+        ],
+        "get_idv_activity": [
+            {
+                "results": [
+                    {
+                        "generated_unique_award_id": "CONT_AWD_ORDER001_2044_PARENT001_2044",
+                        "piid": "ORDER-001",
+                        "recipient_name": "Order Prime LLC",
+                        "recipient_id": "recipient-order",
+                        "obligated_amount": 150.0,
+                        "awarded_amount": 150.0,
+                        "period_of_performance_start_date": "2024-01-01",
+                        "period_of_performance_current_end_date": "2024-12-31",
+                        "period_of_performance_potential_end_date": "2025-12-31",
+                    },
+                    {
+                        "generated_unique_award_id": "CONT_AWD_ORDER002_2044_PARENT001_2044",
+                        "piid": "ORDER-002",
+                        "recipient_name": "Sibling Prime A",
+                        "recipient_id": "recipient-a",
+                        "obligated_amount": 300.0,
+                        "awarded_amount": 300.0,
+                        "period_of_performance_start_date": "2024-02-01",
+                        "period_of_performance_current_end_date": "2024-09-30",
+                        "period_of_performance_potential_end_date": "2025-09-30",
+                    },
+                    {
+                        "generated_unique_award_id": "CONT_AWD_ORDER003_2044_PARENT001_2044",
+                        "piid": "ORDER-003",
+                        "recipient_name": "Sibling Prime B",
+                        "recipient_id": "recipient-b",
+                        "obligated_amount": 400.0,
+                        "awarded_amount": 400.0,
+                        "period_of_performance_start_date": "2024-03-01",
+                        "period_of_performance_current_end_date": "2024-10-31",
+                        "period_of_performance_potential_end_date": "2025-10-31",
+                    },
+                ],
+                "page_metadata": {"hasNext": False},
+            }
+        ],
+        "search_awards": [
+            {
+                "results": [
+                    {
+                        "Award ID": "PARENT-001",
+                        "Recipient Name": "VEHICLE OWNER",
+                        "Recipient UEI": "UEI-1",
+                        "Description": "Parent vehicle",
+                        "Award Amount": 0.0,
+                        "Start Date": "2023-01-01",
+                        "Last Date to Order": "2029-12-31",
+                        "generated_internal_id": "CONT_IDV_PARENT001_2044",
+                    },
+                    {
+                        "Award ID": "PARENT-002",
+                        "Recipient Name": "SIBLING PRIME",
+                        "Recipient UEI": "UEI-2",
+                        "Description": "Parent vehicle sibling",
+                        "Award Amount": 0.0,
+                        "Start Date": "2023-01-01",
+                        "Last Date to Order": "2029-12-31",
+                        "generated_internal_id": "CONT_IDV_PARENT002_2044",
+                    },
+                ]
+            }
+        ],
+        "get_recipient_profile": [
+            {"name": "Order Prime LLC", "parent_name": "ORDER HOLDCO"},
+            {"name": "Sibling Prime A", "parent_name": "HOLDCO A"},
+            {"name": "Sibling Prime B", "parent_name": "HOLDCO B"},
+        ],
+    }
+    ctx = _ctx(tmp_path, responses)
+
+    result = _run(
+        tool_collect_competitive_obligation_intel(
+            ctx,
+            "ORDER-001",
+            scope="single_award",
+        )
+    )
+
+    artifact = json.loads(
+        (ctx.run_dir / "artifacts" / "competitive_intel_obligation.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert result.payload["scope"] == "single_award"
+    assert artifact["scope"] == "single_award"
+    assert artifact["resolved"]["scenario"] == "idiq_order"
+    assert artifact["obligations"]["total_obligated_usd"] == 150.0
+    assert artifact["obligations"]["net_obligated_usd"] == 150.0
+    assert artifact["hierarchy"]["child_award_ids"] == []
+    assert artifact["hierarchy"]["sibling_parent_award_ids"] == []
+    assert len(artifact["obligations"]["by_award"]) == 1
+    assert artifact["obligations"]["by_award"][0]["award_id"] == "CONT_AWD_ORDER001_2044_PARENT001_2044"
+    assert artifact["obligations"]["by_award"][0]["net_obligated_usd"] == 150.0
+    assert [
+        row["cumulative_obligated_usd"]
+        for row in artifact["obligations"]["by_transaction"]
+    ] == [100.0, 150.0]
+    assert artifact["insights"]["headline"] == (
+        "ORDER-001 is best read as one order story: $150.00 net, about $12.50/month through 2024-12-31."
+    )
+    assert artifact["insights"]["blocks"][0]["evidence"]["net_obligated_usd"] == 150.0
+    assert artifact["vehicle_context"] == {
+        "parent_award_id": "CONT_IDV_PARENT001_2044",
+        "child_order_count": 3,
+        "total_obligated_usd": 850.0,
+        "net_obligated_usd": 850.0,
+        "by_period_of_performance": [
+            {
+                "label": "child_order_rollup",
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31",
+                "obligated_usd": 850.0,
+                "source": "idv_activity",
+            },
+            {
+                "label": "child_order_rollup_potential",
+                "start_date": "2024-01-01",
+                "end_date": "2025-12-31",
+                "obligated_usd": 850.0,
+                "source": "idv_activity",
+            },
+        ],
+        "competitor_discovery": {
+            "order_holder_recipients": [],
+            "parent_holder_recipients": [],
+            "parent_vehicle_awardees": [],
+            "order_holder_count": 3,
+            "parent_holder_count": 3,
+            "parent_vehicle_awardee_count": 2,
+            "linkage_method_used": "parent_child",
+            "completeness_status": "high",
+        },
+    }
+    assert artifact["competitor_discovery"]["parent_vehicle_awardees"] == []
+    assert artifact["competitor_discovery"]["parent_vehicle_awardee_count"] == 2
+    assert result.payload["vehicle_context"]["child_order_count"] == 3

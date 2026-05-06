@@ -135,6 +135,9 @@ def test_competitive_intel_declares_workflow_c_and_parent_summary_rules() -> Non
     assert "Use `award_rollups` / `obligations.by_award` as the canonical grouped structure" in body
     assert "If `parent_vehicle_awardees` is present" in body
     assert "The number you state in prose must equal `parent_vehicle_awardee_count`" in body
+    assert 'scope="vehicle"' in body
+    assert 'scope="single_award"' in body
+    assert "Do not call `read_file` on `artifacts/competitive_intel_obligation.json`" in body
 
 
 # ---------------------------------------------------------------------------

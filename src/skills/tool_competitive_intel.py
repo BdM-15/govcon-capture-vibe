@@ -19,6 +19,7 @@ _TRANSACTION_PAGE_LIMIT = 5000
 _MAX_IDV_PAGES = 200
 _MAX_TRANSACTION_PAGES = 50
 _MAX_RECIPIENT_PROFILES = 50
+_OBLIGATION_SCOPES = {"auto", "vehicle", "single_award"}
 
 
 def _artifact_display_name(resolved_piid: str, scenario: str) -> str:
@@ -33,6 +34,7 @@ def _artifact_display_name(resolved_piid: str, scenario: str) -> str:
 async def tool_collect_competitive_obligation_intel(
     ctx: ToolContext,
     contract_number: str,
+    scope: str = "auto",
 ) -> ToolResult:
     """Resolve one contract number and persist the full Workflow B artifact.
 
@@ -43,6 +45,7 @@ async def tool_collect_competitive_obligation_intel(
     """
 
     normalized_contract = _normalize_contract_number(contract_number)
+    requested_scope = _normalize_obligation_scope(scope)
     session = ctx.mcp_sessions.get(_USASPENDING_SERVER)
     if session is None:
         raise ToolError(
@@ -85,6 +88,7 @@ async def tool_collect_competitive_obligation_intel(
     parent_vehicle_award_id = (
         resolved_award_id if scenario == "parent_idiq" else parent_award_id
     )
+    effective_scope = _resolve_obligation_scope(requested_scope, scenario, warnings)
     parent_vehicle_detail = detail
     if scenario == "idiq_order" and parent_award_id:
         parent_vehicle_detail = await _call_usaspending_json(
@@ -205,6 +209,9 @@ async def tool_collect_competitive_obligation_intel(
         sum(max(tx["amount_usd"], 0.0) for tx in all_transactions)
     )
     net_obligated_usd = _round_money(sum(tx["amount_usd"] for tx in all_transactions))
+    current_award_total = _round_money(
+        sum(max(tx["amount_usd"], 0.0) for tx in current_transactions)
+    )
     current_award_net = _round_money(
         sum(tx["amount_usd"] for tx in current_transactions)
     )
@@ -255,21 +262,107 @@ async def tool_collect_competitive_obligation_intel(
         warnings,
     )
     ptw_seed = _build_ptw_seed(all_transactions)
+
+    focus_total_obligated_usd = total_obligated_usd
+    focus_net_obligated_usd = net_obligated_usd
+    focus_pop_entries = pop_entries
+    focus_rate_analysis = rate_analysis
+    focus_award_rollups = award_rollups
+    focus_by_transaction = all_transactions
+    focus_by_award = award_rollups
+    focus_by_child_order = [
+        {
+            "award_id": order["award_id"],
+            "piid": order.get("piid"),
+            "description": order.get("description"),
+            "pop_start_date": order.get("pop_start_date"),
+            "pop_end_current_date": order.get("pop_end_current_date"),
+            "pop_end_potential_date": order.get("pop_end_potential_date"),
+            "pop_end_date": order.get("pop_end_date"),
+            "amount_usd": order.get("amount_usd", 0.0),
+        }
+        for order in child_orders
+    ]
+    focus_hierarchy = {
+        "parent_award_id": parent_award_id,
+        "child_award_ids": [order["award_id"] for order in child_orders],
+        "sibling_parent_award_ids": [
+            awardee["award_id"]
+            for awardee in parent_vehicle_awardees
+            if awardee.get("award_id")
+            and awardee["award_id"] != parent_vehicle_award_id
+        ],
+    }
+    focus_competitor_discovery = _compact_competitor_discovery(
+        competitor_discovery,
+        include_details=True,
+    )
+    focus_ptw_seed = ptw_seed
+    vehicle_context = None
+
+    if scenario == "idiq_order" and effective_scope == "single_award":
+        focus_total_obligated_usd = current_award_total
+        focus_net_obligated_usd = current_award_net
+        focus_pop_entries = _build_period_of_performance_entries(
+            detail,
+            [],
+            scenario,
+            current_award_net=current_award_net,
+            vehicle_net=current_award_net,
+        )
+        focus_rate_analysis = _build_rate_analysis(
+            current_transactions,
+            current_transactions,
+            focus_pop_entries,
+            warnings,
+            scenario,
+        )
+        focus_award_rollups = _build_award_rollups(
+            resolved_award_id,
+            resolved_piid,
+            detail,
+            scenario,
+            [],
+            current_transactions,
+        )
+        focus_by_transaction = _combine_transactions([dict(tx) for tx in current_transactions])
+        focus_by_award = focus_award_rollups
+        focus_by_child_order = []
+        focus_hierarchy = {
+            "parent_award_id": parent_award_id,
+            "child_award_ids": [],
+            "sibling_parent_award_ids": [],
+        }
+        focus_competitor_discovery = _compact_competitor_discovery(
+            competitor_discovery,
+            include_details=False,
+        )
+        focus_ptw_seed = _build_ptw_seed(current_transactions)
+        vehicle_context = _build_vehicle_context(
+            parent_award_id=parent_award_id,
+            child_orders=child_orders,
+            total_obligated_usd=total_obligated_usd,
+            net_obligated_usd=net_obligated_usd,
+            pop_entries=pop_entries,
+            competitor_discovery=competitor_discovery,
+        )
+
     insights = _build_insight_blocks(
         scenario=scenario,
         resolved_piid=resolved_piid,
-        total_obligated_usd=total_obligated_usd,
-        net_obligated_usd=net_obligated_usd,
-        child_orders=child_orders,
-        award_rollups=award_rollups,
-        competitor_discovery=competitor_discovery,
-        rate_analysis=rate_analysis,
-        ptw_seed=ptw_seed,
+        total_obligated_usd=focus_total_obligated_usd,
+        net_obligated_usd=focus_net_obligated_usd,
+        child_orders=child_orders if effective_scope == "vehicle" else [],
+        award_rollups=focus_award_rollups,
+        competitor_discovery=focus_competitor_discovery,
+        rate_analysis=focus_rate_analysis,
+        ptw_seed=focus_ptw_seed,
         warnings=warnings,
     )
 
     envelope = {
         "input_contract_number": contract_number,
+        "scope": effective_scope,
         "resolved": {
             "award_id": resolved_award_id,
             "piid": resolved_piid,
@@ -277,26 +370,19 @@ async def tool_collect_competitive_obligation_intel(
             "lookup_award_type": _clean_text(lookup.get("award_type")),
             "classification_basis": classification_basis,
         },
-        "hierarchy": {
-            "parent_award_id": parent_award_id,
-            "child_award_ids": [order["award_id"] for order in child_orders],
-            "sibling_parent_award_ids": [
-                awardee["award_id"]
-                for awardee in parent_vehicle_awardees
-                if awardee.get("award_id")
-                and awardee["award_id"] != parent_vehicle_award_id
-            ],
-        },
+        "hierarchy": focus_hierarchy,
         "obligations": {
-            "total_obligated_usd": total_obligated_usd,
-            "net_obligated_usd": net_obligated_usd,
+            "total_obligated_usd": focus_total_obligated_usd,
+            "net_obligated_usd": focus_net_obligated_usd,
             "parent_direct_obligated_usd": current_award_net
-            if scenario == "parent_idiq"
+            if scenario == "parent_idiq" and effective_scope == "vehicle"
             else None,
-            "child_order_obligated_usd": child_order_net if child_orders else None,
-            "by_period_of_performance": pop_entries,
-            "by_fiscal_year": _build_fiscal_year_rollup(all_transactions),
-            "rate_analysis": rate_analysis,
+            "child_order_obligated_usd": child_order_net
+            if effective_scope == "vehicle" and child_orders
+            else None,
+            "by_period_of_performance": focus_pop_entries,
+            "by_fiscal_year": _build_fiscal_year_rollup(focus_by_transaction),
+            "rate_analysis": focus_rate_analysis,
             "by_transaction": [
                 {
                     "award_id": tx["award_id"],
@@ -311,32 +397,22 @@ async def tool_collect_competitive_obligation_intel(
                     "cumulative_obligated_usd": tx["cumulative_obligated_usd"],
                     "inferred_pop_segment": tx["inferred_pop_segment"],
                 }
-                for tx in all_transactions
+                for tx in focus_by_transaction
             ],
-            "by_award": award_rollups,
-            "by_child_order": [
-                {
-                    "award_id": order["award_id"],
-                    "piid": order.get("piid"),
-                    "description": order.get("description"),
-                    "pop_start_date": order.get("pop_start_date"),
-                    "pop_end_current_date": order.get("pop_end_current_date"),
-                    "pop_end_potential_date": order.get("pop_end_potential_date"),
-                    "pop_end_date": order.get("pop_end_date"),
-                    "amount_usd": order.get("amount_usd", 0.0),
-                }
-                for order in child_orders
-            ],
+            "by_award": focus_by_award,
+            "by_child_order": focus_by_child_order,
         },
         "insights": insights,
-        "competitor_discovery": competitor_discovery,
-        "ptw_seed": ptw_seed,
+        "competitor_discovery": focus_competitor_discovery,
+        "ptw_seed": focus_ptw_seed,
         "warnings": _dedupe(warnings),
         "data_provenance": {
             "usaspending_award_ids": sorted(award_ids_used),
             "tools_invoked": _dedupe(tools_invoked),
         },
     }
+    if vehicle_context is not None:
+        envelope["vehicle_context"] = vehicle_context
 
     artifact_json = json.dumps(envelope, ensure_ascii=False, indent=2)
     artifact_result = await tool_write_file(
@@ -349,41 +425,105 @@ async def tool_collect_competitive_obligation_intel(
     child_count = len(child_orders)
     summary = {
         "artifact_path": artifact_result.payload["path"],
+        "scope": effective_scope,
         "resolved": envelope["resolved"],
         "obligations_summary": {
-            "total_obligated_usd": total_obligated_usd,
-            "net_obligated_usd": net_obligated_usd,
-            "child_order_count": child_count,
+            "total_obligated_usd": focus_total_obligated_usd,
+            "net_obligated_usd": focus_net_obligated_usd,
+            "child_order_count": child_count if effective_scope == "vehicle" else 0,
         },
-        "award_rollups": award_rollups,
-        "competitor_discovery": {
-            "completeness_status": competitor_discovery["completeness_status"],
-            "order_holder_count": len(
-                competitor_discovery["order_holder_recipients"]
-            ),
-            "parent_holder_count": len(
-                competitor_discovery["parent_holder_recipients"]
-            ),
-            "parent_vehicle_awardee_count": len(
-                competitor_discovery["parent_vehicle_awardees"]
-            ),
-            "parent_vehicle_awardees": competitor_discovery[
-                "parent_vehicle_awardees"
-            ],
-        },
+        "award_rollups": focus_award_rollups,
+        "competitor_discovery": focus_competitor_discovery,
         "insights": insights,
-        "ptw_seed": ptw_seed,
+        "ptw_seed": focus_ptw_seed,
         "warnings": envelope["warnings"],
         "tools_invoked": envelope["data_provenance"]["tools_invoked"],
     }
+    if vehicle_context is not None:
+        summary["vehicle_context"] = vehicle_context
     return ToolResult(
         payload=summary,
         transcript_extra={
             "artifact_path": artifact_result.payload["path"],
             "scenario": scenario,
             "child_order_count": child_count,
+            "scope": effective_scope,
         },
     )
+
+
+def _normalize_obligation_scope(scope: str | None) -> str:
+    normalized = _clean_text(scope) or "auto"
+    normalized = normalized.strip().lower()
+    if normalized not in _OBLIGATION_SCOPES:
+        allowed = ", ".join(sorted(_OBLIGATION_SCOPES))
+        raise ToolError(f"scope must be one of: {allowed}")
+    return normalized
+
+
+def _resolve_obligation_scope(
+    requested_scope: str,
+    scenario: str,
+    warnings: list[str],
+) -> str:
+    if requested_scope == "auto":
+        if scenario == "parent_idiq":
+            return "vehicle"
+        return "single_award"
+    if requested_scope == "single_award" and scenario == "parent_idiq":
+        warnings.append(
+            "single_award scope requested for a parent IDIQ without a specific child order id; falling back to vehicle scope."
+        )
+        return "vehicle"
+    return requested_scope
+
+
+def _compact_competitor_discovery(
+    competitor_discovery: dict[str, Any],
+    *,
+    include_details: bool,
+) -> dict[str, Any]:
+    order_holders = competitor_discovery.get("order_holder_recipients") or []
+    parent_holders = competitor_discovery.get("parent_holder_recipients") or []
+    parent_awardees = competitor_discovery.get("parent_vehicle_awardees") or []
+    return {
+        "order_holder_recipients": order_holders if include_details else [],
+        "parent_holder_recipients": parent_holders if include_details else [],
+        "parent_vehicle_awardees": parent_awardees if include_details else [],
+        "order_holder_count": len(order_holders),
+        "parent_holder_count": len(parent_holders),
+        "parent_vehicle_awardee_count": len(parent_awardees),
+        "linkage_method_used": competitor_discovery.get("linkage_method_used"),
+        "completeness_status": competitor_discovery.get("completeness_status"),
+    }
+
+
+def _build_vehicle_context(
+    *,
+    parent_award_id: str | None,
+    child_orders: list[dict[str, Any]],
+    total_obligated_usd: float,
+    net_obligated_usd: float,
+    pop_entries: list[dict[str, Any]],
+    competitor_discovery: dict[str, Any],
+) -> dict[str, Any] | None:
+    if not parent_award_id:
+        return None
+    return {
+        "parent_award_id": parent_award_id,
+        "child_order_count": len(child_orders),
+        "total_obligated_usd": total_obligated_usd,
+        "net_obligated_usd": net_obligated_usd,
+        "by_period_of_performance": [
+            entry
+            for entry in pop_entries
+            if entry.get("label", "").startswith("child_order_rollup")
+        ],
+        "competitor_discovery": _compact_competitor_discovery(
+            competitor_discovery,
+            include_details=False,
+        ),
+    }
 
 
 async def _call_usaspending_json(
@@ -1510,12 +1650,21 @@ def _build_vehicle_competition_block(
     parent_awardees = competitor_discovery.get("parent_vehicle_awardees") or []
     order_holders = competitor_discovery.get("order_holder_recipients") or []
     parent_holders = competitor_discovery.get("parent_holder_recipients") or []
+    parent_awardee_count = competitor_discovery.get("parent_vehicle_awardee_count")
+    if parent_awardee_count is None:
+        parent_awardee_count = len(parent_awardees)
+    order_holder_count = competitor_discovery.get("order_holder_count")
+    if order_holder_count is None:
+        order_holder_count = len(order_holders)
+    parent_holder_count = competitor_discovery.get("parent_holder_count")
+    if parent_holder_count is None:
+        parent_holder_count = len(parent_holders)
     completeness = competitor_discovery.get("completeness_status") or "unknown"
 
-    if parent_awardees:
+    if parent_awardee_count:
         summary = (
-            f"Parent-level roster is {completeness} confidence with {len(parent_awardees)} exact awardees. "
-            f"Observed burn spreads across {len(order_holders)} order holders and {len(parent_holders)} parent holders."
+            f"Parent-level roster is {completeness} confidence with {parent_awardee_count} exact awardees. "
+            f"Observed burn spreads across {order_holder_count} order holders and {parent_holder_count} parent holders."
         )
     else:
         summary = (
@@ -1529,9 +1678,9 @@ def _build_vehicle_competition_block(
         "summary": summary,
         "evidence": {
             "completeness_status": completeness,
-            "parent_vehicle_awardee_count": len(parent_awardees),
-            "order_holder_count": len(order_holders),
-            "parent_holder_count": len(parent_holders),
+            "parent_vehicle_awardee_count": parent_awardee_count,
+            "order_holder_count": order_holder_count,
+            "parent_holder_count": parent_holder_count,
             "parent_vehicle_awardees": parent_awardees,
         },
     }

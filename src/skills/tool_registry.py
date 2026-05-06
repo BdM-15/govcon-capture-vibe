@@ -237,9 +237,10 @@ def build_tool_specs(*, skill_name: str | None = None) -> list[ToolSpec]:
                     "Deterministically resolve one contract number through USAspending, "
                     "classify standalone vs parent IDIQ vs order, expand child and sibling "
                     "orders, roll up obligations, compute PTW seed metrics, and write "
-                    "artifacts/competitive_intel_obligation.json. Use this for Workflow B "
-                    "instead of manually paging lookup_piid/get_award_detail/get_transactions/"
-                    "get_idv_children/get_idv_activity."
+                    "artifacts/competitive_intel_obligation.json. Use scope='vehicle' for "
+                    "Workflow B and scope='single_award' for Workflow C instead of manually "
+                    "paging lookup_piid/get_award_detail/get_transactions/get_idv_children/"
+                    "get_idv_activity."
                 ),
                 parameters={
                     "type": "object",
@@ -248,6 +249,15 @@ def build_tool_specs(*, skill_name: str | None = None) -> list[ToolSpec]:
                             "type": "string",
                             "description": (
                                 "Raw PIID or order number to resolve, e.g. 'N00024-24-C-0085'."
+                            ),
+                        },
+                        "scope": {
+                            "type": "string",
+                            "enum": ["auto", "vehicle", "single_award"],
+                            "description": (
+                                "Artifact/output scope. Use 'vehicle' for full Workflow B rollups, "
+                                "'single_award' for Workflow C order-only artifacts, or 'auto' to "
+                                "default by resolved scenario."
                             ),
                         }
                     },

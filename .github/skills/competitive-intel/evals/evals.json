@@ -1,7 +1,7 @@
 {
   "skill": "competitive-intel",
-  "version": "0.6.1",
-  "notes": "Phase 4e+ — black-hat plus contract-number obligation modes. Workflow B now uses the deterministic collect_competitive_obligation_intel tool for parent-level vehicle synthesis. Workflow C uses the same deterministic collector for one-award/order burn reads backed by grouped award_rollups, artifact by_award data, and deterministic insights blocks that should anchor the final cover note. Run from a workspace whose KG has at least program/agency/NAICS context OR provide contract number inputs directly. Live MCP eval requires THESEUS_LIVE_MCP=1.",
+  "version": "0.6.2",
+  "notes": "Phase 4e+ — black-hat plus contract-number obligation modes. Workflow B now calls collect_competitive_obligation_intel with vehicle scope for parent-level synthesis. Workflow C calls the same collector with single_award scope so idiq_order artifacts stay order-only while still carrying compact parent-vehicle context. Run from a workspace whose KG has at least program/agency/NAICS context OR provide contract number inputs directly. Live MCP eval requires THESEUS_LIVE_MCP=1.",
   "evals": [
     {
       "id": "eval-001-incumbent-active-window",
@@ -300,6 +300,11 @@
           "path": "obligations.by_award[0].net_obligated_usd"
         },
         {
+          "kind": "json_path_in_set",
+          "path": "scope",
+          "values": ["single_award"]
+        },
+        {
           "kind": "json_path_set",
           "path": "insights.headline"
         },
@@ -307,6 +312,43 @@
           "kind": "json_path_array_min_length",
           "path": "insights.blocks",
           "min": 2
+        },
+        {
+          "kind": "json_path_set",
+          "path": "vehicle_context.parent_award_id"
+        }
+      ]
+    },
+    {
+      "id": "eval-009-order-only-explicit-contract-only",
+      "prompt": "Provide me an obligation rate on this contract only: FA805122F0001",
+      "expectations": [
+        {
+          "kind": "artifact_exists",
+          "path": "competitive_intel_obligation.json"
+        },
+        {
+          "kind": "transcript_tool_called",
+          "tool": "collect_competitive_obligation_intel"
+        },
+        {
+          "kind": "json_path_in_set",
+          "path": "scope",
+          "values": ["single_award"]
+        },
+        {
+          "kind": "json_path_in_set",
+          "path": "resolved.scenario",
+          "values": ["idiq_order", "standalone_contract"]
+        },
+        {
+          "kind": "json_path_in_set",
+          "path": "obligations.by_award[0].role",
+          "values": ["current_order", "resolved_award"]
+        },
+        {
+          "kind": "json_path_set",
+          "path": "vehicle_context.child_order_count"
         }
       ]
     }

@@ -9,7 +9,7 @@ metadata:
   shipley_phases: [pursuit, capture, strategy]
   capability: research
   category: intel
-  version: 0.8.1
+  version: 0.8.2
   status: active
   runtime: tools
   # Workflow A still walks a multi-call MCP + KG path. Workflow B now
@@ -278,7 +278,7 @@ Execute in order. The output is a **parent-level vehicle summary** backed by chi
 
 Input may be contract/order number only. **Do not hand-walk the USAspending hierarchy anymore.**
 
-Call `collect_competitive_obligation_intel` once with the raw contract number. That tool deterministically:
+Call `collect_competitive_obligation_intel` once with the raw contract number and `scope="vehicle"`. That tool deterministically:
 
 - resolves the PIID,
 - classifies `standalone_contract | parent_idiq | idiq_order`,
@@ -518,7 +518,7 @@ Execute in order. The output is a **single-award read**, not a vehicle-wide narr
 
 ### 1. Resolve the contract or order number
 
-Call `collect_competitive_obligation_intel` once with the raw contract number.
+Call `collect_competitive_obligation_intel` once with the raw contract number and `scope="single_award"`.
 
 Use the tool result first. It already gives you:
 
@@ -526,9 +526,9 @@ Use the tool result first. It already gives you:
 - `award_rollups` for clean grouped per-award analysis,
 - `insights` with a deterministic headline plus burn/award-story blocks,
 - aggregate competitor context if the award sits inside a larger vehicle,
-- the saved artifact path if you need deeper fields.
+- `vehicle_context` when the resolved award sits inside a larger vehicle.
 
-Do not re-walk `get_transactions` manually unless the collector fails.
+Do not re-walk `get_transactions` manually unless the collector fails. Do not call `read_file` on `artifacts/competitive_intel_obligation.json`; the runtime `read_file` tool cannot open run artifacts. Use the collector result fields directly.
 
 ### 2. Select the focus award
 
