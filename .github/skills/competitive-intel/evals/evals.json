@@ -1,7 +1,7 @@
 {
   "skill": "competitive-intel",
-  "version": "0.6.0",
-  "notes": "Phase 4e+ — black-hat plus contract-number obligation modes. Workflow B now uses the deterministic collect_competitive_obligation_intel tool for parent-level vehicle synthesis. Workflow C uses the same deterministic collector for one-award/order burn reads backed by grouped award_rollups and artifact by_award data. Run from a workspace whose KG has at least program/agency/NAICS context OR provide contract number inputs directly. Live MCP eval requires THESEUS_LIVE_MCP=1.",
+  "version": "0.6.1",
+  "notes": "Phase 4e+ — black-hat plus contract-number obligation modes. Workflow B now uses the deterministic collect_competitive_obligation_intel tool for parent-level vehicle synthesis. Workflow C uses the same deterministic collector for one-award/order burn reads backed by grouped award_rollups, artifact by_award data, and deterministic insights blocks that should anchor the final cover note. Run from a workspace whose KG has at least program/agency/NAICS context OR provide contract number inputs directly. Live MCP eval requires THESEUS_LIVE_MCP=1.",
   "evals": [
     {
       "id": "eval-001-incumbent-active-window",
@@ -159,6 +159,15 @@
         {
           "kind": "json_path_set",
           "path": "obligations.rate_analysis.by_option_year"
+        },
+        {
+          "kind": "json_path_set",
+          "path": "insights.headline"
+        },
+        {
+          "kind": "json_path_array_min_length",
+          "path": "insights.blocks",
+          "min": 2
         }
       ]
     },
@@ -202,6 +211,15 @@
           "kind": "json_path_in_set",
           "path": "competitor_discovery.completeness_status",
           "values": ["high", "medium", "low"]
+        },
+        {
+          "kind": "json_path_set",
+          "path": "insights.headline"
+        },
+        {
+          "kind": "json_path_array_min_length",
+          "path": "insights.blocks",
+          "min": 3
         }
       ]
     },
@@ -244,6 +262,15 @@
           "kind": "json_path_in_set",
           "path": "competitor_discovery.linkage_method_used",
           "values": ["parent_child", "piid_family", "solicitation_fallback"]
+        },
+        {
+          "kind": "json_path_set",
+          "path": "insights.headline"
+        },
+        {
+          "kind": "json_path_array_min_length",
+          "path": "insights.blocks",
+          "min": 3
         }
       ]
     },
@@ -271,6 +298,15 @@
         {
           "kind": "json_path_set",
           "path": "obligations.by_award[0].net_obligated_usd"
+        },
+        {
+          "kind": "json_path_set",
+          "path": "insights.headline"
+        },
+        {
+          "kind": "json_path_array_min_length",
+          "path": "insights.blocks",
+          "min": 2
         }
       ]
     }

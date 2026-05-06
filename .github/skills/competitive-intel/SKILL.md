@@ -9,7 +9,7 @@ metadata:
   shipley_phases: [pursuit, capture, strategy]
   capability: research
   category: intel
-  version: 0.8.0
+  version: 0.8.1
   status: active
   runtime: tools
   # Workflow A still walks a multi-call MCP + KG path. Workflow B now
@@ -285,6 +285,7 @@ Call `collect_competitive_obligation_intel` once with the raw contract number. T
 - expands child orders / sibling orders without spending more model turns,
 - pulls all transaction pages needed for the rollup,
 - computes period-of-performance, fiscal-year, burn-rate, competitor-completeness, and PTW seed fields,
+- computes `insights.headline` plus deterministic story blocks you should use in prose before free-writing,
 - returns compact `award_rollups` so you can reason about one order without re-walking the hierarchy,
 - writes `artifacts/competitive_intel_obligation.json` directly.
 
@@ -492,8 +493,15 @@ Summarize:
 - PTW seed recommendation,
 - warnings.
 
+Start from `insights.headline` and `insights.blocks` from the collector result or artifact. Treat them as the deterministic spine of the cover note, not optional garnish.
+
 For **Workflow B**, keep the cover note parent-level and insight-driven:
 
+- open with `insights.headline` verbatim or nearly verbatim,
+- use `burn_posture` as the quantitative lead,
+- use `vehicle_concentration` to decide which 1-3 child orders matter most,
+- use `competitive_context` for the exact parent-awardee roster / completeness sentence,
+- surface `caveats` directly instead of paraphrasing warnings into mush,
 - lead with vehicle-wide burn and what it implies,
 - mention the sibling parent-awardee roster when relevant, using `parent_vehicle_awardees` as the exact roster,
 - if you state a parent-awardee count in prose, copy the exact deterministic count from `parent_vehicle_awardee_count` and make the listed roster match it,
@@ -516,6 +524,7 @@ Use the tool result first. It already gives you:
 
 - `resolved` scenario,
 - `award_rollups` for clean grouped per-award analysis,
+- `insights` with a deterministic headline plus burn/award-story blocks,
 - aggregate competitor context if the award sits inside a larger vehicle,
 - the saved artifact path if you need deeper fields.
 
@@ -566,6 +575,8 @@ Summarize the one award:
 - monthly / daily burn,
 - biggest one or two modification inflection points,
 - warnings.
+
+Open with `insights.headline`. Then use `award_story` as the contract-story paragraph, `burn_posture` as the rate paragraph, optional `competitive_context` for brief parent-vehicle orientation, and `caveats` for blunt warnings. Do not ignore these blocks and rebuild the story from raw `by_transaction` unless an insight block is missing.
 
 Reference the saved artifact path. If deeper detail exists for adjacent awards, mention that grouped `by_award` data is available in the artifact.
 

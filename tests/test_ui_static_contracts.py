@@ -51,3 +51,12 @@ def test_studio_filename_button_is_only_preview_trigger() -> None:
     assert '@click="openStudioPreview(d)"' in filename_button
     assert 'x-text="d.filename"' not in filename_button
     assert 'title="Preview inline"' not in source
+
+
+def test_studio_preview_header_hides_raw_filename_subline() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+    start = source.index('x-text="studioPreview.deliverable && (studioPreview.deliverable.display_name || studioPreview.deliverable.filename)"')
+    end = source.index('x-show="studioPreview.deliverable"', start)
+    header_slice = source[start:end]
+
+    assert 'x-show="studioPreview.deliverable && studioPreview.deliverable.display_name && studioPreview.deliverable.display_name !== studioPreview.deliverable.filename"' not in header_slice
