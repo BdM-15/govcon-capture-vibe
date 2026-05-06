@@ -7,9 +7,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
-from src.skills.settings import skill_tools_max_turns
+from src.skills.settings import skill_tools_max_turns, skill_tools_runtime_limits
 from src.skills.skill_emitters import auto_emit_artifacts
 from src.skills.skill_models import Skill, SkillInvocationResult
+from src.skills.text_normalization import normalize_skill_text
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,7 @@ async def run_tools_skill(
     )
 
     max_turns = skill_tools_max_turns(skill.frontmatter.metadata)
+    limits = skill_tools_runtime_limits()
     extra_script_roots, extra_warnings = resolve_extra_script_roots(skill)
     warnings.extend(extra_warnings)
 
@@ -84,6 +86,13 @@ async def run_tools_skill(
         workspace_name=workspace,
         slice_fn=slice_fn,
         retrieve_fn=retrieve_fn,
+        max_read_bytes=limits.max_read_bytes,
+        max_write_bytes=limits.max_write_bytes,
+        max_script_seconds=limits.max_script_seconds,
+        max_kg_entities_per_type=limits.max_kg_entities_per_type,
+        max_kg_chunks=limits.max_kg_chunks,
+        max_kg_chunks_per_entity=limits.max_kg_chunks_per_entity,
+        max_kg_relationships_per_entity=limits.max_kg_relationships_per_entity,
         extra_script_roots=extra_script_roots,
     )
 
@@ -121,6 +130,7 @@ async def run_tools_skill(
 
     warnings.extend(loop_result.warnings)
     elapsed_ms = int((datetime.now(timezone.utc) - started).total_seconds() * 1000)
+    response_text = normalize_skill_text(loop_result.response)
 
     try:
         run_store.persist_tools_run(
@@ -129,7 +139,7 @@ async def run_tools_skill(
             skill_name=skill.name,
             workspace=workspace,
             user_prompt=user_prompt,
-            response=loop_result.response,
+            response=response_text,
             turns=loop_result.turns,
             tool_calls=loop_result.tool_calls,
             finish_reason=loop_result.finish_reason,
@@ -158,11 +168,12 @@ async def run_tools_skill(
     return SkillInvocationResult(
         skill=skill.name,
         workspace=workspace,
-        response=loop_result.response,
+        response=response_text,
         entities_used=[],
         warnings=warnings,
         elapsed_ms=elapsed_ms,
         prompt_tokens_estimate=int(loop_result.usage_total.get("total_tokens", 0)),
         run_id=run_id,
         run_dir=str(Path(run_dir).resolve()),
+        finish_reason=loop_result.finish_reason,
     )

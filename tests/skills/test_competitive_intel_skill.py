@@ -120,6 +120,23 @@ def test_competitive_intel_body_references_real_mcp_tools_only() -> None:
     )
 
 
+def test_competitive_intel_workflow_b_uses_deterministic_collector() -> None:
+    _, body = _read_frontmatter_and_body(_SKILL_MD)
+
+    assert "collect_competitive_obligation_intel" in body
+    assert "writes `artifacts/competitive_intel_obligation.json` directly" in body
+
+
+def test_competitive_intel_declares_workflow_c_and_parent_summary_rules() -> None:
+    _, body = _read_frontmatter_and_body(_SKILL_MD)
+
+    assert "Workflow C (Single Award / Order Burn Intel)" in body
+    assert "keep the cover note parent-level and insight-driven" in body
+    assert "Use `award_rollups` / `obligations.by_award` as the canonical grouped structure" in body
+    assert "If `parent_vehicle_awardees` is present" in body
+    assert "The number you state in prose must equal `parent_vehicle_awardee_count`" in body
+
+
 # ---------------------------------------------------------------------------
 # Layer 2 — live drift check (opt-in)
 # ---------------------------------------------------------------------------

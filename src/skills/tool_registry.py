@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
+from src.skills.tool_competitive_intel import tool_collect_competitive_obligation_intel
 from src.skills.tool_filesystem import tool_read_file, tool_run_script, tool_write_file
 from src.skills.tool_kg import tool_kg_chunks, tool_kg_entities, tool_kg_query
 from src.skills.tool_types import ToolResult
@@ -28,9 +29,9 @@ class ToolSpec:
         }
 
 
-def build_tool_specs() -> list[ToolSpec]:
-    """Return core six-tool registry used by tools-mode skills."""
-    return [
+def build_tool_specs(*, skill_name: str | None = None) -> list[ToolSpec]:
+    """Return the core tool registry plus any skill-specific helpers."""
+    specs = [
         ToolSpec(
             name="read_file",
             description=(
@@ -110,7 +111,8 @@ def build_tool_specs() -> list[ToolSpec]:
                 "Persist a UTF-8 text artifact to <run_dir>/artifacts/. Use "
                 "this for proposal drafts, compliance matrices, infographic "
                 "HTML, or any deliverable the user should download. Path is "
-                "relative to the artifacts/ root."
+                "relative to the artifacts/ root. Optionally set label to a "
+                "short human-readable deliverable name for the Studio UI."
             ),
             parameters={
                 "type": "object",
@@ -120,6 +122,10 @@ def build_tool_specs() -> list[ToolSpec]:
                         "description": "Artifact path relative to artifacts/, e.g. 'volume-1-outline.md'.",
                     },
                     "content": {"type": "string", "description": "File body."},
+                    "label": {
+                        "type": "string",
+                        "description": "Optional short display name shown in Studio, e.g. 'Volume 1 Executive Summary Draft'.",
+                    },
                 },
                 "required": ["path", "content"],
                 "additionalProperties": False,
@@ -222,3 +228,34 @@ def build_tool_specs() -> list[ToolSpec]:
             handler=tool_kg_chunks,
         ),
     ]
+
+    if skill_name == "competitive-intel":
+        specs.append(
+            ToolSpec(
+                name="collect_competitive_obligation_intel",
+                description=(
+                    "Deterministically resolve one contract number through USAspending, "
+                    "classify standalone vs parent IDIQ vs order, expand child and sibling "
+                    "orders, roll up obligations, compute PTW seed metrics, and write "
+                    "artifacts/competitive_intel_obligation.json. Use this for Workflow B "
+                    "instead of manually paging lookup_piid/get_award_detail/get_transactions/"
+                    "get_idv_children/get_idv_activity."
+                ),
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "contract_number": {
+                            "type": "string",
+                            "description": (
+                                "Raw PIID or order number to resolve, e.g. 'N00024-24-C-0085'."
+                            ),
+                        }
+                    },
+                    "required": ["contract_number"],
+                    "additionalProperties": False,
+                },
+                handler=tool_collect_competitive_obligation_intel,
+            )
+        )
+
+    return specs

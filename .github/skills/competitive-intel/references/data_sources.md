@@ -53,7 +53,9 @@ Why: solicitation identifier can over-cluster unrelated actions and under-link
 cross-agency ordering behavior. Parent/child linkage is the strongest evidence
 for competitor completeness in multiple-award vehicles.
 
-### Scenario handling (Workflow B)
+### Scenario handling (Workflow B / C)
+
+Theseus exposes a deterministic obligation helper named `collect_competitive_obligation_intel`. It orchestrates the sequence below, writes `artifacts/competitive_intel_obligation.json`, and returns a compact summary to the model so large child-order rollups no longer depend on turn budget or tool-payload truncation. Workflow B uses it for parent-level synthesis. Workflow C uses the same data for one-award grouped analysis.
 
 | Scenario            | Primary path                                                                                                              | Required outputs                                                 |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
@@ -63,6 +65,8 @@ for competitor completeness in multiple-award vehicles.
 
 Always preserve negative obligation periods (deobligations). Report both gross
 and net totals.
+
+The collector also emits grouped `award_rollups` in tool output and `obligations.by_award` in the artifact so order-level prose can stay clean without re-sorting the flattened transaction list.
 
 ### Known detail quality limits
 

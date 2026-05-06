@@ -168,6 +168,7 @@ window.theseusLoadSkillRun = async function theseusLoadSkillRun(
     app.skills.invokeMeta = {
       entities_used: response.metadata?.entities_used || [],
       elapsed_ms: response.metadata?.elapsed_ms || 0,
+      finish_reason: response.metadata?.finish_reason || "",
       warnings: [],
       run_id: response.run_id,
       run_dir: response.run_dir,
@@ -335,6 +336,7 @@ window.theseusInvokeSkill = async function theseusInvokeSkill(app) {
     app.skills.invokeMeta = {
       entities_used: response.entities_used,
       elapsed_ms: response.elapsed_ms,
+      finish_reason: response.finish_reason || "",
       warnings: response.warnings,
       run_id: response.run_id,
       run_dir: response.run_dir,

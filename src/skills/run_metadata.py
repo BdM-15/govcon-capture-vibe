@@ -11,6 +11,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+ARTIFACT_MANIFEST_FILENAME = "artifacts_manifest.json"
+
 # Mimetypes the stdlib ``mimetypes`` module misses on Windows / fresh installs.
 # Used by the Studio UI to label skill artifact rows and download responses.
 STUDIO_EXTRA_MIME: dict[str, str] = {
@@ -40,6 +42,83 @@ def slugify_for_filename(text: str, max_len: int = 32) -> str:
         return ""
     cleaned = re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
     return cleaned[:max_len].rstrip("_")
+
+
+def sanitize_artifact_display_name(value: Any, max_len: int = 120) -> str | None:
+    """Normalize a user-facing artifact label or return None."""
+    if not isinstance(value, str):
+        return None
+    cleaned = " ".join(value.strip().split())
+    if not cleaned:
+        return None
+    return cleaned[:max_len].rstrip()
+
+
+def humanize_artifact_name(filename: str) -> str:
+    """Turn a raw artifact filename into a readable fallback title."""
+    leaf = Path(filename or "artifact").name
+    stem = Path(leaf).stem or leaf
+    tokens = [token for token in re.split(r"[_\-]+", stem) if token]
+    if not tokens:
+        return leaf
+
+    def _pretty(token: str) -> str:
+        if any(char.isdigit() for char in token) or token.upper() == token:
+            return token
+        return token.capitalize()
+
+    return " ".join(_pretty(token) for token in tokens)
+
+
+def artifact_manifest_path(run_dir: Path) -> Path:
+    """Return the manifest path that stores per-artifact UI metadata."""
+    return run_dir / ARTIFACT_MANIFEST_FILENAME
+
+
+def read_artifact_manifest(run_dir: Path) -> dict[str, dict[str, Any]]:
+    """Load per-artifact metadata for one run, or an empty dict."""
+    path = artifact_manifest_path(run_dir)
+    if not path.exists():
+        return {}
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Unreadable artifact manifest at %s: %s", path, exc)
+        return {}
+    if not isinstance(loaded, dict):
+        return {}
+
+    out: dict[str, dict[str, Any]] = {}
+    for key, value in loaded.items():
+        if not isinstance(key, str) or not isinstance(value, dict):
+            continue
+        normalized: dict[str, Any] = {}
+        display_name = sanitize_artifact_display_name(value.get("display_name"))
+        if display_name:
+            normalized["display_name"] = display_name
+        if normalized:
+            out[key] = normalized
+    return out
+
+
+def write_artifact_manifest(run_dir: Path, manifest: dict[str, dict[str, Any]]) -> None:
+    """Persist per-artifact metadata for one run."""
+    artifact_manifest_path(run_dir).write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def resolve_artifact_display_name(
+    filename: str,
+    manifest_entry: dict[str, Any] | None = None,
+) -> str:
+    """Return explicit label when present, else a readable fallback."""
+    if manifest_entry:
+        explicit = sanitize_artifact_display_name(manifest_entry.get("display_name"))
+        if explicit:
+            return explicit
+    return humanize_artifact_name(filename)
 
 
 def parse_run_envelope(text: str) -> dict[str, Any]:
@@ -82,14 +161,20 @@ def list_run_artifacts(run_dir: Path) -> list[dict[str, str]]:
     """List artifacts under one skill run's artifacts/ directory."""
     artifacts: list[dict[str, str]] = []
     artifacts_dir = run_dir / "artifacts"
+    manifest = read_artifact_manifest(run_dir)
     if artifacts_dir.is_dir():
         for path in sorted(artifacts_dir.iterdir()):
             if path.is_file():
+                rel = path.relative_to(artifacts_dir).as_posix()
                 artifacts.append(
                     {
                         "name": path.name,
                         "size": str(path.stat().st_size),
                         "mime": resolve_artifact_mime(path.name),
+                        "display_name": resolve_artifact_display_name(
+                            path.name,
+                            manifest.get(rel),
+                        ),
                     }
                 )
     return artifacts

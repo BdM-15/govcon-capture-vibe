@@ -158,6 +158,12 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       values: {},
       defaults: {},
     },
+    skillRuntimeSettings: {
+      loaded: false,
+      saving: false,
+      values: {},
+      defaults: {},
+    },
     mcps: {
       loaded: false,
       loading: false,

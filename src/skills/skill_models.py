@@ -130,6 +130,7 @@ class SkillInvocationResult:
     prompt_tokens_estimate: int
     run_id: str = ""
     run_dir: str = ""
+    finish_reason: str = ""
 
 
 @dataclass

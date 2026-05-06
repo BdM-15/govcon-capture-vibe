@@ -69,7 +69,7 @@ async def run_tool_loop(
         :class:`ToolLoopResult` with the final answer, full transcript,
         turn/tool-call counts, and aggregate token usage.
     """
-    specs = build_tool_specs()
+    specs = build_tool_specs(skill_name=skill_name)
     if ctx.mcp_sessions:
         # Phase 4a: append one ToolSpec per discovered MCP tool so the model
         # sees them alongside the in-process tools. Naming convention

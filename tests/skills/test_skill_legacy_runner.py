@@ -66,3 +66,33 @@ def test_run_legacy_skill_truncates_flat_payload(tmp_path: Path) -> None:
 
     assert result.entities_used == ["requirement"]
     assert any("briefing book truncated" in warning for warning in result.warnings)
+
+
+async def _stylish_echo(prompt: str) -> str:
+    return "Messy — prose with ’quotes’ … and bullet ·"
+
+
+def test_run_legacy_skill_normalizes_smart_punctuation(tmp_path: Path) -> None:
+    captured = {}
+
+    def persist_run(**kwargs):
+        captured.update(kwargs)
+        return "run-2", "run-dir"
+
+    result = __import__("asyncio").run(
+        run_legacy_skill(
+            skill=_skill(),
+            workspace="ws",
+            user_prompt="answer",
+            entity_payload={"entities": {"requirement": []}},
+            llm=_stylish_echo,
+            max_payload_chars=None,
+            default_max_payload_chars=1000,
+            workspace_root=tmp_path,
+            persist_run=persist_run,
+            touch_invocation=lambda name: None,
+        )
+    )
+
+    assert result.response == "Messy - prose with 'quotes' ... and bullet -"
+    assert captured["response"] == "Messy - prose with 'quotes' ... and bullet -"

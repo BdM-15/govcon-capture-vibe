@@ -17,6 +17,7 @@ const theseusHandleActiveChange = function theseusHandleActiveChange(app) {
     app.loadQuerySettings();
   }
   app.loadSkillSettings();
+  app.loadSkillRuntimeSettings();
   if (app.active === "settings" && !app.mcps.loaded) {
     app.loadMcps();
   }
@@ -35,7 +36,9 @@ const theseusWatchAfterRender = function theseusWatchAfterRender(app, paths) {
 };
 
 window.theseusInit = async function theseusInit(app) {
-  app.$watch("active", () => app.$nextTick(() => theseusHandleActiveChange(app)));
+  app.$watch("active", () =>
+    app.$nextTick(() => theseusHandleActiveChange(app)),
+  );
 
   theseusWatchAfterRender(app, [
     "documents",
@@ -60,7 +63,7 @@ window.theseusInit = async function theseusInit(app) {
     window.theseusAfterRender(
       app,
       () => {
-      app.scrollMsgs();
+        app.scrollMsgs();
       },
       { iconsFirst: true },
     ),
@@ -69,9 +72,9 @@ window.theseusInit = async function theseusInit(app) {
     window.theseusAfterRender(
       app,
       () => {
-      if (app.promptPicker.open && app.$refs.promptPickerSearch) {
-        app.$refs.promptPickerSearch.focus();
-      }
+        if (app.promptPicker.open && app.$refs.promptPickerSearch) {
+          app.$refs.promptPickerSearch.focus();
+        }
       },
       { iconsFirst: true },
     ),

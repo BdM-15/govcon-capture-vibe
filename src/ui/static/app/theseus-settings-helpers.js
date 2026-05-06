@@ -66,7 +66,9 @@ window.theseusSaveQuerySettings = async function theseusSaveQuerySettings(app) {
   });
 };
 
-window.theseusResetQuerySettings = async function theseusResetQuerySettings(app) {
+window.theseusResetQuerySettings = async function theseusResetQuerySettings(
+  app,
+) {
   return theseusResetSettingsSection(app, {
     stateKey: "querySettings",
     endpoint: "/api/ui/settings/query/reset",
@@ -83,6 +85,15 @@ window.theseusLoadSkillSettings = async function theseusLoadSkillSettings(app) {
   });
 };
 
+window.theseusLoadSkillRuntimeSettings =
+  async function theseusLoadSkillRuntimeSettings(app) {
+    return theseusLoadSettingsSection(app, {
+      stateKey: "skillRuntimeSettings",
+      endpoint: "/api/ui/settings/skills/runtime",
+      loadErrorLabel: "Failed loading skill runtime settings",
+    });
+  };
+
 window.theseusSaveSkillSettings = async function theseusSaveSkillSettings(app) {
   return theseusSaveSettingsSection(app, {
     stateKey: "skillSettings",
@@ -91,14 +102,36 @@ window.theseusSaveSkillSettings = async function theseusSaveSkillSettings(app) {
   });
 };
 
-window.theseusResetSkillSettings = async function theseusResetSkillSettings(app) {
+window.theseusSaveSkillRuntimeSettings =
+  async function theseusSaveSkillRuntimeSettings(app) {
+    return theseusSaveSettingsSection(app, {
+      stateKey: "skillRuntimeSettings",
+      endpoint: "/api/ui/settings/skills/runtime",
+      successMessage: "Global skill runtime caps saved",
+    });
+  };
+
+window.theseusResetSkillSettings = async function theseusResetSkillSettings(
+  app,
+) {
   return theseusResetSettingsSection(app, {
     stateKey: "skillSettings",
     endpoint: "/api/ui/settings/skills/reset",
-    confirmMessage: "Restore default skill retrieval settings for this workspace?",
+    confirmMessage:
+      "Restore default skill retrieval settings for this workspace?",
     successMessage: "Skill settings reset to defaults",
   });
 };
+
+window.theseusResetSkillRuntimeSettings =
+  async function theseusResetSkillRuntimeSettings(app) {
+    return theseusResetSettingsSection(app, {
+      stateKey: "skillRuntimeSettings",
+      endpoint: "/api/ui/settings/skills/runtime/reset",
+      confirmMessage: "Restore default global skill runtime caps?",
+      successMessage: "Global skill runtime caps reset to defaults",
+    });
+  };
 
 window.theseusLoadMcps = async function theseusLoadMcps(app) {
   app.mcps.loading = true;

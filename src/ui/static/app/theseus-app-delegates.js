@@ -584,12 +584,24 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusLoadSkillSettings(this);
     },
 
+    async loadSkillRuntimeSettings() {
+      return window.theseusLoadSkillRuntimeSettings(this);
+    },
+
     async saveSkillSettings() {
       return window.theseusSaveSkillSettings(this);
     },
 
+    async saveSkillRuntimeSettings() {
+      return window.theseusSaveSkillRuntimeSettings(this);
+    },
+
     async resetSkillSettings() {
       return window.theseusResetSkillSettings(this);
+    },
+
+    async resetSkillRuntimeSettings() {
+      return window.theseusResetSkillRuntimeSettings(this);
     },
 
     async loadMcps() {

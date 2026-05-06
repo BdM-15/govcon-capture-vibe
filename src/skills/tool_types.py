@@ -31,6 +31,8 @@ class ToolContext:
     max_script_seconds: int = 60
     max_kg_entities_per_type: int = 50
     max_kg_chunks: int = 30
+    max_kg_chunks_per_entity: int = 5
+    max_kg_relationships_per_entity: int = 20
     extra_script_roots: list[Path] = field(default_factory=list)
     mcp_sessions: dict[str, Any] = field(default_factory=dict)
     call_seq: list[int] = field(default_factory=lambda: [0])

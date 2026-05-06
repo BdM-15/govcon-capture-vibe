@@ -223,6 +223,7 @@ def _register_feature_routes(
         workspace_dir=context.workspace_dir,
         data_func=data_func,
         llm_func=llm_func,
+        set_env_var=context.set_env_var,
     )
 
     register_mcp_ui_routes(

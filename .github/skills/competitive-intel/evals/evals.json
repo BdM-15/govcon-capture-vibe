@@ -1,7 +1,7 @@
 {
   "skill": "competitive-intel",
-  "version": "0.4.0",
-  "notes": "Phase 4e — black-hat plus contract-number obligation mode, now requiring period-of-performance breakdowns, richer by-transaction metadata, cumulative running totals, inferred POP segment labels, and rate_analysis block for manual rate analysis. Run from a workspace whose KG has at least program/agency/NAICS context OR provide contract number inputs directly. Live MCP eval requires THESEUS_LIVE_MCP=1.",
+  "version": "0.6.0",
+  "notes": "Phase 4e+ — black-hat plus contract-number obligation modes. Workflow B now uses the deterministic collect_competitive_obligation_intel tool for parent-level vehicle synthesis. Workflow C uses the same deterministic collector for one-award/order burn reads backed by grouped award_rollups and artifact by_award data. Run from a workspace whose KG has at least program/agency/NAICS context OR provide contract number inputs directly. Live MCP eval requires THESEUS_LIVE_MCP=1.",
   "evals": [
     {
       "id": "eval-001-incumbent-active-window",
@@ -118,15 +118,7 @@
         },
         {
           "kind": "transcript_tool_called",
-          "tool": "mcp__usaspending__lookup_piid"
-        },
-        {
-          "kind": "transcript_tool_called",
-          "tool": "mcp__usaspending__get_award_detail"
-        },
-        {
-          "kind": "transcript_tool_called",
-          "tool": "mcp__usaspending__get_transactions"
+          "tool": "collect_competitive_obligation_intel"
         },
         {
           "kind": "json_path_in_set",
@@ -179,11 +171,8 @@
           "path": "competitive_intel_obligation.json"
         },
         {
-          "kind": "transcript_tool_called_any",
-          "tools": [
-            "mcp__usaspending__get_idv_children",
-            "mcp__usaspending__get_idv_activity"
-          ]
+          "kind": "transcript_tool_called",
+          "tool": "collect_competitive_obligation_intel"
         },
         {
           "kind": "json_path_in_set",
@@ -225,6 +214,10 @@
           "path": "competitive_intel_obligation.json"
         },
         {
+          "kind": "transcript_tool_called",
+          "tool": "collect_competitive_obligation_intel"
+        },
+        {
           "kind": "json_path_in_set",
           "path": "resolved.scenario",
           "values": ["idiq_order", "parent_idiq"]
@@ -251,6 +244,33 @@
           "kind": "json_path_in_set",
           "path": "competitor_discovery.linkage_method_used",
           "values": ["parent_child", "piid_family", "solicitation_fallback"]
+        }
+      ]
+    },
+    {
+      "id": "eval-008-single-order-burn-intel",
+      "prompt": "I only care about this one order. Give me a clean single-award burn read with grouped mods, POP, burn rate, and only brief parent vehicle context.",
+      "expectations": [
+        {
+          "kind": "artifact_exists",
+          "path": "competitive_intel_obligation.json"
+        },
+        {
+          "kind": "transcript_tool_called",
+          "tool": "collect_competitive_obligation_intel"
+        },
+        {
+          "kind": "json_path_array_min_length",
+          "path": "obligations.by_award",
+          "min": 1
+        },
+        {
+          "kind": "json_path_set",
+          "path": "obligations.by_award[0].by_transaction"
+        },
+        {
+          "kind": "json_path_set",
+          "path": "obligations.by_award[0].net_obligated_usd"
         }
       ]
     }

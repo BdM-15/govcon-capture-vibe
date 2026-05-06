@@ -10,6 +10,7 @@ from typing import Any, Awaitable, Callable, Optional
 
 from src.skills.skill_models import Skill, SkillInvocationResult
 from src.skills.skill_prompting import compose_skill_prompt
+from src.skills.text_normalization import normalize_skill_text
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,7 @@ async def run_legacy_skill(
 
     started = datetime.now(timezone.utc)
     response = await llm(composed)
+    response = normalize_skill_text(response)
     elapsed_ms = int((datetime.now(timezone.utc) - started).total_seconds() * 1000)
 
     touch_invocation(skill.name)
@@ -84,4 +86,5 @@ async def run_legacy_skill(
         prompt_tokens_estimate=len(composed) // 4,
         run_id=run_id,
         run_dir=run_dir,
+        finish_reason="",
     )

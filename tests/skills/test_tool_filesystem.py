@@ -1,4 +1,5 @@
 import asyncio
+import json
 from pathlib import Path
 
 import pytest
@@ -53,6 +54,25 @@ def test_tool_write_file_strips_artifacts_prefix(tmp_path: Path) -> None:
 
     assert result.payload == {"path": "artifacts/out.md", "bytes_written": 5}
     assert (ctx.run_dir / "artifacts" / "out.md").read_text(encoding="utf-8") == "hello"
+
+
+def test_tool_write_file_persists_display_name_manifest(tmp_path: Path) -> None:
+    ctx = _ctx(tmp_path)
+
+    result = _run(
+        tool_write_file(
+            ctx,
+            "brief.md",
+            "hello",
+            label="AFCAP V Vehicle Burn Brief",
+        )
+    )
+
+    manifest = json.loads((ctx.run_dir / "artifacts_manifest.json").read_text(encoding="utf-8"))
+    assert result.payload["display_name"] == "AFCAP V Vehicle Burn Brief"
+    assert manifest == {
+        "brief.md": {"display_name": "AFCAP V Vehicle Burn Brief"}
+    }
 
 
 def test_tool_run_script_executes_python_script(tmp_path: Path) -> None:
