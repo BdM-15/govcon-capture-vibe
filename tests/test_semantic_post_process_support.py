@@ -1,12 +1,16 @@
 import json
 
 from src.inference.semantic_post_process_support import (
+    apply_entity_name_updates_to_vdb,
     build_post_processing_result,
+    canonicalize_factor_like_name,
     collect_relationship_retype_updates,
     count_vdb_entries,
     heuristic_table_type_mapping,
+    plan_entity_name_updates,
     plan_entity_type_updates,
     resolve_generic_relationship,
+    sync_entity_metadata_to_vdb,
 )
 
 
@@ -35,6 +39,27 @@ def test_heuristic_table_type_mapping_uses_content_fallback() -> None:
     assert heuristic_table_type_mapping(
         {"entity_name": "Unknown", "content": "plain text with no signal"}
     ) == "concept"
+
+
+def test_heuristic_table_type_mapping_prefers_section_l_instruction_tables() -> None:
+    assert heuristic_table_type_mapping(
+        {
+            "entity_name": "Volume II Page Allocations Table (table)",
+            "description": (
+                "Section L.1.3 defines Volume II Technical Proposal 130-page limit allocation "
+                "for Subfactor 1, 2, 3, and 4. Noncompliance risks unacceptable proposal."
+            ),
+        }
+    ) == "proposal_instruction"
+
+    assert heuristic_table_type_mapping(
+        {
+            "entity_name": "Small Business Subcontracting Goals Table (table)",
+            "description": (
+                "Section L.2.3 submission table for SBPCD and subcontracting goals under Instructions to Offerors."
+            ),
+        }
+    ) == "proposal_instruction"
 
 
 def test_collect_relationship_retype_updates_filters_and_maps() -> None:
@@ -112,3 +137,119 @@ def test_plan_entity_type_updates_handles_table_hash_and_unknown() -> None:
     assert unknown_entities == [{"id": "u1", "entity_name": "Mystery"}]
     assert table_mapped == 1
     assert hash_cleaned == 1
+
+
+def test_sync_entity_metadata_to_vdb_updates_types_from_neo4j_snapshot(tmp_path) -> None:
+    path = tmp_path / "vdb_entities.json"
+    path.write_text(
+        json.dumps(
+            {
+                "data": [
+                    {
+                        "entity_name": "Volume II Page Allocations Table (table)",
+                        "entity_type": "table",
+                        "description": "old",
+                        "source_id": "old-source",
+                        "vector": [1.0],
+                    },
+                    {
+                        "entity_name": "Leave Alone",
+                        "entity_type": "concept",
+                        "description": "keep",
+                        "source_id": "keep-source",
+                        "vector": [2.0],
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    updated = sync_entity_metadata_to_vdb(
+        str(tmp_path),
+        [
+            {
+                "entity_name": "Volume II Page Allocations Table (table)",
+                "entity_type": "proposal_instruction",
+                "description": "new",
+                "source_id": "new-source",
+            }
+        ],
+    )
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows = payload["data"]
+    assert updated == 1
+    assert rows[0]["entity_type"] == "proposal_instruction"
+    assert rows[0]["description"] == "new"
+    assert rows[0]["source_id"] == "new-source"
+    assert rows[1]["entity_type"] == "concept"
+
+
+def test_canonicalize_factor_like_name_adds_expected_separator() -> None:
+    assert canonicalize_factor_like_name("Subfactor 4 Small Business Participation") == (
+        "Subfactor 4: Small Business Participation"
+    )
+    assert canonicalize_factor_like_name("Factor 2: Management Approach") == "Factor 2: Management Approach"
+
+
+def test_plan_entity_name_updates_targets_evaluation_factor_duplicates() -> None:
+    updates, mapping = plan_entity_name_updates(
+        {
+            "evaluation_factor": [
+                {"id": "a", "entity_name": "Subfactor 4 Small Business Participation", "entity_type": "evaluation_factor"},
+                {"id": "b", "entity_name": "Subfactor 4: Small Business Participation", "entity_type": "evaluation_factor"},
+            ]
+        }
+    )
+
+    assert updates == [
+        {
+            "id": "a",
+            "new_entity_name": "Subfactor 4: Small Business Participation",
+            "old_entity_name": "Subfactor 4 Small Business Participation",
+        }
+    ]
+    assert mapping == {
+        "Subfactor 4 Small Business Participation": "Subfactor 4: Small Business Participation"
+    }
+
+
+def test_apply_entity_name_updates_to_vdb_rewrites_entities_and_relationships(tmp_path) -> None:
+    entity_path = tmp_path / "vdb_entities.json"
+    relationship_path = tmp_path / "vdb_relationships.json"
+    entity_path.write_text(
+        json.dumps(
+            {
+                "data": [
+                    {"entity_name": "Subfactor 4 Small Business Participation", "entity_type": "evaluation_factor"},
+                    {"entity_name": "Other", "entity_type": "concept"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    relationship_path.write_text(
+        json.dumps(
+            {
+                "data": [
+                    {
+                        "src_id": "Subfactor 4 Small Business Participation",
+                        "tgt_id": "Section M",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    stats = apply_entity_name_updates_to_vdb(
+        str(tmp_path),
+        {"Subfactor 4 Small Business Participation": "Subfactor 4: Small Business Participation"},
+    )
+
+    entity_rows = json.loads(entity_path.read_text(encoding="utf-8"))["data"]
+    relationship_rows = json.loads(relationship_path.read_text(encoding="utf-8"))["data"]
+    assert stats == {"entities_updated": 1, "relationships_updated": 1}
+    assert entity_rows[0]["entity_name"] == "Subfactor 4: Small Business Participation"
+    assert relationship_rows[0]["src_id"] == "Subfactor 4: Small Business Participation"

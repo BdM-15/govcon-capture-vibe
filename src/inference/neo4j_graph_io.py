@@ -336,6 +336,40 @@ class Neo4jGraphIO:
         )
         logger.info(f"  ✅ Updated {count} entities with new properties in Neo4j")
         return count
+
+    def update_entity_names(self, entity_updates: List[Dict]) -> int:
+        """
+        Canonicalize entity names in Neo4j without changing node identity.
+
+        Args:
+            entity_updates: List of dicts with ``id`` and ``new_entity_name`` keys.
+
+        Returns:
+            Number of entities updated.
+        """
+        query = f"""
+        UNWIND $updates AS update
+        MATCH (n:`{self.workspace}`)
+        WHERE elementId(n) = update.id
+        WITH n, update, coalesce(n.entity_name, n.entity_id) AS old_name
+        SET n.old_entity_name = old_name,
+            n.entity_id = update.new_entity_name,
+            n.entity_name = update.new_entity_name,
+            n.normalized_by = 'semantic_post_processor',
+            n.normalized_at = datetime()
+        RETURN count(n) as updated_count
+        """
+
+        count = run_count_query(
+            self.driver,
+            self.database,
+            query,
+            count_from_record,
+            "updated_count",
+            updates=entity_updates,
+        )
+        logger.info(f"  ✅ Canonicalized {count} entity names in Neo4j")
+        return count
     
     def create_relationships(self, new_relationships: List[Dict]) -> int:
         """

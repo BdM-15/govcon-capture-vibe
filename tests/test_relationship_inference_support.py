@@ -3,7 +3,36 @@ from src.inference.relationship_inference_support import (
     apply_type_based_heuristics,
     build_deduplication_prompt,
     find_potential_duplicate_pairs,
+    normalize_entity_name,
 )
+
+
+def test_normalize_entity_name_collapses_subfactor_punctuation_variants() -> None:
+    assert normalize_entity_name("Subfactor 4: Small Business Participation") == normalize_entity_name(
+        "Subfactor 4 Small Business Participation"
+    )
+    assert normalize_entity_name("Subfactor 3: Key Personnel") == normalize_entity_name(
+        "Subfactor 3 Key Personnel"
+    )
+
+
+def test_find_potential_duplicate_pairs_checks_evaluation_factors() -> None:
+    grouped = {
+        "evaluation_factor": [
+            {"entity_name": "Subfactor 4: Small Business Participation", "entity_type": "evaluation_factor"},
+            {"entity_name": "Subfactor 4 Small Business Participation", "entity_type": "evaluation_factor"},
+        ]
+    }
+
+    duplicates = find_potential_duplicate_pairs(grouped)
+
+    assert "evaluation_factor" in duplicates
+    assert duplicates["evaluation_factor"] == [
+        (
+            {"entity_name": "Subfactor 4: Small Business Participation", "entity_type": "evaluation_factor"},
+            {"entity_name": "Subfactor 4 Small Business Participation", "entity_type": "evaluation_factor"},
+        )
+    ]
 
 
 def test_find_potential_duplicate_pairs_flags_section_variants() -> None:

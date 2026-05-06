@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Dict, List, Tuple
 
 
-DUPLICATE_PRONE_TYPES = ["section", "clause", "deliverable", "document"]
+DUPLICATE_PRONE_TYPES = ["section", "clause", "deliverable", "document", "evaluation_factor"]
 
 
 def find_potential_duplicate_pairs(

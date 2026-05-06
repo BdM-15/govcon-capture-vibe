@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from html.parser import HTMLParser
+from typing import Any, Optional
 
 from lightrag.base import DocStatus
 from lightrag.utils import compute_mdhash_id
@@ -23,6 +25,145 @@ DISCARDED_CONTENT_TYPES = {
     "aside_text",
     "page_footnote",
 }
+
+
+@dataclass
+class ModalRebalanceStats:
+    """Counts for local content-list modal artifact rebalancing."""
+
+    tables_converted: int = 0
+    lists_converted: int = 0
+    seals_discarded: int = 0
+    multimodal_kept: int = 0
+
+    @property
+    def changed(self) -> bool:
+        return bool(self.tables_converted or self.lists_converted or self.seals_discarded)
+
+
+class _TableTextParser(HTMLParser):
+    """Extract readable rows/cells from MinerU HTML table bodies."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.rows: list[list[str]] = []
+        self._current_row: list[str] | None = None
+        self._current_cell: list[str] | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "tr":
+            self._current_row = []
+        elif tag in {"td", "th"}:
+            self._current_cell = []
+
+    def handle_data(self, data: str) -> None:
+        if self._current_cell is not None:
+            text = " ".join(data.split())
+            if text:
+                self._current_cell.append(text)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"td", "th"} and self._current_row is not None:
+            cell_text = " ".join(self._current_cell or []).strip()
+            self._current_row.append(cell_text)
+            self._current_cell = None
+        elif tag == "tr" and self._current_row is not None:
+            if any(cell.strip() for cell in self._current_row):
+                self.rows.append(self._current_row)
+            self._current_row = None
+
+    def to_text(self) -> str:
+        return "\n".join(" | ".join(cell for cell in row if cell).strip() for row in self.rows).strip()
+
+
+def _join_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return "\n".join(str(item).strip() for item in value if str(item).strip())
+    return str(value).strip()
+
+
+def _table_body_to_text(table_body: Any) -> str:
+    body = _join_text(table_body)
+    if not body:
+        return ""
+    if "<table" not in body.lower():
+        return " ".join(body.split())
+
+    parser = _TableTextParser()
+    parser.feed(body)
+    parsed = parser.to_text()
+    return parsed or " ".join(body.split())
+
+
+def _build_table_text_block(block: dict[str, Any]) -> str:
+    caption = _join_text(block.get("table_caption"))
+    body = _table_body_to_text(block.get("table_body"))
+    footnote = _join_text(block.get("table_footnote"))
+    parts = ["[TABLE]"]
+    if caption:
+        parts.append(f"Caption: {caption}")
+    if body:
+        parts.append(body)
+    if footnote:
+        parts.append(f"Footnote: {footnote}")
+    parts.append("[/TABLE]")
+    return "\n".join(parts)
+
+
+def _build_list_text_block(block: dict[str, Any]) -> str:
+    items = _join_text(block.get("list_items")) or _join_text(block.get("text"))
+    if not items:
+        return ""
+    return f"[LIST]\n{items}\n[/LIST]"
+
+
+def rebalance_modal_content_blocks(content_list: list[dict]) -> tuple[list[dict], ModalRebalanceStats]:
+    """Convert text-bearing MinerU modal blocks to text and drop seal artifacts.
+
+    RAG-Anything treats every non-text block as a multimodal chunk, then runs a
+    second extraction pass that can over-amplify textual tables/lists. If MinerU
+    already extracted the text, feed it through the normal LightRAG text path.
+    """
+    stats = ModalRebalanceStats()
+    rebalanced: list[dict] = []
+
+    for block in content_list:
+        block_type = block.get("type")
+        if block_type == "seal":
+            stats.seals_discarded += 1
+            continue
+
+        if block_type == "table":
+            text = _build_table_text_block(block)
+            if text.strip() != "[TABLE]\n[/TABLE]":
+                converted = dict(block)
+                converted["type"] = "text"
+                converted["text"] = text
+                converted["original_type"] = "table"
+                converted["modal_rebalanced"] = True
+                rebalanced.append(converted)
+                stats.tables_converted += 1
+                continue
+
+        if block_type == "list":
+            text = _build_list_text_block(block)
+            if text:
+                converted = dict(block)
+                converted["type"] = "text"
+                converted["text"] = text
+                converted["original_type"] = "list"
+                converted["modal_rebalanced"] = True
+                rebalanced.append(converted)
+                stats.lists_converted += 1
+                continue
+
+        if block_type != "text":
+            stats.multimodal_kept += 1
+        rebalanced.append(block)
+
+    return rebalanced, stats
 
 
 def filter_discarded_content_blocks(content_list: list[dict]) -> tuple[list[dict], int]:
@@ -174,12 +315,22 @@ async def process_document_with_semantic_inference(
                 len(content_list),
             )
 
+        rebalanced_content, rebalance_stats = rebalance_modal_content_blocks(filtered_content)
+        if rebalance_stats.changed:
+            logger.info(
+                "⚖️ Rebalanced modal artifacts before insertion: %d tables -> text, %d lists -> text, %d seals discarded, %d multimodal kept",
+                rebalance_stats.tables_converted,
+                rebalance_stats.lists_converted,
+                rebalance_stats.seals_discarded,
+                rebalance_stats.multimodal_kept,
+            )
+
         llm_timeout = settings.llm_timeout
         logger.info("🚀 Using RAG-Anything native end-to-end pipeline")
         logger.info("   Ontology: 33 govcon entity types | Timeout: %ss", llm_timeout)
 
         await rag_instance.insert_content_list(
-            content_list=filtered_content,
+            content_list=rebalanced_content,
             file_path=file_path,
             doc_id=doc_id,
         )
@@ -191,7 +342,7 @@ async def process_document_with_semantic_inference(
             rag_instance,
             file_name,
             doc_id,
-            filtered_content,
+            rebalanced_content,
             total_duration,
         )
 

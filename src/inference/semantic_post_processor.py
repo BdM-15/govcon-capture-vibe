@@ -33,10 +33,13 @@ from src.core import get_settings
 from src.inference.neo4j_graph_io import Neo4jGraphIO, group_entities_by_type
 from src.inference.algorithms import run_all_algorithms_parallel
 from src.inference.semantic_post_process_support import (
+    apply_entity_name_updates_to_vdb,
     build_post_processing_result,
     collect_relationship_retype_updates,
     heuristic_table_type_mapping as _heuristic_table_type_mapping,
+    plan_entity_name_updates,
     plan_entity_type_updates,
+    sync_entity_metadata_to_vdb,
 )
 from src.ontology.schema import VALID_ENTITY_TYPES
 
@@ -193,6 +196,33 @@ class SemanticPostProcessingRun:
             self.entities_corrected = self._io().update_entity_types(entity_updates)
         else:
             logger.info("\n✅ No entity type corrections needed (native LightRAG extraction working)")
+
+        entities_after_update = self._io().get_all_entities()
+        name_updates, canonical_mapping = plan_entity_name_updates(
+            group_entities_by_type(entities_after_update)
+        )
+        if name_updates:
+            logger.info("\n🪪 Canonicalizing %s entity names...", len(name_updates))
+            self._io().update_entity_names(name_updates)
+            vdb_name_stats = apply_entity_name_updates_to_vdb(
+                self.rag_storage_path,
+                canonical_mapping,
+            )
+            entities_after_update = self._io().get_all_entities()
+            if vdb_name_stats["entities_updated"] > 0 or vdb_name_stats["relationships_updated"] > 0:
+                logger.info(
+                    "  ✅ Synced %s entity names and %s relationship endpoints to VDB JSON",
+                    vdb_name_stats["entities_updated"],
+                    vdb_name_stats["relationships_updated"],
+                )
+
+        if entity_updates or name_updates:
+            entities_synced = sync_entity_metadata_to_vdb(
+                self.rag_storage_path,
+                entities_after_update,
+            )
+            if entities_synced > 0:
+                logger.info("  ✅ Synced %s entity metadata updates back to vdb_entities.json", entities_synced)
 
         self._complete_phase(phase_name, phase_start)
 

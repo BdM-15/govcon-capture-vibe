@@ -7,6 +7,7 @@ class FakeNeo4jIO:
     def __init__(self) -> None:
         self.closed = False
         self.entity_updates = []
+        self.entity_name_updates = []
         self.relationship_updates = []
         self.created_relationships = []
         self._entities = [
@@ -25,6 +26,14 @@ class FakeNeo4jIO:
 
     def update_entity_types(self, updates):
         self.entity_updates = list(updates)
+        return len(updates)
+
+    def update_entity_names(self, updates):
+        self.entity_name_updates = list(updates)
+        for update in updates:
+            for entity in self._entities:
+                if entity["id"] == update["id"]:
+                    entity["entity_name"] = update["new_entity_name"]
         return len(updates)
 
     def retype_relationships(self, updates):
@@ -81,6 +90,7 @@ def test_semantic_post_processing_run_tracks_timing_and_closes_io(tmp_path) -> N
     assert fake_io.created_relationships == [
         {"source": "n1", "target": "n2", "type": "SATISFIED_BY"}
     ]
+    assert fake_io.entity_name_updates == []
     assert fake_io.closed is True
     assert set(run.phase_times) == {
         "Phase 1 · Data Loading",
