@@ -8,6 +8,7 @@ from typing import Any, Awaitable, Callable
 from src.skills.tool_competitive_intel import tool_collect_competitive_obligation_intel
 from src.skills.tool_filesystem import tool_read_file, tool_run_script, tool_write_file
 from src.skills.tool_kg import tool_kg_chunks, tool_kg_entities, tool_kg_query
+from src.skills.tool_skill_chain import tool_invoke_skill
 from src.skills.tool_types import ToolResult
 
 
@@ -32,6 +33,37 @@ class ToolSpec:
 def build_tool_specs(*, skill_name: str | None = None) -> list[ToolSpec]:
     """Return the core tool registry plus any skill-specific helpers."""
     specs = [
+        ToolSpec(
+            name="invoke_skill",
+            description=(
+                "Invoke another Theseus skill synchronously in the same workspace. "
+                "Use this for production chains such as content skill -> renderers, "
+                "competitive-intel -> proposal-generator, or proposal-generator -> "
+                "huashu-design. Tier A guard: one child skill only; the child cannot "
+                "invoke a third skill. Returns the child run id, response preview, "
+                "warnings, and artifacts."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Skill slug to invoke, e.g. 'renderers' or 'proposal-generator'.",
+                    },
+                    "prompt": {
+                        "type": "string",
+                        "description": "Instruction for the child skill. Include exact artifact paths or required output format.",
+                    },
+                    "context": {
+                        "type": "object",
+                        "description": "Optional structured handoff context for the child skill.",
+                    },
+                },
+                "required": ["name", "prompt"],
+                "additionalProperties": False,
+            },
+            handler=tool_invoke_skill,
+        ),
         ToolSpec(
             name="read_file",
             description=(

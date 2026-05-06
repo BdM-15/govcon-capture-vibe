@@ -93,7 +93,7 @@ async def tool_run_script(
     if matched_root is None:
         roots_display = ", ".join(str(root) for root in allowed_roots) or "(none)"
         raise ToolError(
-            f"run_script path {path!r} is outside any allowed root. Allowed roots: {roots_display}. Declare cross-skill script directories via `metadata.script_paths` in your SKILL.md."
+            f"run_script path {path!r} is outside any allowed root. Allowed roots: {roots_display}. Renderer and huashu-design script roots are available by default; declare any other cross-skill script directories via `metadata.script_paths` in your SKILL.md."
         )
 
     if not candidate.is_file():

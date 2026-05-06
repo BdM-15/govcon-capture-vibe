@@ -58,6 +58,7 @@ from src.skills.skill_models import (
     SkillRunSummary,
 )
 from src.skills.skill_tools_runner import run_tools_skill
+from src.skills.tool_types import ToolError, ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,8 @@ class SkillExecutor:
         slice_fn: Optional[Callable[..., dict[str, Any]]] = None,
         retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]] = None,
         runtime_mode_override: Optional[str] = None,
+        _chain_depth: int = 0,
+        _chain: tuple[str, ...] = (),
     ) -> SkillInvocationResult:
         """Run one discovered skill through its configured runtime mode."""
         skill = self._catalog.get_skill(name)
@@ -122,6 +125,18 @@ class SkillExecutor:
             runtime_mode_override=runtime_mode_override,
         )
         if mode == "tools":
+            invoke_skill_fn = self._build_invoke_skill_fn(
+                workspace=workspace,
+                entity_payload=entity_payload,
+                llm=llm,
+                max_payload_chars=max_payload_chars,
+                workspace_root=workspace_root,
+                slice_fn=slice_fn,
+                retrieve_fn=retrieve_fn,
+                runtime_mode_override=runtime_mode_override,
+                chain_depth=_chain_depth,
+                chain=_chain + (name,),
+            )
             return await self._tools_runner(
                 skill=skill,
                 workspace=workspace,
@@ -132,6 +147,7 @@ class SkillExecutor:
                 run_store=self._run_store,
                 mcp_registry=self._mcp_registry,
                 touch_invocation=self._touch_invocation,
+                invoke_skill_fn=invoke_skill_fn,
             )
         return await self._legacy_runner(
             skill=skill,
@@ -145,6 +161,80 @@ class SkillExecutor:
             persist_run=self._persist_legacy_run,
             touch_invocation=self._touch_invocation,
         )
+
+    def _build_invoke_skill_fn(
+        self,
+        *,
+        workspace: str,
+        entity_payload: dict[str, Any],
+        llm: Callable[[str], Awaitable[str]],
+        max_payload_chars: Optional[int],
+        workspace_root: Optional[Path],
+        slice_fn: Optional[Callable[..., dict[str, Any]]],
+        retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]],
+        runtime_mode_override: Optional[str],
+        chain_depth: int,
+        chain: tuple[str, ...],
+    ) -> Callable[..., Awaitable[ToolResult]]:
+        async def _invoke_skill(
+            child_name: str,
+            child_prompt: str,
+            context: dict[str, Any] | None = None,
+        ) -> ToolResult:
+            if chain_depth >= 1:
+                raise ToolError("invoke_skill Tier A allows one child skill only")
+            if child_name in chain:
+                raise ToolError(f"invoke_skill cycle detected: {' -> '.join(chain + (child_name,))}")
+            if self._catalog.get_skill(child_name) is None:
+                raise ToolError(f"Unknown skill: {child_name}")
+            prompt = child_prompt.strip()
+            if context:
+                import json as _json
+
+                prompt += (
+                    "\n\n## Parent handoff context\n"
+                    "```json\n"
+                    + _json.dumps(context, ensure_ascii=False, indent=2, default=str)
+                    + "\n```"
+                )
+            result = await self.invoke(
+                child_name,
+                workspace=workspace,
+                user_prompt=prompt,
+                entity_payload=entity_payload,
+                llm=llm,
+                max_payload_chars=max_payload_chars,
+                workspace_root=workspace_root,
+                slice_fn=slice_fn,
+                retrieve_fn=retrieve_fn,
+                runtime_mode_override=runtime_mode_override,
+                _chain_depth=chain_depth + 1,
+                _chain=chain,
+            )
+            artifacts: list[dict[str, Any]] = []
+            if workspace_root is not None and result.run_id:
+                detail = self._run_store.get_run(workspace_root, child_name, result.run_id)
+                if detail:
+                    artifacts = list(detail.get("artifacts") or [])
+            return ToolResult(
+                payload={
+                    "skill": result.skill,
+                    "run_id": result.run_id,
+                    "run_dir": result.run_dir,
+                    "finish_reason": result.finish_reason,
+                    "elapsed_ms": result.elapsed_ms,
+                    "warnings": result.warnings,
+                    "response_preview": result.response[:2000],
+                    "artifacts": artifacts,
+                },
+                transcript_extra={
+                    "child_skill": result.skill,
+                    "child_run_id": result.run_id,
+                    "artifact_count": len(artifacts),
+                },
+            )
+
+        return _invoke_skill
 
     def _persist_legacy_run(
         self,
@@ -251,6 +341,8 @@ class SkillManager:
         slice_fn: Optional[Callable[..., dict[str, Any]]] = None,
         retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]] = None,
         runtime_mode_override: Optional[str] = None,
+        _chain_depth: int = 0,
+        _chain: tuple[str, ...] = (),
     ) -> SkillInvocationResult:
         """Run a skill against an injected workspace context.
 
@@ -293,6 +385,8 @@ class SkillManager:
             slice_fn=slice_fn,
             retrieve_fn=retrieve_fn,
             runtime_mode_override=runtime_mode_override,
+            _chain_depth=_chain_depth,
+            _chain=_chain,
         )
 
     def list_runs(

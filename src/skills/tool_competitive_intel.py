@@ -1214,6 +1214,7 @@ def _build_rate_analysis(
             "total_potential_pop_months": 0.0,
             "total_potential_pop_days": 0,
             "monthly_burn_usd": 0.0,
+            "annual_burn_usd": 0.0,
             "daily_burn_usd": 0.0,
             "by_option_year": [],
             "derivation_notes": notes,
@@ -1285,9 +1286,12 @@ def _build_rate_analysis(
                 "label": label,
                 "estimated_start": start_date,
                 "estimated_end": end_date,
+                "pop_start_date": start_date,
+                "pop_end_date": end_date,
                 "months": months,
                 "obligated_usd": obligated,
                 "monthly_rate_usd": _round_money(obligated / months) if months else 0.0,
+                "annual_rate_usd": _round_money((obligated / months) * 12.0) if months else 0.0,
             }
         )
 
@@ -1305,6 +1309,7 @@ def _build_rate_analysis(
         "total_potential_pop_months": total_potential_months,
         "total_potential_pop_days": total_potential_days,
         "monthly_burn_usd": _round_money(net / total_months) if total_months else 0.0,
+        "annual_burn_usd": _round_money((net / total_months) * 12.0) if total_months else 0.0,
         "daily_burn_usd": _round_money(net / total_days) if total_days else 0.0,
         "by_option_year": by_option_year,
         "derivation_notes": _dedupe(notes + warnings),
@@ -1516,7 +1521,7 @@ def _build_insight_blocks(
             blocks.append(concentration)
         blocks.append(_build_vehicle_competition_block(competitor_discovery))
     else:
-        award_story = _build_award_story_block(award_rollups)
+        award_story = _build_award_story_block(award_rollups, rate_analysis)
         if award_story is not None:
             blocks.append(award_story)
         if scenario == "idiq_order":
@@ -1568,13 +1573,15 @@ def _build_burn_posture_block(
     current_end = rate_analysis.get("pop_end_current")
     potential_end = rate_analysis.get("pop_end_potential")
     monthly = _fmt_money(rate_analysis.get("monthly_burn_usd"))
+    annual = _fmt_money(rate_analysis.get("annual_burn_usd"))
     daily = _fmt_money(rate_analysis.get("daily_burn_usd"))
     total_months = rate_analysis.get("total_pop_months") or 0.0
     total_potential_months = rate_analysis.get("total_potential_pop_months") or 0.0
 
     summary = (
         f"Gross obligations sit at {_fmt_money(total_obligated_usd)} while net burn sits at "
-        f"{_fmt_money(net_obligated_usd)}. Current cadence is about {monthly}/month "
+        f"{_fmt_money(net_obligated_usd)}. Current cadence is about {monthly}/month, "
+        f"{annual}/year annualized "
         f"({daily}/day) through {current_end or 'unknown'}."
     )
     if potential_end and potential_end != current_end:
@@ -1591,6 +1598,7 @@ def _build_burn_posture_block(
             "gross_obligated_usd": total_obligated_usd,
             "net_obligated_usd": net_obligated_usd,
             "monthly_burn_usd": rate_analysis.get("monthly_burn_usd", 0.0),
+            "annual_burn_usd": rate_analysis.get("annual_burn_usd", 0.0),
             "daily_burn_usd": rate_analysis.get("daily_burn_usd", 0.0),
             "pop_end_current": current_end,
             "pop_end_potential": potential_end,
@@ -1686,28 +1694,37 @@ def _build_vehicle_competition_block(
     }
 
 
-def _build_award_story_block(award_rollups: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _build_award_story_block(
+    award_rollups: list[dict[str, Any]],
+    rate_analysis: dict[str, Any],
+) -> dict[str, Any] | None:
     if not award_rollups:
         return None
     focus = award_rollups[0]
     transactions = focus.get("by_transaction") or []
-    inflections = _select_inflection_points(transactions)
+    pop_segments = _build_pop_story_segments(focus, rate_analysis)
 
     summary = (
         f"Primary award story centers on {focus.get('piid') or focus.get('award_id')}: "
-        f"{_fmt_money(focus.get('net_obligated_usd'))} net across {len(transactions)} posted transactions."
+        f"{_fmt_money(focus.get('net_obligated_usd'))} net across {len(pop_segments) or 1} "
+        "period-of-performance segment(s)."
     )
-    if inflections:
-        first = inflections[0]
+    if pop_segments:
+        first = pop_segments[0]
+        last = pop_segments[-1]
         summary += (
-            f" Biggest non-base inflection is {first.get('action_date') or 'unknown date'} "
-            f"for {_fmt_money(first.get('amount_usd'))} "
-            f"({first.get('action_type_description') or first.get('modification_description') or 'modification'})."
+            f" POP view starts with {first['label']} ({first['pop_start_date']} -> {first['pop_end_date']}) "
+            f"at {_fmt_money(first.get('obligated_usd'))}."
         )
+        if last != first:
+            summary += (
+                f" Current/latest segment is {last['label']} ({last['pop_start_date']} -> "
+                f"{last['pop_end_date']}) at {_fmt_money(last.get('obligated_usd'))}."
+            )
 
     return {
         "id": "award_story",
-        "title": "Award story",
+        "title": "Award story by period of performance",
         "summary": summary,
         "evidence": {
             "award_id": focus.get("award_id"),
@@ -1715,9 +1732,65 @@ def _build_award_story_block(award_rollups: list[dict[str, Any]]) -> dict[str, A
             "net_obligated_usd": focus.get("net_obligated_usd", 0.0),
             "gross_obligated_usd": focus.get("total_obligated_usd", 0.0),
             "transaction_count": len(transactions),
-            "top_inflection_points": inflections,
+            "period_of_performance_segments": pop_segments,
         },
     }
+
+
+def _build_pop_story_segments(
+    focus: dict[str, Any],
+    rate_analysis: dict[str, Any],
+) -> list[dict[str, Any]]:
+    segments = []
+    for segment in rate_analysis.get("by_option_year") or []:
+        start = segment.get("pop_start_date") or segment.get("estimated_start")
+        end = segment.get("pop_end_date") or segment.get("estimated_end")
+        if not start or not end:
+            continue
+        segments.append(
+            {
+                "label": _friendly_pop_label(segment.get("label")),
+                "raw_label": segment.get("label"),
+                "pop_start_date": start,
+                "pop_end_date": end,
+                "months": segment.get("months", 0.0),
+                "obligated_usd": segment.get("obligated_usd", 0.0),
+                "monthly_rate_usd": segment.get("monthly_rate_usd", 0.0),
+                "annual_rate_usd": segment.get("annual_rate_usd", 0.0),
+            }
+        )
+    if segments:
+        return segments
+
+    start = focus.get("pop_start_date")
+    end = focus.get("pop_end_current_date") or focus.get("pop_end_date")
+    if not start or not end:
+        return []
+    months = _round_half_month(_days_between(start, end))
+    obligated = _round_money(focus.get("net_obligated_usd"))
+    monthly = _round_money(obligated / months) if months else 0.0
+    return [
+        {
+            "label": "Base/Current POP",
+            "raw_label": "current_pop",
+            "pop_start_date": start,
+            "pop_end_date": end,
+            "months": months,
+            "obligated_usd": obligated,
+            "monthly_rate_usd": monthly,
+            "annual_rate_usd": _round_money(monthly * 12.0),
+        }
+    ]
+
+
+def _friendly_pop_label(label: Any) -> str:
+    text = str(label or "").strip()
+    if text == "base_year":
+        return "Base period"
+    if text.startswith("option_year_"):
+        suffix = text.removeprefix("option_year_")
+        return f"Option period {suffix}"
+    return text.replace("_", " ").title() or "POP segment"
 
 
 def _build_caveat_block(warnings: list[str]) -> dict[str, Any] | None:

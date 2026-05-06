@@ -37,6 +37,18 @@ class FakeCatalog:
         self.touched.append(name)
 
 
+class MultiCatalog:
+    def __init__(self, skills: list[Skill]):
+        self.skills = {skill.name: skill for skill in skills}
+        self.touched: list[str] = []
+
+    def get_skill(self, name: str):
+        return self.skills.get(name)
+
+    def touch_invocation(self, name: str) -> None:
+        self.touched.append(name)
+
+
 def _result(name: str) -> SkillInvocationResult:
     return SkillInvocationResult(
         skill=name,
@@ -83,6 +95,68 @@ def test_skill_executor_uses_tools_runner_for_tools_mode(tmp_path: Path) -> None
     assert captured["skill"].name == skill.name
     assert captured["workspace"] == "ws"
     assert catalog.touched == [skill.name]
+
+
+def test_skill_executor_wires_invoke_skill_child_tool(tmp_path: Path) -> None:
+    parent = _skill(tmp_path, runtime="tools")
+    child_dir = tmp_path / "child-tools"
+    child_dir.mkdir()
+    child = Skill(
+        name="child-tools",
+        path=str(child_dir),
+        skill_md_path=str(child_dir / "SKILL.md"),
+        frontmatter=SkillFrontmatter(
+            name="child-tools",
+            description="desc",
+            metadata={"runtime": "tools"},
+        ),
+        body_md="child body",
+    )
+    catalog = MultiCatalog([parent, child])
+    captured = {}
+
+    async def fake_tools_runner(**kwargs):
+        skill = kwargs["skill"]
+        kwargs["touch_invocation"]("child-tools" if skill.name == "child-tools" else skill.name)
+        if skill.name == parent.name:
+            tool_result = await kwargs["invoke_skill_fn"](
+                "child-tools",
+                "render this",
+                {"source": "parent"},
+            )
+            captured["tool_payload"] = tool_result.payload
+            captured["tool_extra"] = tool_result.transcript_extra
+            return _result(parent.name)
+        captured["child_prompt"] = kwargs["user_prompt"]
+        return _result(child.name)
+
+    executor = SkillExecutor(
+        catalog=catalog,  # type: ignore[arg-type]
+        run_store=SkillRunStore(),
+        mcp_registry=object(),
+        tools_runner=fake_tools_runner,
+    )
+
+    result = asyncio.run(
+        executor.invoke(
+            parent.name,
+            workspace="ws",
+            user_prompt="answer",
+            entity_payload={},
+            llm=lambda prompt: None,
+            workspace_root=tmp_path,
+        )
+    )
+
+    assert result.skill == parent.name
+    assert captured["tool_payload"]["skill"] == "child-tools"
+    assert captured["tool_extra"] == {
+        "child_skill": "child-tools",
+        "child_run_id": "run-1",
+        "artifact_count": 0,
+    }
+    assert "Parent handoff context" in captured["child_prompt"]
+    assert '"source": "parent"' in captured["child_prompt"]
 
 
 def test_skill_executor_uses_legacy_runner_for_legacy_mode(tmp_path: Path) -> None:

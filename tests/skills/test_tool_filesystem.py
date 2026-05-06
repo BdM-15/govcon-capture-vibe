@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from src.skills.tool_skill_chain import tool_invoke_skill
 from src.skills.tools import ToolContext, ToolError, tool_read_file, tool_run_script, tool_write_file
 
 
@@ -88,3 +89,29 @@ def test_tool_run_script_executes_python_script(tmp_path: Path) -> None:
     assert result.payload["exit_code"] == 0
     assert "ok from script" in result.payload["stdout"]
     assert Path(result.transcript_extra["stdout_file"]).is_file()
+
+
+def test_tool_invoke_skill_delegates_to_configured_handler(tmp_path: Path) -> None:
+    ctx = _ctx(tmp_path)
+    captured = {}
+
+    async def invoke_skill_fn(name, prompt, context):
+        captured.update({"name": name, "prompt": prompt, "context": context})
+        from src.skills.tool_types import ToolResult
+
+        return ToolResult(payload={"skill": name, "run_id": "run-1"})
+
+    ctx.invoke_skill_fn = invoke_skill_fn
+
+    result = _run(tool_invoke_skill(ctx, "child", "do work", {"x": 1}))
+
+    assert result.payload == {"skill": "child", "run_id": "run-1"}
+    assert captured == {"name": "child", "prompt": "do work", "context": {"x": 1}}
+
+
+def test_tool_invoke_skill_rejects_recursive_self_call(tmp_path: Path) -> None:
+    ctx = _ctx(tmp_path)
+    ctx.invoke_skill_fn = lambda *args: None
+
+    with pytest.raises(ToolError, match="current skill"):
+        _run(tool_invoke_skill(ctx, "test", "do work"))

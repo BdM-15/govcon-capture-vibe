@@ -227,26 +227,34 @@ Schema (from `skill-creator/references/schemas.md`):
 
 ---
 
-## 5. Runtime gaps (sub-phase 2.1 scope)
+## 5. Runtime capabilities
 
-The current `SkillManager.invoke()` does single-shot prompt stuffing. To run
-spec-conformant skills, sub-phase 2.1 must add:
+`SkillManager.invoke()` supports both the legacy single-shot path and the
+tools-mode runtime declared by `metadata.runtime: tools`. Tools-mode skills run
+through `src/skills/runtime.py` with a persisted `transcript.json`, bounded tool
+calls, and Studio-visible artifacts under `<run_dir>/artifacts/`.
 
-| Capability                           | Current state              | 2.1 target                                                                      |
-| ------------------------------------ | -------------------------- | ------------------------------------------------------------------------------- |
-| Tool-calling loop                    | None (single LLM call)     | xAI Grok function-calling, multi-turn until model emits no tool calls           |
-| `read_file` tool                     | N/A                        | Reads files under `<skill_root>/{references,assets,scripts}/` (read-only)       |
-| `run_script` tool                    | N/A                        | Subprocess sandbox: timeout, cwd locked to skill dir, captures stdout/stderr    |
-| `write_file` tool                    | N/A                        | Writes confined to `<run_dir>/artifacts/`                                       |
-| `kg_query(cypher)` tool              | N/A                        | Calls Neo4j directly via existing client                                        |
-| `kg_entities(types[], limit)` tool   | N/A                        | Typed slicing — extracted from current `_slice_entities` logic                  |
-| `kg_chunks(query, top_k, mode)` tool | Wrapped inside route layer | Refactor to a tool handler that calls the Phase 1.6 `aquery_data(...)` pipeline |
-| Tool-call transcript                 | None                       | `transcript.json` in `<run_dir>/` capturing every call, args, result, timing    |
-| Per-script artifacts                 | None                       | `tool_outputs/<NN>_<tool>_<descriptor>.{json,txt}`                              |
+| Capability                           | Current state                                                                                                 |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Tool-calling loop                    | xAI Grok function-calling, multi-turn until the model emits no tool calls                                     |
+| `read_file` tool                     | Reads files under `<skill_root>/{references,assets,scripts}/` (read-only)                                     |
+| `run_script` tool                    | Subprocess sandbox: timeout, cwd locked to skill dir, captures stdout/stderr                                  |
+| Default renderer roots               | Every tools-mode skill can call `renderers/scripts` and `huashu-design/scripts` without wrapper code          |
+| `write_file` tool                    | Writes confined to `<run_dir>/artifacts/` with optional Studio display labels                                 |
+| `kg_query(cypher)` tool              | Calls Neo4j directly via existing client                                                                      |
+| `kg_entities(types[], limit)` tool   | Typed slicing via the current workspace KG                                                                    |
+| `kg_chunks(query, top_k, mode)` tool | Chat-grade hybrid retrieval via the Phase 1.6 retrieval path                                                  |
+| `invoke_skill(name, prompt)` tool    | Tier A synchronous child skill invocation, depth=1, same workspace, child run/artifacts returned              |
+| Tool-call transcript                 | `transcript.json` in `<run_dir>/` capturing every call, args, result, timing                                  |
+| Per-script outputs                   | `tool_outputs/<NN>_<tool>_<descriptor>.{stdout,stderr}.txt`                                                   |
+| Generic product emission             | Enabled by default unless `metadata.auto_emit_artifacts: false`; emits `report.md/json`; DOCX requires `metadata.auto_emit_formats` opt-in; XLSX also requires `metadata.auto_emit_xlsx_source` |
 
 The existing Phase 1.6 hybrid retrieval pipeline is **fully reused** — it
-becomes the implementation of `kg_chunks(...)`. The route layer stops
-pre-building the briefing book for skill invokes (chat path is unaffected).
+is the implementation of `kg_chunks(...)`. Studio indexes artifacts, not
+`response.md`, so generic product emission guarantees even chat-only skills
+produce a visible finished Markdown artifact and machine-readable summary. Office
+renders are opt-in, and XLSX auto-emission requires a table JSON source so skills
+do not publish faux workbook products by default.
 
 ---
 

@@ -8,11 +8,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
+from src.skills.skill_emitters import auto_emit_artifacts
 from src.skills.skill_models import Skill, SkillInvocationResult
 from src.skills.skill_prompting import compose_skill_prompt
 from src.skills.text_normalization import normalize_skill_text
 
 logger = logging.getLogger(__name__)
+
+
+def _is_false(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value is False
+    if isinstance(value, str):
+        return value.strip().lower() in {"0", "false", "no", "off"}
+    return False
 
 
 async def run_legacy_skill(
@@ -27,6 +36,7 @@ async def run_legacy_skill(
     workspace_root: Optional[Path],
     persist_run: Callable[..., tuple[str, str]],
     touch_invocation: Callable[[str], None],
+    auto_emit_fn: Callable[[Skill, Path], None] = auto_emit_artifacts,
 ) -> SkillInvocationResult:
     """Run the pre-tools-mode single-shot prompt path."""
     warnings: list[str] = []
@@ -75,6 +85,17 @@ async def run_legacy_skill(
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to persist skill run for %s: %s", skill.name, exc)
             warnings.append(f"persistence failed: {exc}")
+
+    try:
+        auto_emit = not _is_false(skill.frontmatter.metadata.get("auto_emit_artifacts", True))
+    except Exception:
+        auto_emit = True
+    if auto_emit and run_dir:
+        try:
+            auto_emit_fn(skill, Path(run_dir))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Auto-emit artifacts failed for %s run %s: %s", skill.name, run_id, exc)
+            warnings.append(f"auto_emit_artifacts failed: {exc}")
 
     return SkillInvocationResult(
         skill=skill.name,

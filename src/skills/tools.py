@@ -1,8 +1,10 @@
 """Tool registry for the skill runtime.
 
-Skills run as multi-turn tool-calling agents. The runtime exposes six tools
+Skills run as multi-turn tool-calling agents. The runtime exposes bounded tools
 to the model:
 
+* ``invoke_skill(name, prompt, context=None)`` - call one child skill in the
+  same workspace (single-level Tier A chaining)
 * ``read_file(path)`` — read a text file inside the skill folder
 * ``run_script(path, stdin=None, timeout=60)`` — execute a script in the
   skill's ``scripts/`` folder under a sandboxed subprocess

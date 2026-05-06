@@ -141,9 +141,17 @@ def test_collect_competitive_obligation_intel_writes_standalone_artifact(tmp_pat
         "burn_posture",
         "award_story",
     ]
-    assert result.payload["insights"]["blocks"][1]["evidence"]["top_inflection_points"][0][
-        "modification_number"
-    ] == "P00001"
+    assert result.payload["insights"]["blocks"][0]["evidence"]["annual_burn_usd"] > 0.0
+    assert result.payload["insights"]["blocks"][1]["title"] == (
+        "Award story by period of performance"
+    )
+    pop_segments = result.payload["insights"]["blocks"][1]["evidence"][
+        "period_of_performance_segments"
+    ]
+    assert pop_segments[0]["label"] == "Base period"
+    assert pop_segments[0]["pop_start_date"] == "2024-01-01"
+    assert pop_segments[-1]["label"] == "Option period 1"
+    assert pop_segments[-1]["pop_end_date"] == "2024-12-31"
     assert [
         row["cumulative_obligated_usd"] for row in artifact["obligations"]["by_transaction"]
     ] == [100.0, 150.0, 140.0]
@@ -362,6 +370,7 @@ def test_collect_competitive_obligation_intel_rolls_up_parent_idiq(tmp_path: Pat
     ]
     assert artifact["obligations"]["net_obligated_usd"] == 500.0
     assert artifact["obligations"]["rate_analysis"]["monthly_burn_usd"] > 0.0
+    assert artifact["obligations"]["rate_analysis"]["annual_burn_usd"] > 0.0
     assert artifact["obligations"]["rate_analysis"]["daily_burn_usd"] > 0.0
     assert artifact["obligations"]["rate_analysis"]["pop_end_current"] == "2024-12-31"
     assert artifact["obligations"]["rate_analysis"]["pop_end_potential"] == "2027-12-31"
@@ -373,9 +382,12 @@ def test_collect_competitive_obligation_intel_rolls_up_parent_idiq(tmp_path: Pat
             "label": "base_year",
             "estimated_start": "2023-01-01",
             "estimated_end": "2024-12-31",
+            "pop_start_date": "2023-01-01",
+            "pop_end_date": "2024-12-31",
             "months": 24.5,
             "obligated_usd": 500.0,
             "monthly_rate_usd": 20.41,
+            "annual_rate_usd": 244.9,
         }
     ]
     assert any(
@@ -662,6 +674,30 @@ def test_collect_competitive_obligation_intel_keeps_idiq_order_scope_single_awar
         "ORDER-001 is best read as one order story: $150.00 net, about $12.50/month through 2024-12-31."
     )
     assert artifact["insights"]["blocks"][0]["evidence"]["net_obligated_usd"] == 150.0
+    assert artifact["insights"]["blocks"][0]["evidence"]["annual_burn_usd"] == 150.0
+    assert artifact["insights"]["blocks"][1]["title"] == "Award story by period of performance"
+    assert artifact["insights"]["blocks"][1]["evidence"]["period_of_performance_segments"] == [
+        {
+            "label": "Base period",
+            "raw_label": "base_year",
+            "pop_start_date": "2024-01-01",
+            "pop_end_date": "2024-06-01",
+            "months": 5.0,
+            "obligated_usd": 100.0,
+            "monthly_rate_usd": 20.0,
+            "annual_rate_usd": 240.0,
+        },
+        {
+            "label": "Option period 1",
+            "raw_label": "option_year_1",
+            "pop_start_date": "2024-06-01",
+            "pop_end_date": "2024-12-31",
+            "months": 7.0,
+            "obligated_usd": 50.0,
+            "monthly_rate_usd": 7.14,
+            "annual_rate_usd": 85.71,
+        },
+    ]
     assert artifact["vehicle_context"] == {
         "parent_award_id": "CONT_IDV_PARENT001_2044",
         "child_order_count": 3,

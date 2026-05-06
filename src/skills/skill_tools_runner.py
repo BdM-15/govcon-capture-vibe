@@ -14,11 +14,34 @@ from src.skills.text_normalization import normalize_skill_text
 
 logger = logging.getLogger(__name__)
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_DEFAULT_SCRIPT_ROOTS = (
+    Path(".github") / "skills" / "renderers" / "scripts",
+    Path(".github") / "skills" / "huashu-design" / "scripts",
+)
+
+
+def _is_false(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value is False
+    if isinstance(value, str):
+        return value.strip().lower() in {"0", "false", "no", "off"}
+    return False
+
+
+def _default_script_roots(repo_root: Path = _REPO_ROOT) -> list[Path]:
+    roots: list[Path] = []
+    for rel in _DEFAULT_SCRIPT_ROOTS:
+        candidate = (repo_root / rel).resolve()
+        if candidate.is_dir():
+            roots.append(candidate)
+    return roots
+
 
 def resolve_extra_script_roots(skill: Skill) -> tuple[list[Path], list[str]]:
-    """Resolve opt-in cross-skill script roots for tools-mode execution."""
+    """Resolve default renderer roots plus explicit cross-skill script roots."""
     warnings: list[str] = []
-    roots: list[Path] = []
+    roots: list[Path] = _default_script_roots()
     raw_paths = skill.frontmatter.metadata.get("script_paths") or []
     if isinstance(raw_paths, str):
         raw_paths = [raw_paths]
@@ -35,7 +58,8 @@ def resolve_extra_script_roots(skill: Skill) -> tuple[list[Path], list[str]]:
             continue
         if candidate == skill_dir_resolved:
             continue
-        roots.append(candidate)
+        if candidate not in roots:
+            roots.append(candidate)
     return roots, warnings
 
 
@@ -53,6 +77,7 @@ async def run_tools_skill(
     run_tool_loop_fn: Optional[Callable[..., Awaitable[Any]]] = None,
     tool_context_cls: Optional[type] = None,
     auto_emit_fn: Callable[[Skill, Path], None] = auto_emit_artifacts,
+    invoke_skill_fn: Optional[Callable[..., Awaitable[Any]]] = None,
 ) -> SkillInvocationResult:
     """Run a tools-mode skill using the multi-turn tool loop."""
     if workspace_root is None:
@@ -94,6 +119,7 @@ async def run_tools_skill(
         max_kg_chunks_per_entity=limits.max_kg_chunks_per_entity,
         max_kg_relationships_per_entity=limits.max_kg_relationships_per_entity,
         extra_script_roots=extra_script_roots,
+        invoke_skill_fn=invoke_skill_fn,
     )
 
     requested_mcps = skill.frontmatter.required_mcps
@@ -153,9 +179,9 @@ async def run_tools_skill(
         warnings.append(f"persistence failed: {exc}")
 
     try:
-        auto_emit = bool(skill.frontmatter.metadata.get("auto_emit_artifacts"))
+        auto_emit = not _is_false(skill.frontmatter.metadata.get("auto_emit_artifacts", True))
     except Exception:
-        auto_emit = False
+        auto_emit = True
     if auto_emit:
         try:
             auto_emit_fn(skill, Path(run_dir))

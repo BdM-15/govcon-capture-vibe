@@ -35,6 +35,7 @@ class ToolContext:
     max_kg_relationships_per_entity: int = 20
     extra_script_roots: list[Path] = field(default_factory=list)
     mcp_sessions: dict[str, Any] = field(default_factory=dict)
+    invoke_skill_fn: Optional[Callable[..., Awaitable[Any]]] = None
     call_seq: list[int] = field(default_factory=lambda: [0])
 
 
