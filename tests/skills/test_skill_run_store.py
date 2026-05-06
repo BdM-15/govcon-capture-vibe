@@ -87,6 +87,7 @@ def test_tools_run_detail_includes_transcript_artifacts_and_tool_outputs(
             "name": "matrix.xlsx",
             "size": "4",
             "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "display_name": "Matrix",
         }
     ]
     assert detail["tool_outputs"] == [{"name": "001.stdout.txt", "size": "2"}]
