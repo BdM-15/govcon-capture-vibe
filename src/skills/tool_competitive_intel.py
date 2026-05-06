@@ -255,6 +255,18 @@ async def tool_collect_competitive_obligation_intel(
         warnings,
     )
     ptw_seed = _build_ptw_seed(all_transactions)
+    insights = _build_insight_blocks(
+        scenario=scenario,
+        resolved_piid=resolved_piid,
+        total_obligated_usd=total_obligated_usd,
+        net_obligated_usd=net_obligated_usd,
+        child_orders=child_orders,
+        award_rollups=award_rollups,
+        competitor_discovery=competitor_discovery,
+        rate_analysis=rate_analysis,
+        ptw_seed=ptw_seed,
+        warnings=warnings,
+    )
 
     envelope = {
         "input_contract_number": contract_number,
@@ -316,6 +328,7 @@ async def tool_collect_competitive_obligation_intel(
                 for order in child_orders
             ],
         },
+        "insights": insights,
         "competitor_discovery": competitor_discovery,
         "ptw_seed": ptw_seed,
         "warnings": _dedupe(warnings),
@@ -358,6 +371,7 @@ async def tool_collect_competitive_obligation_intel(
                 "parent_vehicle_awardees"
             ],
         },
+        "insights": insights,
         "ptw_seed": ptw_seed,
         "warnings": envelope["warnings"],
         "tools_invoked": envelope["data_provenance"]["tools_invoked"],
@@ -1325,6 +1339,300 @@ def _build_ptw_seed(transactions: list[dict[str, Any]]) -> dict[str, Any]:
         "three_year_weighted_run_rate_usd": _round_money(weighted),
         "recommended_baseline_usd": _round_money(max(recent, weighted)),
     }
+
+
+def _build_insight_blocks(
+    *,
+    scenario: str,
+    resolved_piid: str,
+    total_obligated_usd: float,
+    net_obligated_usd: float,
+    child_orders: list[dict[str, Any]],
+    award_rollups: list[dict[str, Any]],
+    competitor_discovery: dict[str, Any],
+    rate_analysis: dict[str, Any],
+    ptw_seed: dict[str, Any],
+    warnings: list[str],
+) -> dict[str, Any]:
+    headline = _build_insight_headline(
+        scenario=scenario,
+        resolved_piid=resolved_piid,
+        net_obligated_usd=net_obligated_usd,
+        child_orders=child_orders,
+        rate_analysis=rate_analysis,
+    )
+    blocks = [
+        _build_burn_posture_block(
+            total_obligated_usd=total_obligated_usd,
+            net_obligated_usd=net_obligated_usd,
+            rate_analysis=rate_analysis,
+            ptw_seed=ptw_seed,
+        )
+    ]
+
+    if scenario == "parent_idiq":
+        concentration = _build_vehicle_concentration_block(child_orders, net_obligated_usd)
+        if concentration is not None:
+            blocks.append(concentration)
+        blocks.append(_build_vehicle_competition_block(competitor_discovery))
+    else:
+        award_story = _build_award_story_block(award_rollups)
+        if award_story is not None:
+            blocks.append(award_story)
+        if scenario == "idiq_order":
+            blocks.append(_build_vehicle_competition_block(competitor_discovery))
+
+    caveats = _build_caveat_block(warnings)
+    if caveats is not None:
+        blocks.append(caveats)
+
+    return {
+        "headline": headline,
+        "blocks": blocks,
+    }
+
+
+def _build_insight_headline(
+    *,
+    scenario: str,
+    resolved_piid: str,
+    net_obligated_usd: float,
+    child_orders: list[dict[str, Any]],
+    rate_analysis: dict[str, Any],
+) -> str:
+    monthly = _fmt_money(rate_analysis.get("monthly_burn_usd"))
+    pop_end = rate_analysis.get("pop_end_current") or "unknown POP end"
+    if scenario == "parent_idiq":
+        return (
+            f"{resolved_piid} rolls up {_fmt_money(net_obligated_usd)} net across "
+            f"{len(child_orders)} child orders, burning about {monthly}/month through {pop_end}."
+        )
+    if scenario == "idiq_order":
+        return (
+            f"{resolved_piid} is best read as one order story: {_fmt_money(net_obligated_usd)} "
+            f"net, about {monthly}/month through {pop_end}."
+        )
+    return (
+        f"{resolved_piid} is a standalone award with {_fmt_money(net_obligated_usd)} net "
+        f"and a current burn of about {monthly}/month through {pop_end}."
+    )
+
+
+def _build_burn_posture_block(
+    *,
+    total_obligated_usd: float,
+    net_obligated_usd: float,
+    rate_analysis: dict[str, Any],
+    ptw_seed: dict[str, Any],
+) -> dict[str, Any]:
+    current_end = rate_analysis.get("pop_end_current")
+    potential_end = rate_analysis.get("pop_end_potential")
+    monthly = _fmt_money(rate_analysis.get("monthly_burn_usd"))
+    daily = _fmt_money(rate_analysis.get("daily_burn_usd"))
+    total_months = rate_analysis.get("total_pop_months") or 0.0
+    total_potential_months = rate_analysis.get("total_potential_pop_months") or 0.0
+
+    summary = (
+        f"Gross obligations sit at {_fmt_money(total_obligated_usd)} while net burn sits at "
+        f"{_fmt_money(net_obligated_usd)}. Current cadence is about {monthly}/month "
+        f"({daily}/day) through {current_end or 'unknown'}."
+    )
+    if potential_end and potential_end != current_end:
+        summary += (
+            f" Full-term ceiling extends to {potential_end}, stretching horizon from "
+            f"{total_months} to {total_potential_months} months."
+        )
+
+    return {
+        "id": "burn_posture",
+        "title": "Burn posture",
+        "summary": summary,
+        "evidence": {
+            "gross_obligated_usd": total_obligated_usd,
+            "net_obligated_usd": net_obligated_usd,
+            "monthly_burn_usd": rate_analysis.get("monthly_burn_usd", 0.0),
+            "daily_burn_usd": rate_analysis.get("daily_burn_usd", 0.0),
+            "pop_end_current": current_end,
+            "pop_end_potential": potential_end,
+            "recommended_ptw_baseline_usd": ptw_seed.get("recommended_baseline_usd", 0.0),
+        },
+    }
+
+
+def _build_vehicle_concentration_block(
+    child_orders: list[dict[str, Any]],
+    net_obligated_usd: float,
+) -> dict[str, Any] | None:
+    ranked = sorted(
+        child_orders,
+        key=lambda order: (_to_float(order.get("amount_usd")), order.get("piid") or ""),
+        reverse=True,
+    )
+    if not ranked:
+        return None
+
+    leaders = []
+    for order in ranked[:3]:
+        amount = _to_float(order.get("amount_usd"))
+        leaders.append(
+            {
+                "award_id": order.get("award_id"),
+                "piid": order.get("piid"),
+                "amount_usd": _round_money(amount),
+                "share_of_net_obligations_pct": _pct(amount, net_obligated_usd),
+            }
+        )
+
+    top = leaders[0]
+    summary = (
+        f"Burn is concentrated in {top.get('piid') or top.get('award_id')}, which carries "
+        f"{_fmt_money(top['amount_usd'])} or {top['share_of_net_obligations_pct']}% of observed net obligations."
+    )
+    if len(leaders) > 1:
+        summary += (
+            f" Top {len(leaders)} child orders together carry "
+            f"{_fmt_money(sum(item['amount_usd'] for item in leaders))}."
+        )
+
+    return {
+        "id": "vehicle_concentration",
+        "title": "Vehicle concentration",
+        "summary": summary,
+        "evidence": {
+            "top_child_orders": leaders,
+        },
+    }
+
+
+def _build_vehicle_competition_block(
+    competitor_discovery: dict[str, Any],
+) -> dict[str, Any]:
+    parent_awardees = competitor_discovery.get("parent_vehicle_awardees") or []
+    order_holders = competitor_discovery.get("order_holder_recipients") or []
+    parent_holders = competitor_discovery.get("parent_holder_recipients") or []
+    completeness = competitor_discovery.get("completeness_status") or "unknown"
+
+    if parent_awardees:
+        summary = (
+            f"Parent-level roster is {completeness} confidence with {len(parent_awardees)} exact awardees. "
+            f"Observed burn spreads across {len(order_holders)} order holders and {len(parent_holders)} parent holders."
+        )
+    else:
+        summary = (
+            f"Competitive context is {completeness} confidence. No exact parent-awardee roster surfaced, "
+            f"so current read leans on observed order holders only."
+        )
+
+    return {
+        "id": "competitive_context",
+        "title": "Competitive context",
+        "summary": summary,
+        "evidence": {
+            "completeness_status": completeness,
+            "parent_vehicle_awardee_count": len(parent_awardees),
+            "order_holder_count": len(order_holders),
+            "parent_holder_count": len(parent_holders),
+            "parent_vehicle_awardees": parent_awardees,
+        },
+    }
+
+
+def _build_award_story_block(award_rollups: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not award_rollups:
+        return None
+    focus = award_rollups[0]
+    transactions = focus.get("by_transaction") or []
+    inflections = _select_inflection_points(transactions)
+
+    summary = (
+        f"Primary award story centers on {focus.get('piid') or focus.get('award_id')}: "
+        f"{_fmt_money(focus.get('net_obligated_usd'))} net across {len(transactions)} posted transactions."
+    )
+    if inflections:
+        first = inflections[0]
+        summary += (
+            f" Biggest non-base inflection is {first.get('action_date') or 'unknown date'} "
+            f"for {_fmt_money(first.get('amount_usd'))} "
+            f"({first.get('action_type_description') or first.get('modification_description') or 'modification'})."
+        )
+
+    return {
+        "id": "award_story",
+        "title": "Award story",
+        "summary": summary,
+        "evidence": {
+            "award_id": focus.get("award_id"),
+            "piid": focus.get("piid"),
+            "net_obligated_usd": focus.get("net_obligated_usd", 0.0),
+            "gross_obligated_usd": focus.get("total_obligated_usd", 0.0),
+            "transaction_count": len(transactions),
+            "top_inflection_points": inflections,
+        },
+    }
+
+
+def _build_caveat_block(warnings: list[str]) -> dict[str, Any] | None:
+    unique = _dedupe(warnings)
+    if not unique:
+        return None
+    return {
+        "id": "caveats",
+        "title": "Caveats",
+        "summary": f"Collector flagged {len(unique)} caveat(s) that should shape the narrative.",
+        "evidence": {
+            "warnings": unique,
+        },
+    }
+
+
+def _select_inflection_points(
+    transactions: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    ranked = []
+    for tx in transactions:
+        if (tx.get("modification_number") or "") == "0":
+            continue
+        amount = _to_float(tx.get("amount_usd"))
+        if amount == 0.0:
+            continue
+        ranked.append(
+            {
+                "transaction_id": tx.get("transaction_id"),
+                "action_date": tx.get("action_date"),
+                "modification_number": tx.get("modification_number"),
+                "action_type_description": tx.get("action_type_description"),
+                "modification_description": tx.get("modification_description"),
+                "amount_usd": _round_money(amount),
+                "absolute_amount_usd": _round_money(abs(amount)),
+            }
+        )
+    ranked.sort(
+        key=lambda tx: (
+            _to_float(tx.get("absolute_amount_usd")),
+            tx.get("action_date") or "",
+        ),
+        reverse=True,
+    )
+    return ranked[:2]
+
+
+def _pct(amount: float, total: float) -> float:
+    if not total:
+        return 0.0
+    return _round_money((amount / total) * 100.0)
+
+
+def _fmt_money(amount: Any) -> str:
+    value = _to_float(amount)
+    sign = "-" if value < 0 else ""
+    value = abs(value)
+    if value >= 1_000_000_000:
+        return f"{sign}${value / 1_000_000_000:.2f}B"
+    if value >= 1_000_000:
+        return f"{sign}${value / 1_000_000:.2f}M"
+    if value >= 1_000:
+        return f"{sign}${value / 1_000:.1f}K"
+    return f"{sign}${value:.2f}"
 
 
 def _recipient_name(detail: dict[str, Any]) -> str | None:

@@ -134,6 +134,16 @@ def test_collect_competitive_obligation_intel_writes_standalone_artifact(tmp_pat
             "display_name": "ABC-123 Contract Burn Intel"
         }
     }
+    assert artifact["insights"]["headline"].startswith(
+        "ABC-123 is a standalone award"
+    )
+    assert [block["id"] for block in artifact["insights"]["blocks"]] == [
+        "burn_posture",
+        "award_story",
+    ]
+    assert result.payload["insights"]["blocks"][1]["evidence"]["top_inflection_points"][0][
+        "modification_number"
+    ] == "P00001"
     assert [
         row["cumulative_obligated_usd"] for row in artifact["obligations"]["by_transaction"]
     ] == [100.0, 150.0, 140.0]
@@ -403,5 +413,19 @@ def test_collect_competitive_obligation_intel_rolls_up_parent_idiq(tmp_path: Pat
         {"name": "HOLDCO B", "obligated_usd": 300.0},
         {"name": "HOLDCO A", "obligated_usd": 200.0},
     ]
+    assert artifact["insights"]["headline"].startswith(
+        "PARENT-001 rolls up $500.00 net across 2 child orders"
+    )
+    assert [block["id"] for block in artifact["insights"]["blocks"]] == [
+        "burn_posture",
+        "vehicle_concentration",
+        "competitive_context",
+    ]
+    assert artifact["insights"]["blocks"][1]["evidence"]["top_child_orders"][0][
+        "piid"
+    ] == "ORDER-2"
     assert result.payload["competitor_discovery"]["parent_vehicle_awardee_count"] == 2
+    assert result.payload["insights"]["blocks"][2]["evidence"][
+        "parent_vehicle_awardee_count"
+    ] == 2
     assert artifact["ptw_seed"]["recommended_baseline_usd"] == 500.0
