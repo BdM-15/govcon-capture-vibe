@@ -40,3 +40,14 @@ def test_ui_static_files_do_not_contain_common_mojibake_sequences() -> None:
             offenders.append(f"{path.relative_to(_ROOT)}: {', '.join(sorted(set(bad)))}")
 
     assert not offenders, "UI mojibake detected:\n" + "\n".join(offenders)
+
+
+def test_studio_filename_button_is_only_preview_trigger() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+    start = source.index('class="studio-filename-btn text-neon-cyan"')
+    end = source.index("</button>", start)
+    filename_button = source[start:end]
+
+    assert '@click="openStudioPreview(d)"' in filename_button
+    assert 'x-text="d.filename"' not in filename_button
+    assert 'title="Preview inline"' not in source
