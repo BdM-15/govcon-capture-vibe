@@ -6081,6 +6081,117 @@
                 </template>
               </div>
             </div>
+
+            <div
+              x-show="studioPreviewHistory().length > 1"
+              class="studio-provenance-section"
+            >
+              <div class="reasoning-detail-label mb-2">Version History</div>
+              <div class="studio-version-history">
+                <template x-for="artifact in studioPreviewHistory()" :key="studioKey(artifact)">
+                  <div class="studio-version-row" :class="artifact.isCurrent ? 'studio-version-row-current' : ''">
+                    <div class="min-w-0 flex-1">
+                      <div class="studio-version-row-head">
+                        <span class="reasoning-chip" x-text="artifact.isCurrent ? 'Current' : 'Previous'"></span>
+                        <span class="text-xs text-slate-400" x-text="(artifact.created_at || '').slice(0, 19).replace('T', ' ')"></span>
+                      </div>
+                      <div class="text-xs font-mono text-slate-500 mt-1" x-text="artifact.run_id"></div>
+                      <div class="text-xs text-slate-500 mt-1" x-text="formatBytes(Number(artifact.size || 0))"></div>
+                    </div>
+                    <div class="studio-version-actions">
+                      <button
+                        type="button"
+                        class="studio-provenance-link"
+                        x-show="!artifact.isCurrent"
+                        @click="openStudioPreview(artifact)"
+                      >
+                        Open
+                      </button>
+                      <button
+                        type="button"
+                        class="studio-provenance-link"
+                        x-show="!artifact.isCurrent && artifact.isComparable"
+                        @click="studioPreviewCompareVersion(artifact)"
+                      >
+                        Compare
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <div
+              x-show="studioPreview.compareLoading || studioPreview.compareError || studioPreview.compareSummary"
+              class="studio-provenance-section"
+            >
+              <div class="studio-provenance-title-row">
+                <div>
+                  <div class="studio-provenance-kicker">Compare</div>
+                  <div class="studio-provenance-title">Version diff</div>
+                </div>
+                <button
+                  type="button"
+                  class="studio-provenance-link"
+                  x-show="studioPreview.compareSummary || studioPreview.compareError"
+                  @click="studioPreviewClearCompare()"
+                >
+                  Clear
+                </button>
+              </div>
+
+              <div
+                x-show="studioPreview.compareLoading"
+                class="text-sm text-slate-400 flex items-center gap-2"
+              >
+                <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+                <span>Comparing versions&hellip;</span>
+              </div>
+
+              <div
+                x-show="!studioPreview.compareLoading && studioPreview.compareError"
+                class="text-sm text-neon-magenta border border-neon-magenta/40 rounded p-3"
+                x-text="studioPreview.compareError"
+              ></div>
+
+              <div
+                x-show="!studioPreview.compareLoading && studioPreview.compareSummary"
+                class="space-y-3"
+              >
+                <div class="flex flex-wrap gap-2">
+                  <span class="reasoning-chip" x-text="studioPreview.compareSummary?.identical ? 'No textual change' : 'Content changed'"></span>
+                  <span class="reasoning-chip" x-text="`Line delta ${studioPreview.compareSummary?.lineDelta > 0 ? '+' : ''}${studioPreview.compareSummary?.lineDelta}`"></span>
+                  <span class="reasoning-chip" x-text="`Size delta ${studioPreview.compareSummary?.sizeDelta > 0 ? '+' : ''}${formatBytes(Math.abs(Number(studioPreview.compareSummary?.sizeDelta || 0)))}`"></span>
+                </div>
+                <div class="studio-compare-meta-grid">
+                  <div class="studio-compare-meta-card">
+                    <div class="studio-compare-meta-label">Current</div>
+                    <div class="text-xs text-slate-300" x-text="studioPreview.compareSummary?.current?.run_id"></div>
+                    <div class="text-xs text-slate-500 mt-1" x-text="(studioPreview.compareSummary?.current?.created_at || '').slice(0, 19).replace('T', ' ')"></div>
+                  </div>
+                  <div class="studio-compare-meta-card">
+                    <div class="studio-compare-meta-label">Compared to</div>
+                    <div class="text-xs text-slate-300" x-text="studioPreview.compareSummary?.previous?.run_id"></div>
+                    <div class="text-xs text-slate-500 mt-1" x-text="(studioPreview.compareSummary?.previous?.created_at || '').slice(0, 19).replace('T', ' ')"></div>
+                  </div>
+                </div>
+                <div
+                  x-show="studioPreview.compareSummary?.firstChangedLine"
+                  class="text-xs text-slate-400"
+                  x-text="`First changed line: ${studioPreview.compareSummary?.firstChangedLine}`"
+                ></div>
+                <div class="studio-compare-excerpts">
+                  <div class="studio-compare-excerpt-card">
+                    <div class="studio-compare-meta-label">Current excerpt</div>
+                    <pre class="studio-compare-pre" x-text="studioPreview.compareSummary?.currentExcerpt || '(no change)'"></pre>
+                  </div>
+                  <div class="studio-compare-excerpt-card">
+                    <div class="studio-compare-meta-label">Previous excerpt</div>
+                    <pre class="studio-compare-pre" x-text="studioPreview.compareSummary?.previousExcerpt || '(no change)'"></pre>
+                  </div>
+                </div>
+              </div>
+            </div>
           </aside>
         </div>
       </div>

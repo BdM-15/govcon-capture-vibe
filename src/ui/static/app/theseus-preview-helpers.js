@@ -14,9 +14,54 @@ window.theseusEnsureScript = function theseusEnsureScript(app, url) {
 
 const THESEUS_TEXT_PREVIEW_KINDS = new Set(["md", "json", "csv", "text"]);
 const THESEUS_REASONING_SOURCE_EXTENSIONS = new Set(["md", "markdown", "json"]);
+const THESEUS_COMPAREABLE_PREVIEW_KINDS = new Set(["md", "json", "csv", "text", "docx"]);
 
 const theseusNormalizeExtension = function theseusNormalizeExtension(value) {
   return String(value || "").toLowerCase().replace(/^\./, "");
+};
+
+const theseusStudioComparableKind = function theseusStudioComparableKind(deliverable) {
+  return window.theseusStudioFormatFor(deliverable);
+};
+
+const theseusStripHtmlToText = function theseusStripHtmlToText(html) {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html || "";
+  return (tmp.textContent || tmp.innerText || "").replace(/\r\n/g, "\n");
+};
+
+const theseusNormalizeCompareText = function theseusNormalizeCompareText(text) {
+  return String(text || "").replace(/\r\n/g, "\n").trim();
+};
+
+const theseusSummarizeCompareText = function theseusSummarizeCompareText(
+  currentText,
+  previousText,
+) {
+  const current = theseusNormalizeCompareText(currentText);
+  const previous = theseusNormalizeCompareText(previousText);
+  const currentLines = current ? current.split("\n") : [];
+  const previousLines = previous ? previous.split("\n") : [];
+  const maxLen = Math.max(currentLines.length, previousLines.length);
+  let firstChangedIndex = -1;
+  for (let index = 0; index < maxLen; index += 1) {
+    if ((currentLines[index] || "") !== (previousLines[index] || "")) {
+      firstChangedIndex = index;
+      break;
+    }
+  }
+  return {
+    identical: current === previous,
+    currentLineCount: currentLines.length,
+    previousLineCount: previousLines.length,
+    lineDelta: currentLines.length - previousLines.length,
+    firstChangedLine:
+      firstChangedIndex >= 0 ? firstChangedIndex + 1 : null,
+    currentExcerpt:
+      firstChangedIndex >= 0 ? currentLines[firstChangedIndex] || "" : "",
+    previousExcerpt:
+      firstChangedIndex >= 0 ? previousLines[firstChangedIndex] || "" : "",
+  };
 };
 
 const theseusFetchPreviewResponse = async function theseusFetchPreviewResponse(
@@ -61,6 +106,67 @@ const theseusResetStudioPreview = function theseusResetStudioPreview(
   app.studioPreview.provenanceSummary = null;
   app.studioPreview.provenanceSteps = [];
   app.studioPreview.provenanceArtifacts = [];
+  app.studioPreview.history = [];
+  app.studioPreview.compareLoading = false;
+  app.studioPreview.compareError = null;
+  app.studioPreview.compareTarget = null;
+  app.studioPreview.compareSummary = null;
+};
+
+const theseusBuildStudioPreviewHistory = function theseusBuildStudioPreviewHistory(
+  app,
+  deliverable,
+) {
+  const kind = theseusStudioComparableKind(deliverable);
+  return (app.studio.deliverables || [])
+    .filter(
+      (candidate) =>
+        candidate.skill === deliverable.skill &&
+        candidate.filename === deliverable.filename,
+    )
+    .map((candidate) => ({
+      ...candidate,
+      previewKind: theseusStudioComparableKind(candidate),
+      isCurrent: window.theseusStudioKey(candidate) === window.theseusStudioKey(deliverable),
+      isComparable:
+        THESEUS_COMPAREABLE_PREVIEW_KINDS.has(kind) &&
+        THESEUS_COMPAREABLE_PREVIEW_KINDS.has(theseusStudioComparableKind(candidate)) &&
+        theseusStudioComparableKind(candidate) === kind,
+    }));
+};
+
+const theseusMaterializeComparablePreview = async function theseusMaterializeComparablePreview(
+  app,
+  deliverable,
+) {
+  const kind = theseusStudioComparableKind(deliverable);
+  const href = window.theseusStudioDownloadHref(deliverable);
+  if (THESEUS_TEXT_PREVIEW_KINDS.has(kind)) {
+    const response = await theseusFetchPreviewResponse(href);
+    return { kind, text: await response.text() };
+  }
+  if (kind === "docx") {
+    await window.theseusEnsureScript(
+      app,
+      "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
+    );
+    const response = await theseusFetchPreviewResponse(href);
+    const buffer = await response.arrayBuffer();
+    const out = await window.mammoth.convertToHtml({ arrayBuffer: buffer });
+    const html = out && out.value ? out.value : "";
+    return { kind, text: theseusStripHtmlToText(html) };
+  }
+  return { kind, text: "" };
+};
+
+const theseusCurrentPreviewComparableText = function theseusCurrentPreviewComparableText(app) {
+  if (THESEUS_TEXT_PREVIEW_KINDS.has(app.studioPreview.kind)) {
+    return app.studioPreview.text || "";
+  }
+  if (app.studioPreview.kind === "docx") {
+    return theseusStripHtmlToText(app.studioPreview.docxHtml || "");
+  }
+  return "";
 };
 
 const theseusLoadTextStudioPreview =
@@ -152,6 +258,7 @@ window.theseusOpenStudioPreview = async function theseusOpenStudioPreview(
 ) {
   app.studioPreview.loading = true;
   theseusResetStudioPreview(app, deliverable);
+  app.studioPreview.history = theseusBuildStudioPreviewHistory(app, deliverable);
   const provenancePromise = theseusLoadStudioPreviewProvenance(app, deliverable);
 
   try {
@@ -175,6 +282,50 @@ window.theseusOpenStudioPreview = async function theseusOpenStudioPreview(
 
 window.theseusCloseStudioPreview = function theseusCloseStudioPreview(app) {
   app.studioPreview.open = false;
+};
+
+window.theseusStudioPreviewCanCompare = function theseusStudioPreviewCanCompare(app) {
+  return THESEUS_COMPAREABLE_PREVIEW_KINDS.has(app.studioPreview.kind || "");
+};
+
+window.theseusStudioPreviewHistory = function theseusStudioPreviewHistory(app) {
+  return app.studioPreview.history || [];
+};
+
+window.theseusStudioPreviewClearCompare = function theseusStudioPreviewClearCompare(app) {
+  app.studioPreview.compareLoading = false;
+  app.studioPreview.compareError = null;
+  app.studioPreview.compareTarget = null;
+  app.studioPreview.compareSummary = null;
+};
+
+window.theseusStudioPreviewCompareVersion = async function theseusStudioPreviewCompareVersion(
+  app,
+  deliverable,
+) {
+  if (!deliverable || deliverable.isCurrent) return;
+  app.studioPreview.compareLoading = true;
+  app.studioPreview.compareError = null;
+  app.studioPreview.compareTarget = deliverable;
+  app.studioPreview.compareSummary = null;
+  try {
+    const currentText = theseusCurrentPreviewComparableText(app);
+    const previous = await theseusMaterializeComparablePreview(app, deliverable);
+    app.studioPreview.compareSummary = {
+      ...theseusSummarizeCompareText(currentText, previous.text),
+      current: app.studioPreview.deliverable,
+      previous: deliverable,
+      kind: app.studioPreview.kind,
+      sizeDelta:
+        Number((app.studioPreview.deliverable || {}).size || 0) -
+        Number(deliverable.size || 0),
+    };
+  } catch (error) {
+    app.studioPreview.compareError = error?.message || String(error);
+  } finally {
+    app.studioPreview.compareLoading = false;
+    window.theseusAfterRender(app);
+  }
 };
 
 window.theseusStudioSetSheet = function theseusStudioSetSheet(app, idx) {

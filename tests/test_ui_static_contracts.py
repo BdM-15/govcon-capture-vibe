@@ -73,6 +73,16 @@ def test_studio_preview_exposes_provenance_split_view() -> None:
     assert 'x-for="artifact in studioPreviewArtifacts()"' in source
 
 
+def test_studio_preview_exposes_version_history_and_compare() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+
+    assert "Version History" in source
+    assert "Version diff" in source
+    assert "Compare" in source
+    assert '@click="studioPreviewCompareVersion(artifact)"' in source
+    assert '@click="studioPreviewClearCompare()"' in source
+
+
 def test_reasoning_drawer_exposes_run_artifact_actions() -> None:
     source = _INDEX_HTML.read_text(encoding="utf-8")
 

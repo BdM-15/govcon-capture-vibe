@@ -98,6 +98,11 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       provenanceSummary: null,
       provenanceSteps: [],
       provenanceArtifacts: [],
+      history: [],
+      compareLoading: false,
+      compareError: null,
+      compareTarget: null,
+      compareSummary: null,
     },
     reasoning: {
       open: false,

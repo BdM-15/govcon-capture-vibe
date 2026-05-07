@@ -248,6 +248,22 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusStudioPreviewArtifacts(this);
     },
 
+    studioPreviewHistory() {
+      return window.theseusStudioPreviewHistory(this);
+    },
+
+    studioPreviewCanCompare() {
+      return window.theseusStudioPreviewCanCompare(this);
+    },
+
+    async studioPreviewCompareVersion(deliverable) {
+      return window.theseusStudioPreviewCompareVersion(this, deliverable);
+    },
+
+    studioPreviewClearCompare() {
+      return window.theseusStudioPreviewClearCompare(this);
+    },
+
     _extractJsonChunkIds(text) {
       return window.theseusExtractJsonChunkIds(text);
     },
