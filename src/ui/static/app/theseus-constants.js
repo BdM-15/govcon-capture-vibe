@@ -61,6 +61,12 @@ window.createTheseusNavGroups = function createTheseusNavGroups() {
           accent: "magenta",
         },
         {
+          id: "chains",
+          label: "Skill Chains",
+          icon: "workflow",
+          accent: "cyan",
+        },
+        {
           id: "activity",
           label: "Activity Log",
           icon: "activity",

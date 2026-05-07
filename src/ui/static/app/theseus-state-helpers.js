@@ -108,6 +108,17 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       compareTarget: null,
       compareSummary: null,
     },
+    chains: {
+      items: [],
+      loading: false,
+      loadingDetail: false,
+      loaded: false,
+      error: null,
+      current: null,
+      rerunning: "",
+      resuming: "",
+      search: "",
+    },
     reasoning: {
       open: false,
       loading: false,

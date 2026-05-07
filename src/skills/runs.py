@@ -321,6 +321,9 @@ class SkillRunStore:
     def chains_root(workspace_root: Path) -> Path:
         return Path(workspace_root) / "skill_chains"
 
+    def chain_run_dir(self, workspace_root: Path, chain_id: str) -> Path:
+        return self.chains_root(workspace_root) / chain_id
+
     @staticmethod
     def is_safe_run_id(run_id: str) -> bool:
         return bool(_SAFE_RUN_ID.match(run_id))
@@ -340,7 +343,13 @@ class SkillRunStore:
         ts = now.strftime("%Y%m%d_%H%M%S")
         slug = slugify_for_filename(name or prompt) or "chain"
         chain_id = f"{ts}_{slug}"
-        chain_dir = self.chains_root(workspace_root) / chain_id
+        root = self.chains_root(workspace_root)
+        chain_dir = root / chain_id
+        suffix = 2
+        while chain_dir.exists():
+            chain_id = f"{ts}_{slug}_{suffix}"
+            chain_dir = root / chain_id
+            suffix += 1
         chain_dir.mkdir(parents=True, exist_ok=True)
         return chain_id, chain_dir
 
@@ -356,7 +365,7 @@ class SkillRunStore:
     ) -> Optional[dict[str, Any]]:
         if not self.is_safe_chain_id(chain_id):
             return None
-        chain_path = self.chains_root(workspace_root) / chain_id / "chain.json"
+        chain_path = self.chain_run_dir(workspace_root, chain_id) / "chain.json"
         if not chain_path.is_file():
             return None
         try:

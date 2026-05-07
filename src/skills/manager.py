@@ -403,6 +403,8 @@ class SkillManager:
         slice_fn: Optional[Callable[..., dict[str, Any]]] = None,
         retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]] = None,
         runtime_mode_override: Optional[str] = None,
+        source_chain_id: str = "",
+        mode: str = "original",
     ) -> ChainRunState:
         """Run a deterministic multi-skill chain through LangGraph."""
         if workspace_root is None:
@@ -421,6 +423,38 @@ class SkillManager:
             slice_fn=slice_fn,
             retrieve_fn=retrieve_fn,
             runtime_mode_override=runtime_mode_override,
+            source_chain_id=source_chain_id,
+            mode=mode,
+        )
+
+    async def resume_chain(
+        self,
+        chain: ChainRunState,
+        *,
+        workspace_root: Path,
+        entity_payload: dict[str, Any],
+        llm: Callable[[str], Awaitable[str]],
+        max_payload_chars: Optional[int] = None,
+        slice_fn: Optional[Callable[..., dict[str, Any]]] = None,
+        retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]] = None,
+        runtime_mode_override: Optional[str] = None,
+        from_step_id: str = "",
+    ) -> ChainRunState:
+        """Resume an existing chain, preserving completed steps by default."""
+        executor = SkillChainExecutor(
+            invoke_skill=self.invoke,
+            run_store=self._run_store,
+        )
+        return await executor.resume(
+            chain,
+            workspace_root=workspace_root,
+            llm=llm,
+            entity_payload=entity_payload,
+            max_payload_chars=max_payload_chars,
+            slice_fn=slice_fn,
+            retrieve_fn=retrieve_fn,
+            runtime_mode_override=runtime_mode_override,
+            from_step_id=from_step_id,
         )
 
     def list_chain_runs(

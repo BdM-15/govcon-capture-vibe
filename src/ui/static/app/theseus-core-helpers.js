@@ -26,6 +26,7 @@ const theseusHandleActiveChange = function theseusHandleActiveChange(app) {
   }
   theseusSyncActivePanels(app);
   if (app.active === "skills" && !app.skills.loaded) app.loadSkills();
+  if (app.active === "chains" && !app.chains.loaded) app.loadChains();
   if (app.active === "studio" && !app.studio.loaded) app.loadStudio();
 };
 
@@ -57,6 +58,8 @@ window.theseusInit = async function theseusInit(app) {
     "chunkPreview.open",
     "studioPreview.open",
     "studioPreview.sheetIdx",
+    "chains.current",
+    "chains.items",
   ]);
 
   app.$watch("currentChat", () =>

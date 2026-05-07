@@ -144,6 +144,42 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusLoadStudio(this);
     },
 
+    async loadChains() {
+      return window.theseusLoadChains(this);
+    },
+
+    async openChain(chainId) {
+      return window.theseusOpenChain(this, chainId);
+    },
+
+    chainSteps(chain) {
+      return window.theseusChainSteps(chain);
+    },
+
+    chainStatusClass(status) {
+      return window.theseusChainStatusClass(status);
+    },
+
+    chainArtifactCount(chain) {
+      return window.theseusChainArtifactCount(chain);
+    },
+
+    chainCanResume(chain) {
+      return window.theseusChainCanResume(chain);
+    },
+
+    async rerunChain(chainId) {
+      return window.theseusRerunChain(this, chainId);
+    },
+
+    async resumeChain(chainId) {
+      return window.theseusResumeChain(this, chainId);
+    },
+
+    async openChainStepRun(step) {
+      return window.theseusOpenChainStepRun(this, step);
+    },
+
     toggleStudioTrash() {
       return window.theseusToggleStudioTrash(this);
     },

@@ -27,6 +27,10 @@ const THESEUS_VIEW_META = {
     title: "Studio",
     subtitle: "capture products · rendered final deliverables only",
   },
+  chains: {
+    title: "Skill Chains",
+    subtitle: "multi-skill runs · handoffs · resume",
+  },
   settings: {
     title: "Settings",
     subtitle: "workspace · storage · models",

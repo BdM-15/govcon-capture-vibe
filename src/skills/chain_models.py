@@ -9,6 +9,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 _SAFE_STEP_ID = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
+_SAFE_CONTRACT_ID = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
 
 
 def utc_now_iso() -> str:
@@ -29,6 +30,33 @@ class ChainArtifactRef(BaseModel):
     size: int = 0
 
 
+class ChainArtifactRequirement(BaseModel):
+    """Contract for artifacts a step expects from earlier steps."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field("input", min_length=1, max_length=64)
+    description: str = ""
+    from_steps: list[str] = Field(default_factory=list)
+    extensions: list[str] = Field(default_factory=list)
+    mime_types: list[str] = Field(default_factory=list)
+    name_contains: list[str] = Field(default_factory=list)
+    min_count: int = Field(1, ge=0, le=50)
+    required: bool = True
+
+    @field_validator("id")
+    @classmethod
+    def _validate_id(cls, value: str) -> str:
+        if not _SAFE_CONTRACT_ID.fullmatch(value):
+            raise ValueError("artifact requirement id must be lowercase kebab/snake alphanumeric")
+        return value
+
+    @field_validator("extensions")
+    @classmethod
+    def _normalize_extensions(cls, values: list[str]) -> list[str]:
+        return [str(value).strip().lower().lstrip(".") for value in values if str(value).strip()]
+
+
 class ChainStepSpec(BaseModel):
     """One deterministic step in a skill chain."""
 
@@ -40,6 +68,7 @@ class ChainStepSpec(BaseModel):
     context: dict[str, Any] = Field(default_factory=dict)
     depends_on: list[str] = Field(default_factory=list)
     input_artifacts: list[ChainArtifactRef] = Field(default_factory=list)
+    artifact_requirements: list[ChainArtifactRequirement] = Field(default_factory=list)
 
     @field_validator("id")
     @classmethod
@@ -69,6 +98,15 @@ class ChainSpec(BaseModel):
                 raise ValueError(
                     f"step {step.id} depends on unknown or later step(s): {', '.join(unknown)}"
                 )
+            for requirement in step.artifact_requirements:
+                unknown_sources = [
+                    source for source in requirement.from_steps if source not in seen
+                ]
+                if unknown_sources:
+                    raise ValueError(
+                        f"step {step.id} artifact requirement {requirement.id} "
+                        f"references unknown or later step(s): {', '.join(unknown_sources)}"
+                    )
             seen.add(step.id)
         return self
 
@@ -84,6 +122,7 @@ class ChainStepRun(BaseModel):
     run_dir: str = ""
     response_preview: str = ""
     warnings: list[str] = Field(default_factory=list)
+    input_artifacts: list[ChainArtifactRef] = Field(default_factory=list)
     artifacts: list[dict[str, Any]] = Field(default_factory=list)
     started_at: str = ""
     finished_at: str = ""
@@ -98,6 +137,8 @@ class ChainRunState(BaseModel):
     chain_id: str
     workspace: str
     status: Literal["pending", "running", "completed", "failed"] = "pending"
+    mode: Literal["original", "rerun", "resume"] = "original"
+    source_chain_id: str = ""
     spec: ChainSpec
     steps: dict[str, ChainStepRun]
     created_at: str = Field(default_factory=utc_now_iso)
@@ -108,6 +149,7 @@ class ChainRunState(BaseModel):
 
 __all__ = [
     "ChainArtifactRef",
+    "ChainArtifactRequirement",
     "ChainRunState",
     "ChainSpec",
     "ChainStepRun",
