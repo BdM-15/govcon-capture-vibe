@@ -62,15 +62,15 @@ def test_studio_preview_header_hides_raw_filename_subline() -> None:
     assert 'x-show="studioPreview.deliverable && studioPreview.deliverable.display_name && studioPreview.deliverable.display_name !== studioPreview.deliverable.filename"' not in header_slice
 
 
-def test_studio_preview_exposes_provenance_split_view() -> None:
+def test_studio_preview_keeps_reasoning_link_without_provenance_rail() -> None:
     source = _INDEX_HTML.read_text(encoding="utf-8")
 
-    assert "Provenance" in source
     assert "Full reasoning" in source
-    assert "Run Artifacts" in source
-    assert "Transcript Steps" in source
-    assert 'x-show="studioPreview.provenanceLoading"' in source
-    assert 'x-for="artifact in studioPreviewArtifacts()"' in source
+    assert '<aside class="studio-provenance-rail">' not in source
+    assert "Run Artifacts" not in source
+    assert "Transcript Steps" not in source
+    assert 'x-show="studioPreview.provenanceLoading"' not in source
+    assert 'x-for="artifact in studioPreviewArtifacts()"' not in source
 
 
 def test_studio_preview_exposes_version_history_and_compare() -> None:

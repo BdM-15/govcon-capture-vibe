@@ -2760,19 +2760,6 @@ details.acc .summary-actions {
 }
 
 /* === Phase 6a-2 — Inline preview drawer === */
-.studio-preview-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 16px;
-}
-.studio-provenance-rail {
-  position: sticky;
-  top: 84px;
-  align-self: start;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 .studio-provenance-section {
   padding: 12px;
   background: rgba(var(--ink-800-rgb), 0.55);
@@ -3047,14 +3034,6 @@ details.acc .summary-actions {
 }
 
 @media (max-width: 1180px) {
-  .studio-preview-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .studio-provenance-rail {
-    position: static;
-  }
-
   .studio-compare-meta-grid,
   .studio-compare-excerpts {
     grid-template-columns: 1fr;
