@@ -106,14 +106,6 @@ def test_reasoning_drawer_exposes_run_artifact_actions() -> None:
     assert "Render to Studio" in source
 
 
-def test_studio_filter_bar_exposes_latest_only_toggle() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
-
-    assert 'x-model="studio.latestOnly"' in source
-    assert '@change="pruneStudioSelectionToFiltered()"' in source
-    assert "Latest only" in source
-
-
 def test_studio_filter_bar_exposes_grouping_control() -> None:
     source = _INDEX_HTML.read_text(encoding="utf-8")
 
@@ -131,6 +123,7 @@ def test_studio_exposes_trash_toggle_and_restore_action() -> None:
     assert "Studio Trash" in source
     assert "Trash empty." in source
     assert '@click="toggleStudioTrash()"' in source
+    assert '@click="emptyStudioTrash()"' in source
     assert '@click="restoreTrashedStudioArtifact(artifact)"' in source
 
 

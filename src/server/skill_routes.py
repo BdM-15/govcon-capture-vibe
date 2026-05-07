@@ -858,6 +858,21 @@ def register_skill_run_ui_routes(
             }
         )
 
+    @app.delete("/api/ui/studio/trash", tags=["theseus-ui"])
+    async def empty_studio_trash_route() -> JSONResponse:
+        mgr = get_skill_manager()
+        result = await asyncio.to_thread(
+            mgr.purge_trashed_artifacts,
+            workspace_dir(),
+        )
+        return JSONResponse(
+            {
+                "workspace": get_settings().workspace,
+                "purged": result["purged"],
+                "skipped": result["skipped"],
+            }
+        )
+
 
 def register_skill_ui_routes(
     app: FastAPI,

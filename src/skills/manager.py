@@ -490,6 +490,12 @@ class SkillManager:
     ) -> list[dict[str, Any]]:
         return self._run_store.list_trashed_artifacts(workspace_root, limit=limit)
 
+    def purge_trashed_artifacts(
+        self,
+        workspace_root: Path,
+    ) -> dict[str, int]:
+        return self._run_store.purge_trashed_artifacts(workspace_root)
+
     def restore_trashed_artifacts(
         self,
         workspace_root: Path,

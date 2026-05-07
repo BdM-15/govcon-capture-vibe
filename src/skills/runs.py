@@ -846,6 +846,22 @@ class SkillRunStore:
         rows.sort(key=lambda row: str(row.get("deleted_at") or ""), reverse=True)
         return rows[:limit]
 
+    def purge_trashed_artifacts(self, workspace_root: Path) -> dict[str, int]:
+        trash_root = self._trash_root(workspace_root)
+        if not trash_root.is_dir():
+            return {"purged": 0, "skipped": 0}
+        purged = 0
+        skipped = 0
+        for item_dir in trash_root.iterdir():
+            if not item_dir.is_dir():
+                continue
+            try:
+                shutil.rmtree(item_dir)
+                purged += 1
+            except OSError:
+                skipped += 1
+        return {"purged": purged, "skipped": skipped}
+
     def restore_trashed_artifacts(
         self,
         workspace_root: Path,

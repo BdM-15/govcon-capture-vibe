@@ -148,6 +148,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusToggleStudioTrash(this);
     },
 
+    async emptyStudioTrash() {
+      return window.theseusEmptyStudioTrash(this);
+    },
+
     async restoreTrashedStudioArtifact(artifact) {
       return window.theseusRestoreTrashedStudioArtifact(this, artifact);
     },

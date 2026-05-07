@@ -281,6 +281,50 @@ def test_studio_trash_restore_recovers_selected_artifact(
     assert any(row["filename"] == "final.html" for row in listing["deliverables"])
 
 
+def test_studio_trash_empty_purges_all_entries(
+    tmp_path: Path,
+    client_factory,
+) -> None:
+    skill = "competitive-intel"
+    run_id = "20260430_120000_test_run"
+    _seed_artifact(
+        tmp_path,
+        skill=skill,
+        run_id=run_id,
+        filename="final.html",
+        content=b"<h1>final</h1>",
+    )
+    _seed_artifact(
+        tmp_path,
+        skill=skill,
+        run_id=run_id,
+        filename="summary.md",
+        content=b"summary",
+    )
+    client = client_factory(tmp_path)
+
+    trash_response = client.request(
+        "DELETE",
+        "/api/ui/studio/artifacts",
+        json={
+            "artifacts": [
+                {"skill": skill, "run_id": run_id, "filename": "final.html"},
+                {"skill": skill, "run_id": run_id, "filename": "summary.md"},
+            ]
+        },
+    )
+    assert trash_response.status_code == 200, trash_response.text
+    assert client.get("/api/ui/studio/trash").json()["count"] == 2
+
+    empty_response = client.request("DELETE", "/api/ui/studio/trash")
+
+    assert empty_response.status_code == 200, empty_response.text
+    payload = empty_response.json()
+    assert payload["purged"] == 2
+    assert payload["skipped"] == 0
+    assert client.get("/api/ui/studio/trash").json()["count"] == 0
+
+
 def test_studio_zip_selected_artifacts_downloads_archive(
     tmp_path: Path,
     client_factory,

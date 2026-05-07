@@ -721,6 +721,31 @@ window.theseusToggleStudioTrash = function theseusToggleStudioTrash(app) {
   app.studio.trashOpen = !app.studio.trashOpen;
 };
 
+window.theseusEmptyStudioTrash = async function theseusEmptyStudioTrash(app) {
+  const trash = app.studio.trash || [];
+  if (!trash.length || app.studio.emptyingTrash) return;
+  if (!confirm("Permanently delete every trashed Studio artifact? This cannot be undone.")) {
+    return;
+  }
+  app.studio.emptyingTrash = true;
+  try {
+    const result = await app.api("/api/ui/studio/trash", { method: "DELETE" });
+    app.toast(
+      `Studio trash emptied: ${result.purged || 0} purged` +
+        (result.skipped ? `, ${result.skipped} skipped` : ""),
+      "ok",
+    );
+    await window.theseusLoadStudio(app);
+  } catch (error) {
+    app.toast(
+      "Studio trash empty failed: " + (error?.message || error),
+      "error",
+    );
+  } finally {
+    app.studio.emptyingTrash = false;
+  }
+};
+
 window.theseusStudioSelectedCount = function theseusStudioSelectedCount(app) {
   return Object.keys(app.studio.selected || {}).length;
 };
@@ -981,7 +1006,7 @@ window.theseusIsStudioPinned = function theseusIsStudioPinned(
 
 window.theseusStudioFiltered = function theseusStudioFiltered(app) {
   const query = (app.studio.search || "").toLowerCase().trim();
-  let filtered = (app.studio.deliverables || []).filter((deliverable) => {
+  const filtered = (app.studio.deliverables || []).filter((deliverable) => {
     if (
       app.studio.filterSkill &&
       deliverable.skill !== app.studio.filterSkill
@@ -1004,14 +1029,6 @@ window.theseusStudioFiltered = function theseusStudioFiltered(app) {
     }
     return true;
   });
-  if (app.studio.latestOnly) {
-    const latest = new Map();
-    for (const deliverable of filtered) {
-      const key = window.theseusStudioLatestGroupKey(deliverable);
-      if (!latest.has(key)) latest.set(key, deliverable);
-    }
-    filtered = Array.from(latest.values());
-  }
   const pinned = app.studio.pinned || {};
   const pinKey = window.theseusStudioKey;
   return filtered

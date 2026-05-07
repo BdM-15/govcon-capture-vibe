@@ -78,12 +78,12 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       filterFormat: "",
       groupBy: "",
       search: "",
-      latestOnly: true,
       pinned: {},
       selected: {},
       deleting: false,
       zipping: false,
       restoringTrash: "",
+      emptyingTrash: false,
     },
     studioPreview: {
       open: false,
