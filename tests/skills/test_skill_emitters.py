@@ -331,6 +331,52 @@ def test_build_competitive_intel_brief_markdown_keeps_vehicle_story_sharp() -> N
     assert "Exact parent-awardee roster" not in brief
 
 
+def test_build_competitive_intel_brief_markdown_uses_pop_segment_ledger() -> None:
+    brief = build_competitive_intel_brief_markdown(
+        {
+            "input_contract_number": "FA805122F0001",
+            "resolved": {"scenario": "idiq_order"},
+            "obligations": {
+                "total_obligated_usd": 18412872.0,
+                "net_obligated_usd": 18412872.0,
+                "rate_analysis": {"annual_burn_usd": 8382662.42, "monthly_burn_usd": 698555.2},
+                "by_transaction": [
+                    {"modification_number": "0", "action_date": "2021-10-28", "amount_usd": 9229200.0},
+                    {"modification_number": "P00005", "action_date": "2022-11-17", "amount_usd": 9183672.0},
+                ],
+            },
+            "insights": {
+                "headline": "One order story.",
+                "blocks": [
+                    {
+                        "id": "award_story",
+                        "summary": "Two POP segments observed.",
+                        "evidence": {
+                            "period_of_performance_segments": [
+                                {"label": "Base period", "pop_start_date": "2021-10-28", "pop_end_date": "2022-11-17", "months": 13.0, "obligated_usd": 9229200.0, "monthly_rate_usd": 709938.46},
+                                {"label": "Option period 1", "pop_start_date": "2022-11-17", "pop_end_date": "2023-11-20", "months": 12.5, "obligated_usd": 9183672.0, "monthly_rate_usd": 734693.76},
+                            ]
+                        },
+                    }
+                ],
+            },
+            "warnings": [],
+        },
+        "Competitive Intel",
+    )
+
+    assert "## Award Story & Key Inflection Points" in brief
+    assert "Two POP segments observed." in brief
+    assert "- **Base period** (2021-10-28 → 2022-11-17, 13.0mo): $9.23M obligated at $709.9K/mo → cumulative $9.23M" in brief
+    assert "- **Option period 1** (2022-11-17 → 2023-11-20, 12.5mo): $9.18M obligated at $734.7K/mo → cumulative $18.41M" in brief
+    # POP-segment path skips per-mod Mix/Largest
+    assert "**Mix:**" not in brief
+    assert "**Largest single action:**" not in brief
+    # No raw per-mod ledger lines
+    assert "**Base** (2021-10-28" not in brief
+    assert "**P00005** (2022-11-17" not in brief
+
+
 def test_auto_emit_artifacts_marks_failed_render_on_source_artifact(
     tmp_path: Path,
     monkeypatch,

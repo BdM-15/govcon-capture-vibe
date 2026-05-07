@@ -1943,16 +1943,23 @@ def build_competitive_intel_brief_markdown(
     )
     lines.append(lead)
 
-    ledger = _format_transaction_ledger(transactions)
-    if ledger:
-        lines.append("")
-        lines.extend(ledger)
-        mix_line = _format_modification_mix(transactions)
-        if mix_line:
-            lines.extend(["", mix_line])
-        largest_line = _format_largest_action(transactions, net_obligated)
-        if largest_line:
-            lines.append(largest_line)
+    ledger_segments = award_evidence.get("period_of_performance_segments") or []
+    if isinstance(ledger_segments, list) and ledger_segments:
+        seg_lines = _format_pop_segment_ledger(ledger_segments)
+        if seg_lines:
+            lines.append("")
+            lines.extend(seg_lines)
+    else:
+        ledger = _format_transaction_ledger(transactions)
+        if ledger:
+            lines.append("")
+            lines.extend(ledger)
+            mix_line = _format_modification_mix(transactions)
+            if mix_line:
+                lines.extend(["", mix_line])
+            largest_line = _format_largest_action(transactions, net_obligated)
+            if largest_line:
+                lines.append(largest_line)
 
     fy_line = _format_fiscal_trajectory(by_fiscal_year, annual_burn)
     if fy_line:
@@ -2214,6 +2221,30 @@ def _normalize_action_type(value: Any) -> str:
         return _ACTION_TYPE_NORMALIZATIONS[upper]
     # Fallback: title-case but preserve common acronyms
     return text.title()
+
+
+def _format_pop_segment_ledger(segments: list[Any]) -> list[str]:
+    lines: list[str] = []
+    cumulative = 0.0
+    for seg in segments:
+        if not isinstance(seg, dict):
+            continue
+        label = (seg.get("label") or "").strip() or "Segment"
+        start = seg.get("pop_start_date") or "?"
+        end = seg.get("pop_end_date") or "?"
+        months = seg.get("months")
+        obligated = _to_float(seg.get("obligated_usd"))
+        monthly_rate = seg.get("monthly_rate_usd")
+        cumulative += obligated
+        head = f"**{label}** ({start} → {end}"
+        if isinstance(months, (int, float)) and months:
+            head += f", {float(months):.1f}mo"
+        head += f"): {_fmt_money(obligated)} obligated"
+        if isinstance(monthly_rate, (int, float)) and monthly_rate:
+            head += f" at {_fmt_money(monthly_rate)}/mo"
+        head += f" → cumulative {_fmt_money(cumulative)}"
+        lines.append(f"- {head}")
+    return lines
 
 
 def _format_transaction_ledger(transactions: list[dict[str, Any]]) -> list[str]:
