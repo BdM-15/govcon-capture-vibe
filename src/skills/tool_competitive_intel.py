@@ -1869,17 +1869,39 @@ def build_competitive_intel_brief_markdown(
         title_text = str(block.get("title") or _friendly_block_title(block_id))
         summary = str(block.get("summary") or "").strip()
         evidence = block.get("evidence") if isinstance(block.get("evidence"), dict) else {}
+        pop_segments = [
+            item
+            for item in (evidence.get("period_of_performance_segments") or [])
+            if isinstance(item, dict)
+        ]
 
         lines.extend(["", f"## {title_text}"])
-        if summary:
+        if summary and block_id != "burn_posture":
             lines.extend([summary, ""])
 
         if block_id == "burn_posture":
+            if summary:
+                lines.append(f"- Quick read: {summary}")
             lines.extend(
                 [
-                    f"- Current burn: {_fmt_money(evidence.get('monthly_burn_usd'))}/month, {_fmt_money(evidence.get('annual_burn_usd'))}/year, {_fmt_money(evidence.get('daily_burn_usd'))}/day.",
-                    f"- Horizon: {evidence.get('pop_end_current') or 'unknown'} current; {evidence.get('pop_end_potential') or 'n/a'} potential.",
-                    f"- PTW baseline: {_fmt_money(evidence.get('recommended_ptw_baseline_usd'))}.",
+                    (
+                        "- Burn snapshot: "
+                        f"Gross obligations are {_fmt_money(obligations.get('total_obligated_usd'))}, "
+                        f"net burn is {_fmt_money(obligations.get('net_obligated_usd'))}, and current cadence is "
+                        f"{_fmt_money(evidence.get('monthly_burn_usd'))}/month "
+                        f"({_fmt_money(evidence.get('annual_burn_usd'))}/year; "
+                        f"{_fmt_money(evidence.get('daily_burn_usd'))}/day)."
+                    ),
+                    (
+                        "- Planning horizon: "
+                        f"Current POP runs through {evidence.get('pop_end_current') or 'unknown'}, "
+                        f"with the full-term view extending to {evidence.get('pop_end_potential') or 'n/a'}."
+                    ),
+                    (
+                        "- PTW anchor: "
+                        f"Use {_fmt_money(evidence.get('recommended_ptw_baseline_usd'))} as the current deterministic baseline "
+                        "unless newer option or deobligation evidence changes the burn story."
+                    ),
                 ]
             )
         elif block_id == "vehicle_concentration":
@@ -1903,14 +1925,21 @@ def build_competitive_intel_brief_markdown(
             if roster:
                 lines.append(f"- Exact parent-awardee roster: {'; '.join(roster)}.")
         elif block_id == "award_story":
-            for segment in [
-                item
-                for item in (evidence.get("period_of_performance_segments") or [])
-                if isinstance(item, dict)
-            ]:
+            if pop_segments:
+                first_segment = pop_segments[0]
+                last_segment = pop_segments[-1]
                 lines.append(
-                    f"- {segment.get('label') or 'Period'}: {segment.get('pop_start_date') or 'n/a'} to {segment.get('pop_end_date') or 'n/a'}; {_fmt_money(segment.get('obligated_usd'))} obligated; {_fmt_money(segment.get('monthly_rate_usd'))}/month; {_to_float(segment.get('months')):.1f} months."
+                    "Read the funding as a base-to-options sequence rather than isolated mods. "
+                    f"The observed POP story runs from {first_segment.get('label') or 'the first segment'} to "
+                    f"{last_segment.get('label') or 'the latest segment'}."
                 )
+                lines.append("")
+            for segment in pop_segments:
+                lines.append(
+                    f"- {segment.get('label') or 'Period'} ({segment.get('pop_start_date') or 'n/a'} to {segment.get('pop_end_date') or 'n/a'}): {_fmt_money(segment.get('obligated_usd'))} obligated, {_fmt_money(segment.get('monthly_rate_usd'))}/month across {_to_float(segment.get('months')):.1f} months."
+                )
+            if not pop_segments:
+                lines.append("- POP detail unavailable in the collected evidence.")
         elif block_id == "caveats":
             for warning in [item for item in (evidence.get("warnings") or []) if isinstance(item, str) and item.strip()]:
                 lines.append(f"- {warning}")

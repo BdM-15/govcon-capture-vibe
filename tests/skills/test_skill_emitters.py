@@ -175,10 +175,14 @@ def test_auto_emit_artifacts_shapes_competitive_intel_brief(tmp_path: Path) -> N
         assert "## Snapshot" in brief
         assert "- Scenario: Single order" in brief
         assert "## Burn posture" in brief
+        assert "- Burn snapshot: Gross obligations are $44.07M, net burn is $43.66M" in brief
+        assert "- Planning horizon: Current POP runs through unknown, with the full-term view extending to 2026-12-15." in brief
+        assert "- PTW anchor: Use $8.39M as the current deterministic baseline unless newer option or deobligation evidence changes the burn story." in brief
         assert "## Award story by period of performance" in brief
         assert "One award story across base and options." in brief
-        assert "- Base period: 2021-10-28 to 2022-11-17; $9.23M obligated;" in brief
-        assert "$709.9K/month; 13.0 months." in brief
+        assert "Read the funding as a base-to-options sequence rather than isolated mods." in brief
+        assert "- Base period (2021-10-28 to 2022-11-17): $9.23M obligated, $709.9K/month across 13.0 months." in brief
+        assert "- Option period 1 (2022-11-17 to 2023-11-20): $9.18M obligated, $734.7K/month across 12.5 months." in brief
         assert "## Inflection Points" in brief
         assert "- P00014 on 2025-11-14: Exercise option four; $8.37M." in brief
         assert "## Caveats" in brief
@@ -274,6 +278,8 @@ def test_build_competitive_intel_brief_markdown_keeps_vehicle_story_sharp() -> N
         "Competitive Intel",
     )
 
+    assert "- Quick read: Vehicle burn is concentrated and stable." in brief
+    assert "- Burn snapshot: Gross obligations are $525.00, net burn is $500.00" in brief
     assert "## Vehicle concentration" in brief
     assert "- ORDER-2: $300.00 (60.0% of net)." in brief
     assert "## Competitive context" in brief
