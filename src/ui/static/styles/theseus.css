@@ -2940,12 +2940,23 @@ details.acc .summary-actions {
   font-weight: 600;
   margin: 1.2em 0 0.5em;
 }
-.studio-preview-docx h1 { font-size: 1.6em; }
-.studio-preview-docx h2 { font-size: 1.35em; }
-.studio-preview-docx h3 { font-size: 1.15em; }
-.studio-preview-docx p { margin: 0.6em 0; }
+.studio-preview-docx h1 {
+  font-size: 1.6em;
+}
+.studio-preview-docx h2 {
+  font-size: 1.35em;
+}
+.studio-preview-docx h3 {
+  font-size: 1.15em;
+}
+.studio-preview-docx p {
+  margin: 0.6em 0;
+}
 .studio-preview-docx ul,
-.studio-preview-docx ol { padding-left: 1.5em; margin: 0.6em 0; }
+.studio-preview-docx ol {
+  padding-left: 1.5em;
+  margin: 0.6em 0;
+}
 .studio-preview-docx table {
   border-collapse: collapse;
   margin: 0.8em 0;
@@ -3108,6 +3119,31 @@ details.acc .summary-actions {
   color: var(--neon-red);
   border-color: rgba(var(--neon-red-rgb), 0.35);
   background: rgba(var(--neon-red-rgb), 0.1);
+}
+.reasoning-chip-current {
+  color: var(--neon-cyan);
+  border-color: rgba(var(--neon-cyan-rgb), 0.35);
+  background: rgba(var(--neon-cyan-rgb), 0.1);
+}
+.reasoning-chip-source {
+  color: var(--neon-amber-soft);
+  border-color: rgba(255, 205, 94, 0.35);
+  background: rgba(255, 205, 94, 0.1);
+}
+.reasoning-chip-sibling {
+  color: var(--text-200);
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(148, 163, 184, 0.08);
+}
+.reasoning-chip-previous {
+  color: var(--accent-purple-soft);
+  border-color: rgba(var(--accent-purple-rgb), 0.35);
+  background: rgba(var(--accent-purple-rgb), 0.1);
+}
+.reasoning-chip-compare {
+  color: rgba(94, 255, 155, 0.95);
+  border-color: rgba(94, 255, 155, 0.3);
+  background: rgba(94, 255, 155, 0.08);
 }
 .reasoning-artifact-failure {
   padding: 10px;

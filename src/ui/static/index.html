@@ -5506,13 +5506,14 @@
                   <div class="reasoning-artifact-meta mt-3">
                     <span
                       class="reasoning-chip"
-                      x-text="artifact.isCurrent ? 'Current product' : (artifact.isSource ? 'Source' : 'Sibling product')"
+                      :class="`reasoning-chip-${artifact.roleBadge?.tone || 'neutral'}`"
+                      x-text="artifact.roleBadge?.label || 'Artifact'"
                     ></span>
                     <span
                       x-show="artifact.hasRenderFailure"
                       class="reasoning-chip reasoning-chip-failed"
                     >
-                      Failed render
+                      Render failed
                     </span>
                     <span
                       class="reasoning-chip"
@@ -6119,8 +6120,15 @@
                     <div class="studio-version-row-head">
                       <span
                         class="reasoning-chip"
-                        x-text="artifact.isCurrent ? 'Current' : 'Previous'"
+                        :class="`reasoning-chip-${artifact.versionBadge?.tone || 'neutral'}`"
+                        x-text="artifact.versionBadge?.label || 'Version'"
                       ></span>
+                      <span
+                        x-show="!artifact.isCurrent && artifact.isComparable"
+                        class="reasoning-chip reasoning-chip-compare"
+                      >
+                        Diff ready
+                      </span>
                       <span
                         class="text-xs text-slate-400"
                         x-text="(artifact.created_at || '').slice(0, 19).replace('T', ' ')"

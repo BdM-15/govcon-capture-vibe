@@ -6,6 +6,7 @@ from pathlib import Path
 _ROOT = Path(__file__).parent.parent
 _INDEX_HTML = _ROOT / "src" / "ui" / "static" / "index.html"
 _UI_STATIC_ROOT = _ROOT / "src" / "ui" / "static"
+_PREVIEW_HELPERS = _ROOT / "src" / "ui" / "static" / "app" / "theseus-preview-helpers.js"
 _BANNED_MOJIBAKE = (
     "Î",
     "Â",
@@ -75,19 +76,29 @@ def test_studio_preview_keeps_reasoning_link_without_provenance_rail() -> None:
 
 def test_studio_preview_exposes_version_history_and_compare() -> None:
     source = _INDEX_HTML.read_text(encoding="utf-8")
+    helpers = _PREVIEW_HELPERS.read_text(encoding="utf-8")
 
     assert "Version History" in source
     assert "Version diff" in source
     assert "Compare" in source
+    assert "Current version" in helpers
+    assert "Older version" in helpers
+    assert "Diff ready" in source
+    assert "versionBadge" in source
     assert '@click="studioPreviewCompareVersion(artifact)"' in source
     assert '@click="studioPreviewClearCompare()"' in source
 
 
 def test_reasoning_drawer_exposes_run_artifact_actions() -> None:
     source = _INDEX_HTML.read_text(encoding="utf-8")
+    helpers = _PREVIEW_HELPERS.read_text(encoding="utf-8")
 
     assert "Artifacts From This Run" in source
-    assert "Failed render" in source
+    assert "Current product" in helpers
+    assert "Source artifact" in helpers
+    assert "Sibling product" in helpers
+    assert "Render failed" in source
+    assert "roleBadge" in source
     assert "Retry render" in source
     assert '@click="openReasoningArtifactPreview(artifact)"' in source
     assert ':href="reasoningArtifactDownloadHref(artifact)"' in source

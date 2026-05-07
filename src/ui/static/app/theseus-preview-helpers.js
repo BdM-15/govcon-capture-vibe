@@ -14,13 +14,23 @@ window.theseusEnsureScript = function theseusEnsureScript(app, url) {
 
 const THESEUS_TEXT_PREVIEW_KINDS = new Set(["md", "json", "csv", "text"]);
 const THESEUS_REASONING_SOURCE_EXTENSIONS = new Set(["md", "markdown", "json"]);
-const THESEUS_COMPAREABLE_PREVIEW_KINDS = new Set(["md", "json", "csv", "text", "docx"]);
+const THESEUS_COMPAREABLE_PREVIEW_KINDS = new Set([
+  "md",
+  "json",
+  "csv",
+  "text",
+  "docx",
+]);
 
 const theseusNormalizeExtension = function theseusNormalizeExtension(value) {
-  return String(value || "").toLowerCase().replace(/^\./, "");
+  return String(value || "")
+    .toLowerCase()
+    .replace(/^\./, "");
 };
 
-const theseusStudioComparableKind = function theseusStudioComparableKind(deliverable) {
+const theseusStudioComparableKind = function theseusStudioComparableKind(
+  deliverable,
+) {
   return window.theseusStudioFormatFor(deliverable);
 };
 
@@ -31,7 +41,26 @@ const theseusStripHtmlToText = function theseusStripHtmlToText(html) {
 };
 
 const theseusNormalizeCompareText = function theseusNormalizeCompareText(text) {
-  return String(text || "").replace(/\r\n/g, "\n").trim();
+  return String(text || "")
+    .replace(/\r\n/g, "\n")
+    .trim();
+};
+
+const theseusArtifactRoleMeta = function theseusArtifactRoleMeta(artifact) {
+  if (artifact.isCurrent) {
+    return { label: "Current product", tone: "current" };
+  }
+  if (artifact.isSource) {
+    return { label: "Source artifact", tone: "source" };
+  }
+  return { label: "Sibling product", tone: "sibling" };
+};
+
+const theseusVersionBadgeMeta = function theseusVersionBadgeMeta(artifact) {
+  if (artifact.isCurrent) {
+    return { label: "Current version", tone: "current" };
+  }
+  return { label: "Older version", tone: "previous" };
 };
 
 const theseusSummarizeCompareText = function theseusSummarizeCompareText(
@@ -55,8 +84,7 @@ const theseusSummarizeCompareText = function theseusSummarizeCompareText(
     currentLineCount: currentLines.length,
     previousLineCount: previousLines.length,
     lineDelta: currentLines.length - previousLines.length,
-    firstChangedLine:
-      firstChangedIndex >= 0 ? firstChangedIndex + 1 : null,
+    firstChangedLine: firstChangedIndex >= 0 ? firstChangedIndex + 1 : null,
     currentExcerpt:
       firstChangedIndex >= 0 ? currentLines[firstChangedIndex] || "" : "",
     previousExcerpt:
@@ -72,20 +100,18 @@ const theseusFetchPreviewResponse = async function theseusFetchPreviewResponse(
   return response;
 };
 
-const theseusFetchReasoningPayload = async function theseusFetchReasoningPayload(
-  skill,
-  runId,
-) {
-  const response = await fetch(
-    "/api/ui/skills/" +
-      encodeURIComponent(skill) +
-      "/runs/" +
-      encodeURIComponent(runId) +
-      "/reasoning",
-  );
-  if (!response.ok) throw new Error("HTTP " + response.status);
-  return response.json();
-};
+const theseusFetchReasoningPayload =
+  async function theseusFetchReasoningPayload(skill, runId) {
+    const response = await fetch(
+      "/api/ui/skills/" +
+        encodeURIComponent(skill) +
+        "/runs/" +
+        encodeURIComponent(runId) +
+        "/reasoning",
+    );
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    return response.json();
+  };
 
 const theseusResetStudioPreview = function theseusResetStudioPreview(
   app,
@@ -113,61 +139,66 @@ const theseusResetStudioPreview = function theseusResetStudioPreview(
   app.studioPreview.compareSummary = null;
 };
 
-const theseusBuildStudioPreviewHistory = function theseusBuildStudioPreviewHistory(
-  app,
-  deliverable,
-) {
-  const kind = theseusStudioComparableKind(deliverable);
-  return (app.studio.deliverables || [])
-    .filter(
-      (candidate) =>
-        candidate.skill === deliverable.skill &&
-        candidate.filename === deliverable.filename,
-    )
-    .map((candidate) => ({
-      ...candidate,
-      previewKind: theseusStudioComparableKind(candidate),
-      isCurrent: window.theseusStudioKey(candidate) === window.theseusStudioKey(deliverable),
-      isComparable:
-        THESEUS_COMPAREABLE_PREVIEW_KINDS.has(kind) &&
-        THESEUS_COMPAREABLE_PREVIEW_KINDS.has(theseusStudioComparableKind(candidate)) &&
-        theseusStudioComparableKind(candidate) === kind,
-    }));
-};
+const theseusBuildStudioPreviewHistory =
+  function theseusBuildStudioPreviewHistory(app, deliverable) {
+    const kind = theseusStudioComparableKind(deliverable);
+    return (app.studio.deliverables || [])
+      .filter(
+        (candidate) =>
+          candidate.skill === deliverable.skill &&
+          candidate.filename === deliverable.filename,
+      )
+      .map((candidate) => ({
+        ...candidate,
+        previewKind: theseusStudioComparableKind(candidate),
+        isCurrent:
+          window.theseusStudioKey(candidate) ===
+          window.theseusStudioKey(deliverable),
+        isComparable:
+          THESEUS_COMPAREABLE_PREVIEW_KINDS.has(kind) &&
+          THESEUS_COMPAREABLE_PREVIEW_KINDS.has(
+            theseusStudioComparableKind(candidate),
+          ) &&
+          theseusStudioComparableKind(candidate) === kind,
+      }))
+      .map((candidate) => ({
+        ...candidate,
+        versionBadge: theseusVersionBadgeMeta(candidate),
+      }));
+  };
 
-const theseusMaterializeComparablePreview = async function theseusMaterializeComparablePreview(
-  app,
-  deliverable,
-) {
-  const kind = theseusStudioComparableKind(deliverable);
-  const href = window.theseusStudioDownloadHref(deliverable);
-  if (THESEUS_TEXT_PREVIEW_KINDS.has(kind)) {
-    const response = await theseusFetchPreviewResponse(href);
-    return { kind, text: await response.text() };
-  }
-  if (kind === "docx") {
-    await window.theseusEnsureScript(
-      app,
-      "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
-    );
-    const response = await theseusFetchPreviewResponse(href);
-    const buffer = await response.arrayBuffer();
-    const out = await window.mammoth.convertToHtml({ arrayBuffer: buffer });
-    const html = out && out.value ? out.value : "";
-    return { kind, text: theseusStripHtmlToText(html) };
-  }
-  return { kind, text: "" };
-};
+const theseusMaterializeComparablePreview =
+  async function theseusMaterializeComparablePreview(app, deliverable) {
+    const kind = theseusStudioComparableKind(deliverable);
+    const href = window.theseusStudioDownloadHref(deliverable);
+    if (THESEUS_TEXT_PREVIEW_KINDS.has(kind)) {
+      const response = await theseusFetchPreviewResponse(href);
+      return { kind, text: await response.text() };
+    }
+    if (kind === "docx") {
+      await window.theseusEnsureScript(
+        app,
+        "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
+      );
+      const response = await theseusFetchPreviewResponse(href);
+      const buffer = await response.arrayBuffer();
+      const out = await window.mammoth.convertToHtml({ arrayBuffer: buffer });
+      const html = out && out.value ? out.value : "";
+      return { kind, text: theseusStripHtmlToText(html) };
+    }
+    return { kind, text: "" };
+  };
 
-const theseusCurrentPreviewComparableText = function theseusCurrentPreviewComparableText(app) {
-  if (THESEUS_TEXT_PREVIEW_KINDS.has(app.studioPreview.kind)) {
-    return app.studioPreview.text || "";
-  }
-  if (app.studioPreview.kind === "docx") {
-    return theseusStripHtmlToText(app.studioPreview.docxHtml || "");
-  }
-  return "";
-};
+const theseusCurrentPreviewComparableText =
+  function theseusCurrentPreviewComparableText(app) {
+    if (THESEUS_TEXT_PREVIEW_KINDS.has(app.studioPreview.kind)) {
+      return app.studioPreview.text || "";
+    }
+    if (app.studioPreview.kind === "docx") {
+      return theseusStripHtmlToText(app.studioPreview.docxHtml || "");
+    }
+    return "";
+  };
 
 const theseusLoadTextStudioPreview =
   async function theseusLoadTextStudioPreview(app) {
@@ -230,27 +261,25 @@ const theseusRunPreviewLoad = async function theseusRunPreviewLoad(
   }
 };
 
-const theseusLoadStudioPreviewProvenance = async function theseusLoadStudioPreviewProvenance(
-  app,
-  deliverable,
-) {
-  app.studioPreview.provenanceLoading = true;
-  app.studioPreview.provenanceError = null;
-  try {
-    const payload = await theseusFetchReasoningPayload(
-      deliverable.skill,
-      deliverable.run_id,
-    );
-    app.studioPreview.provenanceSummary = payload.summary || null;
-    app.studioPreview.provenanceSteps = payload.steps || [];
-    app.studioPreview.provenanceArtifacts = payload.artifacts || [];
-  } catch (error) {
-    app.studioPreview.provenanceError = error?.message || String(error);
-  } finally {
-    app.studioPreview.provenanceLoading = false;
-    window.theseusAfterRender(app);
-  }
-};
+const theseusLoadStudioPreviewProvenance =
+  async function theseusLoadStudioPreviewProvenance(app, deliverable) {
+    app.studioPreview.provenanceLoading = true;
+    app.studioPreview.provenanceError = null;
+    try {
+      const payload = await theseusFetchReasoningPayload(
+        deliverable.skill,
+        deliverable.run_id,
+      );
+      app.studioPreview.provenanceSummary = payload.summary || null;
+      app.studioPreview.provenanceSteps = payload.steps || [];
+      app.studioPreview.provenanceArtifacts = payload.artifacts || [];
+    } catch (error) {
+      app.studioPreview.provenanceError = error?.message || String(error);
+    } finally {
+      app.studioPreview.provenanceLoading = false;
+      window.theseusAfterRender(app);
+    }
+  };
 
 window.theseusOpenStudioPreview = async function theseusOpenStudioPreview(
   app,
@@ -258,8 +287,14 @@ window.theseusOpenStudioPreview = async function theseusOpenStudioPreview(
 ) {
   app.studioPreview.loading = true;
   theseusResetStudioPreview(app, deliverable);
-  app.studioPreview.history = theseusBuildStudioPreviewHistory(app, deliverable);
-  const provenancePromise = theseusLoadStudioPreviewProvenance(app, deliverable);
+  app.studioPreview.history = theseusBuildStudioPreviewHistory(
+    app,
+    deliverable,
+  );
+  const provenancePromise = theseusLoadStudioPreviewProvenance(
+    app,
+    deliverable,
+  );
 
   try {
     const kind = app.studioPreview.kind;
@@ -284,7 +319,9 @@ window.theseusCloseStudioPreview = function theseusCloseStudioPreview(app) {
   app.studioPreview.open = false;
 };
 
-window.theseusStudioPreviewCanCompare = function theseusStudioPreviewCanCompare(app) {
+window.theseusStudioPreviewCanCompare = function theseusStudioPreviewCanCompare(
+  app,
+) {
   return THESEUS_COMPAREABLE_PREVIEW_KINDS.has(app.studioPreview.kind || "");
 };
 
@@ -292,41 +329,43 @@ window.theseusStudioPreviewHistory = function theseusStudioPreviewHistory(app) {
   return app.studioPreview.history || [];
 };
 
-window.theseusStudioPreviewClearCompare = function theseusStudioPreviewClearCompare(app) {
-  app.studioPreview.compareLoading = false;
-  app.studioPreview.compareError = null;
-  app.studioPreview.compareTarget = null;
-  app.studioPreview.compareSummary = null;
-};
-
-window.theseusStudioPreviewCompareVersion = async function theseusStudioPreviewCompareVersion(
-  app,
-  deliverable,
-) {
-  if (!deliverable || deliverable.isCurrent) return;
-  app.studioPreview.compareLoading = true;
-  app.studioPreview.compareError = null;
-  app.studioPreview.compareTarget = deliverable;
-  app.studioPreview.compareSummary = null;
-  try {
-    const currentText = theseusCurrentPreviewComparableText(app);
-    const previous = await theseusMaterializeComparablePreview(app, deliverable);
-    app.studioPreview.compareSummary = {
-      ...theseusSummarizeCompareText(currentText, previous.text),
-      current: app.studioPreview.deliverable,
-      previous: deliverable,
-      kind: app.studioPreview.kind,
-      sizeDelta:
-        Number((app.studioPreview.deliverable || {}).size || 0) -
-        Number(deliverable.size || 0),
-    };
-  } catch (error) {
-    app.studioPreview.compareError = error?.message || String(error);
-  } finally {
+window.theseusStudioPreviewClearCompare =
+  function theseusStudioPreviewClearCompare(app) {
     app.studioPreview.compareLoading = false;
-    window.theseusAfterRender(app);
-  }
-};
+    app.studioPreview.compareError = null;
+    app.studioPreview.compareTarget = null;
+    app.studioPreview.compareSummary = null;
+  };
+
+window.theseusStudioPreviewCompareVersion =
+  async function theseusStudioPreviewCompareVersion(app, deliverable) {
+    if (!deliverable || deliverable.isCurrent) return;
+    app.studioPreview.compareLoading = true;
+    app.studioPreview.compareError = null;
+    app.studioPreview.compareTarget = deliverable;
+    app.studioPreview.compareSummary = null;
+    try {
+      const currentText = theseusCurrentPreviewComparableText(app);
+      const previous = await theseusMaterializeComparablePreview(
+        app,
+        deliverable,
+      );
+      app.studioPreview.compareSummary = {
+        ...theseusSummarizeCompareText(currentText, previous.text),
+        current: app.studioPreview.deliverable,
+        previous: deliverable,
+        kind: app.studioPreview.kind,
+        sizeDelta:
+          Number((app.studioPreview.deliverable || {}).size || 0) -
+          Number(deliverable.size || 0),
+      };
+    } catch (error) {
+      app.studioPreview.compareError = error?.message || String(error);
+    } finally {
+      app.studioPreview.compareLoading = false;
+      window.theseusAfterRender(app);
+    }
+  };
 
 window.theseusStudioSetSheet = function theseusStudioSetSheet(app, idx) {
   app.studioPreview.sheetIdx = idx;
@@ -372,26 +411,24 @@ window.theseusToggleReasoningStep = function theseusToggleReasoningStep(
   app.reasoning.expanded[idx] = !app.reasoning.expanded[idx];
 };
 
-const theseusReasoningArtifactDeliverable = function theseusReasoningArtifactDeliverable(
-  scope,
-  artifact,
-) {
-  const filename = artifact.filename || artifact.name || "";
-  const ext = theseusNormalizeExtension(
-    artifact.ext || filename.split(".").pop() || "",
-  );
-  return {
-    skill: scope.skill,
-    run_id: scope.run_id,
-    filename,
-    display_name: artifact.display_name || filename,
-    title: scope.title || artifact.display_name || filename,
-    created_at: scope.created_at || "",
-    ext,
-    mime: artifact.mime || "",
-    size: Number(artifact.size || 0),
+const theseusReasoningArtifactDeliverable =
+  function theseusReasoningArtifactDeliverable(scope, artifact) {
+    const filename = artifact.filename || artifact.name || "";
+    const ext = theseusNormalizeExtension(
+      artifact.ext || filename.split(".").pop() || "",
+    );
+    return {
+      skill: scope.skill,
+      run_id: scope.run_id,
+      filename,
+      display_name: artifact.display_name || filename,
+      title: scope.title || artifact.display_name || filename,
+      created_at: scope.created_at || "",
+      ext,
+      mime: artifact.mime || "",
+      size: Number(artifact.size || 0),
+    };
   };
-};
 
 const theseusNormalizeRunArtifacts = function theseusNormalizeRunArtifacts(
   scope,
@@ -408,13 +445,19 @@ const theseusNormalizeRunArtifacts = function theseusNormalizeRunArtifacts(
       ...deliverable,
       isCurrent: deliverable.filename === current,
       isSource,
+      roleBadge: theseusArtifactRoleMeta({
+        isCurrent: deliverable.filename === current,
+        isSource,
+      }),
       renderStatus,
       hasRenderFailure: renderStatus === "failed",
       renderMessage: artifact.render_message || "",
       renderTargets: Array.isArray(artifact.render_targets)
         ? artifact.render_targets
         : [],
-      renderLogs: Array.isArray(artifact.render_logs) ? artifact.render_logs : [],
+      renderLogs: Array.isArray(artifact.render_logs)
+        ? artifact.render_logs
+        : [],
       renderLogExcerpt: artifact.render_log_excerpt || "",
     };
   });
@@ -442,42 +485,40 @@ window.theseusReasoningArtifacts = function theseusReasoningArtifacts(app) {
   });
 };
 
-window.theseusReasoningArtifactDownloadHref = function theseusReasoningArtifactDownloadHref(
-  app,
-  artifact,
-) {
-  return window.theseusStudioDownloadHref(
-    theseusReasoningArtifactDeliverable(
-      {
-        skill: app.reasoning.skill,
-        run_id: app.reasoning.run_id,
-        title: app.reasoning.title,
-        created_at: app.reasoning.created_at,
-      },
-      artifact,
-    ),
-  );
-};
+window.theseusReasoningArtifactDownloadHref =
+  function theseusReasoningArtifactDownloadHref(app, artifact) {
+    return window.theseusStudioDownloadHref(
+      theseusReasoningArtifactDeliverable(
+        {
+          skill: app.reasoning.skill,
+          run_id: app.reasoning.run_id,
+          title: app.reasoning.title,
+          created_at: app.reasoning.created_at,
+        },
+        artifact,
+      ),
+    );
+  };
 
-window.theseusOpenReasoningArtifactPreview = async function theseusOpenReasoningArtifactPreview(
-  app,
-  artifact,
-) {
-  return window.theseusOpenStudioPreview(
-    app,
-    theseusReasoningArtifactDeliverable(
-      {
-        skill: app.reasoning.skill,
-        run_id: app.reasoning.run_id,
-        title: app.reasoning.title,
-        created_at: app.reasoning.created_at,
-      },
-      artifact,
-    ),
-  );
-};
+window.theseusOpenReasoningArtifactPreview =
+  async function theseusOpenReasoningArtifactPreview(app, artifact) {
+    return window.theseusOpenStudioPreview(
+      app,
+      theseusReasoningArtifactDeliverable(
+        {
+          skill: app.reasoning.skill,
+          run_id: app.reasoning.run_id,
+          title: app.reasoning.title,
+          created_at: app.reasoning.created_at,
+        },
+        artifact,
+      ),
+    );
+  };
 
-window.theseusStudioPreviewArtifacts = function theseusStudioPreviewArtifacts(app) {
+window.theseusStudioPreviewArtifacts = function theseusStudioPreviewArtifacts(
+  app,
+) {
   const deliverable = app.studioPreview.deliverable || {};
   const items = theseusNormalizeRunArtifacts(
     {
@@ -504,71 +545,78 @@ window.theseusStudioPreviewArtifacts = function theseusStudioPreviewArtifacts(ap
   });
 };
 
-window.theseusPromoteReasoningArtifact = async function theseusPromoteReasoningArtifact(
-  app,
-  artifact,
-) {
-  if (!artifact || !artifact.isSource) return;
-  const skill = app.reasoning.skill || artifact.skill;
-  const runId = app.reasoning.run_id || artifact.run_id;
-  const busyKey = artifact.filename || "__reasoning_render__";
-  if (!skill || !runId || app.reasoning.promoting === busyKey) return;
-  app.reasoning.promoting = busyKey;
-  try {
-    const response = await fetch(
-      "/api/ui/skills/" +
-        encodeURIComponent(skill) +
-        "/runs/" +
-        encodeURIComponent(runId) +
-        "/artifacts/render",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      },
-    );
-    const contentType = response.headers.get("content-type") || "";
-    const payload = contentType.includes("application/json")
-      ? await response.json()
-      : await response.text();
-    if (
-      app.skills.current?.name === skill &&
-      app.skills.run?.run_id === runId
-    ) {
-      await app.loadSkillRun(skill, runId);
+window.theseusPromoteReasoningArtifact =
+  async function theseusPromoteReasoningArtifact(app, artifact) {
+    if (!artifact || !artifact.isSource) return;
+    const skill = app.reasoning.skill || artifact.skill;
+    const runId = app.reasoning.run_id || artifact.run_id;
+    const busyKey = artifact.filename || "__reasoning_render__";
+    if (!skill || !runId || app.reasoning.promoting === busyKey) return;
+    app.reasoning.promoting = busyKey;
+    try {
+      const response = await fetch(
+        "/api/ui/skills/" +
+          encodeURIComponent(skill) +
+          "/runs/" +
+          encodeURIComponent(runId) +
+          "/artifacts/render",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+      const contentType = response.headers.get("content-type") || "";
+      const payload = contentType.includes("application/json")
+        ? await response.json()
+        : await response.text();
+      if (
+        app.skills.current?.name === skill &&
+        app.skills.run?.run_id === runId
+      ) {
+        await app.loadSkillRun(skill, runId);
+      }
+      if (response.ok) {
+        await window.theseusLoadStudio(app);
+      }
+      await window.theseusOpenReasoning(app, {
+        skill,
+        run_id: runId,
+        filename: app.reasoning.filename || artifact.filename || "",
+        title:
+          app.reasoning.title ||
+          artifact.display_name ||
+          artifact.filename ||
+          "",
+        created_at: app.reasoning.created_at || "",
+      });
+      if (!response.ok) {
+        const detail =
+          (payload &&
+            typeof payload === "object" &&
+            (payload.detail || payload.message)) ||
+          (typeof payload === "string" && payload) ||
+          `${response.status} ${response.statusText}`;
+        throw new Error(String(detail));
+      }
+      const created = ((payload && payload.created) || [])
+        .map(
+          (deliverable) =>
+            deliverable.display_name || deliverable.filename || "",
+        )
+        .filter(Boolean);
+      app.toast(
+        created.length
+          ? "Rendered to Studio: " + created.join(", ")
+          : "Studio products refreshed for this run",
+        "success",
+      );
+    } catch (error) {
+      app.toast("Render failed: " + (error?.message || error), "error");
+    } finally {
+      app.reasoning.promoting = "";
+      window.theseusAfterRender(app);
     }
-    if (response.ok) {
-      await window.theseusLoadStudio(app);
-    }
-    await window.theseusOpenReasoning(app, {
-      skill,
-      run_id: runId,
-      filename: app.reasoning.filename || artifact.filename || "",
-      title: app.reasoning.title || artifact.display_name || artifact.filename || "",
-      created_at: app.reasoning.created_at || "",
-    });
-    if (!response.ok) {
-      const detail =
-        (payload && typeof payload === "object" && (payload.detail || payload.message)) ||
-        (typeof payload === "string" && payload) ||
-        `${response.status} ${response.statusText}`;
-      throw new Error(String(detail));
-    }
-    const created = ((payload && payload.created) || [])
-      .map((deliverable) => deliverable.display_name || deliverable.filename || "")
-      .filter(Boolean);
-    app.toast(
-      created.length
-        ? "Rendered to Studio: " + created.join(", ")
-        : "Studio products refreshed for this run",
-      "success",
-    );
-  } catch (error) {
-    app.toast("Render failed: " + (error?.message || error), "error");
-  } finally {
-    app.reasoning.promoting = "";
-    window.theseusAfterRender(app);
-  }
-};
+  };
 
 window.theseusCopyToClipboard = async function theseusCopyToClipboard(
   app,
@@ -658,8 +706,10 @@ window.theseusLoadStudio = async function theseusLoadStudio(app) {
   } catch (error) {
     app.studio.deliverables = [];
     app.studio.trash = [];
-    app.studio.error = "Failed to load deliverables: " + (error?.message || error);
-    app.studio.trashError = "Failed to load trash: " + (error?.message || error);
+    app.studio.error =
+      "Failed to load deliverables: " + (error?.message || error);
+    app.studio.trashError =
+      "Failed to load trash: " + (error?.message || error);
   } finally {
     app.studio.loading = false;
     app.studio.trashLoading = false;
@@ -676,7 +726,9 @@ window.theseusStudioSelectedCount = function theseusStudioSelectedCount(app) {
 };
 
 window.theseusPruneStudioSelection = function theseusPruneStudioSelection(app) {
-  const live = new Set((app.studio.deliverables || []).map(window.theseusStudioKey));
+  const live = new Set(
+    (app.studio.deliverables || []).map(window.theseusStudioKey),
+  );
   const next = {};
   for (const key of Object.keys(app.studio.selected || {})) {
     if (live.has(key)) next[key] = app.studio.selected[key];
@@ -684,14 +736,17 @@ window.theseusPruneStudioSelection = function theseusPruneStudioSelection(app) {
   app.studio.selected = next;
 };
 
-window.theseusPruneStudioSelectionToFiltered = function theseusPruneStudioSelectionToFiltered(app) {
-  const live = new Set(window.theseusStudioFiltered(app).map(window.theseusStudioKey));
-  const next = {};
-  for (const key of Object.keys(app.studio.selected || {})) {
-    if (live.has(key)) next[key] = app.studio.selected[key];
-  }
-  app.studio.selected = next;
-};
+window.theseusPruneStudioSelectionToFiltered =
+  function theseusPruneStudioSelectionToFiltered(app) {
+    const live = new Set(
+      window.theseusStudioFiltered(app).map(window.theseusStudioKey),
+    );
+    const next = {};
+    for (const key of Object.keys(app.studio.selected || {})) {
+      if (live.has(key)) next[key] = app.studio.selected[key];
+    }
+    app.studio.selected = next;
+  };
 
 window.theseusToggleStudioSelection = function theseusToggleStudioSelection(
   app,
@@ -710,130 +765,145 @@ window.theseusToggleStudioSelection = function theseusToggleStudioSelection(
   app.studio.selected = next;
 };
 
-window.theseusStudioAllFilteredSelected = function theseusStudioAllFilteredSelected(app) {
-  const rows = window.theseusStudioFiltered(app);
-  if (!rows.length) return false;
-  const selected = app.studio.selected || {};
-  return rows.every((deliverable) => selected[window.theseusStudioKey(deliverable)]);
-};
+window.theseusStudioAllFilteredSelected =
+  function theseusStudioAllFilteredSelected(app) {
+    const rows = window.theseusStudioFiltered(app);
+    if (!rows.length) return false;
+    const selected = app.studio.selected || {};
+    return rows.every(
+      (deliverable) => selected[window.theseusStudioKey(deliverable)],
+    );
+  };
 
-window.theseusToggleStudioSelectAllFiltered = function theseusToggleStudioSelectAllFiltered(app) {
-  const rows = window.theseusStudioFiltered(app);
-  const next = { ...(app.studio.selected || {}) };
-  const allSelected = window.theseusStudioAllFilteredSelected(app);
-  for (const deliverable of rows) {
-    const key = window.theseusStudioKey(deliverable);
-    if (allSelected) delete next[key];
-    else {
-      next[key] = {
-        skill: deliverable.skill,
-        run_id: deliverable.run_id,
-        filename: deliverable.filename,
-      };
+window.theseusToggleStudioSelectAllFiltered =
+  function theseusToggleStudioSelectAllFiltered(app) {
+    const rows = window.theseusStudioFiltered(app);
+    const next = { ...(app.studio.selected || {}) };
+    const allSelected = window.theseusStudioAllFilteredSelected(app);
+    for (const deliverable of rows) {
+      const key = window.theseusStudioKey(deliverable);
+      if (allSelected) delete next[key];
+      else {
+        next[key] = {
+          skill: deliverable.skill,
+          run_id: deliverable.run_id,
+          filename: deliverable.filename,
+        };
+      }
     }
-  }
-  app.studio.selected = next;
-};
+    app.studio.selected = next;
+  };
 
 window.theseusClearStudioSelection = function theseusClearStudioSelection(app) {
   app.studio.selected = {};
 };
 
-window.theseusDeleteSelectedStudioArtifacts = async function theseusDeleteSelectedStudioArtifacts(app) {
-  const artifacts = Object.values(app.studio.selected || {});
-  if (!artifacts.length || app.studio.deleting) return;
-  const label = artifacts.length === 1 ? "1 artifact" : artifacts.length + " artifacts";
-  const names = artifacts
-    .slice(0, 12)
-    .map((artifact) => "- " + artifact.filename)
-    .join("\n");
-  const extra = artifacts.length > 12 ? "\n- ...and " + (artifacts.length - 12) + " more" : "";
-  const message =
-    "Move " +
-    label +
-    " to Studio trash? You can recover them later.\n\n" +
-    names +
-    extra;
-  if (!confirm(message)) {
-    return;
-  }
-  app.studio.deleting = true;
-  try {
-    const result = await app.api("/api/ui/studio/artifacts", {
-      method: "DELETE",
-      body: JSON.stringify({ artifacts }),
-    });
-    app.toast("Moved " + result.trashed_count + " artifact(s) to trash", "success");
-    window.theseusClearStudioSelection(app);
-    await window.theseusLoadStudio(app);
-  } catch (error) {
-    app.toast("Trash move failed: " + (error?.message || error), "error");
-  } finally {
-    app.studio.deleting = false;
-    window.theseusAfterRender(app);
-  }
-};
-
-window.theseusRestoreTrashedStudioArtifact = async function theseusRestoreTrashedStudioArtifact(
-  app,
-  artifact,
-) {
-  const trashId = artifact && artifact.trash_id;
-  if (!trashId || app.studio.restoringTrash === trashId) return;
-  app.studio.restoringTrash = trashId;
-  try {
-    const result = await app.api("/api/ui/studio/trash/restore", {
-      method: "POST",
-      body: JSON.stringify({ artifacts: [{ trash_id: trashId }] }),
-    });
-    if (result.conflict_count) {
-      const conflict = (result.conflicts || [])[0];
-      throw new Error(conflict?.reason || "restore-conflict");
+window.theseusDeleteSelectedStudioArtifacts =
+  async function theseusDeleteSelectedStudioArtifacts(app) {
+    const artifacts = Object.values(app.studio.selected || {});
+    if (!artifacts.length || app.studio.deleting) return;
+    const label =
+      artifacts.length === 1 ? "1 artifact" : artifacts.length + " artifacts";
+    const names = artifacts
+      .slice(0, 12)
+      .map((artifact) => "- " + artifact.filename)
+      .join("\n");
+    const extra =
+      artifacts.length > 12
+        ? "\n- ...and " + (artifacts.length - 12) + " more"
+        : "";
+    const message =
+      "Move " +
+      label +
+      " to Studio trash? You can recover them later.\n\n" +
+      names +
+      extra;
+    if (!confirm(message)) {
+      return;
     }
-    app.toast("Restored " + (artifact.display_name || artifact.filename), "success");
-    await window.theseusLoadStudio(app);
-  } catch (error) {
-    app.toast("Restore failed: " + (error?.message || error), "error");
-  } finally {
-    app.studio.restoringTrash = "";
-    window.theseusAfterRender(app);
-  }
-};
-
-window.theseusDownloadSelectedStudioZip = async function theseusDownloadSelectedStudioZip(app) {
-  const artifacts = Object.values(app.studio.selected || {});
-  if (!artifacts.length || app.studio.zipping) return;
-  app.studio.zipping = true;
-  try {
-    const response = await fetch("/api/ui/studio/artifacts.zip", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ artifacts }),
-    });
-    if (!response.ok) {
-      throw new Error(response.status + " " + response.statusText);
+    app.studio.deleting = true;
+    try {
+      const result = await app.api("/api/ui/studio/artifacts", {
+        method: "DELETE",
+        body: JSON.stringify({ artifacts }),
+      });
+      app.toast(
+        "Moved " + result.trashed_count + " artifact(s) to trash",
+        "success",
+      );
+      window.theseusClearStudioSelection(app);
+      await window.theseusLoadStudio(app);
+    } catch (error) {
+      app.toast("Trash move failed: " + (error?.message || error), "error");
+    } finally {
+      app.studio.deleting = false;
+      window.theseusAfterRender(app);
     }
-    const blob = await response.blob();
-    const disposition = response.headers.get("content-disposition") || "";
-    const match = disposition.match(/filename="?([^";]+)"?/i);
-    const filename = match ? match[1] : "theseus-studio-products.zip";
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-    const count = response.headers.get("x-theseus-zip-count") || artifacts.length;
-    app.toast("Downloaded " + count + " product(s) as ZIP", "success");
-  } catch (error) {
-    app.toast("ZIP download failed: " + (error?.message || error), "error");
-  } finally {
-    app.studio.zipping = false;
-    window.theseusAfterRender(app);
-  }
-};
+  };
+
+window.theseusRestoreTrashedStudioArtifact =
+  async function theseusRestoreTrashedStudioArtifact(app, artifact) {
+    const trashId = artifact && artifact.trash_id;
+    if (!trashId || app.studio.restoringTrash === trashId) return;
+    app.studio.restoringTrash = trashId;
+    try {
+      const result = await app.api("/api/ui/studio/trash/restore", {
+        method: "POST",
+        body: JSON.stringify({ artifacts: [{ trash_id: trashId }] }),
+      });
+      if (result.conflict_count) {
+        const conflict = (result.conflicts || [])[0];
+        throw new Error(conflict?.reason || "restore-conflict");
+      }
+      app.toast(
+        "Restored " + (artifact.display_name || artifact.filename),
+        "success",
+      );
+      await window.theseusLoadStudio(app);
+    } catch (error) {
+      app.toast("Restore failed: " + (error?.message || error), "error");
+    } finally {
+      app.studio.restoringTrash = "";
+      window.theseusAfterRender(app);
+    }
+  };
+
+window.theseusDownloadSelectedStudioZip =
+  async function theseusDownloadSelectedStudioZip(app) {
+    const artifacts = Object.values(app.studio.selected || {});
+    if (!artifacts.length || app.studio.zipping) return;
+    app.studio.zipping = true;
+    try {
+      const response = await fetch("/api/ui/studio/artifacts.zip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ artifacts }),
+      });
+      if (!response.ok) {
+        throw new Error(response.status + " " + response.statusText);
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition") || "";
+      const match = disposition.match(/filename="?([^";]+)"?/i);
+      const filename = match ? match[1] : "theseus-studio-products.zip";
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      const count =
+        response.headers.get("x-theseus-zip-count") || artifacts.length;
+      app.toast("Downloaded " + count + " product(s) as ZIP", "success");
+    } catch (error) {
+      app.toast("ZIP download failed: " + (error?.message || error), "error");
+    } finally {
+      app.studio.zipping = false;
+      window.theseusAfterRender(app);
+    }
+  };
 
 window.theseusStudioSkillOptions = function theseusStudioSkillOptions(app) {
   const set = new Set(
@@ -991,8 +1061,7 @@ window.theseusStudioGrouped = function theseusStudioGrouped(app) {
   return groups.map((group) => ({
     key: group.key,
     title: group.title,
-    meta:
-      group.metaPrefix + " · " + group.items.length + " item(s)",
+    meta: group.metaPrefix + " · " + group.items.length + " item(s)",
     items: group.items,
   }));
 };
