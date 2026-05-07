@@ -326,7 +326,18 @@ window.theseusDeleteSelectedStudioArtifacts = async function theseusDeleteSelect
   const artifacts = Object.values(app.studio.selected || {});
   if (!artifacts.length || app.studio.deleting) return;
   const label = artifacts.length === 1 ? "1 artifact" : artifacts.length + " artifacts";
-  if (!confirm("Delete " + label + " from Studio? This removes selected files from disk.")) {
+  const names = artifacts
+    .slice(0, 12)
+    .map((artifact) => "- " + artifact.filename)
+    .join("\n");
+  const extra = artifacts.length > 12 ? "\n- ...and " + (artifacts.length - 12) + " more" : "";
+  const message =
+    "Delete " +
+    label +
+    " from Studio? This removes selected files from disk.\n\n" +
+    names +
+    extra;
+  if (!confirm(message)) {
     return;
   }
   app.studio.deleting = true;
