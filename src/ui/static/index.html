@@ -3020,6 +3020,14 @@
                           Run Trash
                         </h4>
                         <span class="text-[10px] font-mono text-slate-600" x-text="'(' + skills.runTrash.length + ')'"></span>
+                        <button
+                          x-show="!skills.runTrashLoading && skills.runTrash.length"
+                          @click="emptySkillRunTrash(skills.current?.name)"
+                          class="ml-auto text-[10px] font-mono text-neon-red/80 hover:text-neon-red border border-neon-red/40 hover:border-neon-red rounded px-1.5 py-0.5"
+                          title="Permanently delete every trashed run for this skill"
+                        >
+                          Empty Trash
+                        </button>
                       </div>
                       <div
                         x-show="skills.runTrashLoading"

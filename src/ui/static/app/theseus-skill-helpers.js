@@ -215,11 +215,11 @@ window.theseusDeleteSkillRun = async function theseusDeleteSkillRun(
   runId,
 ) {
   if (!name || !runId) return;
-  if (!confirm(`Move run ${runId} to trash? You can restore it later.`)) {
+  if (!confirm(`Permanently delete run ${runId}? This cannot be undone.`)) {
     return;
   }
   try {
-    const result = await app.api(
+    await app.api(
       "/api/ui/skills/" +
         encodeURIComponent(name) +
         "/runs/" +
@@ -231,13 +231,38 @@ window.theseusDeleteSkillRun = async function theseusDeleteSkillRun(
       app.skills.transcriptOpen = false;
       app.skills.transcriptExpanded = {};
     }
-    app.toast(
-      "Run moved to trash: " + (result.trashed?.run_id || runId),
-      "ok",
-    );
+    app.toast("Run deleted: " + runId, "ok");
     await Promise.all([app.loadSkillRuns(name), app.loadSkillRunTrash(name)]);
   } catch (error) {
-    app.toast("Run trash move failed: " + (error?.message || error), "error");
+    app.toast("Run delete failed: " + (error?.message || error), "error");
+  }
+};
+
+window.theseusEmptySkillRunTrash = async function theseusEmptySkillRunTrash(
+  app,
+  name,
+) {
+  if (!name) return;
+  if (
+    !confirm(
+      "Permanently delete every trashed run for this skill? This cannot be undone.",
+    )
+  ) {
+    return;
+  }
+  try {
+    const result = await app.api(
+      "/api/ui/skills/" + encodeURIComponent(name) + "/runs/trash",
+      { method: "DELETE" },
+    );
+    app.toast(
+      `Trash emptied: ${result.purged || 0} purged` +
+        (result.skipped ? `, ${result.skipped} skipped` : ""),
+      "ok",
+    );
+    await app.loadSkillRunTrash(name);
+  } catch (error) {
+    app.toast("Empty trash failed: " + (error?.message || error), "error");
   }
 };
 

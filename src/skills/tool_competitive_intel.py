@@ -1993,6 +1993,31 @@ def build_competitive_intel_brief_markdown(
     if fy_line:
         lines.extend(["", fy_line])
 
+    # --- Vehicle Fiscal-Year Pivot + Per-Order Detail (vehicle scope only) --
+    if is_vehicle_scope and by_award:
+        pivot = _format_vehicle_fy_pivot(by_award)
+        if pivot:
+            lines.extend([
+                "",
+                "## Vehicle Fiscal-Year Pivot",
+                "Cross-cutting view — which orders carried which years. Drop-offs and "
+                "concentration become visible here that the flat ledger hides.",
+                "",
+                *pivot,
+            ])
+        per_order = _format_per_order_detail_section(by_award, net_obligated)
+        if per_order:
+            lines.extend([
+                "",
+                "## Per-Order Detail",
+                f"Single-order-style breakdown for all **{len(by_award)}** child order(s) "
+                "on the parent IDV, sorted by net obligated. Each order shows POP, "
+                "fiscal trajectory, mod mix, largest action, and the top transactions by "
+                "absolute value (full transaction list lives in the .xlsx).",
+                "",
+                *per_order,
+            ])
+
     # --- Awardee Roster (vehicle scope only) ---------------------------------
     if is_vehicle_scope and parent_vehicle_awardees:
         roster_lines = _format_awardee_roster(parent_vehicle_awardees)
@@ -2339,6 +2364,194 @@ def _format_child_order_ledger(
             f"**{_fmt_money(remainder_total)}**.*"
         )
     return lines
+
+
+def _format_vehicle_fy_pivot(by_award: list[dict[str, Any]]) -> list[str]:
+    """Cross-cutting per-FY pivot table: rows=child orders, cols=fiscal years.
+
+    Surfaces which orders were live in which years and lets the reader spot
+    annual concentration / drop-offs that a flat ledger hides.
+    """
+    rows = [a for a in by_award if isinstance(a, dict) and a.get("piid")]
+    if not rows:
+        return []
+    fy_set: set[str] = set()
+    per_order: list[dict[str, Any]] = []
+    for award in rows:
+        fy_breakdown: dict[str, float] = {}
+        for fy_row in award.get("by_fiscal_year") or []:
+            if not isinstance(fy_row, dict):
+                continue
+            fy = str(fy_row.get("fy") or "").strip()
+            if not fy:
+                continue
+            fy_set.add(fy)
+            fy_breakdown[fy] = _to_float(fy_row.get("amount_usd"))
+        per_order.append(
+            {
+                "piid": str(award.get("piid") or "").strip(),
+                "recipient": _clean_text(award.get("recipient_name")) or "(unknown)",
+                "net": _to_float(award.get("net_obligated_usd"))
+                or _to_float(award.get("total_obligated_usd")),
+                "fy": fy_breakdown,
+            }
+        )
+    if not fy_set:
+        return []
+    fys = sorted(fy_set)
+    per_order.sort(key=lambda r: r["net"], reverse=True)
+
+    header = "| # | Child Order | Recipient | " + " | ".join(f"FY{fy[-2:]}" for fy in fys) + " | **Total** |"
+    align = "|---:|---|---|" + "|".join(["---:"] * len(fys)) + "|---:|"
+    lines = [header, align]
+    fy_totals: dict[str, float] = {fy: 0.0 for fy in fys}
+    grand_total = 0.0
+    for idx, row in enumerate(per_order, start=1):
+        cells = []
+        for fy in fys:
+            amt = row["fy"].get(fy, 0.0)
+            fy_totals[fy] += amt
+            cells.append(_fmt_money(amt) if amt else "—")
+        grand_total += row["net"]
+        recipient = row["recipient"]
+        if len(recipient) > 28:
+            recipient = recipient[:25].rstrip() + "…"
+        lines.append(
+            f"| {idx} | `{row['piid']}` | {recipient} | "
+            + " | ".join(cells)
+            + f" | **{_fmt_money(row['net'])}** |"
+        )
+    total_cells = " | ".join(_fmt_money(fy_totals[fy]) for fy in fys)
+    lines.append(
+        f"| | **Vehicle Total** | | {total_cells} | **{_fmt_money(grand_total)}** |"
+    )
+    return lines
+
+
+def _format_per_order_detail_section(
+    by_award: list[dict[str, Any]],
+    vehicle_total: float,
+) -> list[str]:
+    """Single-order-style deep dive for every child order on the vehicle.
+
+    Each subsection mirrors the standalone-contract brief: POP, FY pattern,
+    cadence, mod mix, largest action, top transactions. Sorted by net desc
+    so the heaviest hitters are first.
+    """
+    today = date.today()
+    rows = [a for a in by_award if isinstance(a, dict) and a.get("piid")]
+    if not rows:
+        return []
+    rows.sort(
+        key=lambda a: _to_float(a.get("net_obligated_usd"))
+        or _to_float(a.get("total_obligated_usd")),
+        reverse=True,
+    )
+    out: list[str] = []
+    for idx, award in enumerate(rows, start=1):
+        piid = str(award.get("piid") or "").strip()
+        recipient = _clean_text(award.get("recipient_name")) or "(recipient unknown)"
+        description = _clean_text(award.get("description")) or ""
+        net = _to_float(award.get("net_obligated_usd")) or _to_float(
+            award.get("total_obligated_usd")
+        )
+        gross = _to_float(award.get("total_obligated_usd"))
+        share = (net / vehicle_total * 100.0) if vehicle_total else 0.0
+        pop_start = award.get("pop_start_date")
+        pop_end_curr = award.get("pop_end_current_date")
+        pop_end_pot = award.get("pop_end_potential_date")
+        txns = sorted(
+            [t for t in (award.get("by_transaction") or []) if isinstance(t, dict)],
+            key=lambda t: (t.get("action_date") or "", t.get("modification_number") or ""),
+        )
+        fy_rows = [
+            r for r in (award.get("by_fiscal_year") or []) if isinstance(r, dict)
+        ]
+        # Per-order cadence from POP + net.
+        monthly_rate: float | None = None
+        annual_rate: float | None = None
+        if pop_start and net:
+            try:
+                start_d = date.fromisoformat(str(pop_start)[:10])
+                end_d = date.fromisoformat(str(pop_end_curr or pop_end_pot or pop_start)[:10])
+                end_for_rate = min(end_d, today) if end_d > today else end_d
+                months = max(1.0, (end_for_rate - start_d).days / 30.4375)
+                monthly_rate = net / months
+                annual_rate = monthly_rate * 12.0
+            except (ValueError, TypeError):
+                monthly_rate = None
+                annual_rate = None
+
+        deob_total = _round_money(
+            sum(_to_float(t.get("amount_usd")) for t in txns if _to_float(t.get("amount_usd")) < 0)
+        )
+        deob_count = sum(1 for t in txns if _to_float(t.get("amount_usd")) < 0)
+
+        out.append(f"### {idx}. `{piid}` — {recipient}")
+        if description:
+            out.append(f"*{description}*")
+        out.append("")
+
+        # Money line
+        gross_clause = ""
+        if gross and abs(gross - net) > 1.0:
+            gross_clause = f" (gross {_fmt_money(gross)})"
+        share_clause = f" — {share:.1f}% of vehicle" if vehicle_total else ""
+        out.append(f"- **Net Obligated:** {_fmt_money(net)}{gross_clause}{share_clause}")
+
+        # POP
+        pop_line = _format_pop_line(pop_start, pop_end_curr, pop_end_pot)
+        if pop_line:
+            out.append(pop_line)
+        remaining = _format_time_remaining(pop_end_curr, pop_end_pot, today)
+        if remaining:
+            out.append(remaining)
+
+        # Cadence
+        if monthly_rate and annual_rate:
+            out.append(
+                f"- **Cadence:** ≈{_fmt_money(annual_rate)}/yr "
+                f"({_fmt_money(monthly_rate)}/mo, derived from POP elapsed)"
+            )
+
+        # FY pattern
+        fy_line = _format_fiscal_trajectory(fy_rows, annual_rate)
+        if fy_line:
+            out.append(f"- {fy_line}")
+
+        # Mod mix + largest action
+        mix_line = _format_modification_mix(txns)
+        if mix_line:
+            out.append(f"- {mix_line}")
+        largest = _format_largest_action(txns, net)
+        if largest:
+            out.append(f"- {largest}")
+        if deob_count:
+            out.append(
+                f"- **Deobligations:** {deob_count} action(s) totaling "
+                f"{_fmt_money(deob_total)} — review for descope before forecasting."
+            )
+
+        # Top transactions ledger (cap at 6 to keep brief readable; xlsx has full list)
+        if txns:
+            ledger_subset = sorted(
+                txns,
+                key=lambda t: abs(_to_float(t.get("amount_usd"))),
+                reverse=True,
+            )[:6]
+            ledger_subset.sort(
+                key=lambda t: (t.get("action_date") or "", t.get("modification_number") or "")
+            )
+            ledger = _format_transaction_ledger(ledger_subset)
+            if ledger:
+                out.append("")
+                out.append(
+                    f"  *Top {len(ledger_subset)} of {len(txns)} action(s) by absolute value:*"
+                )
+                out.extend([f"  {row}" for row in ledger])
+
+        out.append("")
+    return out
 
 
 def _format_awardee_roster(awardees: list[dict[str, Any]]) -> list[str]:

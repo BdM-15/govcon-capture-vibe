@@ -668,10 +668,22 @@ def register_skill_run_ui_routes(
     @app.delete("/api/ui/skills/{name}/runs/{run_id}", tags=["theseus-ui"])
     async def delete_skill_run_route(name: str, run_id: str) -> JSONResponse:
         mgr = get_skill_manager()
-        trashed = mgr.trash_run(workspace_dir(), name, run_id)
-        if trashed is None:
+        ok = mgr.purge_run(workspace_dir(), name, run_id)
+        if not ok:
             raise HTTPException(404, f"Unknown or unsafe run id: {name}/{run_id}")
-        return JSONResponse({"trashed": trashed, "removed": run_id})
+        return JSONResponse({"removed": run_id, "purged": True})
+
+    @app.delete("/api/ui/skills/{name}/runs/trash", tags=["theseus-ui"])
+    async def empty_skill_run_trash_route(name: str) -> JSONResponse:
+        mgr = get_skill_manager()
+        result = mgr.purge_trashed_runs(workspace_dir(), skill_name=name)
+        return JSONResponse(
+            {
+                "skill": name,
+                "workspace": get_settings().workspace,
+                **result,
+            }
+        )
 
     @app.post("/api/ui/skills/{name}/runs/trash/restore", tags=["theseus-ui"])
     async def restore_skill_run_route(name: str, payload: dict[str, Any]) -> JSONResponse:

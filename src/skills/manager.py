@@ -408,6 +408,21 @@ class SkillManager:
     ) -> bool:
         return self._run_store.delete_run(workspace_root, skill_name, run_id)
 
+    def purge_run(
+        self, workspace_root: Path, skill_name: str, run_id: str
+    ) -> bool:
+        return self._run_store.purge_run(workspace_root, skill_name, run_id)
+
+    def purge_trashed_runs(
+        self,
+        workspace_root: Path,
+        *,
+        skill_name: Optional[str] = None,
+    ) -> dict[str, Any]:
+        return self._run_store.purge_trashed_runs(
+            workspace_root, skill_name=skill_name
+        )
+
     def trash_run(
         self,
         workspace_root: Path,

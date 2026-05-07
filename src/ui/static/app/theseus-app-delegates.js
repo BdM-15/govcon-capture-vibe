@@ -416,6 +416,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusDeleteSkillRun(this, name, runId);
     },
 
+    async emptySkillRunTrash(name) {
+      return window.theseusEmptySkillRunTrash(this, name);
+    },
+
     toggleSkillRunTrash() {
       return window.theseusToggleSkillRunTrash(this);
     },

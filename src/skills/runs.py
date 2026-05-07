@@ -564,6 +564,45 @@ class SkillRunStore:
     def delete_run(self, workspace_root: Path, skill_name: str, run_id: str) -> bool:
         return self.trash_run(workspace_root, skill_name, run_id) is not None
 
+    def purge_run(self, workspace_root: Path, skill_name: str, run_id: str) -> bool:
+        """Hard-delete a run dir without sending it through trash."""
+        if not self.is_safe_run_id(run_id):
+            return False
+        run_dir = self.runs_root(workspace_root, skill_name) / run_id
+        if not run_dir.is_dir():
+            return False
+        try:
+            shutil.rmtree(run_dir)
+        except OSError:
+            return False
+        return True
+
+    def purge_trashed_runs(
+        self,
+        workspace_root: Path,
+        *,
+        skill_name: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Hard-delete trashed run dirs. If skill_name is None, purges all."""
+        trash_root = self._run_trash_root(workspace_root)
+        if not trash_root.is_dir():
+            return {"purged": 0, "skipped": 0}
+        purged = 0
+        skipped = 0
+        for item_dir in trash_root.iterdir():
+            if not item_dir.is_dir():
+                continue
+            payload = self._read_run_trash_meta(workspace_root, item_dir.name)
+            if skill_name and (not payload or str(payload.get("skill") or "") != skill_name):
+                skipped += 1
+                continue
+            try:
+                shutil.rmtree(item_dir)
+                purged += 1
+            except OSError:
+                skipped += 1
+        return {"purged": purged, "skipped": skipped}
+
     def list_trashed_runs(
         self,
         workspace_root: Path,
