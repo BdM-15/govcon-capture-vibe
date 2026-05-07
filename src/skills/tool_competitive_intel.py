@@ -1826,8 +1826,12 @@ def build_competitive_intel_brief_markdown(
         obligations.get("rate_analysis") if isinstance(obligations.get("rate_analysis"), dict) else {}
     )
     blocks = insights.get("blocks") if isinstance(insights.get("blocks"), list) else []
-    transactions = [
-        item for item in (obligations.get("by_transaction") or []) if isinstance(item, dict)
+    transactions = sorted(
+        [item for item in (obligations.get("by_transaction") or []) if isinstance(item, dict)],
+        key=lambda tx: (tx.get("action_date") or "", tx.get("modification_number") or ""),
+    )
+    by_fiscal_year = [
+        item for item in (obligations.get("by_fiscal_year") or []) if isinstance(item, dict)
     ]
 
     scenario = str(resolved.get("scenario") or payload.get("scope") or "unknown")
@@ -1836,132 +1840,557 @@ def build_competitive_intel_brief_markdown(
         or resolved.get("piid")
         or "Unknown"
     )
-    headline = str(insights.get("headline") or "No headline available.")
+    headline = str(insights.get("headline") or "").strip()
     parent_award_id = hierarchy.get("parent_award_id") or vehicle.get("parent_award_id")
-    child_order_count = int(vehicle.get("child_order_count") or len(obligations.get("by_child_order") or []))
 
-    lines: list[str] = [
-        f"# {title} Brief",
-        "",
-        headline,
-        "",
-        "## Snapshot",
-        f"- Contract: {piid}",
-        f"- Scenario: {_scenario_label(scenario)}",
-        f"- Net obligations: {_fmt_money(obligations.get('net_obligated_usd'))}",
-        f"- Gross obligations: {_fmt_money(obligations.get('total_obligated_usd'))}",
-        f"- PTW baseline: {_fmt_money(ptw_seed.get('recommended_baseline_usd'))}",
-        f"- Competitive completeness: {competitor.get('completeness_status') or 'unknown'}",
-    ]
-    if parent_award_id:
-        lines.append(f"- Parent vehicle: {parent_award_id}")
-    if scenario == "parent_idiq":
-        lines.append(f"- Child orders observed: {child_order_count}")
-    elif scenario == "idiq_order" and vehicle:
-        lines.append(
-            f"- Parent vehicle context: {child_order_count} child orders; {_fmt_money(vehicle.get('net_obligated_usd'))} net"
+    burn_evidence = _evidence_for_block(blocks, "burn_posture")
+    award_evidence = _evidence_for_block(blocks, "award_story")
+    competitive_evidence = _evidence_for_block(blocks, "competitive_context")
+    caveat_evidence = _evidence_for_block(blocks, "caveats")
+
+    pop_start = rate_analysis.get("pop_start") or burn_evidence.get("pop_start")
+    pop_end_current = rate_analysis.get("pop_end_current") or burn_evidence.get("pop_end_current")
+    pop_end_potential = (
+        rate_analysis.get("pop_end_potential") or burn_evidence.get("pop_end_potential")
+    )
+    monthly_burn = rate_analysis.get("monthly_burn_usd") or burn_evidence.get("monthly_burn_usd")
+    annual_burn = rate_analysis.get("annual_burn_usd") or burn_evidence.get("annual_burn_usd")
+    daily_burn = rate_analysis.get("daily_burn_usd") or burn_evidence.get("daily_burn_usd")
+    ptw_baseline = (
+        ptw_seed.get("recommended_baseline_usd")
+        or burn_evidence.get("recommended_ptw_baseline_usd")
+    )
+    ptw_basis = _ptw_basis_label(ptw_seed)
+
+    net_obligated = _to_float(obligations.get("net_obligated_usd"))
+    gross_obligated = _to_float(obligations.get("total_obligated_usd"))
+    deob_total = _round_money(sum(
+        _to_float(tx.get("amount_usd"))
+        for tx in transactions
+        if _to_float(tx.get("amount_usd")) < 0
+    ))
+    deob_count = sum(1 for tx in transactions if _to_float(tx.get("amount_usd")) < 0)
+
+    today = date.today()
+    recompete_signal = _detect_recompete_signal(pop_end_current, pop_end_potential, today)
+    recency_note = _format_recency_note(transactions, today)
+
+    lines: list[str] = [f"# {title} Brief", ""]
+
+    bluf = _build_bluf(
+        piid=piid,
+        scenario=scenario,
+        net_obligated=net_obligated,
+        transaction_count=len(transactions),
+        annual_burn=annual_burn,
+        monthly_burn=monthly_burn,
+        daily_burn=daily_burn,
+        pop_end_current=pop_end_current,
+        parent_award_id=parent_award_id,
+        competitor=competitor,
+        ptw_baseline=ptw_baseline,
+        ptw_basis=ptw_basis,
+        headline=headline,
+    )
+    lines.append(bluf)
+
+    # --- Burn Posture --------------------------------------------------------
+    lines.extend(["", "## Burn Posture"])
+    deob_clause = (
+        f" (deobligations: {_fmt_money(deob_total)} across {deob_count} action(s))"
+        if deob_count
+        else " (no deobligations recorded)"
+    )
+    lines.append(
+        f"- Gross / Net Obligated: {_fmt_money(gross_obligated)} / {_fmt_money(net_obligated)}{deob_clause}"
+    )
+    cadence_parts = []
+    if annual_burn:
+        cadence_parts.append(f"≈{_fmt_money(annual_burn)}/year")
+    if monthly_burn:
+        cadence_parts.append(f"{_fmt_money(monthly_burn)}/month")
+    if daily_burn:
+        cadence_parts.append(f"{_fmt_money(daily_burn)}/day")
+    if cadence_parts:
+        lines.append(f"- Current Cadence: {cadence_parts[0]} ({', '.join(cadence_parts[1:])})" if len(cadence_parts) > 1 else f"- Current Cadence: {cadence_parts[0]}")
+    pop_line = _format_pop_line(pop_start, pop_end_current, pop_end_potential)
+    if pop_line:
+        lines.append(pop_line)
+    remaining_line = _format_time_remaining(pop_end_current, pop_end_potential, today)
+    if remaining_line:
+        lines.append(remaining_line)
+    if ptw_baseline:
+        basis_clause = f" ({ptw_basis})" if ptw_basis else ""
+        lines.append(f"- Recommended PTW Baseline: {_fmt_money(ptw_baseline)}{basis_clause}")
+    if recency_note:
+        lines.append(f"- *{recency_note}*")
+
+    # --- Award Story ---------------------------------------------------------
+    lines.extend(["", "## Award Story & Key Inflection Points"])
+    award_summary = str(award_evidence.get("summary") or "").strip()
+    award_block = next(
+        (b for b in blocks if isinstance(b, dict) and b.get("id") == "award_story"),
+        None,
+    )
+    if not award_summary and award_block:
+        award_summary = str(award_block.get("summary") or "").strip()
+    lead = _build_award_story_lead(
+        piid=piid,
+        scenario=scenario,
+        transactions=transactions,
+        net_obligated=net_obligated,
+        award_summary=award_summary,
+    )
+    lines.append(lead)
+
+    ledger = _format_transaction_ledger(transactions)
+    if ledger:
+        lines.append("")
+        lines.extend(ledger)
+        mix_line = _format_modification_mix(transactions)
+        if mix_line:
+            lines.extend(["", mix_line])
+        largest_line = _format_largest_action(transactions, net_obligated)
+        if largest_line:
+            lines.append(largest_line)
+
+    fy_line = _format_fiscal_trajectory(by_fiscal_year, annual_burn)
+    if fy_line:
+        lines.extend(["", fy_line])
+
+    # --- Competitive Context -------------------------------------------------
+    comp_para = _format_competitive_paragraph(
+        scenario=scenario,
+        competitor=competitor,
+        competitive_evidence=competitive_evidence,
+        parent_award_id=parent_award_id,
+        vehicle=vehicle,
+    )
+    if comp_para:
+        lines.extend(["", "## Competitive Context", comp_para])
+
+    # --- Caveats -------------------------------------------------------------
+    caveat_lines: list[str] = []
+    raw_caveats = caveat_evidence.get("warnings") or payload.get("warnings") or []
+    for warning in raw_caveats:
+        if isinstance(warning, str) and warning.strip():
+            caveat_lines.append(f"- {warning.strip()}")
+    if deob_count:
+        caveat_lines.append(
+            f"- Contains {deob_count} deobligation action(s) totaling {_fmt_money(deob_total)} — "
+            "review for descope or re-baseline before forecasting."
         )
-
-    for block in blocks:
-        if not isinstance(block, dict):
-            continue
-        block_id = str(block.get("id") or "")
-        title_text = str(block.get("title") or _friendly_block_title(block_id))
-        summary = str(block.get("summary") or "").strip()
-        evidence = block.get("evidence") if isinstance(block.get("evidence"), dict) else {}
-        pop_segments = [
-            item
-            for item in (evidence.get("period_of_performance_segments") or [])
-            if isinstance(item, dict)
-        ]
-
-        lines.extend(["", f"## {title_text}"])
-        if summary and block_id != "burn_posture":
-            lines.extend([summary, ""])
-
-        if block_id == "burn_posture":
-            if summary:
-                lines.append(f"- Quick read: {summary}")
-            lines.extend(
-                [
-                    (
-                        "- Burn snapshot: "
-                        f"Gross obligations are {_fmt_money(obligations.get('total_obligated_usd'))}, "
-                        f"net burn is {_fmt_money(obligations.get('net_obligated_usd'))}, and current cadence is "
-                        f"{_fmt_money(evidence.get('monthly_burn_usd'))}/month "
-                        f"({_fmt_money(evidence.get('annual_burn_usd'))}/year; "
-                        f"{_fmt_money(evidence.get('daily_burn_usd'))}/day)."
-                    ),
-                    (
-                        "- Planning horizon: "
-                        f"Current POP runs through {evidence.get('pop_end_current') or 'unknown'}, "
-                        f"with the full-term view extending to {evidence.get('pop_end_potential') or 'n/a'}."
-                    ),
-                    (
-                        "- PTW anchor: "
-                        f"Use {_fmt_money(evidence.get('recommended_ptw_baseline_usd'))} as the current deterministic baseline "
-                        "unless newer option or deobligation evidence changes the burn story."
-                    ),
-                ]
-            )
-        elif block_id == "vehicle_concentration":
-            leaders = [item for item in (evidence.get("top_child_orders") or []) if isinstance(item, dict)]
-            for leader in leaders:
-                lines.append(
-                    f"- {leader.get('piid') or leader.get('award_id')}: {_fmt_money(leader.get('amount_usd'))} ({leader.get('share_of_net_obligations_pct')}% of net)."
-                )
-        elif block_id == "competitive_context":
-            roster = [
-                item.get("name")
-                for item in (evidence.get("parent_vehicle_awardees") or [])
-                if isinstance(item, dict) and item.get("name")
-            ]
-            lines.append(
-                f"- Exact parent-awardee count: {evidence.get('parent_vehicle_awardee_count') or 0}."
-            )
-            lines.append(
-                f"- Observed order holders: {evidence.get('order_holder_count') or 0}; parent holders: {evidence.get('parent_holder_count') or 0}."
-            )
-            if roster:
-                lines.append(f"- Exact parent-awardee roster: {'; '.join(roster)}.")
-        elif block_id == "award_story":
-            if pop_segments:
-                first_segment = pop_segments[0]
-                last_segment = pop_segments[-1]
-                lines.append(
-                    "Read the funding as a base-to-options sequence rather than isolated mods. "
-                    f"The observed POP story runs from {first_segment.get('label') or 'the first segment'} to "
-                    f"{last_segment.get('label') or 'the latest segment'}."
-                )
-                lines.append("")
-            for segment in pop_segments:
-                lines.append(
-                    f"- {segment.get('label') or 'Period'} ({segment.get('pop_start_date') or 'n/a'} to {segment.get('pop_end_date') or 'n/a'}): {_fmt_money(segment.get('obligated_usd'))} obligated, {_fmt_money(segment.get('monthly_rate_usd'))}/month across {_to_float(segment.get('months')):.1f} months."
-                )
-            if not pop_segments:
-                lines.append("- POP detail unavailable in the collected evidence.")
-        elif block_id == "caveats":
-            for warning in [item for item in (evidence.get("warnings") or []) if isinstance(item, str) and item.strip()]:
-                lines.append(f"- {warning}")
-
-    inflections = _select_inflection_points(transactions)
-    if inflections:
-        lines.extend(["", "## Inflection Points"])
-        for point in inflections:
-            detail = point.get("modification_description") or point.get("action_type_description") or "no description"
-            lines.append(
-                f"- {point.get('modification_number') or 'mod'} on {point.get('action_date') or 'unknown date'}: {detail}; {_fmt_money(point.get('amount_usd'))}."
-            )
-
-    if not any(isinstance(block, dict) and block.get("id") == "caveats" for block in blocks):
-        warnings = [item for item in (payload.get("warnings") or []) if isinstance(item, str) and item.strip()]
-        lines.extend(["", "## Caveats"])
-        if warnings:
-            lines.extend(f"- {warning}" for warning in warnings)
-        else:
-            lines.append("- No collector caveats reported.")
+    if recompete_signal:
+        caveat_lines.append(f"- {recompete_signal}")
+    if not caveat_lines:
+        caveat_lines.append("- No collector caveats reported.")
+    lines.extend(["", "## Caveats", *caveat_lines])
 
     return "\n".join(lines).strip() + "\n"
+
+
+def _evidence_for_block(blocks: list[Any], block_id: str) -> dict[str, Any]:
+    for block in blocks:
+        if isinstance(block, dict) and block.get("id") == block_id:
+            evidence = block.get("evidence")
+            if isinstance(evidence, dict):
+                return evidence
+            return {}
+    return {}
+
+
+def _ptw_basis_label(ptw_seed: dict[str, Any]) -> str:
+    recommended = _to_float(ptw_seed.get("recommended_baseline_usd"))
+    recent = _to_float(ptw_seed.get("recent_annual_run_rate_usd"))
+    weighted = _to_float(ptw_seed.get("three_year_weighted_run_rate_usd"))
+    if not recommended:
+        return ""
+    if recommended == recent and recent >= weighted:
+        return "most recent FY annual"
+    if recommended == weighted:
+        return "3-yr weighted run-rate"
+    return "deterministic baseline"
+
+
+def _build_bluf(
+    *,
+    piid: str,
+    scenario: str,
+    net_obligated: float,
+    transaction_count: int,
+    annual_burn: Any,
+    monthly_burn: Any,
+    daily_burn: Any,
+    pop_end_current: str | None,
+    parent_award_id: Any,
+    competitor: dict[str, Any],
+    ptw_baseline: Any,
+    ptw_basis: str,
+    headline: str,
+) -> str:
+    scenario_phrase = {
+        "parent_idiq": "parent IDV rollup",
+        "idiq_order": "single-order story",
+        "standalone_contract": "standalone contract",
+    }.get(scenario, "single award")
+    cadence_clause = ""
+    if annual_burn:
+        sub_parts = []
+        if monthly_burn:
+            sub_parts.append(f"{_fmt_money(monthly_burn)}/mo")
+        if daily_burn:
+            sub_parts.append(f"{_fmt_money(daily_burn)}/day")
+        sub = f" ({', '.join(sub_parts)})" if sub_parts else ""
+        cadence_clause = f", burning **≈{_fmt_money(annual_burn)}/yr**{sub}"
+    elif monthly_burn:
+        cadence_clause = f", burning **≈{_fmt_money(monthly_burn)}/month**"
+    horizon_clause = f" through **{pop_end_current}**" if pop_end_current else ""
+    parent_clause = ""
+    if parent_award_id and scenario != "standalone_contract":
+        awardee_count = competitor.get("parent_vehicle_awardee_count")
+        completeness = competitor.get("completeness_status") or "unknown"
+        detail_bits = []
+        if awardee_count:
+            detail_bits.append(f"{awardee_count} awardees")
+        detail_bits.append(f"{completeness} linkage")
+        parent_clause = f" Parent vehicle: **{parent_award_id}** ({', '.join(detail_bits)})."
+    ptw_clause = ""
+    if ptw_baseline:
+        basis = f" ({ptw_basis})" if ptw_basis else ""
+        ptw_clause = f" Recommended PTW baseline: **{_fmt_money(ptw_baseline)}**{basis}."
+    paragraph = (
+        f"**{piid}** is best read as a {scenario_phrase}: "
+        f"**{_fmt_money(net_obligated)} net** obligated across **{transaction_count} transaction(s)**"
+        f"{cadence_clause}{horizon_clause}.{parent_clause}{ptw_clause}"
+    )
+    if headline and headline.lower() not in paragraph.lower():
+        paragraph = f"{paragraph}\n\n*Collector headline:* {headline}"
+    return paragraph
+
+
+def _format_pop_line(
+    pop_start: str | None,
+    pop_end_current: str | None,
+    pop_end_potential: str | None,
+) -> str | None:
+    if not pop_start and not pop_end_current and not pop_end_potential:
+        return None
+    start = pop_start or "unknown"
+    end = pop_end_current or "unknown"
+    if pop_end_potential and pop_end_potential != pop_end_current:
+        return f"- Period of Performance: {start} → {end} (potential: {pop_end_potential})"
+    return f"- Period of Performance: {start} → {end}"
+
+
+def _format_time_remaining(
+    pop_end_current: str | None,
+    pop_end_potential: str | None,
+    today: date,
+) -> str | None:
+    if not pop_end_current:
+        return None
+    try:
+        current_end = date.fromisoformat(pop_end_current)
+    except (TypeError, ValueError):
+        return None
+    days_to_current = (current_end - today).days
+    months_to_current = days_to_current / 30.44
+    pieces = []
+    if days_to_current >= 0:
+        pieces.append(f"{months_to_current:.1f} months to current POP end")
+    else:
+        pieces.append(f"current POP end {abs(days_to_current)} days in the past")
+    if pop_end_potential and pop_end_potential != pop_end_current:
+        try:
+            potential_end = date.fromisoformat(pop_end_potential)
+            days_to_potential = (potential_end - today).days
+            if days_to_potential >= 0:
+                pieces.append(f"{days_to_potential / 30.44:.1f} months to potential")
+            else:
+                pieces.append(f"potential end {abs(days_to_potential)} days in the past")
+        except (TypeError, ValueError):
+            pass
+    return f"- Time Remaining: {'; '.join(pieces)}"
+
+
+def _detect_recompete_signal(
+    pop_end_current: str | None,
+    pop_end_potential: str | None,
+    today: date,
+) -> str | None:
+    if not pop_end_current or not pop_end_potential or pop_end_current == pop_end_potential:
+        return None
+    try:
+        current_end = date.fromisoformat(pop_end_current)
+        potential_end = date.fromisoformat(pop_end_potential)
+    except (TypeError, ValueError):
+        return None
+    if current_end < today and potential_end > today:
+        return (
+            f"Current POP end ({pop_end_current}) is in the past while potential end is "
+            f"{pop_end_potential} — likely early recompete or unexercised options; verify award "
+            "status before forecasting future option years."
+        )
+    return None
+
+
+def _format_recency_note(transactions: list[dict[str, Any]], today: date) -> str | None:
+    dates = []
+    for tx in transactions:
+        action_date = tx.get("action_date")
+        if not action_date:
+            continue
+        try:
+            dates.append(date.fromisoformat(str(action_date)))
+        except (TypeError, ValueError):
+            continue
+    if not dates:
+        return None
+    most_recent = max(dates)
+    days_since = (today - most_recent).days
+    if days_since < 0:
+        return None
+    if days_since <= 90:
+        return f"Most recent action {days_since} days ago ({most_recent.isoformat()}) — actively burning."
+    if days_since > 365:
+        years = days_since / 365.25
+        return (
+            f"No actions in {days_since} days (last on {most_recent.isoformat()}, ~{years:.1f} yrs) — "
+            "likely dormant, recompeted, or off-ramped."
+        )
+    return None
+
+
+def _build_award_story_lead(
+    *,
+    piid: str,
+    scenario: str,
+    transactions: list[dict[str, Any]],
+    net_obligated: float,
+    award_summary: str,
+) -> str:
+    if award_summary:
+        return award_summary
+    n = len(transactions)
+    if n == 0:
+        return f"No transactions observed for {piid}; ledger unavailable."
+    scenario_word = {
+        "parent_idiq": "parent IDV rollup",
+        "idiq_order": "IDIQ order",
+        "standalone_contract": "standalone contract",
+    }.get(scenario, "award")
+    return (
+        f"This is a {scenario_word} with {_fmt_money(net_obligated)} net obligated across "
+        f"{n} transaction(s). The ledger below traces every base award, option exercise, and "
+        "modification with running cumulative totals."
+    )
+
+
+_ACTION_TYPE_NORMALIZATIONS = {
+    "EXERCISE OPTION": "Exercise Option",
+    "EXERCISE AN OPTION": "Exercise Option",
+    "ADDITIONAL WORK (NEW AGREEMENT, FAR PART 6 APPLIES)": "Additional Work",
+    "ADDITIONAL WORK": "Additional Work",
+    "DEFINITIZE LETTER CONTRACT": "Definitize Letter Contract",
+    "INITIAL LETTER CONTRACT": "Initial Letter Contract",
+    "DEFINITIVE CONTRACT": "Initial Award",
+    "ADMIN CHANGE": "Admin Change",
+    "ADMINISTRATIVE CHANGE": "Admin Change",
+    "TERMINATE FOR CONVENIENCE (COMPLETE OR PARTIAL)": "Terminate for Convenience",
+    "TERMINATE FOR DEFAULT (COMPLETE OR PARTIAL)": "Terminate for Default",
+    "FUNDING ONLY ACTION": "Funding Action",
+    "CHANGE ORDER": "Change Order",
+    "SUPPLEMENTAL AGREEMENT FOR WORK WITHIN SCOPE": "In-Scope Supplemental",
+    "OTHER ADMINISTRATIVE ACTION": "Admin Action",
+}
+
+
+def _normalize_action_type(value: Any) -> str:
+    text = (str(value or "")).strip()
+    if not text:
+        return ""
+    upper = text.upper()
+    if upper in _ACTION_TYPE_NORMALIZATIONS:
+        return _ACTION_TYPE_NORMALIZATIONS[upper]
+    # Fallback: title-case but preserve common acronyms
+    return text.title()
+
+
+def _format_transaction_ledger(transactions: list[dict[str, Any]]) -> list[str]:
+    if not transactions:
+        return []
+    lines: list[str] = []
+    for tx in transactions:
+        mod = (tx.get("modification_number") or "").strip()
+        if mod in ("", "0"):
+            label = "**Base**"
+        else:
+            label = f"**{mod}**"
+        action_date = tx.get("action_date") or "unknown date"
+        action_type = _normalize_action_type(tx.get("action_type_description"))
+        amount = _to_float(tx.get("amount_usd"))
+        sign = "+" if amount >= 0 else "-"
+        amount_str = f"{sign}{_fmt_money(abs(amount))}"
+        cumulative = tx.get("cumulative_obligated_usd")
+        cum_str = f" → cumulative {_fmt_money(cumulative)}" if cumulative is not None else ""
+        head = f"{label} ({action_date}"
+        if action_type:
+            head += f", {action_type}"
+        head += f"): {amount_str}{cum_str}"
+        description = (tx.get("modification_description") or "").strip()
+        if description and description.lower() not in {"none", "n/a", "null"}:
+            description = description.rstrip(". ").strip()
+            head += f" — {description}"
+        lines.append(f"- {head}")
+    return lines
+
+
+def _format_modification_mix(transactions: list[dict[str, Any]]) -> str | None:
+    if not transactions:
+        return None
+    counts: dict[str, int] = defaultdict(int)
+    for tx in transactions:
+        mod = (tx.get("modification_number") or "").strip()
+        action_type = _normalize_action_type(tx.get("action_type_description"))
+        if mod in ("", "0"):
+            counts["base award"] += 1
+        elif "Exercise" in action_type:
+            counts["option exercise"] += 1
+        elif "Additional Work" in action_type:
+            counts["additional-work mod"] += 1
+        elif "Terminate" in action_type:
+            counts["termination action"] += 1
+        elif "Admin" in action_type or "Funding" in action_type:
+            counts["admin/funding action"] += 1
+        else:
+            counts["other modification"] += 1
+    if not counts:
+        return None
+    parts = []
+    for label, count in sorted(counts.items(), key=lambda item: -item[1]):
+        plural = label if count == 1 else (label + "s" if not label.endswith("s") else label)
+        parts.append(f"{count} {plural}")
+    return f"**Mix:** {', '.join(parts)}."
+
+
+def _format_largest_action(
+    transactions: list[dict[str, Any]],
+    net_obligated: float,
+) -> str | None:
+    candidates = [tx for tx in transactions if _to_float(tx.get("amount_usd")) != 0]
+    if not candidates:
+        return None
+    largest = max(candidates, key=lambda tx: abs(_to_float(tx.get("amount_usd"))))
+    amount = _to_float(largest.get("amount_usd"))
+    mod_raw = (largest.get("modification_number") or "").strip()
+    mod = "Base" if mod_raw in ("", "0") else mod_raw
+    action_date = largest.get("action_date") or "unknown date"
+    action_type = _normalize_action_type(largest.get("action_type_description"))
+    pct = (abs(amount) / abs(net_obligated) * 100.0) if net_obligated else 0.0
+    type_clause = f", {action_type}" if action_type else ""
+    return (
+        f"**Largest single action:** {mod} ({_fmt_money(amount)}, {action_date}{type_clause}) — "
+        f"{pct:.1f}% of net obligated."
+    )
+
+
+def _format_fiscal_trajectory(
+    by_fiscal_year: list[dict[str, Any]],
+    annual_burn: Any,
+) -> str | None:
+    rows = [row for row in by_fiscal_year if row.get("fy") and row.get("amount_usd") is not None]
+    if len(rows) < 2:
+        return None
+    arrow_parts = [
+        f"FY{str(row['fy'])[-2:]} {_fmt_money(row['amount_usd'])}" for row in rows
+    ]
+    sentence = f"**Fiscal-year pattern:** {' → '.join(arrow_parts)}."
+    annual_value = _to_float(annual_burn)
+    latest_value = _to_float(rows[-1].get("amount_usd"))
+    if annual_value and latest_value:
+        ratio = latest_value / annual_value
+        if ratio >= 1.15:
+            trend = "accelerating"
+        elif ratio <= 0.85:
+            trend = "decelerating"
+        else:
+            trend = "steady"
+        sentence += (
+            f" Lifetime cadence ({_fmt_money(annual_value)}/yr) vs FY{str(rows[-1]['fy'])[-2:]} actual "
+            f"({_fmt_money(latest_value)}) suggests **{trend}** spend."
+        )
+    return sentence
+
+
+def _format_competitive_paragraph(
+    *,
+    scenario: str,
+    competitor: dict[str, Any],
+    competitive_evidence: dict[str, Any],
+    parent_award_id: Any,
+    vehicle: dict[str, Any],
+) -> str | None:
+    awardee_count = (
+        competitor.get("parent_vehicle_awardee_count")
+        or competitive_evidence.get("parent_vehicle_awardee_count")
+    )
+    completeness = (
+        competitor.get("completeness_status")
+        or competitive_evidence.get("completeness_status")
+        or "unknown"
+    )
+    order_holders = (
+        competitor.get("order_holder_count")
+        or competitive_evidence.get("order_holder_count")
+        or 0
+    )
+    parent_holders = (
+        competitor.get("parent_holder_count")
+        or competitive_evidence.get("parent_holder_count")
+        or 0
+    )
+    roster = []
+    for source in (competitor.get("parent_vehicle_awardees"), competitive_evidence.get("parent_vehicle_awardees")):
+        if isinstance(source, list):
+            for item in source:
+                if isinstance(item, dict) and item.get("name"):
+                    roster.append(str(item["name"]))
+            if roster:
+                break
+
+    if scenario == "parent_idiq":
+        child_count = vehicle.get("child_order_count") or 0
+        sentences = [
+            f"Parent IDV {parent_award_id or '(unknown)'} has **{awardee_count or 0} awardees** "
+            f"({completeness} parent-child linkage), with **{child_count} child orders** observed."
+        ]
+        if roster:
+            sentences.append(f"Awardees observed: {', '.join(roster[:6])}.")
+        return " ".join(sentences)
+
+    if scenario == "idiq_order":
+        if not parent_award_id and not awardee_count:
+            return None
+        coverage = (
+            "This order is the only observed holder under the current recipient slice."
+            if order_holders <= 1
+            else f"{order_holders} order holders observed across the parent vehicle."
+        )
+        sentences = [
+            f"Parent IDV **{parent_award_id or '(unknown)'}** has **{awardee_count or 0} awardees** "
+            f"({completeness} parent-child linkage). {coverage}"
+        ]
+        if roster:
+            sentences.append(f"Awardees observed: {', '.join(roster[:6])}.")
+        return " ".join(sentences)
+
+    # standalone_contract
+    if not awardee_count and not parent_holders:
+        return None
+    return (
+        f"Standalone contract; no parent-vehicle competition. Recipient profile completeness: "
+        f"**{completeness}**."
+    )
 
 
 def build_competitive_intel_product_title(payload: dict[str, Any]) -> str:

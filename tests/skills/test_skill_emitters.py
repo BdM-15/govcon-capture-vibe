@@ -128,11 +128,25 @@ def test_auto_emit_artifacts_shapes_competitive_intel_brief(tmp_path: Path) -> N
                     "obligations": {
                         "total_obligated_usd": 44070085.27,
                         "net_obligated_usd": 43659700.13,
-                        "rate_analysis": {"monthly_burn_usd": 698555.2, "annual_burn_usd": 8382662.42, "daily_burn_usd": 23297.6},
+                        "rate_analysis": {
+                            "pop_start": "2021-10-28",
+                            "pop_end_current": "2023-11-20",
+                            "pop_end_potential": "2026-12-15",
+                            "monthly_burn_usd": 698555.2,
+                            "annual_burn_usd": 8382662.42,
+                            "daily_burn_usd": 23297.6
+                        },
+                        "by_fiscal_year": [
+                            {"fy": "2022", "amount_usd": 9229200.0},
+                            {"fy": "2023", "amount_usd": 9183672.0},
+                            {"fy": "2024", "amount_usd": -350385.14},
+                            {"fy": "2026", "amount_usd": 8369667.0}
+                        ],
                         "by_transaction": [
-                            {"modification_number": "P00005", "action_type": "G", "action_date": "2022-11-17", "amount_usd": 9183672.0},
-                            {"modification_number": "P00007", "action_type": "B", "action_date": "2024-05-23", "amount_usd": -350385.14},
-                            {"modification_number": "P00014", "action_type": "G", "action_date": "2025-11-14", "amount_usd": 8369667.0, "modification_description": "Exercise option four"}
+                            {"modification_number": "0", "action_type": "A", "action_date": "2021-10-28", "action_type_description": "DEFINITIVE CONTRACT", "amount_usd": 9229200.0, "cumulative_obligated_usd": 9229200.0, "modification_description": null},
+                            {"modification_number": "P00005", "action_type": "G", "action_date": "2022-11-17", "action_type_description": "EXERCISE OPTION", "amount_usd": 9183672.0, "cumulative_obligated_usd": 18412872.0, "modification_description": "Exercise option one"},
+                            {"modification_number": "P00007", "action_type": "B", "action_date": "2024-05-23", "action_type_description": "ADMIN CHANGE", "amount_usd": -350385.14, "cumulative_obligated_usd": 18062486.86, "modification_description": "Deob excess funds"},
+                            {"modification_number": "P00014", "action_type": "G", "action_date": "2025-11-14", "action_type_description": "EXERCISE OPTION", "amount_usd": 8369667.0, "cumulative_obligated_usd": 26432153.86, "modification_description": "Exercise option four"}
                         ]
                     },
                     "insights": {
@@ -140,22 +154,18 @@ def test_auto_emit_artifacts_shapes_competitive_intel_brief(tmp_path: Path) -> N
                         "blocks": [
                             {
                                 "id": "burn_posture",
-                                "evidence": {"recommended_ptw_baseline_usd": 8388921.37, "pop_end_potential": "2026-12-15"}
+                                "evidence": {"recommended_ptw_baseline_usd": 8388921.37, "pop_end_potential": "2026-12-15", "pop_end_current": "2023-11-20"}
                             },
                             {
                                 "id": "award_story",
-                                "summary": "One award story across base and options.",
-                                "evidence": {
-                                    "period_of_performance_segments": [
-                                        {"label": "Base period", "pop_start_date": "2021-10-28", "pop_end_date": "2022-11-17", "months": 13.0, "obligated_usd": 9229200.0, "monthly_rate_usd": 709938.46},
-                                        {"label": "Option period 1", "pop_start_date": "2022-11-17", "pop_end_date": "2023-11-20", "months": 12.5, "obligated_usd": 9183672.0, "monthly_rate_usd": 734693.76}
-                                    ]
-                                }
+                                "summary": "FA805122F0001 is an IDIQ order against parent CONT_IDV_PARENT with four observed actions across base and options.",
+                                "evidence": {}
                             }
                         ]
                     },
                     "vehicle_context": {"child_order_count": 22, "net_obligated_usd": 390322586.54},
                     "competitor_discovery": {"completeness_status": "high", "parent_vehicle_awardee_count": 8, "order_holder_count": 1},
+                    "ptw_seed": {"recommended_baseline_usd": 8388921.37, "recent_annual_run_rate_usd": 8369667.0, "three_year_weighted_run_rate_usd": 8388921.37},
                     "warnings": []
                 }
                 """,
@@ -171,22 +181,42 @@ def test_auto_emit_artifacts_shapes_competitive_intel_brief(tmp_path: Path) -> N
 
         brief = (artifacts_dir / "competitive_intel_brief.md").read_text(encoding="utf-8")
         manifest = json.loads((run_dir / "artifacts_manifest.json").read_text(encoding="utf-8"))
-        assert brief.startswith("# FA805122F0001 Order Burn Brief\n\nClean burn story.")
-        assert "## Snapshot" in brief
-        assert "- Scenario: Single order" in brief
-        assert "## Burn posture" in brief
-        assert "- Burn snapshot: Gross obligations are $44.07M, net burn is $43.66M" in brief
-        assert "- Planning horizon: Current POP runs through unknown, with the full-term view extending to 2026-12-15." in brief
-        assert "- PTW anchor: Use $8.39M as the current deterministic baseline unless newer option or deobligation evidence changes the burn story." in brief
-        assert "## Award story by period of performance" in brief
-        assert "One award story across base and options." in brief
-        assert "Read the funding as a base-to-options sequence rather than isolated mods." in brief
-        assert "- Base period (2021-10-28 to 2022-11-17): $9.23M obligated, $709.9K/month across 13.0 months." in brief
-        assert "- Option period 1 (2022-11-17 to 2023-11-20): $9.18M obligated, $734.7K/month across 12.5 months." in brief
-        assert "## Inflection Points" in brief
-        assert "- P00014 on 2025-11-14: Exercise option four; $8.37M." in brief
+        assert brief.startswith("# FA805122F0001 Order Burn Brief")
+        # BLUF prose, not raw bullets
+        assert "**FA805122F0001** is best read as a single-order story" in brief
+        assert "**$43.66M net** obligated across **4 transaction(s)**" in brief
+        assert "burning **≈$8.38M/yr**" in brief
+        assert "Parent vehicle: **CONT_IDV_PARENT** (8 awardees, high linkage)." in brief
+        assert "Recommended PTW baseline: **$8.39M**" in brief
+        # No raw Snapshot block any more
+        assert "## Snapshot" not in brief
+        # Burn Posture is Title Case + factual bullets
+        assert "## Burn Posture" in brief
+        assert "- Gross / Net Obligated: $44.07M / $43.66M (deobligations: -$350.4K across 1 action(s))" in brief
+        assert "- Current Cadence: ≈$8.38M/year ($698.6K/month, $23.3K/day)" in brief
+        assert "- Period of Performance: 2021-10-28 → 2023-11-20 (potential: 2026-12-15)" in brief
+        assert "- Recommended PTW Baseline: $8.39M" in brief
+        # Award Story has lead paragraph + ledger + mix + largest + fiscal trajectory
+        assert "## Award Story & Key Inflection Points" in brief
+        assert "FA805122F0001 is an IDIQ order against parent CONT_IDV_PARENT" in brief
+        assert "- **Base** (2021-10-28, Initial Award): +$9.23M → cumulative $9.23M" in brief
+        assert "- **P00005** (2022-11-17, Exercise Option): +$9.18M → cumulative $18.41M — Exercise option one" in brief
+        assert "- **P00007** (2024-05-23, Admin Change): -$350.4K → cumulative $18.06M — Deob excess funds" in brief
+        assert "- **P00014** (2025-11-14, Exercise Option): +$8.37M → cumulative $26.43M — Exercise option four" in brief
+        assert "**Mix:**" in brief
+        assert "**Largest single action:**" in brief
+        assert "**Fiscal-year pattern:** FY22 $9.23M → FY23 $9.18M → FY24 -$350.4K → FY26 $8.37M." in brief
+        # Inflection Points section is dropped for idiq_order (ledger covers it)
+        assert "## Inflection Points" not in brief
+        # Competitive context paragraph (not bullets)
+        assert "## Competitive Context" in brief
+        assert "Parent IDV **CONT_IDV_PARENT** has **8 awardees**" in brief
+        assert "This order is the only observed holder under the current recipient slice." in brief
+        # Caveats picks up deobligation auto-warning + recompete signal (current end < today < potential)
         assert "## Caveats" in brief
-        assert "- No collector caveats reported." in brief
+        assert "- Contains 1 deobligation action(s) totaling -$350.4K" in brief
+        assert "- Current POP end (2023-11-20) is in the past while potential end is 2026-12-15" in brief
+        # Manifest still uses descriptive labels
         assert manifest["report.md"]["display_name"] == "FA805122F0001 Order Burn Final Response"
         assert manifest["competitive_intel_brief.md"]["display_name"] == "FA805122F0001 Order Burn Brief Source"
         assert manifest["competitive_intel_brief.docx"]["display_name"] == "FA805122F0001 Order Burn Brief"
@@ -278,14 +308,27 @@ def test_build_competitive_intel_brief_markdown_keeps_vehicle_story_sharp() -> N
         "Competitive Intel",
     )
 
-    assert "- Quick read: Vehicle burn is concentrated and stable." in brief
-    assert "- Burn snapshot: Gross obligations are $525.00, net burn is $500.00" in brief
-    assert "## Vehicle concentration" in brief
-    assert "- ORDER-2: $300.00 (60.0% of net)." in brief
-    assert "## Competitive context" in brief
-    assert "- Exact parent-awardee roster: HOLDCO B; HOLDCO A." in brief
+    assert "**PARENT-001** is best read as a parent IDV rollup" in brief
+    assert "**$500.00 net** obligated across **2 transaction(s)**" in brief
+    assert "## Burn Posture" in brief
+    assert "- Gross / Net Obligated: $525.00 / $500.00 (deobligations: -$25.00 across 1 action(s))" in brief
+    assert "- Recommended PTW Baseline: $500.00" in brief
+    assert "## Award Story & Key Inflection Points" in brief
+    assert "- **P00009** (2024-05-01, Other): -$25.00" in brief
+    assert "- **P00012** (2024-09-01, Exercise Option): +$300.00" in brief
+    assert "**Mix:**" in brief
+    assert "## Competitive Context" in brief
+    assert "Parent IDV CONT_IDV_PARENT has **2 awardees**" in brief
+    assert "Awardees observed: HOLDCO B, HOLDCO A." in brief
     assert "## Caveats" in brief
     assert "- POP end dates inferred from modification timing." in brief
+    assert "- Contains 1 deobligation action(s) totaling -$25.00" in brief
+    # Old metric-dump bullets must be gone
+    assert "- Quick read:" not in brief
+    assert "- Burn snapshot:" not in brief
+    assert "## Snapshot" not in brief
+    assert "## Vehicle concentration" not in brief
+    assert "Exact parent-awardee roster" not in brief
 
 
 def test_auto_emit_artifacts_marks_failed_render_on_source_artifact(
