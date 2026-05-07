@@ -3740,6 +3740,72 @@
               </div>
             </div>
 
+            <div class="card p-4 mb-4 space-y-3">
+              <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)_auto] gap-3 items-end">
+                <div>
+                  <label class="text-xs uppercase text-slate-500">Chain Goal</label>
+                  <input
+                    type="text"
+                    placeholder="price-to-win package, proposal draft, compliance audit…"
+                    class="mt-1 w-full bg-ink-800 border border-edge text-slate-200 text-sm rounded px-3 py-2"
+                    x-model="studio.chainGoal"
+                  />
+                </div>
+                <div>
+                  <label class="text-xs uppercase text-slate-500">Outcome</label>
+                  <input
+                    type="text"
+                    placeholder="DOCX + workbook, cited draft, risk brief…"
+                    class="mt-1 w-full bg-ink-800 border border-edge text-slate-200 text-sm rounded px-3 py-2"
+                    x-model="studio.chainOutcome"
+                  />
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="pill bg-ink-800 border border-edge text-slate-300 hover:text-neon-cyan hover:border-neon-cyan/50 px-3 py-2 text-xs"
+                    :disabled="studio.chainPlanning || !studio.chainGoal"
+                    @click="planStudioChainGoal()"
+                  >
+                    <i data-lucide="route" class="w-3.5 h-3.5"></i>
+                    <span
+                      x-text="studio.chainPlanning ? 'Planning…' : 'Plan'"
+                    ></span>
+                  </button>
+                  <button
+                    type="button"
+                    class="pill bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/20 px-3 py-2 text-xs"
+                    :disabled="studio.chainRunningGoal || !studio.chainGoal"
+                    @click="runStudioChainGoal()"
+                  >
+                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                    <span
+                      x-text="studio.chainRunningGoal ? 'Running…' : 'Run'"
+                    ></span>
+                  </button>
+                </div>
+              </div>
+              <div
+                x-show="studio.chainPlanError"
+                class="text-xs font-mono text-neon-red"
+                x-text="studio.chainPlanError"
+              ></div>
+              <div
+                x-show="studio.chainPlan"
+                class="flex flex-wrap items-center gap-2 text-xs"
+              >
+                <span
+                  class="reasoning-chip"
+                  x-text="studio.chainPlan?.spec?.name || 'skill-chain'"
+                ></span>
+                <template x-for="step in studioChainPlanSteps()" :key="step.id">
+                  <span class="reasoning-chip">
+                    <span x-text="step.skill"></span>
+                  </span>
+                </template>
+              </div>
+            </div>
+
             <div
               x-show="studio.error"
               class="card border border-red-500/40 bg-red-500/5 p-3 mb-4 text-sm text-red-300"

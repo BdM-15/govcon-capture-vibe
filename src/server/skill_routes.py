@@ -394,6 +394,35 @@ def register_skill_invoke_ui_routes(
             le=500,
         )
 
+    class SkillChainPlanPayload(BaseModel):
+        """Body for dynamic chain plan/run routes."""
+
+        prompt: str = Field(..., min_length=1, max_length=4000)
+        outcome: str = Field("", max_length=2000)
+        max_steps: int = Field(8, ge=1, le=20)
+        include_rendering: bool = True
+        max_entities_per_type: int = Field(
+            default_factory=_default_max_entities_per_type,
+            ge=1,
+            le=500,
+        )
+        max_chunks_per_entity: int = Field(
+            default_factory=_default_max_chunks_per_entity,
+            ge=0,
+            le=10,
+        )
+        max_relationships_per_entity: int = Field(
+            default_factory=_default_max_relationships_per_entity,
+            ge=0,
+            le=50,
+        )
+        retrieval_mode: str = Field(default_factory=_default_skill_retrieval_mode)
+        retrieval_top_k: int = Field(
+            default_factory=_default_skill_retrieval_top_k,
+            ge=5,
+            le=500,
+        )
+
     class SkillChainRepeatPayload(BaseModel):
         """Body for chain rerun/resume routes."""
 
@@ -686,6 +715,72 @@ def register_skill_invoke_ui_routes(
         return JSONResponse(
             {
                 "workspace": get_settings().workspace,
+                "chain": result.model_dump(),
+                "retrieval": retrieval,
+            }
+        )
+
+    @app.post("/api/ui/skill-chains/plan", tags=["theseus-ui"])
+    async def plan_skill_chain_route(
+        payload: SkillChainPlanPayload = Body(...),
+    ) -> JSONResponse:
+        mgr = manager_factory()
+        try:
+            plan = mgr.plan_chain(
+                prompt=payload.prompt,
+                outcome=payload.outcome,
+                max_steps=payload.max_steps,
+                include_rendering=payload.include_rendering,
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        return JSONResponse(
+            {
+                "workspace": get_settings().workspace,
+                "plan": plan.model_dump(),
+            }
+        )
+
+    @app.post("/api/ui/skill-chains/invoke-planned", tags=["theseus-ui"])
+    async def invoke_planned_skill_chain_route(
+        payload: SkillChainPlanPayload = Body(...),
+    ) -> JSONResponse:
+        if llm_func is None:
+            raise HTTPException(
+                503,
+                "Skill-chain invocation requires an llm_func; server was started without one",
+            )
+        mgr = manager_factory()
+        try:
+            plan = mgr.plan_chain(
+                prompt=payload.prompt,
+                outcome=payload.outcome,
+                max_steps=payload.max_steps,
+                include_rendering=payload.include_rendering,
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        context, retrieval, slice_fn, retrieve_fn = await _prepare_chain_execution(
+            mgr,
+            plan.spec,
+            payload,
+        )
+        try:
+            result = await mgr.invoke_chain(
+                plan.spec,
+                workspace=workspace_name(),
+                entity_payload=context,
+                llm=llm_func,
+                workspace_root=workspace_dir(),
+                slice_fn=slice_fn,
+                retrieve_fn=retrieve_fn,
+            )
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        return JSONResponse(
+            {
+                "workspace": get_settings().workspace,
+                "plan": plan.model_dump(),
                 "chain": result.model_dump(),
                 "retrieval": retrieval,
             }

@@ -85,6 +85,12 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       restoringTrash: "",
       emptyingTrash: false,
       chainTraceOpen: false,
+      chainGoal: "",
+      chainOutcome: "",
+      chainPlanning: false,
+      chainRunningGoal: false,
+      chainPlan: null,
+      chainPlanError: null,
     },
     studioPreview: {
       open: false,

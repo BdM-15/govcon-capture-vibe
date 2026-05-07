@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.server.skill_routes import register_skill_invoke_ui_routes
+from src.skills.chain_planner import ChainPlan, PlannedSkill
+from src.skills.chain_models import ChainSpec, ChainStepSpec
 from src.skills.settings import SkillSettingsStore
 
 
@@ -44,6 +46,7 @@ class _FakeManager:
         self.invoke_calls = []
         self.chain_calls = []
         self.resume_calls = []
+        self.plan_calls = []
         self.chain_payload = None
 
     def get_skill(self, name: str):
@@ -67,6 +70,28 @@ class _FakeManager:
     async def resume_chain(self, state, **kwargs):
         self.resume_calls.append((state, kwargs))
         return _FakeChainResult(chain_id=state.chain_id, mode="resume")
+
+    def plan_chain(self, **kwargs):
+        self.plan_calls.append(kwargs)
+        return ChainPlan(
+            spec=ChainSpec(
+                name="planned-chain",
+                prompt=kwargs["prompt"],
+                steps=[
+                    ChainStepSpec(id="intel", skill="competitive-intel"),
+                    ChainStepSpec(
+                        id="ptw",
+                        skill="price-to-win",
+                        depends_on=["intel"],
+                    ),
+                ],
+            ),
+            selected_skills=[
+                PlannedSkill(skill="competitive-intel", score=10),
+                PlannedSkill(skill="price-to-win", score=12),
+            ],
+            rationale="competitive-intel -> price-to-win",
+        )
 
     def get_chain_run(self, _workspace_root, chain_id):
         if self.chain_payload and chain_id == self.chain_payload["chain_id"]:
@@ -418,3 +443,53 @@ def test_skill_chain_rerun_and_resume_routes(tmp_path) -> None:
     resumed_state, resume_kwargs = manager.resume_calls[-1]
     assert resumed_state.chain_id == "20260507_120000_intel-to-ptw"
     assert resume_kwargs["from_step_id"] == "ptw"
+
+
+def test_skill_chain_plan_and_invoke_planned_routes(tmp_path) -> None:
+    manager = _FakeManager("tools", known_skills={"competitive-intel", "price-to-win"})
+
+    def fake_slice(
+        workspace_root,
+        entity_types,
+        max_per_type,
+        max_chunks_per_entity,
+        max_relationships_per_entity,
+        relevant_entity_names,
+    ):
+        return {"entities": {}}
+
+    async def fake_retrieve(data_func, prompt, skill_description, mode, top_k):
+        return {"names": set(), "metadata": {"mode": mode, "top_k": top_k}}
+
+    app = FastAPI()
+    register_skill_invoke_ui_routes(
+        app,
+        workspace_dir=lambda: tmp_path,
+        settings_store=SkillSettingsStore(lambda: tmp_path),
+        data_func=None,
+        llm_func=_llm,
+        workspace_name=lambda: "ws-a",
+        manager_factory=lambda: manager,
+        slice_workspace_entities=fake_slice,
+        retrieve_entities_for_skill=fake_retrieve,
+    )
+    client = TestClient(app)
+
+    plan = client.post(
+        "/api/ui/skill-chains/plan",
+        json={"prompt": "Build PTW package", "outcome": "XLSX workbook"},
+    )
+    run = client.post(
+        "/api/ui/skill-chains/invoke-planned",
+        json={"prompt": "Build PTW package", "outcome": "XLSX workbook"},
+    )
+
+    assert plan.status_code == 200, plan.text
+    assert run.status_code == 200, run.text
+    assert plan.json()["plan"]["spec"]["name"] == "planned-chain"
+    assert run.json()["chain"]["mode"] == "original"
+    assert manager.plan_calls[0]["outcome"] == "XLSX workbook"
+    spec, invoke_kwargs = manager.chain_calls[-1]
+    assert spec.name == "planned-chain"
+    assert callable(invoke_kwargs["slice_fn"])
+    assert callable(invoke_kwargs["retrieve_fn"])

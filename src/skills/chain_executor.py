@@ -403,6 +403,7 @@ class SkillChainExecutor:
             "chain_id": chain.chain_id,
             "chain_name": chain.spec.name,
             "chain_prompt": chain.spec.prompt,
+            "chain_context": chain.spec.context,
             "step_id": step.id,
             "step_context": step.context,
             "artifact_requirements": [

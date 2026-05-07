@@ -84,6 +84,7 @@ class ChainSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field("skill-chain", min_length=1, max_length=128)
     prompt: str = ""
+    context: dict[str, Any] = Field(default_factory=dict)
     steps: list[ChainStepSpec] = Field(..., min_length=1, max_length=20)
     stop_on_error: bool = True
 

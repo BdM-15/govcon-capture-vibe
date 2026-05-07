@@ -204,6 +204,18 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusResumeStudioChain(this, deliverable);
     },
 
+    async planStudioChainGoal() {
+      return window.theseusPlanStudioChainGoal(this);
+    },
+
+    async runStudioChainGoal() {
+      return window.theseusRunStudioChainGoal(this);
+    },
+
+    studioChainPlanSteps() {
+      return window.theseusStudioChainPlanSteps(this);
+    },
+
     toggleStudioTrash() {
       return window.theseusToggleStudioTrash(this);
     },

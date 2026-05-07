@@ -45,6 +45,7 @@ from typing import Any, Awaitable, Callable, Optional
 
 from src.skills.chain_executor import SkillChainExecutor
 from src.skills.chain_models import ChainRunState, ChainSpec
+from src.skills.chain_planner import ChainPlan, SkillChainPlanner
 from src.skills.runs import SkillRunStore
 from src.skills.run_metadata import STUDIO_EXTRA_MIME, resolve_artifact_mime
 from src.skills.settings import (
@@ -319,6 +320,23 @@ class SkillManager:
 
     def get_skill_detail(self, name: str) -> Optional[dict[str, Any]]:
         return self._catalog.get_skill_detail(name)
+
+    def plan_chain(
+        self,
+        *,
+        prompt: str,
+        outcome: str = "",
+        max_steps: int = 8,
+        include_rendering: bool = True,
+    ) -> ChainPlan:
+        """Plan a logical skill chain from installed skill contracts."""
+        planner = SkillChainPlanner(self.list_skills(include_developer=False))
+        return planner.plan(
+            prompt=prompt,
+            outcome=outcome,
+            max_steps=max_steps,
+            include_rendering=include_rendering,
+        )
 
     # ---- Install / uninstall -----------------------------------------
 

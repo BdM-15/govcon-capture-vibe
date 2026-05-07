@@ -126,6 +126,64 @@ window.theseusResumeStudioChain = async function theseusResumeStudioChain(
   await window.theseusResumeChain(app, chain.chain_id);
 };
 
+const theseusStudioChainGoalPayload = function theseusStudioChainGoalPayload(app) {
+  return {
+    prompt: app.studio.chainGoal || "",
+    outcome: app.studio.chainOutcome || "",
+    max_steps: 8,
+    include_rendering: true,
+  };
+};
+
+window.theseusPlanStudioChainGoal = async function theseusPlanStudioChainGoal(app) {
+  if (!app.studio.chainGoal?.trim() || app.studio.chainPlanning) return;
+  app.studio.chainPlanning = true;
+  app.studio.chainPlanError = null;
+  try {
+    const response = await app.api("/api/ui/skill-chains/plan", {
+      method: "POST",
+      body: JSON.stringify(theseusStudioChainGoalPayload(app)),
+    });
+    app.studio.chainPlan = response.plan;
+    app.toast("Chain planned: " + (response.plan?.spec?.name || "skill-chain"), "ok");
+  } catch (error) {
+    app.studio.chainPlan = null;
+    app.studio.chainPlanError = error?.message || String(error);
+    app.toast("Chain plan failed: " + app.studio.chainPlanError, "error");
+  } finally {
+    app.studio.chainPlanning = false;
+    window.theseusAfterRender(app);
+  }
+};
+
+window.theseusRunStudioChainGoal = async function theseusRunStudioChainGoal(app) {
+  if (!app.studio.chainGoal?.trim() || app.studio.chainRunningGoal) return;
+  app.studio.chainRunningGoal = true;
+  app.studio.chainPlanError = null;
+  try {
+    const response = await app.api("/api/ui/skill-chains/invoke-planned", {
+      method: "POST",
+      body: JSON.stringify(theseusStudioChainGoalPayload(app)),
+    });
+    app.studio.chainPlan = response.plan;
+    app.chains.current = response.chain;
+    app.studio.chainTraceOpen = true;
+    app.toast("Chain run saved: " + response.chain.chain_id, "ok");
+    await app.loadStudio();
+    if (app.chains.loaded) await app.loadChains();
+  } catch (error) {
+    app.studio.chainPlanError = error?.message || String(error);
+    app.toast("Chain run failed: " + app.studio.chainPlanError, "error");
+  } finally {
+    app.studio.chainRunningGoal = false;
+    window.theseusAfterRender(app);
+  }
+};
+
+window.theseusStudioChainPlanSteps = function theseusStudioChainPlanSteps(app) {
+  return app.studio.chainPlan?.spec?.steps || [];
+};
+
 window.theseusRerunChain = async function theseusRerunChain(app, chainId) {
   if (!chainId || app.chains.rerunning) return;
   app.chains.rerunning = chainId;
