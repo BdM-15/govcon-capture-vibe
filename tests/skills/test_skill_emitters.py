@@ -4,6 +4,7 @@ import subprocess
 
 from src.skills.skill_emitters import auto_emit_artifacts
 from src.skills.skill_models import Skill, SkillFrontmatter
+from src.skills.tool_competitive_intel import build_competitive_intel_brief_markdown
 
 
 def _skill(tmp_path: Path) -> Skill:
@@ -169,14 +170,111 @@ def test_auto_emit_artifacts_shapes_competitive_intel_brief(tmp_path: Path) -> N
         auto_emit_artifacts(skill, run_dir, repo_root=repo_root)
 
         brief = (artifacts_dir / "competitive_intel_brief.md").read_text(encoding="utf-8")
-        assert "## Burn Posture" in brief
-        assert "- Gross obligations: $44.07M" in brief
-        assert "## Award Story" in brief
+        assert brief.startswith("# Competitive Intel Brief\n\nClean burn story.")
+        assert "## Snapshot" in brief
+        assert "- Scenario: Single order" in brief
+        assert "## Burn posture" in brief
+        assert "## Award story by period of performance" in brief
         assert "One award story across base and options." in brief
-        assert "- Base period: 2021-10-28 to 2022-11-17" in brief
-        assert "- Option period 1: 2022-11-17 to 2023-11-20" in brief
-        assert "## Influential Points" in brief
-        assert "- Option exercise pattern: P00005, P00014" in brief
+        assert "- Base period: 2021-10-28 to 2022-11-17; $9.23M obligated;" in brief
+        assert "$709.9K/month; 13.0 months." in brief
+        assert "## Inflection Points" in brief
+        assert "- P00014 on 2025-11-14: Exercise option four; $8.37M." in brief
+        assert "## Caveats" in brief
+        assert "- No collector caveats reported." in brief
+
+
+def test_build_competitive_intel_brief_markdown_keeps_vehicle_story_sharp() -> None:
+    brief = build_competitive_intel_brief_markdown(
+        {
+            "input_contract_number": "PARENT-001",
+            "resolved": {"scenario": "parent_idiq", "piid": "PARENT-001"},
+            "hierarchy": {"parent_award_id": "CONT_IDV_PARENT"},
+            "obligations": {
+                "total_obligated_usd": 525.0,
+                "net_obligated_usd": 500.0,
+                "by_transaction": [
+                    {
+                        "modification_number": "P00012",
+                        "action_date": "2024-09-01",
+                        "action_type_description": "EXERCISE AN OPTION",
+                        "modification_description": "Option exercised",
+                        "amount_usd": 300.0,
+                    },
+                    {
+                        "modification_number": "P00009",
+                        "action_date": "2024-05-01",
+                        "action_type_description": "OTHER",
+                        "modification_description": "Bridge mod",
+                        "amount_usd": -25.0,
+                    },
+                ],
+            },
+            "vehicle_context": {"child_order_count": 2, "net_obligated_usd": 500.0},
+            "competitor_discovery": {"completeness_status": "high"},
+            "ptw_seed": {"recommended_baseline_usd": 500.0},
+            "insights": {
+                "headline": "PARENT-001 rolls up $500.00 net across 2 child orders.",
+                "blocks": [
+                    {
+                        "id": "burn_posture",
+                        "title": "Burn posture",
+                        "summary": "Vehicle burn is concentrated and stable.",
+                        "evidence": {
+                            "monthly_burn_usd": 41.67,
+                            "annual_burn_usd": 500.0,
+                            "daily_burn_usd": 1.37,
+                            "pop_end_current": "2024-12-31",
+                            "pop_end_potential": "2025-12-31",
+                            "recommended_ptw_baseline_usd": 500.0,
+                        },
+                    },
+                    {
+                        "id": "vehicle_concentration",
+                        "title": "Vehicle concentration",
+                        "summary": "Burn is concentrated in ORDER-2.",
+                        "evidence": {
+                            "top_child_orders": [
+                                {
+                                    "piid": "ORDER-2",
+                                    "amount_usd": 300.0,
+                                    "share_of_net_obligations_pct": 60.0,
+                                },
+                                {
+                                    "piid": "ORDER-1",
+                                    "amount_usd": 200.0,
+                                    "share_of_net_obligations_pct": 40.0,
+                                },
+                            ]
+                        },
+                    },
+                    {
+                        "id": "competitive_context",
+                        "title": "Competitive context",
+                        "summary": "Roster exact and high confidence.",
+                        "evidence": {
+                            "parent_vehicle_awardee_count": 2,
+                            "order_holder_count": 2,
+                            "parent_holder_count": 2,
+                            "parent_vehicle_awardees": [
+                                {"name": "HOLDCO B"},
+                                {"name": "HOLDCO A"},
+                            ],
+                        },
+                    },
+                ],
+            },
+            "warnings": ["POP end dates inferred from modification timing."],
+        },
+        "Competitive Intel",
+    )
+
+    assert "## Vehicle concentration" in brief
+    assert "- ORDER-2: $300.00 (60.0% of net)." in brief
+    assert "## Competitive context" in brief
+    assert "- Exact parent-awardee roster: HOLDCO B; HOLDCO A." in brief
+    assert "## Caveats" in brief
+    assert "- POP end dates inferred from modification timing." in brief
 
 
 def test_auto_emit_artifacts_marks_failed_render_on_source_artifact(

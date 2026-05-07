@@ -1807,6 +1807,155 @@ def _build_caveat_block(warnings: list[str]) -> dict[str, Any] | None:
     }
 
 
+def build_competitive_intel_brief_markdown(
+    payload: dict[str, Any],
+    title: str,
+) -> str:
+    insights = payload.get("insights") if isinstance(payload.get("insights"), dict) else {}
+    resolved = payload.get("resolved") if isinstance(payload.get("resolved"), dict) else {}
+    hierarchy = payload.get("hierarchy") if isinstance(payload.get("hierarchy"), dict) else {}
+    obligations = payload.get("obligations") if isinstance(payload.get("obligations"), dict) else {}
+    competitor = (
+        payload.get("competitor_discovery")
+        if isinstance(payload.get("competitor_discovery"), dict)
+        else {}
+    )
+    vehicle = payload.get("vehicle_context") if isinstance(payload.get("vehicle_context"), dict) else {}
+    ptw_seed = payload.get("ptw_seed") if isinstance(payload.get("ptw_seed"), dict) else {}
+    rate_analysis = (
+        obligations.get("rate_analysis") if isinstance(obligations.get("rate_analysis"), dict) else {}
+    )
+    blocks = insights.get("blocks") if isinstance(insights.get("blocks"), list) else []
+    transactions = [
+        item for item in (obligations.get("by_transaction") or []) if isinstance(item, dict)
+    ]
+
+    scenario = str(resolved.get("scenario") or payload.get("scope") or "unknown")
+    piid = str(
+        payload.get("input_contract_number")
+        or resolved.get("piid")
+        or "Unknown"
+    )
+    headline = str(insights.get("headline") or "No headline available.")
+    parent_award_id = hierarchy.get("parent_award_id") or vehicle.get("parent_award_id")
+    child_order_count = int(vehicle.get("child_order_count") or len(obligations.get("by_child_order") or []))
+
+    lines: list[str] = [
+        f"# {title} Brief",
+        "",
+        headline,
+        "",
+        "## Snapshot",
+        f"- Contract: {piid}",
+        f"- Scenario: {_scenario_label(scenario)}",
+        f"- Net obligations: {_fmt_money(obligations.get('net_obligated_usd'))}",
+        f"- Gross obligations: {_fmt_money(obligations.get('total_obligated_usd'))}",
+        f"- PTW baseline: {_fmt_money(ptw_seed.get('recommended_baseline_usd'))}",
+        f"- Competitive completeness: {competitor.get('completeness_status') or 'unknown'}",
+    ]
+    if parent_award_id:
+        lines.append(f"- Parent vehicle: {parent_award_id}")
+    if scenario == "parent_idiq":
+        lines.append(f"- Child orders observed: {child_order_count}")
+    elif scenario == "idiq_order" and vehicle:
+        lines.append(
+            f"- Parent vehicle context: {child_order_count} child orders; {_fmt_money(vehicle.get('net_obligated_usd'))} net"
+        )
+
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        block_id = str(block.get("id") or "")
+        title_text = str(block.get("title") or _friendly_block_title(block_id))
+        summary = str(block.get("summary") or "").strip()
+        evidence = block.get("evidence") if isinstance(block.get("evidence"), dict) else {}
+
+        lines.extend(["", f"## {title_text}"])
+        if summary:
+            lines.extend([summary, ""])
+
+        if block_id == "burn_posture":
+            lines.extend(
+                [
+                    f"- Current burn: {_fmt_money(evidence.get('monthly_burn_usd'))}/month, {_fmt_money(evidence.get('annual_burn_usd'))}/year, {_fmt_money(evidence.get('daily_burn_usd'))}/day.",
+                    f"- Horizon: {evidence.get('pop_end_current') or 'unknown'} current; {evidence.get('pop_end_potential') or 'n/a'} potential.",
+                    f"- PTW baseline: {_fmt_money(evidence.get('recommended_ptw_baseline_usd'))}.",
+                ]
+            )
+        elif block_id == "vehicle_concentration":
+            leaders = [item for item in (evidence.get("top_child_orders") or []) if isinstance(item, dict)]
+            for leader in leaders:
+                lines.append(
+                    f"- {leader.get('piid') or leader.get('award_id')}: {_fmt_money(leader.get('amount_usd'))} ({leader.get('share_of_net_obligations_pct')}% of net)."
+                )
+        elif block_id == "competitive_context":
+            roster = [
+                item.get("name")
+                for item in (evidence.get("parent_vehicle_awardees") or [])
+                if isinstance(item, dict) and item.get("name")
+            ]
+            lines.append(
+                f"- Exact parent-awardee count: {evidence.get('parent_vehicle_awardee_count') or 0}."
+            )
+            lines.append(
+                f"- Observed order holders: {evidence.get('order_holder_count') or 0}; parent holders: {evidence.get('parent_holder_count') or 0}."
+            )
+            if roster:
+                lines.append(f"- Exact parent-awardee roster: {'; '.join(roster)}.")
+        elif block_id == "award_story":
+            for segment in [
+                item
+                for item in (evidence.get("period_of_performance_segments") or [])
+                if isinstance(item, dict)
+            ]:
+                lines.append(
+                    f"- {segment.get('label') or 'Period'}: {segment.get('pop_start_date') or 'n/a'} to {segment.get('pop_end_date') or 'n/a'}; {_fmt_money(segment.get('obligated_usd'))} obligated; {_fmt_money(segment.get('monthly_rate_usd'))}/month; {_to_float(segment.get('months')):.1f} months."
+                )
+        elif block_id == "caveats":
+            for warning in [item for item in (evidence.get("warnings") or []) if isinstance(item, str) and item.strip()]:
+                lines.append(f"- {warning}")
+
+    inflections = _select_inflection_points(transactions)
+    if inflections:
+        lines.extend(["", "## Inflection Points"])
+        for point in inflections:
+            detail = point.get("modification_description") or point.get("action_type_description") or "no description"
+            lines.append(
+                f"- {point.get('modification_number') or 'mod'} on {point.get('action_date') or 'unknown date'}: {detail}; {_fmt_money(point.get('amount_usd'))}."
+            )
+
+    if not any(isinstance(block, dict) and block.get("id") == "caveats" for block in blocks):
+        warnings = [item for item in (payload.get("warnings") or []) if isinstance(item, str) and item.strip()]
+        lines.extend(["", "## Caveats"])
+        if warnings:
+            lines.extend(f"- {warning}" for warning in warnings)
+        else:
+            lines.append("- No collector caveats reported.")
+
+    return "\n".join(lines).strip() + "\n"
+
+
+def _scenario_label(scenario: str) -> str:
+    return {
+        "parent_idiq": "Vehicle rollup",
+        "idiq_order": "Single order",
+        "standalone_contract": "Standalone contract",
+    }.get(scenario, scenario.replace("_", " "))
+
+
+def _friendly_block_title(block_id: str) -> str:
+    canonical = {
+        "burn_posture": "Burn posture",
+        "vehicle_concentration": "Vehicle concentration",
+        "competitive_context": "Competitive context",
+        "award_story": "Award story by period of performance",
+        "caveats": "Caveats",
+    }
+    if block_id in canonical:
+        return canonical[block_id]
+    return " ".join(part.capitalize() for part in block_id.split("_")) or "Insight"
+
+
 def _select_inflection_points(
     transactions: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
