@@ -150,6 +150,33 @@ window.theseusLoadSkillRuns = async function theseusLoadSkillRuns(app, name) {
   }
 };
 
+window.theseusLoadSkillRunTrash = async function theseusLoadSkillRunTrash(
+  app,
+  name,
+) {
+  if (!name) return;
+  app.skills.runTrashLoading = true;
+  try {
+    const response = await app.api(
+      "/api/ui/skills/" + encodeURIComponent(name) + "/runs/trash",
+    );
+    app.skills.runTrash = response.runs || [];
+  } catch (error) {
+    app.skills.runTrash = [];
+  } finally {
+    app.skills.runTrashLoading = false;
+    window.theseusAfterRender(app);
+  }
+};
+
+window.theseusToggleSkillRunTrash = function theseusToggleSkillRunTrash(app) {
+  app.skills.runTrashOpen = !app.skills.runTrashOpen;
+  if (app.skills.runTrashOpen && app.skills.current?.name) {
+    app.loadSkillRunTrash(app.skills.current.name);
+  }
+  window.theseusAfterRender(app);
+};
+
 window.theseusLoadSkillRun = async function theseusLoadSkillRun(
   app,
   name,
@@ -188,21 +215,57 @@ window.theseusDeleteSkillRun = async function theseusDeleteSkillRun(
   runId,
 ) {
   if (!name || !runId) return;
-  if (!confirm(`Delete run ${runId}? This removes the saved files on disk.`)) {
+  if (!confirm(`Move run ${runId} to trash? You can restore it later.`)) {
     return;
   }
   try {
-    await app.api(
+    const result = await app.api(
       "/api/ui/skills/" +
         encodeURIComponent(name) +
         "/runs/" +
         encodeURIComponent(runId),
       { method: "DELETE" },
     );
-    app.toast("Run deleted", "ok");
-    app.loadSkillRuns(name);
+    if (app.skills.run?.run_id === runId) {
+      app.skills.run = null;
+      app.skills.transcriptOpen = false;
+      app.skills.transcriptExpanded = {};
+    }
+    app.toast(
+      "Run moved to trash: " + (result.trashed?.run_id || runId),
+      "ok",
+    );
+    await Promise.all([app.loadSkillRuns(name), app.loadSkillRunTrash(name)]);
   } catch (error) {
-    app.toast("Delete failed: " + (error?.message || error), "error");
+    app.toast("Run trash move failed: " + (error?.message || error), "error");
+  }
+};
+
+window.theseusRestoreSkillRun = async function theseusRestoreSkillRun(
+  app,
+  name,
+  trashId,
+) {
+  if (!name || !trashId || app.skills.restoringRunTrash === trashId) return;
+  app.skills.restoringRunTrash = trashId;
+  try {
+    const result = await app.api(
+      "/api/ui/skills/" + encodeURIComponent(name) + "/runs/trash/restore",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runs: [{ trash_id: trashId }] }),
+      },
+    );
+    if (!result.restored_count) {
+      throw new Error("No runs restored");
+    }
+    app.toast("Run restored", "ok");
+    await Promise.all([app.loadSkillRuns(name), app.loadSkillRunTrash(name)]);
+  } catch (error) {
+    app.toast("Run restore failed: " + (error?.message || error), "error");
+  } finally {
+    app.skills.restoringRunTrash = "";
   }
 };
 
@@ -300,12 +363,15 @@ window.theseusOpenSkill = async function theseusOpenSkill(app, name) {
   app.skills.invokeMeta = null;
   app.skills.invokePrompt = "";
   app.skills.runs = [];
+  app.skills.runTrash = [];
+  app.skills.runTrashOpen = false;
   try {
     const detail = await app.api("/api/ui/skills/" + encodeURIComponent(name));
     app.skills.current = detail;
     app.skills.detailOpen = true;
     window.theseusAfterRender(app);
     app.loadSkillRuns(name);
+    app.loadSkillRunTrash(name);
   } catch (error) {
     app.toast("Failed to load skill: " + (error?.message || error), "error");
   }
@@ -346,7 +412,10 @@ window.theseusInvokeSkill = async function theseusInvokeSkill(app) {
     }
     if (response.run_id) {
       app.toast("Saved run " + response.run_id, "ok");
-      app.loadSkillRuns(app.skills.current.name);
+      Promise.all([
+        app.loadSkillRuns(app.skills.current.name),
+        app.loadSkillRunTrash(app.skills.current.name),
+      ]);
     }
   } catch (error) {
     app.toast("Skill invocation failed: " + (error?.message || error), "error");

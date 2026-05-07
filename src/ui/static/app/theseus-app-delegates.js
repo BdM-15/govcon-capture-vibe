@@ -396,6 +396,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusLoadSkillRuns(this, name);
     },
 
+    async loadSkillRunTrash(name) {
+      return window.theseusLoadSkillRunTrash(this, name);
+    },
+
     formatBytes(value) {
       return window.theseusFormatBytes(value);
     },
@@ -410,6 +414,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
 
     async deleteSkillRun(name, runId) {
       return window.theseusDeleteSkillRun(this, name, runId);
+    },
+
+    toggleSkillRunTrash() {
+      return window.theseusToggleSkillRunTrash(this);
+    },
+
+    async restoreSkillRun(name, trashId) {
+      return window.theseusRestoreSkillRun(this, name, trashId);
     },
 
     async installSkill() {

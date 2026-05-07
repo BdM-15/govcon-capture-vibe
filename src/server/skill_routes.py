@@ -528,6 +528,18 @@ def register_skill_run_ui_routes(
             }
         )
 
+    @app.get("/api/ui/skills/{name}/runs/trash", tags=["theseus-ui"])
+    async def list_skill_run_trash_route(name: str, limit: int = 50) -> JSONResponse:
+        mgr = get_skill_manager()
+        runs = mgr.list_trashed_runs(workspace_dir(), skill_name=name, limit=limit)
+        return JSONResponse(
+            {
+                "workspace": get_settings().workspace,
+                "skill": name,
+                "runs": runs,
+            }
+        )
+
     @app.get("/api/ui/skills/{name}/runs/{run_id}", tags=["theseus-ui"])
     async def get_skill_run_route(name: str, run_id: str) -> JSONResponse:
         mgr = get_skill_manager()
@@ -656,10 +668,33 @@ def register_skill_run_ui_routes(
     @app.delete("/api/ui/skills/{name}/runs/{run_id}", tags=["theseus-ui"])
     async def delete_skill_run_route(name: str, run_id: str) -> JSONResponse:
         mgr = get_skill_manager()
-        ok = mgr.delete_run(workspace_dir(), name, run_id)
-        if not ok:
+        trashed = mgr.trash_run(workspace_dir(), name, run_id)
+        if trashed is None:
             raise HTTPException(404, f"Unknown or unsafe run id: {name}/{run_id}")
-        return JSONResponse({"removed": run_id})
+        return JSONResponse({"trashed": trashed, "removed": run_id})
+
+    @app.post("/api/ui/skills/{name}/runs/trash/restore", tags=["theseus-ui"])
+    async def restore_skill_run_route(name: str, payload: dict[str, Any]) -> JSONResponse:
+        mgr = get_skill_manager()
+        trash_ids = [
+            str(item.get("trash_id") or "")
+            for item in (payload.get("runs") or [])
+            if isinstance(item, dict)
+        ]
+        trash_ids = [trash_id for trash_id in trash_ids if trash_id]
+        if not trash_ids:
+            raise HTTPException(400, "No run trash ids provided")
+        result = mgr.restore_trashed_runs(workspace_dir(), trash_ids)
+        return JSONResponse(
+            {
+                "workspace": get_settings().workspace,
+                "skill": name,
+                "restored": result.get("restored") or [],
+                "missing": result.get("missing") or [],
+                "conflicts": result.get("conflicts") or [],
+                "restored_count": len(result.get("restored") or []),
+            }
+        )
 
     @app.get(
         "/api/ui/skills/{name}/runs/{run_id}/artifacts/{filename}",

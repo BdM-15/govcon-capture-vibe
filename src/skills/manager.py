@@ -408,6 +408,33 @@ class SkillManager:
     ) -> bool:
         return self._run_store.delete_run(workspace_root, skill_name, run_id)
 
+    def trash_run(
+        self,
+        workspace_root: Path,
+        skill_name: str,
+        run_id: str,
+    ) -> Optional[dict[str, Any]]:
+        return self._run_store.trash_run(workspace_root, skill_name, run_id)
+
+    def list_trashed_runs(
+        self,
+        workspace_root: Path,
+        skill_name: Optional[str] = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        return self._run_store.list_trashed_runs(
+            workspace_root,
+            skill_name=skill_name,
+            limit=limit,
+        )
+
+    def restore_trashed_runs(
+        self,
+        workspace_root: Path,
+        trash_ids: list[str],
+    ) -> dict[str, list[dict[str, Any]]]:
+        return self._run_store.restore_trashed_runs(workspace_root, trash_ids)
+
     def list_deliverables(
         self, workspace_root: Path, limit: int = 500
     ) -> list[dict[str, Any]]:

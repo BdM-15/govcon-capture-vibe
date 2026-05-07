@@ -2943,13 +2943,23 @@
                           x-text="'(' + skills.runs.length + ')'"
                         ></span>
                       </h3>
-                      <button
-                        @click="loadSkillRuns(skills.current?.name)"
-                        class="text-[10px] text-slate-500 hover:text-neon-cyan font-mono"
-                      >
-                        <i data-lucide="refresh-cw" class="w-3 h-3 inline"></i>
-                        refresh
-                      </button>
+                      <div class="flex items-center gap-3">
+                        <button
+                          @click="toggleSkillRunTrash()"
+                          class="text-[10px] text-slate-500 hover:text-neon-cyan font-mono"
+                        >
+                          <i data-lucide="archive" class="w-3 h-3 inline"></i>
+                          trash
+                          <span x-text="'(' + skills.runTrash.length + ')'" class="text-slate-600"></span>
+                        </button>
+                        <button
+                          @click="loadSkillRuns(skills.current?.name); loadSkillRunTrash(skills.current?.name)"
+                          class="text-[10px] text-slate-500 hover:text-neon-cyan font-mono"
+                        >
+                          <i data-lucide="refresh-cw" class="w-3 h-3 inline"></i>
+                          refresh
+                        </button>
+                      </div>
                     </div>
                     <div
                       x-show="skills.runsLoading"
@@ -2995,15 +3005,59 @@
                             </button>
                             <button
                               @click="deleteSkillRun(skills.current?.name, run.run_id)"
-                              class="text-slate-600 hover:text-red-400"
-                              title="Delete run"
+                              class="text-slate-600 hover:text-neon-amber"
+                              title="Move run to trash"
                             >
-                              <i data-lucide="x" class="w-3 h-3"></i>
+                              <i data-lucide="archive" class="w-3 h-3"></i>
                             </button>
                           </div>
                         </li>
                       </template>
                     </ul>
+                    <div class="mt-3 pt-3 border-t border-edge" x-show="skills.runTrashOpen">
+                      <div class="flex items-center justify-between mb-1">
+                        <h4 class="text-[10px] font-mono uppercase tracking-[0.16em] text-slate-500">
+                          Run Trash
+                        </h4>
+                        <span class="text-[10px] font-mono text-slate-600" x-text="'(' + skills.runTrash.length + ')'"></span>
+                      </div>
+                      <div
+                        x-show="skills.runTrashLoading"
+                        class="text-[10px] font-mono text-slate-500"
+                      >
+                        Loading trash…
+                      </div>
+                      <div
+                        x-show="!skills.runTrashLoading && skills.runTrash.length === 0"
+                        class="text-[10px] font-mono text-slate-600 italic"
+                      >
+                        Run trash empty.
+                      </div>
+                      <ul class="space-y-1" x-show="!skills.runTrashLoading && skills.runTrash.length">
+                        <template x-for="run in skills.runTrash" :key="run.trash_id">
+                          <li class="bg-ink-900/50 border border-edge rounded-md p-2 text-[11px] font-mono">
+                            <div class="flex items-start justify-between gap-2">
+                              <div class="flex-1 min-w-0">
+                                <div class="text-neon-amber truncate" x-text="run.run_id"></div>
+                                <div class="text-slate-400 mt-0.5 truncate" x-text="run.prompt_preview || '(skill defaults)'"></div>
+                                <div class="text-slate-600 mt-0.5">
+                                  trashed <span x-text="(run.deleted_at || '').slice(0, 19).replace('T', ' ')"></span>
+                                  · <span x-text="(run.artifact_count || 0) + ' artifacts'"></span>
+                                </div>
+                              </div>
+                              <button
+                                @click="restoreSkillRun(skills.current?.name, run.trash_id)"
+                                class="text-slate-500 hover:text-neon-cyan"
+                                :disabled="skills.restoringRunTrash === run.trash_id"
+                                title="Restore run"
+                              >
+                                <i data-lucide="undo-2" class="w-3 h-3"></i>
+                              </button>
+                            </div>
+                          </li>
+                        </template>
+                      </ul>
+                    </div>
                   </div>
 
                   <!-- Artifacts download panel (any run that wrote files) -->
@@ -3391,7 +3445,9 @@
                   @click="toggleStudioTrash()"
                 >
                   <i data-lucide="trash-2" class="w-3.5 h-3.5 inline mr-1"></i>
-                  <span x-text="`Trash (${(studio.trash || []).length})`"></span>
+                  <span
+                    x-text="`Trash (${(studio.trash || []).length})`"
+                  ></span>
                 </button>
               </div>
             </div>
@@ -3459,7 +3515,9 @@
                   x-model="studio.latestOnly"
                   @change="pruneStudioSelectionToFiltered()"
                 />
-                <span class="uppercase tracking-[0.14em] text-slate-400">Latest only</span>
+                <span class="uppercase tracking-[0.14em] text-slate-400"
+                  >Latest only</span
+                >
               </label>
               <span
                 class="text-xs text-slate-500 ml-auto"
@@ -3472,7 +3530,10 @@
               class="studio-selection-bar mb-4"
             >
               <div class="flex items-center gap-2 text-sm text-slate-300">
-                <i data-lucide="check-square" class="w-4 h-4 text-neon-cyan"></i>
+                <i
+                  data-lucide="check-square"
+                  class="w-4 h-4 text-neon-cyan"
+                ></i>
                 <span x-text="studioSelectedCount() + ' selected'"></span>
               </div>
               <div class="flex items-center gap-2">
@@ -3491,7 +3552,9 @@
                   :disabled="studio.deleting || studio.zipping"
                 >
                   <i data-lucide="archive" class="w-3.5 h-3.5"></i>
-                  <span x-text="studio.zipping ? 'Building ZIP…' : 'Download ZIP'"></span>
+                  <span
+                    x-text="studio.zipping ? 'Building ZIP…' : 'Download ZIP'"
+                  ></span>
                 </button>
                 <button
                   type="button"
@@ -3500,26 +3563,31 @@
                   :disabled="studio.deleting || studio.zipping"
                 >
                   <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                  <span x-text="studio.deleting ? 'Deleting…' : 'Delete selected'"></span>
+                  <span
+                    x-text="studio.deleting ? 'Deleting…' : 'Delete selected'"
+                  ></span>
                 </button>
               </div>
             </div>
 
-            <div
-              x-show="studio.trashOpen"
-              class="card p-4 mb-4"
-            >
+            <div x-show="studio.trashOpen" class="card p-4 mb-4">
               <div class="flex items-center justify-between gap-3 mb-3">
                 <div>
-                  <div class="text-sm font-semibold text-slate-200">Studio Trash</div>
-                  <div class="text-xs text-slate-500">Soft-deleted products. Restore puts them back in Studio.</div>
+                  <div class="text-sm font-semibold text-slate-200">
+                    Studio Trash
+                  </div>
+                  <div class="text-xs text-slate-500">
+                    Soft-deleted products. Restore puts them back in Studio.
+                  </div>
                 </div>
-                <div class="text-xs text-slate-500" x-text="(studio.trash || []).length + ' item(s)'"></div>
+                <div
+                  class="text-xs text-slate-500"
+                  x-text="(studio.trash || []).length + ' item(s)'"
+                ></div>
               </div>
-              <div
-                x-show="studio.trashLoading"
-                class="text-sm text-slate-500"
-              >Loading trash…</div>
+              <div x-show="studio.trashLoading" class="text-sm text-slate-500">
+                Loading trash…
+              </div>
               <div
                 x-show="studio.trashError"
                 class="text-sm text-red-300"
@@ -3528,15 +3596,34 @@
               <div
                 x-show="!studio.trashLoading && !(studio.trash || []).length"
                 class="text-sm text-slate-500"
-              >Trash empty.</div>
+              >
+                Trash empty.
+              </div>
               <div class="space-y-2" x-show="(studio.trash || []).length">
-                <template x-for="artifact in studio.trash" :key="artifact.trash_id">
-                  <div class="studio-trash-item border border-edge rounded-lg px-3 py-3 bg-ink-900/50 flex items-start justify-between gap-3">
+                <template
+                  x-for="artifact in studio.trash"
+                  :key="artifact.trash_id"
+                >
+                  <div
+                    class="studio-trash-item border border-edge rounded-lg px-3 py-3 bg-ink-900/50 flex items-start justify-between gap-3"
+                  >
                     <div class="min-w-0 flex-1">
-                      <div class="text-sm font-semibold text-slate-200" x-text="artifact.display_name || artifact.filename"></div>
-                      <div class="text-xs font-mono text-slate-500 mt-1" x-text="artifact.filename"></div>
-                      <div class="text-xs text-slate-500 mt-1" x-text="`${artifact.skill} · ${artifact.run_id}`"></div>
-                      <div class="text-xs text-slate-500 mt-1" x-text="`Trashed ${String(artifact.deleted_at || '').slice(0, 19).replace('T', ' ')}`"></div>
+                      <div
+                        class="text-sm font-semibold text-slate-200"
+                        x-text="artifact.display_name || artifact.filename"
+                      ></div>
+                      <div
+                        class="text-xs font-mono text-slate-500 mt-1"
+                        x-text="artifact.filename"
+                      ></div>
+                      <div
+                        class="text-xs text-slate-500 mt-1"
+                        x-text="`${artifact.skill} · ${artifact.run_id}`"
+                      ></div>
+                      <div
+                        class="text-xs text-slate-500 mt-1"
+                        x-text="`Trashed ${String(artifact.deleted_at || '').slice(0, 19).replace('T', ' ')}`"
+                      ></div>
                     </div>
                     <button
                       type="button"
@@ -3544,7 +3631,9 @@
                       :disabled="studio.restoringTrash === artifact.trash_id"
                       @click="restoreTrashedStudioArtifact(artifact)"
                     >
-                      <span x-text="studio.restoringTrash === artifact.trash_id ? 'Restoring…' : 'Restore'"></span>
+                      <span
+                        x-text="studio.restoringTrash === artifact.trash_id ? 'Restoring…' : 'Restore'"
+                      ></span>
                     </button>
                   </div>
                 </template>
@@ -3615,11 +3704,20 @@
                       :class="row.kind === 'group' ? 'studio-group-row' : (isStudioPinned(row.deliverable) ? 'studio-row studio-row-pinned' : 'studio-row')"
                     >
                       <template x-if="row.kind === 'group'">
-                        <td colspan="7" class="border-t border-edge bg-ink-900/85 px-4 py-3">
+                        <td
+                          colspan="7"
+                          class="border-t border-edge bg-ink-900/85 px-4 py-3"
+                        >
                           <div class="flex items-center justify-between gap-3">
                             <div class="min-w-0">
-                              <div class="text-xs uppercase tracking-[0.18em] text-neon-amber" x-text="row.group.title"></div>
-                              <div class="text-xs text-slate-500" x-text="row.group.meta"></div>
+                              <div
+                                class="text-xs uppercase tracking-[0.18em] text-neon-amber"
+                                x-text="row.group.title"
+                              ></div>
+                              <div
+                                class="text-xs text-slate-500"
+                                x-text="row.group.meta"
+                              ></div>
                             </div>
                             <button
                               x-show="studio.groupBy === 'run' && row.group.items.length"
@@ -3651,13 +3749,18 @@
                             @click="openStudioPreview(row.deliverable)"
                             :title="`Preview ${row.deliverable.display_name || row.deliverable.filename}`"
                           >
-                            <span x-text="row.deliverable.display_name || row.deliverable.filename"></span>
+                            <span
+                              x-text="row.deliverable.display_name || row.deliverable.filename"
+                            ></span>
                           </button>
                         </td>
                       </template>
                       <template x-if="row.kind === 'item'">
                         <td>
-                          <span class="studio-pill" x-text="row.deliverable.skill"></span>
+                          <span
+                            class="studio-pill"
+                            x-text="row.deliverable.skill"
+                          ></span>
                         </td>
                       </template>
                       <template x-if="row.kind === 'item'">
@@ -5365,9 +5468,14 @@
             x-show="!reasoning.loading && !reasoning.error && reasoningArtifacts().length"
             class="mb-5"
           >
-            <div class="reasoning-detail-label mb-2">Artifacts From This Run</div>
+            <div class="reasoning-detail-label mb-2">
+              Artifacts From This Run
+            </div>
             <div class="reasoning-artifact-grid">
-              <template x-for="artifact in reasoningArtifacts()" :key="artifact.filename">
+              <template
+                x-for="artifact in reasoningArtifacts()"
+                :key="artifact.filename"
+              >
                 <div
                   class="reasoning-artifact-card"
                   :class="artifact.isCurrent ? 'reasoning-artifact-current' : ''"
@@ -5931,7 +6039,10 @@
                     </button>
                   </template>
                 </div>
-                <pre class="studio-preview-pre" x-text="studioPreview.text"></pre>
+                <pre
+                  class="studio-preview-pre"
+                  x-text="studioPreview.text"
+                ></pre>
               </div>
             </template>
 
@@ -5990,116 +6101,161 @@
             </template>
           </div>
 
-            <div
-              x-show="studioPreviewHistory().length > 1"
-              class="studio-provenance-section"
-            >
-              <div class="reasoning-detail-label mb-2">Version History</div>
-              <div class="studio-version-history">
-                <template x-for="artifact in studioPreviewHistory()" :key="studioKey(artifact)">
-                  <div class="studio-version-row" :class="artifact.isCurrent ? 'studio-version-row-current' : ''">
-                    <div class="min-w-0 flex-1">
-                      <div class="studio-version-row-head">
-                        <span class="reasoning-chip" x-text="artifact.isCurrent ? 'Current' : 'Previous'"></span>
-                        <span class="text-xs text-slate-400" x-text="(artifact.created_at || '').slice(0, 19).replace('T', ' ')"></span>
-                      </div>
-                      <div class="text-xs font-mono text-slate-500 mt-1" x-text="artifact.run_id"></div>
-                      <div class="text-xs text-slate-500 mt-1" x-text="formatBytes(Number(artifact.size || 0))"></div>
-                    </div>
-                    <div class="studio-version-actions">
-                      <button
-                        type="button"
-                        class="studio-provenance-link"
-                        x-show="!artifact.isCurrent"
-                        @click="openStudioPreview(artifact)"
-                      >
-                        Open
-                      </button>
-                      <button
-                        type="button"
-                        class="studio-provenance-link"
-                        x-show="!artifact.isCurrent && artifact.isComparable"
-                        @click="studioPreviewCompareVersion(artifact)"
-                      >
-                        Compare
-                      </button>
-                    </div>
-                  </div>
-                </template>
-              </div>
-            </div>
-
-            <div
-              x-show="studioPreview.compareLoading || studioPreview.compareError || studioPreview.compareSummary"
-              class="studio-provenance-section"
-            >
-              <div class="studio-provenance-title-row">
-                <div>
-                  <div class="studio-provenance-kicker">Compare</div>
-                  <div class="studio-provenance-title">Version diff</div>
-                </div>
-                <button
-                  type="button"
-                  class="studio-provenance-link"
-                  x-show="studioPreview.compareSummary || studioPreview.compareError"
-                  @click="studioPreviewClearCompare()"
-                >
-                  Clear
-                </button>
-              </div>
-
-              <div
-                x-show="studioPreview.compareLoading"
-                class="text-sm text-slate-400 flex items-center gap-2"
+          <div
+            x-show="studioPreviewHistory().length > 1"
+            class="studio-provenance-section"
+          >
+            <div class="reasoning-detail-label mb-2">Version History</div>
+            <div class="studio-version-history">
+              <template
+                x-for="artifact in studioPreviewHistory()"
+                :key="studioKey(artifact)"
               >
-                <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
-                <span>Comparing versions&hellip;</span>
-              </div>
-
-              <div
-                x-show="!studioPreview.compareLoading && studioPreview.compareError"
-                class="text-sm text-neon-magenta border border-neon-magenta/40 rounded p-3"
-                x-text="studioPreview.compareError"
-              ></div>
-
-              <div
-                x-show="!studioPreview.compareLoading && studioPreview.compareSummary"
-                class="space-y-3"
-              >
-                <div class="flex flex-wrap gap-2">
-                  <span class="reasoning-chip" x-text="studioPreview.compareSummary?.identical ? 'No textual change' : 'Content changed'"></span>
-                  <span class="reasoning-chip" x-text="`Line delta ${studioPreview.compareSummary?.lineDelta > 0 ? '+' : ''}${studioPreview.compareSummary?.lineDelta}`"></span>
-                  <span class="reasoning-chip" x-text="`Size delta ${studioPreview.compareSummary?.sizeDelta > 0 ? '+' : ''}${formatBytes(Math.abs(Number(studioPreview.compareSummary?.sizeDelta || 0)))}`"></span>
-                </div>
-                <div class="studio-compare-meta-grid">
-                  <div class="studio-compare-meta-card">
-                    <div class="studio-compare-meta-label">Current</div>
-                    <div class="text-xs text-slate-300" x-text="studioPreview.compareSummary?.current?.run_id"></div>
-                    <div class="text-xs text-slate-500 mt-1" x-text="(studioPreview.compareSummary?.current?.created_at || '').slice(0, 19).replace('T', ' ')"></div>
-                  </div>
-                  <div class="studio-compare-meta-card">
-                    <div class="studio-compare-meta-label">Compared to</div>
-                    <div class="text-xs text-slate-300" x-text="studioPreview.compareSummary?.previous?.run_id"></div>
-                    <div class="text-xs text-slate-500 mt-1" x-text="(studioPreview.compareSummary?.previous?.created_at || '').slice(0, 19).replace('T', ' ')"></div>
-                  </div>
-                </div>
                 <div
-                  x-show="studioPreview.compareSummary?.firstChangedLine"
-                  class="text-xs text-slate-400"
-                  x-text="`First changed line: ${studioPreview.compareSummary?.firstChangedLine}`"
-                ></div>
-                <div class="studio-compare-excerpts">
-                  <div class="studio-compare-excerpt-card">
-                    <div class="studio-compare-meta-label">Current excerpt</div>
-                    <pre class="studio-compare-pre" x-text="studioPreview.compareSummary?.currentExcerpt || '(no change)'"></pre>
+                  class="studio-version-row"
+                  :class="artifact.isCurrent ? 'studio-version-row-current' : ''"
+                >
+                  <div class="min-w-0 flex-1">
+                    <div class="studio-version-row-head">
+                      <span
+                        class="reasoning-chip"
+                        x-text="artifact.isCurrent ? 'Current' : 'Previous'"
+                      ></span>
+                      <span
+                        class="text-xs text-slate-400"
+                        x-text="(artifact.created_at || '').slice(0, 19).replace('T', ' ')"
+                      ></span>
+                    </div>
+                    <div
+                      class="text-xs font-mono text-slate-500 mt-1"
+                      x-text="artifact.run_id"
+                    ></div>
+                    <div
+                      class="text-xs text-slate-500 mt-1"
+                      x-text="formatBytes(Number(artifact.size || 0))"
+                    ></div>
                   </div>
-                  <div class="studio-compare-excerpt-card">
-                    <div class="studio-compare-meta-label">Previous excerpt</div>
-                    <pre class="studio-compare-pre" x-text="studioPreview.compareSummary?.previousExcerpt || '(no change)'"></pre>
+                  <div class="studio-version-actions">
+                    <button
+                      type="button"
+                      class="studio-provenance-link"
+                      x-show="!artifact.isCurrent"
+                      @click="openStudioPreview(artifact)"
+                    >
+                      Open
+                    </button>
+                    <button
+                      type="button"
+                      class="studio-provenance-link"
+                      x-show="!artifact.isCurrent && artifact.isComparable"
+                      @click="studioPreviewCompareVersion(artifact)"
+                    >
+                      Compare
+                    </button>
                   </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div
+            x-show="studioPreview.compareLoading || studioPreview.compareError || studioPreview.compareSummary"
+            class="studio-provenance-section"
+          >
+            <div class="studio-provenance-title-row">
+              <div>
+                <div class="studio-provenance-kicker">Compare</div>
+                <div class="studio-provenance-title">Version diff</div>
+              </div>
+              <button
+                type="button"
+                class="studio-provenance-link"
+                x-show="studioPreview.compareSummary || studioPreview.compareError"
+                @click="studioPreviewClearCompare()"
+              >
+                Clear
+              </button>
+            </div>
+
+            <div
+              x-show="studioPreview.compareLoading"
+              class="text-sm text-slate-400 flex items-center gap-2"
+            >
+              <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+              <span>Comparing versions&hellip;</span>
+            </div>
+
+            <div
+              x-show="!studioPreview.compareLoading && studioPreview.compareError"
+              class="text-sm text-neon-magenta border border-neon-magenta/40 rounded p-3"
+              x-text="studioPreview.compareError"
+            ></div>
+
+            <div
+              x-show="!studioPreview.compareLoading && studioPreview.compareSummary"
+              class="space-y-3"
+            >
+              <div class="flex flex-wrap gap-2">
+                <span
+                  class="reasoning-chip"
+                  x-text="studioPreview.compareSummary?.identical ? 'No textual change' : 'Content changed'"
+                ></span>
+                <span
+                  class="reasoning-chip"
+                  x-text="`Line delta ${studioPreview.compareSummary?.lineDelta > 0 ? '+' : ''}${studioPreview.compareSummary?.lineDelta}`"
+                ></span>
+                <span
+                  class="reasoning-chip"
+                  x-text="`Size delta ${studioPreview.compareSummary?.sizeDelta > 0 ? '+' : ''}${formatBytes(Math.abs(Number(studioPreview.compareSummary?.sizeDelta || 0)))}`"
+                ></span>
+              </div>
+              <div class="studio-compare-meta-grid">
+                <div class="studio-compare-meta-card">
+                  <div class="studio-compare-meta-label">Current</div>
+                  <div
+                    class="text-xs text-slate-300"
+                    x-text="studioPreview.compareSummary?.current?.run_id"
+                  ></div>
+                  <div
+                    class="text-xs text-slate-500 mt-1"
+                    x-text="(studioPreview.compareSummary?.current?.created_at || '').slice(0, 19).replace('T', ' ')"
+                  ></div>
+                </div>
+                <div class="studio-compare-meta-card">
+                  <div class="studio-compare-meta-label">Compared to</div>
+                  <div
+                    class="text-xs text-slate-300"
+                    x-text="studioPreview.compareSummary?.previous?.run_id"
+                  ></div>
+                  <div
+                    class="text-xs text-slate-500 mt-1"
+                    x-text="(studioPreview.compareSummary?.previous?.created_at || '').slice(0, 19).replace('T', ' ')"
+                  ></div>
+                </div>
+              </div>
+              <div
+                x-show="studioPreview.compareSummary?.firstChangedLine"
+                class="text-xs text-slate-400"
+                x-text="`First changed line: ${studioPreview.compareSummary?.firstChangedLine}`"
+              ></div>
+              <div class="studio-compare-excerpts">
+                <div class="studio-compare-excerpt-card">
+                  <div class="studio-compare-meta-label">Current excerpt</div>
+                  <pre
+                    class="studio-compare-pre"
+                    x-text="studioPreview.compareSummary?.currentExcerpt || '(no change)'"
+                  ></pre>
+                </div>
+                <div class="studio-compare-excerpt-card">
+                  <div class="studio-compare-meta-label">Previous excerpt</div>
+                  <pre
+                    class="studio-compare-pre"
+                    x-text="studioPreview.compareSummary?.previousExcerpt || '(no change)'"
+                  ></pre>
                 </div>
               </div>
             </div>
+          </div>
         </div>
       </div>
     </div>

@@ -121,3 +121,12 @@ def test_studio_exposes_trash_toggle_and_restore_action() -> None:
     assert "Trash empty." in source
     assert '@click="toggleStudioTrash()"' in source
     assert '@click="restoreTrashedStudioArtifact(artifact)"' in source
+
+
+def test_skills_expose_run_trash_and_restore_action() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+
+    assert "Run Trash" in source
+    assert "Run trash empty." in source
+    assert '@click="toggleSkillRunTrash()"' in source
+    assert '@click="restoreSkillRun(skills.current?.name, run.trash_id)"' in source
