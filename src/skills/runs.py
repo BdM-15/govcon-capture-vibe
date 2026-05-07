@@ -13,6 +13,7 @@ from src.skills.run_metadata import (
     STUDIO_EXTRA_MIME,
     list_run_artifacts,
     list_tool_outputs,
+    normalize_artifact_products,
     parse_run_envelope,
     read_artifact_manifest,
     read_run_metadata,
@@ -23,10 +24,18 @@ from src.skills.run_metadata import (
     slugify_for_filename,
     write_artifact_manifest,
 )
+from src.skills.chain_contracts import CONTRACT_REGISTRY
 
 _SAFE_RUN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")
 _SAFE_CHAIN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")
 _TRASH_SAFE_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[0-9]{6}_[a-z0-9._-]+$")
+
+
+def _contract_products(skill_name: str) -> list[str]:
+    contract = CONTRACT_REGISTRY.get(skill_name)
+    if not contract:
+        return []
+    return sorted(contract.produces)
 
 
 class SkillRunIndex:
@@ -138,7 +147,10 @@ class SkillRunIndex:
             "prompt": prompt_path.read_text(encoding="utf-8")
             if prompt_path.exists()
             else "",
-            "artifacts": list_run_artifacts(run_dir),
+            "artifacts": list_run_artifacts(
+                run_dir,
+                default_products=_contract_products(skill_name),
+            ),
             "transcript": read_run_transcript(run_dir),
             "tool_outputs": list_tool_outputs(run_dir),
         }
@@ -172,6 +184,9 @@ class SkillRunIndex:
                 except OSError:
                     continue
                 rel = artifact.relative_to(artifacts_dir).as_posix()
+                products = normalize_artifact_products(
+                    (manifest.get(rel) or {}).get("products")
+                ) or _contract_products(skill_name)
                 rows.append(
                     {
                         "skill": skill_name,
@@ -187,6 +202,7 @@ class SkillRunIndex:
                         or datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
                         "title": title,
                         "ext": artifact.suffix.lstrip(".").lower(),
+                        "products": products,
                     }
                 )
 
@@ -683,6 +699,43 @@ class SkillRunStore:
             run_id=run_id,
             is_safe_run_id=self.is_safe_run_id,
         )
+
+    def annotate_artifact_products(
+        self,
+        workspace_root: Path,
+        skill_name: str,
+        run_id: str,
+        products: list[str] | None = None,
+    ) -> int:
+        """Persist semantic product labels into a run's artifact manifest."""
+        if not self.is_safe_run_id(run_id):
+            return 0
+        product_list = normalize_artifact_products(products or _contract_products(skill_name))
+        if not product_list:
+            return 0
+        run_dir = self.runs_root(workspace_root, skill_name) / run_id
+        artifacts_dir = run_dir / "artifacts"
+        if not artifacts_dir.is_dir():
+            return 0
+        manifest = read_artifact_manifest(run_dir)
+        changed = 0
+        for artifact in sorted(artifacts_dir.iterdir()):
+            if not artifact.is_file():
+                continue
+            rel = artifact.relative_to(artifacts_dir).as_posix()
+            entry = dict(manifest.get(rel) or {})
+            existing = normalize_artifact_products(entry.get("products"))
+            merged = existing[:]
+            for product in product_list:
+                if product not in merged:
+                    merged.append(product)
+            if merged != existing:
+                entry["products"] = merged
+                manifest[rel] = entry
+                changed += 1
+        if changed:
+            write_artifact_manifest(run_dir, manifest)
+        return changed
 
     def trash_run(
         self,

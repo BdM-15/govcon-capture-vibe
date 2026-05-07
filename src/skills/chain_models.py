@@ -28,6 +28,19 @@ class ChainArtifactRef(BaseModel):
     display_name: str = ""
     mime: str = ""
     size: int = 0
+    products: list[str] = Field(default_factory=list)
+
+    @field_validator("products")
+    @classmethod
+    def _normalize_ref_products(cls, values: list[str]) -> list[str]:
+        seen: set[str] = set()
+        normalized: list[str] = []
+        for value in values:
+            cleaned = str(value).strip().lower()
+            if cleaned and cleaned not in seen:
+                seen.add(cleaned)
+                normalized.append(cleaned)
+        return normalized
 
 
 class ChainArtifactRequirement(BaseModel):
@@ -39,6 +52,7 @@ class ChainArtifactRequirement(BaseModel):
     description: str = ""
     from_steps: list[str] = Field(default_factory=list)
     extensions: list[str] = Field(default_factory=list)
+    products: list[str] = Field(default_factory=list)
     mime_types: list[str] = Field(default_factory=list)
     name_contains: list[str] = Field(default_factory=list)
     min_count: int = Field(1, ge=0, le=50)
@@ -55,6 +69,18 @@ class ChainArtifactRequirement(BaseModel):
     @classmethod
     def _normalize_extensions(cls, values: list[str]) -> list[str]:
         return [str(value).strip().lower().lstrip(".") for value in values if str(value).strip()]
+
+    @field_validator("products")
+    @classmethod
+    def _normalize_products(cls, values: list[str]) -> list[str]:
+        seen: set[str] = set()
+        normalized: list[str] = []
+        for value in values:
+            cleaned = str(value).strip().lower()
+            if cleaned and cleaned not in seen:
+                seen.add(cleaned)
+                normalized.append(cleaned)
+        return normalized
 
 
 class ChainStepSpec(BaseModel):

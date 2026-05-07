@@ -140,7 +140,7 @@ class SkillExecutor:
                 chain_depth=_chain_depth,
                 chain=_chain + (name,),
             )
-            return await self._tools_runner(
+            result = await self._tools_runner(
                 skill=skill,
                 workspace=workspace,
                 user_prompt=user_prompt,
@@ -152,7 +152,9 @@ class SkillExecutor:
                 touch_invocation=self._touch_invocation,
                 invoke_skill_fn=invoke_skill_fn,
             )
-        return await self._legacy_runner(
+            self._annotate_products(workspace_root, result)
+            return result
+        result = await self._legacy_runner(
             skill=skill,
             workspace=workspace,
             user_prompt=user_prompt,
@@ -163,6 +165,21 @@ class SkillExecutor:
             workspace_root=workspace_root,
             persist_run=self._persist_legacy_run,
             touch_invocation=self._touch_invocation,
+        )
+        self._annotate_products(workspace_root, result)
+        return result
+
+    def _annotate_products(
+        self,
+        workspace_root: Optional[Path],
+        result: SkillInvocationResult,
+    ) -> None:
+        if workspace_root is None or not result.run_id:
+            return
+        self._run_store.annotate_artifact_products(
+            workspace_root,
+            result.skill,
+            result.run_id,
         )
 
     def _build_invoke_skill_fn(

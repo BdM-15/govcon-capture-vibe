@@ -97,6 +97,27 @@ def humanize_artifact_name(filename: str) -> str:
     return " ".join(_pretty(token) for token in tokens)
 
 
+def normalize_artifact_products(value: Any, max_items: int = 16) -> list[str]:
+    """Normalize semantic product labels from manifest metadata."""
+    if isinstance(value, str):
+        raw_values = [value]
+    elif isinstance(value, list):
+        raw_values = value
+    else:
+        return []
+    products: list[str] = []
+    seen: set[str] = set()
+    for item in raw_values:
+        cleaned = str(item or "").strip().lower()
+        if not cleaned or cleaned in seen:
+            continue
+        seen.add(cleaned)
+        products.append(cleaned[:128])
+        if len(products) >= max_items:
+            break
+    return products
+
+
 def artifact_manifest_path(run_dir: Path) -> Path:
     """Return the manifest path that stores per-artifact UI metadata."""
     return run_dir / ARTIFACT_MANIFEST_FILENAME
@@ -126,6 +147,9 @@ def read_artifact_manifest(run_dir: Path) -> dict[str, dict[str, Any]]:
         render_status = str(value.get("render_status") or "").strip().lower()
         if render_status == "failed":
             normalized["render_status"] = render_status
+        products = normalize_artifact_products(value.get("products"))
+        if products:
+            normalized["products"] = products
         render_message = str(value.get("render_message") or "").strip()
         if render_message:
             normalized["render_message"] = render_message[:400]
@@ -215,16 +239,24 @@ def parse_run_envelope(text: str) -> dict[str, Any]:
     return out
 
 
-def list_run_artifacts(run_dir: Path) -> list[dict[str, Any]]:
+def list_run_artifacts(
+    run_dir: Path,
+    *,
+    default_products: list[str] | None = None,
+) -> list[dict[str, Any]]:
     """List artifacts under one skill run's artifacts/ directory."""
     artifacts: list[dict[str, Any]] = []
     artifacts_dir = run_dir / "artifacts"
     manifest = read_artifact_manifest(run_dir)
+    default_product_list = normalize_artifact_products(default_products or [])
     if artifacts_dir.is_dir():
         for path in sorted(artifacts_dir.iterdir()):
             if path.is_file():
                 rel = path.relative_to(artifacts_dir).as_posix()
                 manifest_entry = manifest.get(rel)
+                products = normalize_artifact_products(
+                    (manifest_entry or {}).get("products")
+                ) or default_product_list
                 artifacts.append(
                     {
                         "name": path.name,
@@ -234,10 +266,11 @@ def list_run_artifacts(run_dir: Path) -> list[dict[str, Any]]:
                             path.name,
                             manifest_entry,
                         ),
+                        "products": products,
                         **{
                             key: value
                             for key, value in (manifest_entry or {}).items()
-                            if key != "display_name"
+                            if key not in {"display_name", "products"}
                         },
                     }
                 )

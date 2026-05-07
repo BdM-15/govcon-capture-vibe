@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from src.skills.manager import SkillManager
+from src.skills.runs import SkillRunStore
 
 
 def _seed_run(
@@ -97,6 +98,46 @@ def test_list_deliverables_prefers_manifest_display_name(tmp_path: Path) -> None
 
     assert rows[0]["filename"] == "burn.html"
     assert rows[0]["display_name"] == "AFCAP V Parent Vehicle Burn Intel"
+
+
+def test_list_deliverables_exposes_manifest_or_contract_products(tmp_path: Path) -> None:
+    mgr = SkillManager()
+    run_dir = _seed_run(
+        tmp_path,
+        skill="competitive-intel",
+        run_id="20250428_130000_second",
+        artifacts={"burn.html": b"html", "orders.xlsx": b"xlsx"},
+        created_at="2025-04-28T13:00:00",
+    )
+    (run_dir / "artifacts_manifest.json").write_text(
+        json.dumps({"orders.xlsx": {"products": ["obligation_data"]}}),
+        encoding="utf-8",
+    )
+
+    rows = {row["filename"]: row for row in mgr.list_deliverables(tmp_path)}
+
+    assert rows["orders.xlsx"]["products"] == ["obligation_data"]
+    assert "award_history" in rows["burn.html"]["products"]
+
+
+def test_run_store_annotates_artifact_manifest_products(tmp_path: Path) -> None:
+    store = SkillRunStore()
+    run_dir = _seed_run(
+        tmp_path,
+        skill="price-to-win",
+        run_id="20250428_130000_second",
+        artifacts={"ptw.xlsx": b"xlsx"},
+    )
+
+    changed = store.annotate_artifact_products(
+        tmp_path,
+        "price-to-win",
+        "20250428_130000_second",
+    )
+
+    assert changed == 1
+    manifest = json.loads((run_dir / "artifacts_manifest.json").read_text(encoding="utf-8"))
+    assert "pricing_stack" in manifest["ptw.xlsx"]["products"]
 
 
 def test_list_deliverables_attaches_chain_trace(tmp_path: Path) -> None:

@@ -64,6 +64,12 @@ def test_planner_builds_logical_ptw_chain_with_rendering() -> None:
     ]
     assert plan.spec.steps[2].depends_on == ["competitive-intel", "workload-analyzer"]
     assert plan.spec.steps[3].depends_on == ["price-to-win"]
+    ptw_products = {
+        product
+        for requirement in plan.spec.steps[2].artifact_requirements
+        for product in requirement.products
+    }
+    assert {"obligation_data", "pricing_inputs"}.issubset(ptw_products)
     assert plan.spec.context["expected_outcome"] == "Excel workbook and brief"
     assert plan.iteration_policy["mode"] == "outcome-gated-linear"
     assert "low/mid/high" in plan.spec.steps[2].context["quality_gate"]

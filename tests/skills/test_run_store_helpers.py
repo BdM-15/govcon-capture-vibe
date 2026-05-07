@@ -88,6 +88,7 @@ def test_list_runs_under_base_and_deliverables_under_base(tmp_path) -> None:
             "created_at": "2026-01-02T03:04:05+00:00",
             "title": None,
             "ext": "docx",
+            "products": ["compliance_matrix", "proposal_draft"],
         }
     ]
 

@@ -331,6 +331,7 @@ class SkillChainPlanner:
                     id=f"{dep}-handoff",
                     description=f"Use artifacts from {dep} when useful for {name}.",
                     from_steps=[dep],
+                    products=_edge_products(selected, step_ids, dep),
                     extensions=_edge_extensions(selected, step_ids, dep),
                     required=False,
                 )
@@ -450,6 +451,17 @@ def _edge_extensions(
     inverse = {step_id: skill for skill, step_id in step_ids.items()}
     upstream = inverse.get(dep_step_id, "")
     return list(CONTRACT_REGISTRY.artifact_extensions(upstream))
+
+
+def _edge_products(
+    selected: list[str],
+    step_ids: dict[str, str],
+    dep_step_id: str,
+) -> list[str]:
+    inverse = {step_id: skill for skill, step_id in step_ids.items()}
+    upstream = inverse.get(dep_step_id, "")
+    contract = CONTRACT_REGISTRY.get(upstream)
+    return sorted(contract.produces) if contract else []
 
 
 __all__ = ["ChainPlan", "PlannedSkill", "SkillChainPlanner"]

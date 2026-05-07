@@ -72,6 +72,7 @@ async def _chain_executor_runs_steps_and_persists_state(tmp_path: Path) -> None:
                     ChainArtifactRequirement(
                         id="intel-json",
                         from_steps=["intel"],
+                        products=["obligation_data"],
                         extensions=["json"],
                     )
                 ],
@@ -92,7 +93,9 @@ async def _chain_executor_runs_steps_and_persists_state(tmp_path: Path) -> None:
     assert result.steps["intel"].status == "completed"
     assert result.steps["ptw"].status == "completed"
     assert result.steps["intel"].artifacts[0]["name"] == "competitive-intel.json"
+    assert "obligation_data" in result.steps["intel"].artifacts[0]["products"]
     assert result.steps["ptw"].input_artifacts[0].filename == "competitive-intel.json"
+    assert "obligation_data" in result.steps["ptw"].input_artifacts[0].products
     assert "upstream_steps" in calls[1][1]
     assert "competitive-intel.json" in calls[1][1]
     persisted = store.get_chain_run(tmp_path, result.chain_id)
@@ -192,6 +195,72 @@ async def _chain_executor_fails_missing_artifact_contract(tmp_path: Path) -> Non
     assert calls == ["competitive-intel"]
     assert result.steps["ptw"].status == "failed"
     assert "artifact requirement workbook" in result.steps["ptw"].error
+
+
+def test_chain_executor_matches_artifact_products_before_extension(tmp_path: Path) -> None:
+    asyncio.run(_chain_executor_matches_artifact_products_before_extension(tmp_path))
+
+
+async def _chain_executor_matches_artifact_products_before_extension(tmp_path: Path) -> None:
+    store = SkillRunStore()
+    calls: list[str] = []
+
+    async def invoke_skill(name: str, **kwargs: Any) -> SkillInvocationResult:
+        calls.append(name)
+        run_id, run_dir = store.create_run_dir(
+            workspace_root=kwargs["workspace_root"],
+            skill_name=name,
+            user_prompt=kwargs["user_prompt"],
+            started_at=datetime.now(timezone.utc),
+        )
+        if name == "competitive-intel":
+            (run_dir / "artifacts" / "raw.json").write_text("{}", encoding="utf-8")
+            (run_dir / "artifacts" / "obligations.json").write_text("{}", encoding="utf-8")
+            (run_dir / "artifacts_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "raw.json": {"products": ["scratch_data"]},
+                        "obligations.json": {"products": ["obligation_data"]},
+                    }
+                ),
+                encoding="utf-8",
+            )
+        return _fake_result(name, run_id, run_dir, kwargs["user_prompt"])
+
+    executor = SkillChainExecutor(invoke_skill=invoke_skill, run_store=store)
+    spec = ChainSpec(
+        name="product-contract-chain",
+        steps=[
+            ChainStepSpec(id="intel", skill="competitive-intel"),
+            ChainStepSpec(
+                id="ptw",
+                skill="price-to-win",
+                depends_on=["intel"],
+                artifact_requirements=[
+                    ChainArtifactRequirement(
+                        id="obligation-data",
+                        from_steps=["intel"],
+                        products=["obligation_data"],
+                        extensions=["json"],
+                    )
+                ],
+            ),
+        ],
+    )
+
+    result = await executor.invoke(
+        spec,
+        workspace="test-workspace",
+        workspace_root=tmp_path,
+        llm=_noop_llm,
+        entity_payload={},
+    )
+
+    assert result.status == "completed"
+    assert calls == ["competitive-intel", "price-to-win"]
+    assert [ref.filename for ref in result.steps["ptw"].input_artifacts] == [
+        "obligations.json"
+    ]
 
 
 def test_chain_executor_resume_preserves_completed_steps(tmp_path: Path) -> None:

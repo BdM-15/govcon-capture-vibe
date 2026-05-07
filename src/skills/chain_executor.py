@@ -340,6 +340,11 @@ class SkillChainExecutor:
                     size = int(artifact.get("size") or 0)
                 except (TypeError, ValueError):
                     size = 0
+                products = [
+                    str(product).strip().lower()
+                    for product in artifact.get("products") or []
+                    if str(product).strip()
+                ]
                 refs.append(
                     ChainArtifactRef(
                         step_id=step_id,
@@ -349,6 +354,7 @@ class SkillChainExecutor:
                         display_name=str(artifact.get("display_name") or filename),
                         mime=str(artifact.get("mime") or ""),
                         size=size,
+                        products=products,
                     )
                 )
         return refs
@@ -359,6 +365,10 @@ class SkillChainExecutor:
         requirement: ChainArtifactRequirement,
     ) -> bool:
         filename = artifact.filename.lower()
+        if requirement.products:
+            artifact_products = set(artifact.products)
+            if not artifact_products.intersection(requirement.products):
+                return False
         if requirement.extensions:
             ext = filename.rsplit(".", 1)[-1] if "." in filename else ""
             if ext not in requirement.extensions:
