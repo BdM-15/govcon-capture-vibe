@@ -43,6 +43,8 @@ import logging
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
+from src.skills.chain_executor import SkillChainExecutor
+from src.skills.chain_models import ChainRunState, ChainSpec
 from src.skills.runs import SkillRunStore
 from src.skills.run_metadata import STUDIO_EXTRA_MIME, resolve_artifact_mime
 from src.skills.settings import (
@@ -388,6 +390,48 @@ class SkillManager:
             _chain_depth=_chain_depth,
             _chain=_chain,
         )
+
+    async def invoke_chain(
+        self,
+        spec: ChainSpec,
+        *,
+        workspace: str,
+        entity_payload: dict[str, Any],
+        llm: Callable[[str], Awaitable[str]],
+        max_payload_chars: Optional[int] = None,
+        workspace_root: Optional[Path] = None,
+        slice_fn: Optional[Callable[..., dict[str, Any]]] = None,
+        retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]] = None,
+        runtime_mode_override: Optional[str] = None,
+    ) -> ChainRunState:
+        """Run a deterministic multi-skill chain through LangGraph."""
+        if workspace_root is None:
+            workspace_root = _REPO_ROOT / "rag_storage" / workspace
+        executor = SkillChainExecutor(
+            invoke_skill=self.invoke,
+            run_store=self._run_store,
+        )
+        return await executor.invoke(
+            spec,
+            workspace=workspace,
+            workspace_root=workspace_root,
+            llm=llm,
+            entity_payload=entity_payload,
+            max_payload_chars=max_payload_chars,
+            slice_fn=slice_fn,
+            retrieve_fn=retrieve_fn,
+            runtime_mode_override=runtime_mode_override,
+        )
+
+    def list_chain_runs(
+        self, workspace_root: Path, limit: int = 50
+    ) -> list[dict[str, Any]]:
+        return self._run_store.list_chain_runs(workspace_root, limit=limit)
+
+    def get_chain_run(
+        self, workspace_root: Path, chain_id: str
+    ) -> Optional[dict[str, Any]]:
+        return self._run_store.get_chain_run(workspace_root, chain_id)
 
     def list_runs(
         self, workspace_root: Path, skill_name: Optional[str] = None, limit: int = 50

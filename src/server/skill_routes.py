@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from src.core import get_settings
 from src.skills import get_skill_manager
+from src.skills.chain_models import ChainSpec, ChainStepSpec
 from src.skills.context import (
     build_skill_briefing_book,
     retrieve_relevant_entities_for_skill,
@@ -364,6 +365,35 @@ def register_skill_invoke_ui_routes(
             description="Cap on retrieval-ranked entities promoted into the briefing book.",
         )
 
+    class SkillChainInvokePayload(BaseModel):
+        """Body for POST /api/ui/skill-chains/invoke."""
+
+        name: str = Field("skill-chain", min_length=1, max_length=128)
+        prompt: str = ""
+        steps: list[ChainStepSpec] = Field(..., min_length=1, max_length=20)
+        stop_on_error: bool = True
+        max_entities_per_type: int = Field(
+            default_factory=_default_max_entities_per_type,
+            ge=1,
+            le=500,
+        )
+        max_chunks_per_entity: int = Field(
+            default_factory=_default_max_chunks_per_entity,
+            ge=0,
+            le=10,
+        )
+        max_relationships_per_entity: int = Field(
+            default_factory=_default_max_relationships_per_entity,
+            ge=0,
+            le=50,
+        )
+        retrieval_mode: str = Field(default_factory=_default_skill_retrieval_mode)
+        retrieval_top_k: int = Field(
+            default_factory=_default_skill_retrieval_top_k,
+            ge=5,
+            le=500,
+        )
+
     def _slice_workspace_entities(
         entity_types: Optional[list[str]],
         max_per_type: int,
@@ -508,6 +538,114 @@ def register_skill_invoke_ui_routes(
             )
         )
 
+    @app.post("/api/ui/skill-chains/invoke", tags=["theseus-ui"])
+    async def invoke_skill_chain_route(
+        payload: SkillChainInvokePayload = Body(...),
+    ) -> JSONResponse:
+        if llm_func is None:
+            raise HTTPException(
+                503,
+                "Skill-chain invocation requires an llm_func; server was started without one",
+            )
+        mgr = manager_factory()
+        skills_by_name = {
+            step.skill: mgr.get_skill(step.skill)
+            for step in payload.steps
+        }
+        missing_skills = [
+            name for name, skill in skills_by_name.items() if skill is None
+        ]
+        if missing_skills:
+            raise HTTPException(
+                404,
+                f"Unknown skill(s): {', '.join(sorted(set(missing_skills)))}",
+            )
+
+        combined_prompt = "\n\n".join(
+            part
+            for part in [payload.prompt, *(step.prompt for step in payload.steps)]
+            if part
+        )
+        combined_description = "\n".join(
+            skill.frontmatter.description
+            for skill in skills_by_name.values()
+            if skill is not None
+        )
+        retrieval = await _retrieve_relevant_entities_for_skill(
+            prompt=combined_prompt,
+            skill_description=combined_description,
+            mode=payload.retrieval_mode,
+            top_k=payload.retrieval_top_k,
+        )
+        context = _slice_workspace_entities(
+            None,
+            payload.max_entities_per_type,
+            max_chunks_per_entity=payload.max_chunks_per_entity,
+            max_relationships_per_entity=payload.max_relationships_per_entity,
+            relevant_entity_names=retrieval["names"] or None,
+        )
+        context["retrieval_metadata"] = retrieval["metadata"]
+
+        def _tools_slice_workspace_entities(
+            entity_types: Optional[list[str]],
+            max_per_type: int,
+            max_chunks_per_entity: int = 2,
+            max_relationships_per_entity: int = 5,
+            relevant_entity_names: Optional[set[str]] = None,
+        ) -> dict[str, Any]:
+            return _slice_workspace_entities(
+                entity_types,
+                min(max_per_type, payload.max_entities_per_type),
+                max_chunks_per_entity=min(
+                    max_chunks_per_entity,
+                    payload.max_chunks_per_entity,
+                ),
+                max_relationships_per_entity=min(
+                    max_relationships_per_entity,
+                    payload.max_relationships_per_entity,
+                ),
+                relevant_entity_names=relevant_entity_names,
+            )
+
+        async def _tools_retrieve_relevant_entities_for_skill(
+            prompt: str,
+            skill_description: str,
+            mode: str,
+            top_k: int,
+        ) -> dict[str, Any]:
+            return await _retrieve_relevant_entities_for_skill(
+                prompt,
+                skill_description,
+                payload.retrieval_mode,
+                min(top_k, payload.retrieval_top_k),
+            )
+
+        spec = ChainSpec(
+            name=payload.name,
+            prompt=payload.prompt,
+            steps=payload.steps,
+            stop_on_error=payload.stop_on_error,
+        )
+        try:
+            result = await mgr.invoke_chain(
+                spec,
+                workspace=workspace_name(),
+                entity_payload=context,
+                llm=llm_func,
+                workspace_root=workspace_dir(),
+                slice_fn=_tools_slice_workspace_entities,
+                retrieve_fn=_tools_retrieve_relevant_entities_for_skill,
+            )
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        return JSONResponse(
+            {
+                "workspace": get_settings().workspace,
+                "chain": result.model_dump(),
+                "retrieval": retrieval["metadata"],
+            }
+        )
+
 
 def register_skill_run_ui_routes(
     app: FastAPI,
@@ -527,6 +665,24 @@ def register_skill_run_ui_routes(
                 "runs": runs,
             }
         )
+
+    @app.get("/api/ui/skill-chains", tags=["theseus-ui"])
+    async def list_skill_chains_route(limit: int = 50) -> JSONResponse:
+        mgr = get_skill_manager()
+        return JSONResponse(
+            {
+                "workspace": get_settings().workspace,
+                "chains": mgr.list_chain_runs(workspace_dir(), limit=limit),
+            }
+        )
+
+    @app.get("/api/ui/skill-chains/{chain_id}", tags=["theseus-ui"])
+    async def get_skill_chain_route(chain_id: str) -> JSONResponse:
+        mgr = get_skill_manager()
+        chain = mgr.get_chain_run(workspace_dir(), chain_id)
+        if chain is None:
+            raise HTTPException(404, f"Unknown chain: {chain_id}")
+        return JSONResponse(chain)
 
     @app.get("/api/ui/skills/{name}/runs/trash", tags=["theseus-ui"])
     async def list_skill_run_trash_route(name: str, limit: int = 50) -> JSONResponse:

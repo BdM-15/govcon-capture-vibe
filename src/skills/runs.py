@@ -25,6 +25,7 @@ from src.skills.run_metadata import (
 )
 
 _SAFE_RUN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")
+_SAFE_CHAIN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")
 _TRASH_SAFE_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[0-9]{6}_[a-z0-9._-]+$")
 
 
@@ -317,8 +318,84 @@ class SkillRunStore:
         return Path(workspace_root) / "skill_runs" / skill_name
 
     @staticmethod
+    def chains_root(workspace_root: Path) -> Path:
+        return Path(workspace_root) / "skill_chains"
+
+    @staticmethod
     def is_safe_run_id(run_id: str) -> bool:
         return bool(_SAFE_RUN_ID.match(run_id))
+
+    @staticmethod
+    def is_safe_chain_id(chain_id: str) -> bool:
+        return bool(_SAFE_CHAIN_ID.match(chain_id))
+
+    def create_chain_run(
+        self,
+        *,
+        workspace_root: Path,
+        name: str,
+        prompt: str,
+    ) -> tuple[str, Path]:
+        now = datetime.now(timezone.utc)
+        ts = now.strftime("%Y%m%d_%H%M%S")
+        slug = slugify_for_filename(name or prompt) or "chain"
+        chain_id = f"{ts}_{slug}"
+        chain_dir = self.chains_root(workspace_root) / chain_id
+        chain_dir.mkdir(parents=True, exist_ok=True)
+        return chain_id, chain_dir
+
+    @staticmethod
+    def write_chain_run(chain_dir: Path, state: dict[str, Any]) -> None:
+        (chain_dir / "chain.json").write_text(
+            json.dumps(state, ensure_ascii=False, indent=2, default=str) + "\n",
+            encoding="utf-8",
+        )
+
+    def get_chain_run(
+        self, workspace_root: Path, chain_id: str
+    ) -> Optional[dict[str, Any]]:
+        if not self.is_safe_chain_id(chain_id):
+            return None
+        chain_path = self.chains_root(workspace_root) / chain_id / "chain.json"
+        if not chain_path.is_file():
+            return None
+        try:
+            payload = json.loads(chain_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if not isinstance(payload, dict):
+            return None
+        payload.setdefault("chain_id", chain_id)
+        return payload
+
+    def list_chain_runs(
+        self, workspace_root: Path, limit: int = 50
+    ) -> list[dict[str, Any]]:
+        root = self.chains_root(workspace_root)
+        if not root.is_dir():
+            return []
+        rows: list[dict[str, Any]] = []
+        for chain_dir in root.iterdir():
+            if not chain_dir.is_dir() or not self.is_safe_chain_id(chain_dir.name):
+                continue
+            payload = self.get_chain_run(workspace_root, chain_dir.name)
+            if not payload:
+                continue
+            rows.append(
+                {
+                    "chain_id": payload.get("chain_id") or chain_dir.name,
+                    "name": (payload.get("spec") or {}).get("name") or "skill-chain",
+                    "workspace": payload.get("workspace") or "",
+                    "status": payload.get("status") or "",
+                    "created_at": payload.get("created_at") or "",
+                    "updated_at": payload.get("updated_at") or "",
+                    "finished_at": payload.get("finished_at") or "",
+                    "step_count": len(payload.get("steps") or {}),
+                    "error": payload.get("error") or "",
+                }
+            )
+        rows.sort(key=lambda row: row.get("created_at", ""), reverse=True)
+        return rows[:limit]
 
     @staticmethod
     def _trash_root(workspace_root: Path) -> Path:

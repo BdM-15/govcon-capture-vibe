@@ -22,12 +22,26 @@ class _FakeInvokeResult:
         self.finish_reason = "max_turns" if runtime_mode == "tools" else ""
 
 
+class _FakeChainResult:
+    def model_dump(self):
+        return {
+            "chain_id": "chain-1",
+            "workspace": "ws-a",
+            "status": "completed",
+            "steps": {},
+        }
+
+
 class _FakeManager:
-    def __init__(self, runtime_mode: str):
+    def __init__(self, runtime_mode: str, known_skills=None):
         self.runtime_mode = runtime_mode
+        self.known_skills = set(known_skills or [])
         self.invoke_calls = []
+        self.chain_calls = []
 
     def get_skill(self, name: str):
+        if self.known_skills and name not in self.known_skills:
+            return None
         return SimpleNamespace(
             frontmatter=SimpleNamespace(
                 description="demo skill",
@@ -38,6 +52,10 @@ class _FakeManager:
     async def invoke(self, name: str, **kwargs):
         self.invoke_calls.append((name, kwargs))
         return _FakeInvokeResult(runtime_mode=self.runtime_mode)
+
+    async def invoke_chain(self, spec, **kwargs):
+        self.chain_calls.append((spec, kwargs))
+        return _FakeChainResult()
 
 
 async def _llm(prompt: str) -> str:
@@ -211,3 +229,97 @@ def test_skill_invoke_route_tools_mode(tmp_path) -> None:
         "mode": "off",
         "top_k": 9,
     }
+
+
+def test_skill_chain_invoke_route_builds_spec_and_context(tmp_path) -> None:
+    manager = _FakeManager("tools", known_skills={"competitive-intel", "price-to-win"})
+    captured = {}
+
+    def fake_slice(
+        workspace_root,
+        entity_types,
+        max_per_type,
+        max_chunks_per_entity,
+        max_relationships_per_entity,
+        relevant_entity_names,
+    ):
+        captured["slice"] = {
+            "workspace_root": workspace_root,
+            "entity_types": entity_types,
+            "max_per_type": max_per_type,
+            "max_chunks_per_entity": max_chunks_per_entity,
+            "max_relationships_per_entity": max_relationships_per_entity,
+            "relevant_entity_names": relevant_entity_names,
+        }
+        return {"entities": {"requirement": [{"name": "Entity A"}]}}
+
+    async def fake_retrieve(data_func, prompt, skill_description, mode, top_k):
+        captured["retrieve"] = {
+            "prompt": prompt,
+            "skill_description": skill_description,
+            "mode": mode,
+            "top_k": top_k,
+        }
+        return {
+            "names": {"Entity A"},
+            "metadata": {"mode": mode, "used": True, "top_k": top_k},
+        }
+
+    app = FastAPI()
+    register_skill_invoke_ui_routes(
+        app,
+        workspace_dir=lambda: tmp_path,
+        settings_store=SkillSettingsStore(lambda: tmp_path),
+        data_func=None,
+        llm_func=_llm,
+        workspace_name=lambda: "ws-a",
+        manager_factory=lambda: manager,
+        slice_workspace_entities=fake_slice,
+        retrieve_entities_for_skill=fake_retrieve,
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/ui/skill-chains/invoke",
+        json={
+            "name": "intel-to-ptw",
+            "prompt": "Build a chain.",
+            "retrieval_mode": "mix",
+            "retrieval_top_k": 11,
+            "steps": [
+                {
+                    "id": "intel",
+                    "skill": "competitive-intel",
+                    "prompt": "Find incumbent data.",
+                },
+                {
+                    "id": "ptw",
+                    "skill": "price-to-win",
+                    "prompt": "Estimate price using intel.",
+                    "depends_on": ["intel"],
+                },
+            ],
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["chain"]["chain_id"] == "chain-1"
+    assert body["retrieval"] == {"mode": "mix", "used": True, "top_k": 11}
+    assert captured["retrieve"]["prompt"] == (
+        "Build a chain.\n\nFind incumbent data.\n\nEstimate price using intel."
+    )
+    assert captured["slice"]["relevant_entity_names"] == {"Entity A"}
+
+    spec, invoke_kwargs = manager.chain_calls[0]
+    assert spec.name == "intel-to-ptw"
+    assert [step.skill for step in spec.steps] == ["competitive-intel", "price-to-win"]
+    assert spec.steps[1].depends_on == ["intel"]
+    assert invoke_kwargs["workspace"] == "ws-a"
+    assert invoke_kwargs["entity_payload"]["retrieval_metadata"] == {
+        "mode": "mix",
+        "used": True,
+        "top_k": 11,
+    }
+    assert callable(invoke_kwargs["slice_fn"])
+    assert callable(invoke_kwargs["retrieve_fn"])

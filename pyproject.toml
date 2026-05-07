@@ -54,6 +54,7 @@ dependencies = [
     # datasets <4 because datasets 4.x calls pa.json_() (added in pyarrow 19).
     "pyarrow<19",
     "datasets<4",
+    "langgraph>=1.1.10",
 ]
 
 # ============================================================================
