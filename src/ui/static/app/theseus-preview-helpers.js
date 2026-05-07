@@ -997,6 +997,36 @@ window.theseusStudioGrouped = function theseusStudioGrouped(app) {
   }));
 };
 
+window.theseusStudioRenderableRows = function theseusStudioRenderableRows(app) {
+  const groups = window.theseusStudioGrouped(app);
+  const mode = app.studio.groupBy || "";
+  if (!mode) {
+    return (groups[0]?.items || []).map((deliverable) => ({
+      kind: "item",
+      key: window.theseusStudioKey(deliverable),
+      deliverable,
+    }));
+  }
+
+  return groups.flatMap((group) => {
+    const rows = [
+      {
+        kind: "group",
+        key: group.key,
+        group,
+      },
+    ];
+    for (const deliverable of group.items || []) {
+      rows.push({
+        kind: "item",
+        key: window.theseusStudioKey(deliverable),
+        deliverable,
+      });
+    }
+    return rows;
+  });
+};
+
 window.theseusStudioOpenRun = function theseusStudioOpenRun(app, deliverable) {
   app.active = "skills";
   app.$nextTick(async () => {

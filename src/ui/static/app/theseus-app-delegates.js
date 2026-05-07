@@ -168,6 +168,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusStudioGrouped(this);
     },
 
+    studioRenderableRows() {
+      return window.theseusStudioRenderableRows(this);
+    },
+
     studioSelectedCount() {
       return window.theseusStudioSelectedCount(this);
     },

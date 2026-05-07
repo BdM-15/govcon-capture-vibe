@@ -48,7 +48,7 @@ def test_studio_filename_button_is_only_preview_trigger() -> None:
     end = source.index("</button>", start)
     filename_button = source[start:end]
 
-    assert '@click="openStudioPreview(d)"' in filename_button
+    assert '@click="openStudioPreview(row.deliverable)"' in filename_button
     assert 'x-text="d.filename"' not in filename_button
     assert 'title="Preview inline"' not in source
 
@@ -110,7 +110,7 @@ def test_studio_filter_bar_exposes_grouping_control() -> None:
     assert '<option value="skill">Skill</option>' in source
     assert '<option value="run">Run</option>' in source
     assert '<option value="date">Date</option>' in source
-    assert 'x-for="group in studioGrouped()"' in source
+    assert 'x-for="row in studioRenderableRows()"' in source
     assert "Open run" in source
 
 
