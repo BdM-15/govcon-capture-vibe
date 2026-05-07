@@ -38,50 +38,47 @@ const theseusResetStudioPreview = function theseusResetStudioPreview(
   app.studioPreview.jsonChunks = [];
 };
 
-const theseusLoadTextStudioPreview = async function theseusLoadTextStudioPreview(
-  app,
-) {
-  const response = await theseusFetchPreviewResponse(app.studioPreview.href);
-  app.studioPreview.text = await response.text();
-  if (app.studioPreview.kind === "json") {
-    app.studioPreview.jsonChunks = window.theseusExtractJsonChunkIds(
-      app.studioPreview.text,
+const theseusLoadTextStudioPreview =
+  async function theseusLoadTextStudioPreview(app) {
+    const response = await theseusFetchPreviewResponse(app.studioPreview.href);
+    app.studioPreview.text = await response.text();
+    if (app.studioPreview.kind === "json") {
+      app.studioPreview.jsonChunks = window.theseusExtractJsonChunkIds(
+        app.studioPreview.text,
+      );
+    }
+  };
+
+const theseusLoadDocxStudioPreview =
+  async function theseusLoadDocxStudioPreview(app) {
+    await window.theseusEnsureScript(
+      app,
+      "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
     );
-  }
-};
+    const response = await theseusFetchPreviewResponse(app.studioPreview.href);
+    const buffer = await response.arrayBuffer();
+    const out = await window.mammoth.convertToHtml({ arrayBuffer: buffer });
+    app.studioPreview.docxHtml = out && out.value ? out.value : "";
+  };
 
-const theseusLoadDocxStudioPreview = async function theseusLoadDocxStudioPreview(
-  app,
-) {
-  await window.theseusEnsureScript(
-    app,
-    "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
-  );
-  const response = await theseusFetchPreviewResponse(app.studioPreview.href);
-  const buffer = await response.arrayBuffer();
-  const out = await window.mammoth.convertToHtml({ arrayBuffer: buffer });
-  app.studioPreview.docxHtml = out && out.value ? out.value : "";
-};
-
-const theseusLoadXlsxStudioPreview = async function theseusLoadXlsxStudioPreview(
-  app,
-) {
-  await window.theseusEnsureScript(
-    app,
-    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
-  );
-  const response = await theseusFetchPreviewResponse(app.studioPreview.href);
-  const buffer = await response.arrayBuffer();
-  const workbook = window.XLSX.read(buffer, { type: "array" });
-  app.studioPreview.sheets = (workbook.SheetNames || []).map((name) => ({
-    name,
-    html: window.XLSX.utils.sheet_to_html(workbook.Sheets[name], {
-      header: "",
-      footer: "",
-    }),
-  }));
-  app.studioPreview.sheetIdx = 0;
-};
+const theseusLoadXlsxStudioPreview =
+  async function theseusLoadXlsxStudioPreview(app) {
+    await window.theseusEnsureScript(
+      app,
+      "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
+    );
+    const response = await theseusFetchPreviewResponse(app.studioPreview.href);
+    const buffer = await response.arrayBuffer();
+    const workbook = window.XLSX.read(buffer, { type: "array" });
+    app.studioPreview.sheets = (workbook.SheetNames || []).map((name) => ({
+      name,
+      html: window.XLSX.utils.sheet_to_html(workbook.Sheets[name], {
+        header: "",
+        footer: "",
+      }),
+    }));
+    app.studioPreview.sheetIdx = 0;
+  };
 
 const theseusRunPreviewLoad = async function theseusRunPreviewLoad(
   app,
@@ -252,9 +249,10 @@ window.theseusLoadStudio = async function theseusLoadStudio(app) {
     app,
     app.studio,
     async () => {
-    const response = await app.api("/api/ui/studio");
-    app.studio.deliverables = response.deliverables || [];
-    app.studio.loaded = true;
+      const response = await app.api("/api/ui/studio");
+      app.studio.deliverables = response.deliverables || [];
+      window.theseusPruneStudioSelection(app);
+      app.studio.loaded = true;
     },
     {
       onError: (error) => {
@@ -263,6 +261,89 @@ window.theseusLoadStudio = async function theseusLoadStudio(app) {
       },
     },
   );
+};
+
+window.theseusStudioSelectedCount = function theseusStudioSelectedCount(app) {
+  return Object.keys(app.studio.selected || {}).length;
+};
+
+window.theseusPruneStudioSelection = function theseusPruneStudioSelection(app) {
+  const live = new Set((app.studio.deliverables || []).map(window.theseusStudioKey));
+  const next = {};
+  for (const key of Object.keys(app.studio.selected || {})) {
+    if (live.has(key)) next[key] = app.studio.selected[key];
+  }
+  app.studio.selected = next;
+};
+
+window.theseusToggleStudioSelection = function theseusToggleStudioSelection(
+  app,
+  deliverable,
+) {
+  const key = window.theseusStudioKey(deliverable);
+  const next = { ...(app.studio.selected || {}) };
+  if (next[key]) delete next[key];
+  else {
+    next[key] = {
+      skill: deliverable.skill,
+      run_id: deliverable.run_id,
+      filename: deliverable.filename,
+    };
+  }
+  app.studio.selected = next;
+};
+
+window.theseusStudioAllFilteredSelected = function theseusStudioAllFilteredSelected(app) {
+  const rows = window.theseusStudioFiltered(app);
+  if (!rows.length) return false;
+  const selected = app.studio.selected || {};
+  return rows.every((deliverable) => selected[window.theseusStudioKey(deliverable)]);
+};
+
+window.theseusToggleStudioSelectAllFiltered = function theseusToggleStudioSelectAllFiltered(app) {
+  const rows = window.theseusStudioFiltered(app);
+  const next = { ...(app.studio.selected || {}) };
+  const allSelected = window.theseusStudioAllFilteredSelected(app);
+  for (const deliverable of rows) {
+    const key = window.theseusStudioKey(deliverable);
+    if (allSelected) delete next[key];
+    else {
+      next[key] = {
+        skill: deliverable.skill,
+        run_id: deliverable.run_id,
+        filename: deliverable.filename,
+      };
+    }
+  }
+  app.studio.selected = next;
+};
+
+window.theseusClearStudioSelection = function theseusClearStudioSelection(app) {
+  app.studio.selected = {};
+};
+
+window.theseusDeleteSelectedStudioArtifacts = async function theseusDeleteSelectedStudioArtifacts(app) {
+  const artifacts = Object.values(app.studio.selected || {});
+  if (!artifacts.length || app.studio.deleting) return;
+  const label = artifacts.length === 1 ? "1 artifact" : artifacts.length + " artifacts";
+  if (!confirm("Delete " + label + " from Studio? This removes selected files from disk.")) {
+    return;
+  }
+  app.studio.deleting = true;
+  try {
+    const result = await app.api("/api/ui/studio/artifacts", {
+      method: "DELETE",
+      body: JSON.stringify({ artifacts }),
+    });
+    app.toast("Deleted " + result.deleted_count + " artifact(s)", "success");
+    window.theseusClearStudioSelection(app);
+    await window.theseusLoadStudio(app);
+  } catch (error) {
+    app.toast("Delete failed: " + (error?.message || error), "error");
+  } finally {
+    app.studio.deleting = false;
+    window.theseusAfterRender(app);
+  }
 };
 
 window.theseusStudioSkillOptions = function theseusStudioSkillOptions(app) {

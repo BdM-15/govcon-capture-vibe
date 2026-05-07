@@ -57,7 +57,7 @@ def test_list_deliverables_flattens_across_skills(tmp_path: Path) -> None:
         tmp_path,
         skill="competitive-intel",
         run_id="20250428_130000_second",
-        artifacts={"brief.md": b"# brief"},
+        artifacts={"brief.md": b"# brief", "brief.html": b"<h1>brief</h1>"},
         created_at="2025-04-28T13:00:00",
     )
 
@@ -65,7 +65,7 @@ def test_list_deliverables_flattens_across_skills(tmp_path: Path) -> None:
     assert len(rows) == 3
 
     # Newest-first ordering by created_at.
-    assert rows[0]["filename"] == "brief.md"
+    assert rows[0]["filename"] == "brief.html"
     assert rows[0]["display_name"] == "Brief"
     assert rows[0]["skill"] == "competitive-intel"
     assert rows[0]["created_at"] == "2025-04-28T13:00:00"
@@ -84,18 +84,36 @@ def test_list_deliverables_prefers_manifest_display_name(tmp_path: Path) -> None
         tmp_path,
         skill="competitive-intel",
         run_id="20250428_130000_second",
-        artifacts={"competitive_intel_obligation.json": b"{}"},
+        artifacts={"competitive_intel_obligation.json": b"{}", "burn.html": b"html"},
         created_at="2025-04-28T13:00:00",
     )
     (run_dir / "artifacts_manifest.json").write_text(
-        '{\n  "competitive_intel_obligation.json": {\n    "display_name": "AFCAP V Parent Vehicle Burn Intel"\n  }\n}\n',
+        '{\n  "burn.html": {\n    "display_name": "AFCAP V Parent Vehicle Burn Intel"\n  }\n}\n',
         encoding="utf-8",
     )
 
     rows = mgr.list_deliverables(tmp_path)
 
-    assert rows[0]["filename"] == "competitive_intel_obligation.json"
+    assert rows[0]["filename"] == "burn.html"
     assert rows[0]["display_name"] == "AFCAP V Parent Vehicle Burn Intel"
+
+
+def test_list_deliverables_hides_source_artifacts(tmp_path: Path) -> None:
+    mgr = SkillManager()
+    _seed_run(
+        tmp_path,
+        skill="competitive-intel",
+        run_id="20250428_130000_second",
+        artifacts={
+            "report.md": b"# source",
+            "report.json": b"{}",
+            "final.html": b"<h1>final</h1>",
+        },
+    )
+
+    rows = mgr.list_deliverables(tmp_path)
+
+    assert [row["filename"] for row in rows] == ["final.html"]
 
 
 def test_list_deliverables_resolves_office_mimes(tmp_path: Path) -> None:
@@ -109,7 +127,7 @@ def test_list_deliverables_resolves_office_mimes(tmp_path: Path) -> None:
             "y.xlsx": b"y",
             "z.pptx": b"z",
             "w.pdf": b"w",
-            "n.md": b"n",
+            "n.html": b"n",
         },
     )
     by_name = {r["filename"]: r for r in mgr.list_deliverables(tmp_path)}
@@ -126,7 +144,7 @@ def test_list_deliverables_resolves_office_mimes(tmp_path: Path) -> None:
         == "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     )
     assert by_name["w.pdf"]["mime"] == "application/pdf"
-    assert by_name["n.md"]["mime"] in {"text/markdown", "text/x-markdown"}
+    assert by_name["n.html"]["mime"] == "text/html"
     # Extension is normalized lowercase, no leading dot.
     assert by_name["x.docx"]["ext"] == "docx"
 
@@ -159,7 +177,7 @@ def test_list_deliverables_ignores_runs_without_artifacts_dir(tmp_path: Path) ->
 
 def test_list_deliverables_respects_limit(tmp_path: Path) -> None:
     mgr = SkillManager()
-    artifacts = {f"a{i}.txt": b"x" for i in range(10)}
+    artifacts = {f"a{i}.pdf": b"x" for i in range(10)}
     _seed_run(
         tmp_path,
         skill="proposal-generator",

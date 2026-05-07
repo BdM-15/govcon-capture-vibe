@@ -75,6 +75,20 @@ class SkillRuntimeSettingsUpdate(BaseModel):
     max_kg_relationships_per_entity: Optional[int] = Field(default=None, ge=0, le=500)
 
 
+class StudioArtifactDeleteItem(BaseModel):
+    """One artifact selected for deletion from Studio."""
+
+    skill: str = Field(..., min_length=1, max_length=128)
+    run_id: str = Field(..., min_length=1, max_length=128)
+    filename: str = Field(..., min_length=1, max_length=255)
+
+
+class StudioArtifactDeletePayload(BaseModel):
+    """Bulk deletion request for Studio artifacts."""
+
+    artifacts: list[StudioArtifactDeleteItem] = Field(..., min_length=1, max_length=200)
+
+
 def _skill_response_payload(
     result: Any,
     *,
@@ -580,6 +594,25 @@ def register_skill_run_ui_routes(
                 "workspace": get_settings().workspace,
                 "count": len(deliverables),
                 "deliverables": deliverables,
+            }
+        )
+
+    @app.delete("/api/ui/studio/artifacts", tags=["theseus-ui"])
+    async def delete_studio_artifacts_route(
+        payload: StudioArtifactDeletePayload = Body(...),
+    ) -> JSONResponse:
+        mgr = get_skill_manager()
+        result = await asyncio.to_thread(
+            mgr.delete_artifacts,
+            workspace_dir(),
+            [item.model_dump() for item in payload.artifacts],
+        )
+        return JSONResponse(
+            {
+                "deleted": result["deleted"],
+                "missing": result["missing"],
+                "deleted_count": len(result["deleted"]),
+                "missing_count": len(result["missing"]),
             }
         )
 

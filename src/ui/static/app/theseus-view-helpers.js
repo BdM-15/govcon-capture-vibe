@@ -25,7 +25,7 @@ const THESEUS_VIEW_META = {
   },
   studio: {
     title: "Studio",
-    subtitle: "capture products · every artifact every skill produced",
+    subtitle: "capture products · rendered final deliverables only",
   },
   settings: {
     title: "Settings",

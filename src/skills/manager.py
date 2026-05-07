@@ -427,6 +427,13 @@ class SkillManager:
             filename,
         )
 
+    def delete_artifacts(
+        self,
+        workspace_root: Path,
+        artifacts: list[dict[str, str]],
+    ) -> dict[str, list[dict[str, str]]]:
+        return self._run_store.delete_artifacts(workspace_root, artifacts)
+
 # ---------------------------------------------------------------------------
 # Singleton accessor
 # ---------------------------------------------------------------------------

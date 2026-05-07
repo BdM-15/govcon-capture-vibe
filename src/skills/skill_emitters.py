@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 import logging
 import subprocess
@@ -30,15 +31,15 @@ def _set_display_names(run_dir: Path, labels: dict[str, str]) -> None:
 def _auto_emit_formats(skill: Skill) -> set[str]:
     raw = (skill.frontmatter.metadata or {}).get("auto_emit_formats")
     if raw is None:
-        return {"md", "json"}
+        return {"html", "md", "json"}
     if isinstance(raw, str):
         values = [part.strip().lower() for part in raw.split(",")]
     elif isinstance(raw, list):
         values = [str(part).strip().lower() for part in raw]
     else:
         return {"md", "json"}
-    formats = {value for value in values if value in {"md", "json", "docx", "xlsx"}}
-    return formats or {"md", "json"}
+    formats = {value for value in values if value in {"html", "md", "json", "docx", "xlsx"}}
+    return formats or {"html", "md", "json"}
 
 
 def _xlsx_source_path(skill: Skill, artifacts_dir: Path) -> Path | None:
@@ -50,6 +51,37 @@ def _xlsx_source_path(skill: Skill, artifacts_dir: Path) -> Path | None:
     if candidate == artifacts_root or not candidate.is_relative_to(artifacts_root):
         return None
     return candidate
+
+
+def _render_response_html(title: str, response_text: str) -> str:
+    body = html.escape(response_text.strip() or "No final response produced.")
+    body = body.replace("\r\n", "\n").replace("\r", "\n")
+    body = body.replace("\n\n", "</p><p>").replace("\n", "<br>")
+    return f"""<!doctype html>
+<html lang=\"en\">
+<head>
+    <meta charset=\"utf-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
+    <title>{html.escape(title)}</title>
+    <style>
+        :root {{ color-scheme: light; font-family: Inter, Segoe UI, Arial, sans-serif; }}
+        body {{ margin: 0; background: #f7f8fb; color: #111827; }}
+        main {{ max-width: 920px; margin: 40px auto; padding: 44px 52px; background: #fff; border: 1px solid #d9e0ea; box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12); }}
+        h1 {{ margin: 0 0 24px; font-size: 28px; line-height: 1.2; color: #0f172a; }}
+        p {{ margin: 0 0 16px; font-size: 15px; line-height: 1.65; }}
+        .meta {{ margin-bottom: 22px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #64748b; }}
+        @media print {{ body {{ background: #fff; }} main {{ margin: 0; border: 0; box-shadow: none; }} }}
+    </style>
+</head>
+<body>
+    <main>
+        <div class=\"meta\">Theseus Studio final product</div>
+        <h1>{html.escape(title)}</h1>
+        <p>{body}</p>
+    </main>
+</body>
+</html>
+"""
 
 
 def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = None) -> None:
@@ -86,6 +118,14 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
             "report.md": f"{title} Final Response",
             "report.json": f"{title} Final Response Data",
         }
+
+        if "html" in formats:
+            out_html = artifacts_dir / f"{skill.name}_final.html"
+            out_html.write_text(
+                _render_response_html(f"{title} Final Product", response_text),
+                encoding="utf-8",
+            )
+            labels[out_html.name] = f"{title} Final Product"
 
         if not ({"docx", "xlsx"} & formats):
             _set_display_names(Path(run_dir), labels)

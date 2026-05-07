@@ -69,6 +69,8 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       filterFormat: "",
       search: "",
       pinned: {},
+      selected: {},
+      deleting: false,
     },
     studioPreview: {
       open: false,

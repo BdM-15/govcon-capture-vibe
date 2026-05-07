@@ -156,6 +156,30 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusStudioFiltered(this);
     },
 
+    studioSelectedCount() {
+      return window.theseusStudioSelectedCount(this);
+    },
+
+    studioAllFilteredSelected() {
+      return window.theseusStudioAllFilteredSelected(this);
+    },
+
+    toggleStudioSelection(deliverable) {
+      return window.theseusToggleStudioSelection(this, deliverable);
+    },
+
+    toggleStudioSelectAllFiltered() {
+      return window.theseusToggleStudioSelectAllFiltered(this);
+    },
+
+    clearStudioSelection() {
+      return window.theseusClearStudioSelection(this);
+    },
+
+    async deleteSelectedStudioArtifacts() {
+      return window.theseusDeleteSelectedStudioArtifacts(this);
+    },
+
     studioDownloadHref(deliverable) {
       return window.theseusStudioDownloadHref(deliverable);
     },

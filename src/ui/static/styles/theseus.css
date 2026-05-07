@@ -2655,6 +2655,22 @@ details.acc .summary-actions {
   border-bottom: 1px solid rgba(var(--edge-rgb, 38, 49, 80), 0.4);
   vertical-align: middle;
 }
+.studio-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(var(--ink-800-rgb), 0.76);
+  border: 1px solid rgba(var(--neon-cyan-rgb), 0.25);
+  border-radius: 8px;
+}
+.studio-check {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--neon-cyan);
+  cursor: pointer;
+}
 .studio-row {
   transition: background-color 120ms ease;
 }

@@ -75,6 +75,7 @@ def _seed_artifact(
         ("draft.docx", _STUDIO_EXTRA_MIME["docx"]),
         ("compliance.xlsx", _STUDIO_EXTRA_MIME["xlsx"]),
         ("slides.pptx", _STUDIO_EXTRA_MIME["pptx"]),
+        ("final.html", "text/html"),
         ("pws.md", "text/markdown"),
         ("envelope.json", "application/json"),
         ("brief.pdf", "application/pdf"),
@@ -105,8 +106,7 @@ def test_resolve_artifact_mime_no_extension_falls_back() -> None:
 @pytest.mark.parametrize(
     "ext,content,expected_mime",
     [
-        ("md", b"# PWS\n\nFAR 37.602 work statement.\n", "text/markdown"),
-        ("json", b'{"factor": "M.4"}', "application/json"),
+        ("html", b"<h1>PWS</h1>", "text/html"),
         (
             "docx",
             b"PK\x03\x04fake-docx-payload",
@@ -176,3 +176,45 @@ def test_download_unknown_artifact_404(tmp_path: Path, client_factory) -> None:
         "/api/ui/skills/renderers/runs/no_such_run/artifacts/missing.md"
     )
     assert resp.status_code == 404
+
+
+def test_studio_delete_selected_artifacts_removes_files(
+    tmp_path: Path,
+    client_factory,
+) -> None:
+    skill = "competitive-intel"
+    run_id = "20260430_120000_test_run"
+    html_path = _seed_artifact(
+        tmp_path,
+        skill=skill,
+        run_id=run_id,
+        filename="final.html",
+        content=b"<h1>final</h1>",
+    )
+    source_path = _seed_artifact(
+        tmp_path,
+        skill=skill,
+        run_id=run_id,
+        filename="report.json",
+        content=b"{}",
+    )
+    client = client_factory(tmp_path)
+
+    response = client.request(
+        "DELETE",
+        "/api/ui/studio/artifacts",
+        json={
+            "artifacts": [
+                {"skill": skill, "run_id": run_id, "filename": "final.html"},
+                {"skill": skill, "run_id": run_id, "filename": "missing.html"},
+            ]
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["deleted_count"] == 1
+    assert payload["missing_count"] == 1
+    assert not html_path.exists()
+    assert source_path.exists()
+    assert client.get("/api/ui/studio").json()["deliverables"] == []

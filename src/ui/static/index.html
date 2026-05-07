@@ -3350,10 +3350,11 @@
 
           <!-- ============== STUDIO (Phase 6a) ============== -->
           <!--
-            Cross-skill deliverables index. Walks /api/ui/studio (server
+            Cross-skill final-products index. Walks /api/ui/studio (server
             walks rag_storage/<workspace>/skill_runs/<skill>/<run_id>/
-            artifacts/* and flattens). Each row is one rendered artifact:
-            DOCX, XLSX, PDF, MD, JSON, MP4, GIF, etc. Filters by skill +
+            artifacts/* and flattens polished products). Source MD/JSON stay in
+            the run reasoning view. Each row is one rendered artifact:
+            DOCX, XLSX, PDF, HTML, PPTX, MP4, GIF, etc. Filters by skill +
             format + free-text search; "Open Run" deep-links into the
             existing skill-run drawer in Agent Skills.
             Phase 6b will add an inline preview pane + reasoning view.
@@ -3365,8 +3366,8 @@
                   <span class="h1-gradient">Studio</span>
                 </h1>
                 <p class="text-sm text-slate-500 mt-1">
-                  Every deliverable every skill has produced for the active
-                  workspace. Sourced from
+                  Polished final products produced for the active workspace.
+                  Source MD/JSON stays in reasoning. Sourced from
                   <code class="font-mono text-neon-cyan"
                     >rag_storage/&lt;workspace&gt;/skill_runs/</code
                   >
@@ -3426,7 +3427,6 @@
                   type="text"
                   placeholder="filename, label, or title…"
                   class="bg-ink-800 border border-edge text-slate-200 text-sm rounded px-2 py-1.5 flex-1"
-                  placeholder="filename or title…"
                   x-model="studio.search"
                 />
               </div>
@@ -3434,6 +3434,35 @@
                 class="text-xs text-slate-500 ml-auto"
                 x-text="studioFiltered().length + ' / ' + studio.deliverables.length + ' deliverables'"
               ></span>
+            </div>
+
+            <div
+              x-show="studioSelectedCount()"
+              class="studio-selection-bar mb-4"
+            >
+              <div class="flex items-center gap-2 text-sm text-slate-300">
+                <i data-lucide="check-square" class="w-4 h-4 text-neon-cyan"></i>
+                <span x-text="studioSelectedCount() + ' selected'"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  class="btn btn-ghost text-xs px-3 py-1.5"
+                  @click="clearStudioSelection()"
+                  :disabled="studio.deleting"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-danger text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+                  @click="deleteSelectedStudioArtifacts()"
+                  :disabled="studio.deleting"
+                >
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span x-text="studio.deleting ? 'Deleting…' : 'Delete selected'"></span>
+                </button>
+              </div>
             </div>
 
             <!-- Loading + empty states -->
@@ -3455,9 +3484,9 @@
                 data-lucide="folder-open"
                 class="w-8 h-8 mx-auto mb-3 text-slate-600"
               ></i>
-              No deliverables yet for this workspace.<br />
-              Run an agent skill that writes artifacts and they will appear
-              here.
+              No final products yet for this workspace.<br />
+              Run a skill that writes or renders DOCX, XLSX, PPTX, PDF, HTML,
+              media, or image artifacts.
             </div>
             <div
               x-show="!studio.loading && studioFiltered().length === 0 && studio.deliverables.length"
@@ -3474,6 +3503,15 @@
               <table class="studio-table w-full text-sm">
                 <thead>
                   <tr>
+                    <th class="w-10 text-center">
+                      <input
+                        type="checkbox"
+                        class="studio-check"
+                        :checked="studioAllFilteredSelected()"
+                        @change="toggleStudioSelectAllFiltered()"
+                        title="Select all visible artifacts"
+                      />
+                    </th>
                     <th>File</th>
                     <th>Skill</th>
                     <th>Format</th>
@@ -3491,6 +3529,15 @@
                       class="studio-row"
                       :class="isStudioPinned(d) ? 'studio-row-pinned' : ''"
                     >
+                      <td class="text-center">
+                        <input
+                          type="checkbox"
+                          class="studio-check"
+                          :checked="!!studio.selected[studioKey(d)]"
+                          @click.stop="toggleStudioSelection(d)"
+                          :title="`Select ${d.display_name || d.filename}`"
+                        />
+                      </td>
                       <td>
                         <button
                           type="button"

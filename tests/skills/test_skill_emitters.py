@@ -18,7 +18,7 @@ def _skill(tmp_path: Path) -> Skill:
 
 def _office_skill(tmp_path: Path) -> Skill:
     skill = _skill(tmp_path)
-    skill.frontmatter.metadata["auto_emit_formats"] = ["md", "json", "docx", "xlsx"]
+    skill.frontmatter.metadata["auto_emit_formats"] = ["html", "md", "json", "docx", "xlsx"]
     skill.frontmatter.metadata["auto_emit_xlsx_source"] = "table.json"
     return skill
 
@@ -55,6 +55,7 @@ def test_auto_emit_artifacts_writes_reports_by_default(tmp_path: Path) -> None:
     artifacts_dir = run_dir / "artifacts"
     assert (artifacts_dir / "report.md").read_text(encoding="utf-8") == "hello world"
     assert (artifacts_dir / "report.json").is_file()
+    assert (artifacts_dir / "demo-skill_final.html").is_file()
     assert not (artifacts_dir / "demo-skill_report.docx").exists()
     assert not (artifacts_dir / "demo-skill_report.xlsx").exists()
 
@@ -79,6 +80,7 @@ def test_auto_emit_artifacts_writes_office_outputs_when_opted_in(tmp_path: Path)
 
     auto_emit_artifacts(skill, run_dir, repo_root=repo_root)
 
+    assert (artifacts_dir / "demo-skill_final.html").is_file()
     assert (artifacts_dir / "demo-skill_report.docx").is_file()
     assert (artifacts_dir / "demo-skill_report.xlsx").is_file()
     assert (run_dir / "tool_outputs" / "render_docx.stdout.txt").is_file()

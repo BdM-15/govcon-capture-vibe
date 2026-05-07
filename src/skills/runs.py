@@ -18,7 +18,9 @@ from src.skills.run_metadata import (
     read_run_transcript,
     resolve_artifact_display_name,
     resolve_artifact_mime,
+    is_studio_deliverable,
     slugify_for_filename,
+    write_artifact_manifest,
 )
 
 _SAFE_RUN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")
@@ -126,6 +128,8 @@ class SkillRunIndex:
 
             for artifact in sorted(artifacts_dir.iterdir()):
                 if not artifact.is_file():
+                    continue
+                if not is_studio_deliverable(artifact.name):
                     continue
                 try:
                     stat = artifact.stat()
@@ -433,3 +437,54 @@ class SkillRunStore:
         if not candidate.is_file():
             return None
         return candidate
+
+    def delete_artifact(
+        self,
+        workspace_root: Path,
+        skill_name: str,
+        run_id: str,
+        filename: str,
+    ) -> bool:
+        path = self.get_artifact_path(workspace_root, skill_name, run_id, filename)
+        if path is None:
+            return False
+        run_dir = self.runs_root(workspace_root, skill_name) / run_id
+        artifacts_dir = run_dir / "artifacts"
+        try:
+            rel = path.relative_to(artifacts_dir.resolve()).as_posix()
+        except ValueError:
+            rel = path.name
+        try:
+            path.unlink()
+        except OSError:
+            return False
+        manifest = read_artifact_manifest(run_dir)
+        if rel in manifest or path.name in manifest:
+            manifest.pop(rel, None)
+            manifest.pop(path.name, None)
+            write_artifact_manifest(run_dir, manifest)
+        return not path.exists()
+
+    def delete_artifacts(
+        self,
+        workspace_root: Path,
+        artifacts: list[dict[str, str]],
+    ) -> dict[str, list[dict[str, str]]]:
+        deleted: list[dict[str, str]] = []
+        missing: list[dict[str, str]] = []
+        for item in artifacts:
+            ref = {
+                "skill": str(item.get("skill") or ""),
+                "run_id": str(item.get("run_id") or ""),
+                "filename": str(item.get("filename") or ""),
+            }
+            if self.delete_artifact(
+                workspace_root,
+                ref["skill"],
+                ref["run_id"],
+                ref["filename"],
+            ):
+                deleted.append(ref)
+            else:
+                missing.append(ref)
+        return {"deleted": deleted, "missing": missing}

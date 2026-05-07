@@ -19,12 +19,39 @@ STUDIO_EXTRA_MIME: dict[str, str] = {
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "html": "text/html",
+    "htm": "text/html",
     "md": "text/markdown",
     "json": "application/json",
     "gif": "image/gif",
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "webp": "image/webp",
     "mp4": "video/mp4",
     "pdf": "application/pdf",
 }
+
+STUDIO_DELIVERABLE_EXTENSIONS = {
+    "docx",
+    "xlsx",
+    "pptx",
+    "pdf",
+    "html",
+    "htm",
+    "mp4",
+    "gif",
+    "png",
+    "jpg",
+    "jpeg",
+    "webp",
+}
+
+
+def is_studio_deliverable(filename: str) -> bool:
+    """Return true for polished final products shown in Studio."""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    return ext in STUDIO_DELIVERABLE_EXTENSIONS
 
 
 def resolve_artifact_mime(filename: str) -> str:
