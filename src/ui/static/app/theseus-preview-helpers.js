@@ -724,7 +724,11 @@ window.theseusToggleStudioTrash = function theseusToggleStudioTrash(app) {
 window.theseusEmptyStudioTrash = async function theseusEmptyStudioTrash(app) {
   const trash = app.studio.trash || [];
   if (!trash.length || app.studio.emptyingTrash) return;
-  if (!confirm("Permanently delete every trashed Studio artifact? This cannot be undone.")) {
+  if (
+    !confirm(
+      "Permanently delete every trashed Studio artifact? This cannot be undone.",
+    )
+  ) {
     return;
   }
   app.studio.emptyingTrash = true;
