@@ -407,6 +407,96 @@ class SkillRunStore:
         return rows[:limit]
 
     @staticmethod
+    def _chain_resume_step_id(payload: dict[str, Any]) -> str:
+        if payload.get("status") in {"completed", "running"}:
+            return ""
+        steps = payload.get("steps") or {}
+        spec_steps = (payload.get("spec") or {}).get("steps") or []
+        ordered_ids = [
+            str(step.get("id") or "")
+            for step in spec_steps
+            if isinstance(step, dict) and step.get("id")
+        ]
+        ordered_ids.extend(
+            step_id for step_id in steps.keys() if step_id not in ordered_ids
+        )
+        for step_id in ordered_ids:
+            step = steps.get(step_id) or {}
+            if step.get("status") in {"failed", "skipped", "pending", "running"}:
+                return str(step_id)
+        return ""
+
+    def _chain_artifact_index(
+        self,
+        workspace_root: Path,
+    ) -> dict[tuple[str, str, str], list[dict[str, Any]]]:
+        root = self.chains_root(workspace_root)
+        if not root.is_dir():
+            return {}
+        index: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+        for chain_dir in root.iterdir():
+            if not chain_dir.is_dir() or not self.is_safe_chain_id(chain_dir.name):
+                continue
+            payload = self.get_chain_run(workspace_root, chain_dir.name)
+            if not payload:
+                continue
+            spec = payload.get("spec") or {}
+            spec_steps = spec.get("steps") or []
+            steps = payload.get("steps") or {}
+            if not isinstance(steps, dict):
+                continue
+            step_order = {
+                str(step.get("id")): idx
+                for idx, step in enumerate(spec_steps)
+                if isinstance(step, dict) and step.get("id")
+            }
+            resume_step_id = self._chain_resume_step_id(payload)
+            base = {
+                "chain_id": payload.get("chain_id") or chain_dir.name,
+                "name": spec.get("name") or "skill-chain",
+                "status": payload.get("status") or "",
+                "mode": payload.get("mode") or "original",
+                "source_chain_id": payload.get("source_chain_id") or "",
+                "created_at": payload.get("created_at") or "",
+                "updated_at": payload.get("updated_at") or "",
+                "finished_at": payload.get("finished_at") or "",
+                "error": payload.get("error") or "",
+                "step_count": len(spec_steps) or len(steps),
+                "resume_step_id": resume_step_id,
+                "can_resume": bool(resume_step_id),
+            }
+            for step_id, step in steps.items():
+                if not isinstance(step, dict):
+                    continue
+                skill = str(step.get("skill") or "")
+                run_id = str(step.get("run_id") or "")
+                if not skill or not self.is_safe_run_id(run_id):
+                    continue
+                artifacts = step.get("artifacts") or []
+                if not isinstance(artifacts, list):
+                    continue
+                for artifact in artifacts:
+                    if not isinstance(artifact, dict):
+                        continue
+                    filename = str(
+                        artifact.get("filename") or artifact.get("name") or ""
+                    )
+                    if not filename or "/" in filename or "\\" in filename:
+                        continue
+                    key = (skill, run_id, filename)
+                    index.setdefault(key, []).append(
+                        {
+                            **base,
+                            "step_id": str(step.get("id") or step_id),
+                            "step_status": step.get("status") or "",
+                            "step_index": step_order.get(str(step_id), -1),
+                        }
+                    )
+        for refs in index.values():
+            refs.sort(key=lambda ref: ref.get("created_at", ""), reverse=True)
+        return index
+
+    @staticmethod
     def _trash_root(workspace_root: Path) -> Path:
         return Path(workspace_root) / ".trash" / "studio_artifacts"
 
@@ -754,10 +844,22 @@ class SkillRunStore:
     def list_deliverables(
         self, workspace_root: Path, limit: int = 500
     ) -> list[dict[str, Any]]:
-        return SkillRunIndex(Path(workspace_root) / "skill_runs").list_deliverables(
+        rows = SkillRunIndex(Path(workspace_root) / "skill_runs").list_deliverables(
             is_safe_run_id=self.is_safe_run_id,
             limit=limit,
         )
+        chain_index = self._chain_artifact_index(workspace_root)
+        for row in rows:
+            key = (
+                str(row.get("skill") or ""),
+                str(row.get("run_id") or ""),
+                str(row.get("filename") or ""),
+            )
+            chains = chain_index.get(key) or []
+            if chains:
+                row["chains"] = chains
+                row["chain"] = chains[0]
+        return rows
 
     def get_artifact_path(
         self,

@@ -20,7 +20,11 @@ window.theseusLoadChains = async function theseusLoadChains(app) {
   }
 };
 
-window.theseusOpenChain = async function theseusOpenChain(app, chainId) {
+window.theseusOpenChain = async function theseusOpenChain(
+  app,
+  chainId,
+  options = {},
+) {
   if (!chainId) return;
   app.chains.loadingDetail = true;
   app.chains.error = null;
@@ -29,7 +33,7 @@ window.theseusOpenChain = async function theseusOpenChain(app, chainId) {
       "/api/ui/skill-chains/" + encodeURIComponent(chainId),
     );
     app.chains.current = response;
-    app.active = "chains";
+    if (options.activate !== false) app.active = "chains";
   } catch (error) {
     app.toast("Chain load failed: " + (error?.message || error), "error");
   } finally {
@@ -75,7 +79,51 @@ window.theseusChainResumeStepId = function theseusChainResumeStepId(chain) {
 
 window.theseusChainCanResume = function theseusChainCanResume(chain) {
   if (!chain || chain.status === "running" || chain.status === "completed") return false;
+  if (chain.resume_step_id) return true;
+  if (chain.can_resume === false) return false;
   return !!window.theseusChainResumeStepId(chain);
+};
+
+window.theseusPrimaryChain = function theseusPrimaryChain(deliverable) {
+  return deliverable?.chain || (deliverable?.chains || [])[0] || null;
+};
+
+window.theseusStudioHasChain = function theseusStudioHasChain(deliverable) {
+  return !!window.theseusPrimaryChain(deliverable);
+};
+
+window.theseusOpenStudioChainTrace = async function theseusOpenStudioChainTrace(
+  app,
+  deliverable,
+) {
+  const chain = window.theseusPrimaryChain(deliverable);
+  if (!chain?.chain_id) return;
+  app.studio.chainTraceOpen = true;
+  await window.theseusOpenChain(app, chain.chain_id, { activate: false });
+};
+
+window.theseusCloseStudioChainTrace = function theseusCloseStudioChainTrace(app) {
+  app.studio.chainTraceOpen = false;
+};
+
+window.theseusRerunStudioChain = async function theseusRerunStudioChain(
+  app,
+  deliverable,
+) {
+  const chain = window.theseusPrimaryChain(deliverable);
+  if (!chain?.chain_id) return;
+  app.studio.chainTraceOpen = true;
+  await window.theseusRerunChain(app, chain.chain_id);
+};
+
+window.theseusResumeStudioChain = async function theseusResumeStudioChain(
+  app,
+  deliverable,
+) {
+  const chain = window.theseusPrimaryChain(deliverable);
+  if (!chain?.chain_id) return;
+  app.studio.chainTraceOpen = true;
+  await window.theseusResumeChain(app, chain.chain_id);
 };
 
 window.theseusRerunChain = async function theseusRerunChain(app, chainId) {
@@ -103,10 +151,14 @@ window.theseusRerunChain = async function theseusRerunChain(app, chainId) {
 
 window.theseusResumeChain = async function theseusResumeChain(app, chainId) {
   if (!chainId || app.chains.resuming) return;
-  const chain = app.chains.current?.chain_id === chainId ? app.chains.current : null;
-  const fromStepId = window.theseusChainResumeStepId(chain);
   app.chains.resuming = chainId;
   try {
+    let chain = app.chains.current?.chain_id === chainId ? app.chains.current : null;
+    if (!chain) {
+      chain = await app.api("/api/ui/skill-chains/" + encodeURIComponent(chainId));
+      app.chains.current = chain;
+    }
+    const fromStepId = chain.resume_step_id || window.theseusChainResumeStepId(chain);
     const response = await app.api(
       "/api/ui/skill-chains/" + encodeURIComponent(chainId) + "/resume",
       {
@@ -128,6 +180,8 @@ window.theseusResumeChain = async function theseusResumeChain(app, chainId) {
 
 window.theseusOpenChainStepRun = async function theseusOpenChainStepRun(app, step) {
   if (!step?.skill || !step?.run_id) return;
+  app.studio.chainTraceOpen = false;
+  app.active = "skills";
   await app.openSkill(step.skill);
   await app.loadSkillRun(step.skill, step.run_id);
 };

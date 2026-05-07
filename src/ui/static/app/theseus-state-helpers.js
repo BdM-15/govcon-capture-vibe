@@ -84,6 +84,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       zipping: false,
       restoringTrash: "",
       emptyingTrash: false,
+      chainTraceOpen: false,
     },
     studioPreview: {
       open: false,

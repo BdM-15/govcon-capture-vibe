@@ -180,6 +180,30 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusOpenChainStepRun(this, step);
     },
 
+    primaryChain(deliverable) {
+      return window.theseusPrimaryChain(deliverable);
+    },
+
+    studioHasChain(deliverable) {
+      return window.theseusStudioHasChain(deliverable);
+    },
+
+    async openStudioChainTrace(deliverable) {
+      return window.theseusOpenStudioChainTrace(this, deliverable);
+    },
+
+    closeStudioChainTrace() {
+      return window.theseusCloseStudioChainTrace(this);
+    },
+
+    async rerunStudioChain(deliverable) {
+      return window.theseusRerunStudioChain(this, deliverable);
+    },
+
+    async resumeStudioChain(deliverable) {
+      return window.theseusResumeStudioChain(this, deliverable);
+    },
+
     toggleStudioTrash() {
       return window.theseusToggleStudioTrash(this);
     },

@@ -9,6 +9,7 @@ without spinning up FastAPI + a workspace.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -96,6 +97,56 @@ def test_list_deliverables_prefers_manifest_display_name(tmp_path: Path) -> None
 
     assert rows[0]["filename"] == "burn.html"
     assert rows[0]["display_name"] == "AFCAP V Parent Vehicle Burn Intel"
+
+
+def test_list_deliverables_attaches_chain_trace(tmp_path: Path) -> None:
+    mgr = SkillManager()
+    _seed_run(
+        tmp_path,
+        skill="price-to-win",
+        run_id="20260507_120000_ptw",
+        artifacts={"ptw.xlsx": b"workbook"},
+        created_at="2026-05-07T12:00:00",
+    )
+    chain_id = "20260507_121500_intel_to_ptw"
+    chain_dir = tmp_path / "skill_chains" / chain_id
+    chain_dir.mkdir(parents=True)
+    (chain_dir / "chain.json").write_text(
+        json.dumps(
+            {
+                "chain_id": chain_id,
+                "workspace": "ws",
+                "status": "completed",
+                "mode": "original",
+                "spec": {
+                    "name": "intel-to-ptw",
+                    "steps": [
+                        {"id": "intel", "skill": "competitive-intel"},
+                        {"id": "ptw", "skill": "price-to-win"},
+                    ],
+                },
+                "steps": {
+                    "ptw": {
+                        "id": "ptw",
+                        "skill": "price-to-win",
+                        "run_id": "20260507_120000_ptw",
+                        "status": "completed",
+                        "artifacts": [{"name": "ptw.xlsx"}],
+                    }
+                },
+                "created_at": "2026-05-07T12:15:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = mgr.list_deliverables(tmp_path)
+
+    assert rows[0]["chain"]["chain_id"] == chain_id
+    assert rows[0]["chain"]["name"] == "intel-to-ptw"
+    assert rows[0]["chain"]["step_id"] == "ptw"
+    assert rows[0]["chain"]["step_count"] == 2
+    assert rows[0]["chain"]["can_resume"] is False
 
 
 def test_list_deliverables_hides_source_artifacts(tmp_path: Path) -> None:

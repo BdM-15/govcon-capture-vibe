@@ -57,6 +57,7 @@ window.theseusInit = async function theseusInit(app) {
     "reasoning.expanded",
     "chunkPreview.open",
     "studioPreview.open",
+    "studio.chainTraceOpen",
     "studioPreview.sheetIdx",
     "chains.current",
     "chains.items",
