@@ -412,10 +412,17 @@ window.theseusInvokeSkill = async function theseusInvokeSkill(app) {
     }
     if (response.run_id) {
       app.toast("Saved run " + response.run_id, "ok");
-      Promise.all([
+      const refreshes = [
         app.loadSkillRuns(app.skills.current.name),
         app.loadSkillRunTrash(app.skills.current.name),
-      ]);
+      ];
+      // Refresh Studio so freshly-emitted artifacts surface without manual click.
+      // Only refresh if Studio has been opened at least once this session — avoids
+      // pulling the index for users who never visit Studio.
+      if (app.studio && app.studio.loaded) {
+        refreshes.push(app.loadStudio());
+      }
+      Promise.all(refreshes);
     }
   } catch (error) {
     app.toast("Skill invocation failed: " + (error?.message || error), "error");
