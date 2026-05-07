@@ -11,12 +11,13 @@ INPUT JSON SHAPES
 1. Top-level array of objects → single sheet named --sheet (default "Sheet1"):
    [{"col_a": 1, "col_b": "x"}, ...]
 
-2. Top-level object whose values are arrays of objects → one sheet per key
+2. Object whose values contain arrays of objects → one sheet per key/path
    (sheet name = key, truncated to 31 chars per Excel limit):
    {"compliance_matrix": [...], "themes": [...], "fab_chains": [...]}
 
-   Non-array values at the top level are ignored (e.g. executive_summary_md,
-   warnings — those belong in a DOCX, not a worksheet).
+    Nested arrays are discovered recursively (e.g. obligations.by_award).
+    Non-array values are ignored (e.g. executive_summary_md, warnings — those
+    belong in a DOCX, not a worksheet).
 
 STYLING (automatic)
 -------------------
@@ -51,6 +52,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -83,6 +85,7 @@ HEADER_FONT = Font(bold=True, color="FFFFFF")
 WRAP = Alignment(wrap_text=True, vertical="top")
 MAX_COL_WIDTH = 60
 SHEET_NAME_MAX = 31  # Excel hard limit
+INVALID_SHEET_CHARS = re.compile(r"[\\/*?:\[\]]+")
 
 
 def _cell_value(v: Any) -> Any:
@@ -177,6 +180,40 @@ def _load_input(path_arg: str) -> Any:
         sys.exit(2)
 
 
+def _is_object_rows(value: Any) -> bool:
+    return isinstance(value, list) and bool(value) and all(isinstance(row, dict) for row in value)
+
+
+def _sheet_name(path: tuple[str, ...], used: set[str]) -> str:
+    raw = "_".join(part for part in path if part) or "Sheet1"
+    cleaned = INVALID_SHEET_CHARS.sub("_", raw).strip(" '_") or "Sheet1"
+    base = cleaned[:SHEET_NAME_MAX]
+    name = base
+    index = 2
+    while name in used:
+        suffix = f"_{index}"
+        name = f"{base[: SHEET_NAME_MAX - len(suffix)]}{suffix}"
+        index += 1
+    used.add(name)
+    return name
+
+
+def _walk_object_rows(data: Any, path: tuple[str, ...], used: set[str]) -> list[tuple[str, list[dict[str, Any]]]]:
+    if _is_object_rows(data):
+        return [(_sheet_name(path, used), data)]
+    if isinstance(data, dict):
+        sheets: list[tuple[str, list[dict[str, Any]]]] = []
+        for key, value in data.items():
+            sheets.extend(_walk_object_rows(value, path + (str(key),), used))
+        return sheets
+    if isinstance(data, list):
+        sheets: list[tuple[str, list[dict[str, Any]]]] = []
+        for index, value in enumerate(data, start=1):
+            sheets.extend(_walk_object_rows(value, path + (str(index),), used))
+        return sheets
+    return []
+
+
 def _coerce_to_sheets(data: Any, default_sheet: str) -> list[tuple[str, list[dict[str, Any]]]]:
     """Return [(sheet_name, rows)] derived from the input JSON shape."""
     if isinstance(data, list):
@@ -186,15 +223,12 @@ def _coerce_to_sheets(data: Any, default_sheet: str) -> list[tuple[str, list[dic
         return [(default_sheet, data)]
 
     if isinstance(data, dict):
-        sheets: list[tuple[str, list[dict[str, Any]]]] = []
-        for key, value in data.items():
-            if isinstance(value, list) and value and all(isinstance(r, dict) for r in value):
-                sheets.append((key, value))
+        sheets = _walk_object_rows(data, (), set())
         if not sheets:
             sys.stderr.write(
-                "No array-of-objects values found at top level. "
-                "Expected either a top-level array or an object with array-valued keys "
-                "(e.g. {'compliance_matrix': [...], 'themes': [...]}).\n"
+                "No array-of-objects values found. Expected either a top-level array "
+                "or an object containing array-valued keys "
+                "(e.g. {'compliance_matrix': [...], 'obligations': {'by_award': [...]}}).\n"
             )
             sys.exit(2)
         return sheets

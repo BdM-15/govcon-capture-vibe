@@ -247,15 +247,18 @@ calls, and Studio-visible artifacts under `<run_dir>/artifacts/`.
 | `invoke_skill(name, prompt)` tool    | Tier A synchronous child skill invocation, depth=1, same workspace, child run/artifacts returned              |
 | Tool-call transcript                 | `transcript.json` in `<run_dir>/` capturing every call, args, result, timing                                  |
 | Per-script outputs                   | `tool_outputs/<NN>_<tool>_<descriptor>.{stdout,stderr}.txt`                                                   |
-| Generic product emission             | Enabled by default unless `metadata.auto_emit_artifacts: false`; emits a Studio-visible final HTML product plus source `report.md/json`; DOCX requires `metadata.auto_emit_formats` opt-in; XLSX also requires `metadata.auto_emit_xlsx_source` |
+| Generic product emission             | Enabled by default unless `metadata.auto_emit_artifacts: false`; emits source `report.md/json`, a Studio-visible DOCX brief, and XLSX workbooks only when real JSON array data exists. HTML is shown only when a skill writes or renders HTML itself. |
 
 The existing Phase 1.6 hybrid retrieval pipeline is **fully reused** — it
 is the implementation of `kg_chunks(...)`. Studio indexes artifacts, not
 `response.md`, so generic product emission guarantees even chat-only skills
-produce a Studio-visible final HTML product. Source `report.md/json` remains on
-disk for reasoning/editing workflows but is filtered out of Studio. Office renders
-are opt-in, and XLSX auto-emission requires a table JSON source so skills do not
-publish faux workbook products by default.
+produce a Studio-visible Word brief. Source `report.md/json` remains on disk for
+reasoning/editing workflows but is filtered out of Studio. Workbook emission is
+profile-driven and data-driven: known skill envelopes are tried first, then any
+non-source JSON artifacts; the XLSX renderer publishes only files with real
+array-of-object data, including nested envelope arrays such as obligation
+rollups. This prevents faux workbook products while still making data-heavy
+skills populate Studio automatically.
 
 ---
 

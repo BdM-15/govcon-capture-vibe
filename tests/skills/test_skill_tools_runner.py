@@ -241,10 +241,10 @@ def test_run_tools_skill_auto_emit_deliverables_reach_studio_route(tmp_path: Pat
     rows = response.json()["deliverables"]
     by_filename = {row["filename"]: row for row in rows}
     assert set(by_filename) == {
-        "future-skill_final.html",
+        "future_skill_brief.docx",
     }
     assert all(row["run_id"] == result.run_id for row in rows)
-    assert by_filename["future-skill_final.html"]["display_name"] == "Future Skill Final Product"
+    assert by_filename["future_skill_brief.docx"]["display_name"] == "Future Skill Brief"
 
 
 def test_run_tools_skill_requires_workspace_root(tmp_path: Path) -> None:

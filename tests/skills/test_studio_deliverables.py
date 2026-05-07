@@ -107,13 +107,13 @@ def test_list_deliverables_hides_source_artifacts(tmp_path: Path) -> None:
         artifacts={
             "report.md": b"# source",
             "report.json": b"{}",
-            "final.html": b"<h1>final</h1>",
+            "final.docx": b"docx",
         },
     )
 
     rows = mgr.list_deliverables(tmp_path)
 
-    assert [row["filename"] for row in rows] == ["final.html"]
+    assert [row["filename"] for row in rows] == ["final.docx"]
 
 
 def test_list_deliverables_resolves_office_mimes(tmp_path: Path) -> None:

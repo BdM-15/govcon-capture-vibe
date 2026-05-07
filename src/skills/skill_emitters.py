@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import html
 import json
 import logging
 import subprocess
@@ -15,8 +14,74 @@ from src.skills.skill_models import Skill
 logger = logging.getLogger(__name__)
 
 
+_PRODUCT_PROFILES: dict[str, dict[str, object]] = {
+    "competitive-intel": {
+        "base": "competitive_intel",
+        "label": "Competitive Intel",
+        "xlsx_sources": ["competitive_intel_obligation.json", "competitive_intel.json"],
+    },
+    "compliance-auditor": {
+        "base": "compliance_audit",
+        "label": "Compliance Audit",
+        "xlsx_sources": ["compliance_audit.json"],
+    },
+    "proposal-generator": {
+        "base": "proposal_draft",
+        "label": "Proposal Draft",
+        "xlsx_sources": ["proposal_draft.json"],
+    },
+    "price-to-win": {
+        "base": "price_to_win",
+        "label": "Price To Win",
+        "xlsx_sources": ["price_to_win.json", "ptw_ffp.json", "ptw_lh.json", "ptw_cr.json"],
+    },
+    "oci-sweeper": {
+        "base": "oci_sweep",
+        "label": "OCI Sweep",
+        "xlsx_sources": ["oci_sweep.json"],
+    },
+    "ot-prototype-strategist": {
+        "base": "ot_prototype_strategy",
+        "label": "OT Prototype Strategy",
+        "xlsx_sources": ["ot_prototype_strategy.json", "ot_strategy.json"],
+    },
+    "rfp-reverse-engineer": {
+        "base": "rfp_reverse_engineering",
+        "label": "RFP Reverse Engineering",
+        "xlsx_sources": ["rfp_reverse_engineering.json", "rfp_reverse_engineer.json"],
+    },
+    "subcontractor-sow-builder": {
+        "base": "subcontractor_sow",
+        "label": "Subcontractor SOW",
+        "xlsx_sources": ["subcontractor_sow.json"],
+    },
+    "workload-analyzer": {
+        "base": "workload_analysis",
+        "label": "Workload Analysis",
+        "xlsx_sources": ["workload_analysis.json", "workload_handoff.json"],
+    },
+    "data-analyzer": {
+        "base": "data_analysis",
+        "label": "Data Analysis",
+        "xlsx_sources": ["data_analysis.json"],
+    },
+    "grill-me-govcon": {"base": "govcon_grill", "label": "GovCon Grill"},
+    "grill-me-bid-strategy": {"base": "bid_strategy_grill", "label": "Bid Strategy Grill"},
+    "grill-me-capture": {"base": "capture_grill", "label": "Capture Grill"},
+    "grill-me-proposal": {"base": "proposal_grill", "label": "Proposal Grill"},
+    "grill-me-ptw": {"base": "ptw_grill", "label": "PTW Grill"},
+}
+
+
 def _display_title(skill: Skill) -> str:
     return " ".join(part.capitalize() for part in skill.name.replace("_", "-").split("-"))
+
+
+def _profile(skill: Skill) -> dict[str, object]:
+    profile = dict(_PRODUCT_PROFILES.get(skill.name) or {})
+    profile.setdefault("base", skill.name.replace("-", "_"))
+    profile.setdefault("label", _display_title(skill))
+    return profile
 
 
 def _set_display_names(run_dir: Path, labels: dict[str, str]) -> None:
@@ -31,7 +96,7 @@ def _set_display_names(run_dir: Path, labels: dict[str, str]) -> None:
 def _auto_emit_formats(skill: Skill) -> set[str]:
     raw = (skill.frontmatter.metadata or {}).get("auto_emit_formats")
     if raw is None:
-        return {"html", "md", "json"}
+        return {"md", "json", "docx", "xlsx"}
     if isinstance(raw, str):
         values = [part.strip().lower() for part in raw.split(",")]
     elif isinstance(raw, list):
@@ -39,49 +104,50 @@ def _auto_emit_formats(skill: Skill) -> set[str]:
     else:
         return {"md", "json"}
     formats = {value for value in values if value in {"html", "md", "json", "docx", "xlsx"}}
-    return formats or {"html", "md", "json"}
+    return formats or {"md", "json", "docx", "xlsx"}
 
 
-def _xlsx_source_path(skill: Skill, artifacts_dir: Path) -> Path | None:
+def _metadata_xlsx_sources(skill: Skill) -> list[str]:
     raw = (skill.frontmatter.metadata or {}).get("auto_emit_xlsx_source")
-    if not isinstance(raw, str) or not raw.strip():
-        return None
-    candidate = (artifacts_dir / raw.strip()).resolve()
+    if isinstance(raw, str) and raw.strip():
+        return [raw.strip()]
+    if isinstance(raw, list):
+        return [str(item).strip() for item in raw if str(item).strip()]
+    return []
+
+
+def _safe_artifact_path(artifacts_dir: Path, rel: str) -> Path | None:
+    candidate = (artifacts_dir / rel).resolve()
     artifacts_root = artifacts_dir.resolve()
-    if candidate == artifacts_root or not candidate.is_relative_to(artifacts_root):
+    if candidate == artifacts_root:
+        return None
+    try:
+        candidate.relative_to(artifacts_root)
+    except ValueError:
         return None
     return candidate
 
 
-def _render_response_html(title: str, response_text: str) -> str:
-    body = html.escape(response_text.strip() or "No final response produced.")
-    body = body.replace("\r\n", "\n").replace("\r", "\n")
-    body = body.replace("\n\n", "</p><p>").replace("\n", "<br>")
-    return f"""<!doctype html>
-<html lang=\"en\">
-<head>
-    <meta charset=\"utf-8\">
-    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
-    <title>{html.escape(title)}</title>
-    <style>
-        :root {{ color-scheme: light; font-family: Inter, Segoe UI, Arial, sans-serif; }}
-        body {{ margin: 0; background: #f7f8fb; color: #111827; }}
-        main {{ max-width: 920px; margin: 40px auto; padding: 44px 52px; background: #fff; border: 1px solid #d9e0ea; box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12); }}
-        h1 {{ margin: 0 0 24px; font-size: 28px; line-height: 1.2; color: #0f172a; }}
-        p {{ margin: 0 0 16px; font-size: 15px; line-height: 1.65; }}
-        .meta {{ margin-bottom: 22px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #64748b; }}
-        @media print {{ body {{ background: #fff; }} main {{ margin: 0; border: 0; box-shadow: none; }} }}
-    </style>
-</head>
-<body>
-    <main>
-        <div class=\"meta\">Theseus Studio final product</div>
-        <h1>{html.escape(title)}</h1>
-        <p>{body}</p>
-    </main>
-</body>
-</html>
-"""
+def _xlsx_source_paths(skill: Skill, artifacts_dir: Path, profile: dict[str, object]) -> list[Path]:
+    seen: set[Path] = set()
+    out: list[Path] = []
+    configured = _metadata_xlsx_sources(skill)
+    profiled = [str(item) for item in profile.get("xlsx_sources", []) if str(item).strip()]
+    discovered = [path.name for path in sorted(artifacts_dir.glob("*.json")) if path.name != "report.json"]
+    for rel in configured + profiled + discovered:
+        candidate = _safe_artifact_path(artifacts_dir, rel)
+        if candidate is None or not candidate.is_file() or candidate.suffix.lower() != ".json":
+            continue
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        out.append(candidate)
+    return out
+
+
+def _safe_output_stem(stem: str) -> str:
+    cleaned = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in stem).strip("._-")
+    return cleaned or "artifact"
 
 
 def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = None) -> None:
@@ -98,6 +164,10 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
         if not response_path.exists():
             return
 
+        profile = _profile(skill)
+        base = _safe_output_stem(str(profile["base"]))
+        title = str(profile["label"])
+
         report_md = artifacts_dir / "report.md"
         response_text = response_path.read_text(encoding="utf-8")
         report_md.write_text(response_text, encoding="utf-8")
@@ -113,19 +183,10 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
         }
         report_json.write_text(json.dumps(json_payload, ensure_ascii=False), encoding="utf-8")
 
-        title = _display_title(skill)
         labels = {
             "report.md": f"{title} Final Response",
             "report.json": f"{title} Final Response Data",
         }
-
-        if "html" in formats:
-            out_html = artifacts_dir / f"{skill.name}_final.html"
-            out_html.write_text(
-                _render_response_html(f"{title} Final Product", response_text),
-                encoding="utf-8",
-            )
-            labels[out_html.name] = f"{title} Final Product"
 
         if not ({"docx", "xlsx"} & formats):
             _set_display_names(Path(run_dir), labels)
@@ -135,7 +196,7 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
             repo_root = Path(__file__).resolve().parents[2]
         renderers_dir = repo_root / ".github" / "skills" / "renderers" / "scripts"
 
-        def _run_script(prog_path: Path, args: list[str], out_name: str) -> None:
+        def _run_script(prog_path: Path, args: list[str], out_name: str) -> bool:
             try:
                 proc = subprocess.run(
                     [sys.executable, str(prog_path)] + args,
@@ -146,36 +207,47 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
                 )
             except Exception as exc:  # noqa: BLE001
                 (tool_outputs_dir / f"{out_name}.stderr.txt").write_text(str(exc), encoding="utf-8")
-                return
+                return False
             (tool_outputs_dir / f"{out_name}.stdout.txt").write_text(proc.stdout or "", encoding="utf-8")
             (tool_outputs_dir / f"{out_name}.stderr.txt").write_text(proc.stderr or "", encoding="utf-8")
+            return proc.returncode == 0
 
         docx_script = renderers_dir / "render_docx.py"
         if "docx" in formats and docx_script.is_file():
-            out_docx = artifacts_dir / f"{skill.name}_report.docx"
-            args = ["--input", str(report_md), "--output", str(out_docx)]
+            out_docx = artifacts_dir / f"{base}_brief.docx"
+            args = [
+                "--input",
+                str(report_md),
+                "--output",
+                str(out_docx),
+                "--metadata",
+                f"title={title} Brief",
+            ]
             ref = skill_dir / "assets" / "reference.docx"
             if ref.is_file():
                 args.extend(["--reference", str(ref)])
             _run_script(docx_script, args, "render_docx")
             if out_docx.is_file():
-                labels[out_docx.name] = f"{title} Final Response DOCX"
+                labels[out_docx.name] = f"{title} Brief"
 
         xlsx_script = renderers_dir / "render_xlsx.py"
         if "xlsx" in formats and xlsx_script.is_file():
-            xlsx_source = _xlsx_source_path(skill, artifacts_dir)
-            if xlsx_source is None or not xlsx_source.is_file():
-                (tool_outputs_dir / "render_xlsx.stderr.txt").write_text(
-                    "auto_emit_xlsx_source must point to a JSON table artifact before XLSX auto-emission runs.",
-                    encoding="utf-8",
-                )
-                _set_display_names(Path(run_dir), labels)
-                return
-            out_xlsx = artifacts_dir / f"{skill.name}_report.xlsx"
-            args = ["--input", str(xlsx_source), "--output", str(out_xlsx), "--title", "Skill Report"]
-            _run_script(xlsx_script, args, "render_xlsx")
-            if out_xlsx.is_file():
-                labels[out_xlsx.name] = f"{title} Final Response Workbook"
+            for xlsx_source in _xlsx_source_paths(skill, artifacts_dir, profile):
+                stem = _safe_output_stem(xlsx_source.stem)
+                out_xlsx = artifacts_dir / f"{stem}.xlsx"
+                if out_xlsx == xlsx_source:
+                    continue
+                args = [
+                    "--input",
+                    str(xlsx_source),
+                    "--output",
+                    str(out_xlsx),
+                    "--title",
+                    f"{title} Workbook",
+                ]
+                _run_script(xlsx_script, args, f"render_xlsx_{stem}")
+                if out_xlsx.is_file():
+                    labels[out_xlsx.name] = f"{title} Workbook"
         _set_display_names(Path(run_dir), labels)
     except Exception as exc:  # noqa: BLE001
         logger.warning("auto_emit_artifacts error: %s", exc)
