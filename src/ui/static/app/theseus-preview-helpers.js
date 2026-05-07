@@ -207,14 +207,24 @@ window.theseusReasoningArtifacts = function theseusReasoningArtifacts(app) {
   const items = (app.reasoning.artifacts || []).map((artifact) => {
     const deliverable = theseusReasoningArtifactDeliverable(app, artifact);
     const isSource = THESEUS_REASONING_SOURCE_EXTENSIONS.has(deliverable.ext);
+    const renderStatus = String(artifact.render_status || "").toLowerCase();
     return {
       ...artifact,
       ...deliverable,
       isCurrent: deliverable.filename === current,
       isSource,
+      renderStatus,
+      hasRenderFailure: renderStatus === "failed",
+      renderMessage: artifact.render_message || "",
+      renderTargets: Array.isArray(artifact.render_targets)
+        ? artifact.render_targets
+        : [],
+      renderLogs: Array.isArray(artifact.render_logs) ? artifact.render_logs : [],
+      renderLogExcerpt: artifact.render_log_excerpt || "",
     };
   });
-  const rank = (item) => (item.isCurrent ? 0 : item.isSource ? 2 : 1);
+  const rank = (item) =>
+    item.isCurrent ? 0 : item.hasRenderFailure ? 1 : item.isSource ? 3 : 2;
   return items.sort((left, right) => {
     const byRank = rank(left) - rank(right);
     if (byRank) return byRank;
@@ -254,21 +264,30 @@ window.theseusPromoteReasoningArtifact = async function theseusPromoteReasoningA
   if (!skill || !runId || app.reasoning.promoting === busyKey) return;
   app.reasoning.promoting = busyKey;
   try {
-    const response = await app.api(
+    const response = await fetch(
       "/api/ui/skills/" +
         encodeURIComponent(skill) +
         "/runs/" +
         encodeURIComponent(runId) +
         "/artifacts/render",
-      { method: "POST" },
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
     );
+    const contentType = response.headers.get("content-type") || "";
+    const payload = contentType.includes("application/json")
+      ? await response.json()
+      : await response.text();
     if (
       app.skills.current?.name === skill &&
       app.skills.run?.run_id === runId
     ) {
       await app.loadSkillRun(skill, runId);
     }
-    await window.theseusLoadStudio(app);
+    if (response.ok) {
+      await window.theseusLoadStudio(app);
+    }
     await window.theseusOpenReasoning(app, {
       skill,
       run_id: runId,
@@ -276,7 +295,14 @@ window.theseusPromoteReasoningArtifact = async function theseusPromoteReasoningA
       title: app.reasoning.title || artifact.display_name || artifact.filename || "",
       created_at: app.reasoning.created_at || "",
     });
-    const created = (response.created || [])
+    if (!response.ok) {
+      const detail =
+        (payload && typeof payload === "object" && (payload.detail || payload.message)) ||
+        (typeof payload === "string" && payload) ||
+        `${response.status} ${response.statusText}`;
+      throw new Error(String(detail));
+    }
+    const created = ((payload && payload.created) || [])
       .map((deliverable) => deliverable.display_name || deliverable.filename || "")
       .filter(Boolean);
     app.toast(

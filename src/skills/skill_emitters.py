@@ -14,6 +14,14 @@ from src.skills.skill_models import Skill
 
 logger = logging.getLogger(__name__)
 
+_RENDER_STATUS_KEYS = (
+    "render_status",
+    "render_message",
+    "render_targets",
+    "render_logs",
+    "render_log_excerpt",
+)
+
 
 _PRODUCT_PROFILES: dict[str, dict[str, object]] = {
     "competitive-intel": {
@@ -91,6 +99,47 @@ def _set_display_names(run_dir: Path, labels: dict[str, str]) -> None:
         entry = dict(manifest.get(artifact) or {})
         entry["display_name"] = display_name
         manifest[artifact] = entry
+    write_artifact_manifest(run_dir, manifest)
+
+
+def _clear_render_status(run_dir: Path, artifact: str) -> None:
+    manifest = read_artifact_manifest(run_dir)
+    entry = dict(manifest.get(artifact) or {})
+    changed = False
+    for key in _RENDER_STATUS_KEYS:
+        if key in entry:
+            entry.pop(key, None)
+            changed = True
+    if not changed:
+        return
+    if entry:
+        manifest[artifact] = entry
+    else:
+        manifest.pop(artifact, None)
+    write_artifact_manifest(run_dir, manifest)
+
+
+def _mark_render_failed(
+    run_dir: Path,
+    artifact: str,
+    *,
+    message: str,
+    targets: list[str],
+    logs: list[str],
+    excerpt: str,
+) -> None:
+    manifest = read_artifact_manifest(run_dir)
+    entry = dict(manifest.get(artifact) or {})
+    entry["render_status"] = "failed"
+    if message:
+        entry["render_message"] = message
+    if targets:
+        entry["render_targets"] = targets
+    if logs:
+        entry["render_logs"] = logs
+    if excerpt:
+        entry["render_log_excerpt"] = excerpt
+    manifest[artifact] = entry
     write_artifact_manifest(run_dir, manifest)
 
 
@@ -373,7 +422,9 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
             repo_root = Path(__file__).resolve().parents[2]
         renderers_dir = repo_root / ".github" / "skills" / "renderers" / "scripts"
 
-        def _run_script(prog_path: Path, args: list[str], out_name: str) -> bool:
+        def _run_script(prog_path: Path, args: list[str], out_name: str) -> dict[str, Any]:
+            stdout_name = f"{out_name}.stdout.txt"
+            stderr_name = f"{out_name}.stderr.txt"
             try:
                 proc = subprocess.run(
                     [sys.executable, str(prog_path)] + args,
@@ -383,11 +434,25 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
                     timeout=120,
                 )
             except Exception as exc:  # noqa: BLE001
-                (tool_outputs_dir / f"{out_name}.stderr.txt").write_text(str(exc), encoding="utf-8")
-                return False
-            (tool_outputs_dir / f"{out_name}.stdout.txt").write_text(proc.stdout or "", encoding="utf-8")
-            (tool_outputs_dir / f"{out_name}.stderr.txt").write_text(proc.stderr or "", encoding="utf-8")
-            return proc.returncode == 0
+                (tool_outputs_dir / stdout_name).write_text("", encoding="utf-8")
+                (tool_outputs_dir / stderr_name).write_text(str(exc), encoding="utf-8")
+                return {
+                    "ok": False,
+                    "message": str(exc),
+                    "log_files": [stdout_name, stderr_name],
+                    "excerpt": str(exc),
+                }
+            (tool_outputs_dir / stdout_name).write_text(proc.stdout or "", encoding="utf-8")
+            (tool_outputs_dir / stderr_name).write_text(proc.stderr or "", encoding="utf-8")
+            message = (proc.stderr or proc.stdout or "").strip()
+            if not message and proc.returncode != 0:
+                message = f"Renderer exited with code {proc.returncode}"
+            return {
+                "ok": proc.returncode == 0,
+                "message": message,
+                "log_files": [stdout_name, stderr_name],
+                "excerpt": (proc.stderr or proc.stdout or "").strip()[:1200],
+            }
 
         docx_script = renderers_dir / "render_docx.py"
         if "docx" in formats and docx_script.is_file():
@@ -406,9 +471,19 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
             ref = skill_dir / "assets" / "reference.docx"
             if ref.is_file():
                 args.extend(["--reference", str(ref)])
-            _run_script(docx_script, args, "render_docx")
+            result = _run_script(docx_script, args, "render_docx")
             if out_docx.is_file():
                 labels[out_docx.name] = f"{title} Brief"
+                _clear_render_status(Path(run_dir), docx_input.name)
+            else:
+                _mark_render_failed(
+                    Path(run_dir),
+                    docx_input.name,
+                    message=result["message"] or f"No Studio deliverable emitted for {out_docx.name}",
+                    targets=[out_docx.name],
+                    logs=list(result["log_files"]),
+                    excerpt=str(result["excerpt"] or ""),
+                )
 
         xlsx_script = renderers_dir / "render_xlsx.py"
         if "xlsx" in formats and xlsx_script.is_file():
@@ -425,9 +500,19 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
                     "--title",
                     f"{title} Workbook",
                 ]
-                _run_script(xlsx_script, args, f"render_xlsx_{stem}")
+                result = _run_script(xlsx_script, args, f"render_xlsx_{stem}")
                 if out_xlsx.is_file():
                     labels[out_xlsx.name] = f"{title} Workbook"
+                    _clear_render_status(Path(run_dir), xlsx_source.name)
+                else:
+                    _mark_render_failed(
+                        Path(run_dir),
+                        xlsx_source.name,
+                        message=result["message"] or f"No Studio deliverable emitted for {out_xlsx.name}",
+                        targets=[out_xlsx.name],
+                        logs=list(result["log_files"]),
+                        excerpt=str(result["excerpt"] or ""),
+                    )
         _set_display_names(Path(run_dir), labels)
     except Exception as exc:  # noqa: BLE001
         logger.warning("auto_emit_artifacts error: %s", exc)

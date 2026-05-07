@@ -396,3 +396,53 @@ def test_rerender_skill_run_artifacts_promotes_existing_source_run(
                 and row["filename"] == "competitive_intel_brief.docx"
                 for row in listing["deliverables"]
         )
+
+
+def test_reasoning_route_surfaces_render_failure_metadata(
+    tmp_path: Path,
+    client_factory,
+) -> None:
+    skill = "competitive-intel"
+    run_id = "20260507_120000_render_failure"
+    run_dir = tmp_path / "skill_runs" / skill / run_id
+    _seed_artifact(
+        tmp_path,
+        skill=skill,
+        run_id=run_id,
+        filename="competitive_intel_obligation.json",
+        content=b"{}",
+    )
+    (run_dir / "artifacts_manifest.json").write_text(
+        json.dumps(
+            {
+                "competitive_intel_obligation.json": {
+                    "display_name": "Competitive Intel Source",
+                    "render_status": "failed",
+                    "render_message": "render_xlsx exited with code 2",
+                    "render_targets": ["competitive_intel_obligation.xlsx"],
+                    "render_logs": ["render_xlsx_competitive_intel_obligation.stderr.txt"],
+                    "render_log_excerpt": "Traceback: workbook generation failed",
+                }
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    client = client_factory(tmp_path)
+
+    response = client.get(f"/api/ui/skills/{skill}/runs/{run_id}/reasoning")
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    source = next(
+        artifact
+        for artifact in payload["artifacts"]
+        if artifact["name"] == "competitive_intel_obligation.json"
+    )
+    assert source["display_name"] == "Competitive Intel Source"
+    assert source["render_status"] == "failed"
+    assert source["render_message"] == "render_xlsx exited with code 2"
+    assert source["render_targets"] == ["competitive_intel_obligation.xlsx"]
+    assert source["render_logs"] == ["render_xlsx_competitive_intel_obligation.stderr.txt"]
+    assert source["render_log_excerpt"] == "Traceback: workbook generation failed"

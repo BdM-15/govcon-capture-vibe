@@ -66,6 +66,8 @@ def test_reasoning_drawer_exposes_run_artifact_actions() -> None:
     source = _INDEX_HTML.read_text(encoding="utf-8")
 
     assert "Artifacts From This Run" in source
+    assert "Failed render" in source
+    assert "Retry render" in source
     assert '@click="openReasoningArtifactPreview(artifact)"' in source
     assert ':href="reasoningArtifactDownloadHref(artifact)"' in source
     assert '@click="promoteReasoningArtifact(artifact)"' in source

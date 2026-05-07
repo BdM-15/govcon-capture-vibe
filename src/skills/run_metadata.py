@@ -123,6 +123,37 @@ def read_artifact_manifest(run_dir: Path) -> dict[str, dict[str, Any]]:
         display_name = sanitize_artifact_display_name(value.get("display_name"))
         if display_name:
             normalized["display_name"] = display_name
+        render_status = str(value.get("render_status") or "").strip().lower()
+        if render_status == "failed":
+            normalized["render_status"] = render_status
+        render_message = str(value.get("render_message") or "").strip()
+        if render_message:
+            normalized["render_message"] = render_message[:400]
+        render_targets = value.get("render_targets")
+        if isinstance(render_targets, list):
+            cleaned_targets = []
+            for item in render_targets:
+                text = str(item or "").strip()
+                if text and text not in cleaned_targets:
+                    cleaned_targets.append(text[:160])
+                if len(cleaned_targets) >= 8:
+                    break
+            if cleaned_targets:
+                normalized["render_targets"] = cleaned_targets
+        render_logs = value.get("render_logs")
+        if isinstance(render_logs, list):
+            cleaned_logs = []
+            for item in render_logs:
+                text = str(item or "").strip()
+                if text and text not in cleaned_logs:
+                    cleaned_logs.append(text[:160])
+                if len(cleaned_logs) >= 8:
+                    break
+            if cleaned_logs:
+                normalized["render_logs"] = cleaned_logs
+        render_log_excerpt = str(value.get("render_log_excerpt") or "").strip()
+        if render_log_excerpt:
+            normalized["render_log_excerpt"] = render_log_excerpt[:1200]
         if normalized:
             out[key] = normalized
     return out
@@ -184,15 +215,16 @@ def parse_run_envelope(text: str) -> dict[str, Any]:
     return out
 
 
-def list_run_artifacts(run_dir: Path) -> list[dict[str, str]]:
+def list_run_artifacts(run_dir: Path) -> list[dict[str, Any]]:
     """List artifacts under one skill run's artifacts/ directory."""
-    artifacts: list[dict[str, str]] = []
+    artifacts: list[dict[str, Any]] = []
     artifacts_dir = run_dir / "artifacts"
     manifest = read_artifact_manifest(run_dir)
     if artifacts_dir.is_dir():
         for path in sorted(artifacts_dir.iterdir()):
             if path.is_file():
                 rel = path.relative_to(artifacts_dir).as_posix()
+                manifest_entry = manifest.get(rel)
                 artifacts.append(
                     {
                         "name": path.name,
@@ -200,8 +232,13 @@ def list_run_artifacts(run_dir: Path) -> list[dict[str, str]]:
                         "mime": resolve_artifact_mime(path.name),
                         "display_name": resolve_artifact_display_name(
                             path.name,
-                            manifest.get(rel),
+                            manifest_entry,
                         ),
+                        **{
+                            key: value
+                            for key, value in (manifest_entry or {}).items()
+                            if key != "display_name"
+                        },
                     }
                 )
     return artifacts

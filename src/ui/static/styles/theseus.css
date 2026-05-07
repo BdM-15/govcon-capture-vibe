@@ -2956,6 +2956,41 @@ details.acc .summary-actions {
   flex-wrap: wrap;
   gap: 8px;
 }
+.reasoning-chip-failed {
+  color: var(--neon-red);
+  border-color: rgba(var(--neon-red-rgb), 0.35);
+  background: rgba(var(--neon-red-rgb), 0.1);
+}
+.reasoning-artifact-failure {
+  padding: 10px;
+  background: rgba(var(--neon-red-rgb), 0.08);
+  border: 1px solid rgba(var(--neon-red-rgb), 0.24);
+  border-radius: 6px;
+}
+.reasoning-artifact-failure-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--neon-red);
+}
+.reasoning-artifact-failure-sub {
+  font-size: 11px;
+  color: var(--text-300);
+  word-break: break-word;
+}
+.reasoning-artifact-failure-log {
+  margin: 0;
+  padding: 8px;
+  max-height: 144px;
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-200);
+  background: rgba(var(--ink-950-rgb, 9, 14, 28), 0.5);
+  border: 1px solid rgba(var(--neon-red-rgb), 0.2);
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .reasoning-artifact-action {
   display: inline-flex;
   align-items: center;

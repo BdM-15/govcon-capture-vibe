@@ -5304,9 +5304,40 @@
                       x-text="artifact.isCurrent ? 'Current product' : (artifact.isSource ? 'Source' : 'Sibling product')"
                     ></span>
                     <span
+                      x-show="artifact.hasRenderFailure"
+                      class="reasoning-chip reasoning-chip-failed"
+                    >
+                      Failed render
+                    </span>
+                    <span
                       class="reasoning-chip"
                       x-text="formatBytes(Number(artifact.size || 0))"
                     ></span>
+                  </div>
+
+                  <div
+                    x-show="artifact.hasRenderFailure"
+                    class="reasoning-artifact-failure mt-3"
+                  >
+                    <div
+                      class="reasoning-artifact-failure-title"
+                      x-text="artifact.renderMessage || 'Studio render failed for this source artifact.'"
+                    ></div>
+                    <div
+                      x-show="artifact.renderTargets.length"
+                      class="reasoning-artifact-failure-sub mt-1"
+                      x-text="'Targets: ' + artifact.renderTargets.join(', ')"
+                    ></div>
+                    <div
+                      x-show="artifact.renderLogs.length"
+                      class="reasoning-artifact-failure-sub mt-1"
+                      x-text="'Logs: ' + artifact.renderLogs.join(', ')"
+                    ></div>
+                    <pre
+                      x-show="artifact.renderLogExcerpt"
+                      class="reasoning-artifact-failure-log mt-2"
+                      x-text="artifact.renderLogExcerpt"
+                    ></pre>
                   </div>
 
                   <div class="reasoning-artifact-actions mt-3">
@@ -5327,7 +5358,7 @@
                       >
                         <i data-lucide="wand-sparkles" class="w-3.5 h-3.5"></i>
                         <span
-                          x-text="reasoning.promoting === artifact.filename ? 'Rendering…' : 'Render to Studio'"
+                          x-text="reasoning.promoting === artifact.filename ? 'Rendering…' : (artifact.hasRenderFailure ? 'Retry render' : 'Render to Studio')"
                         ></span>
                       </button>
                     </template>

@@ -1,4 +1,6 @@
 from pathlib import Path
+import json
+import subprocess
 
 from src.skills.skill_emitters import auto_emit_artifacts
 from src.skills.skill_models import Skill, SkillFrontmatter
@@ -175,3 +177,40 @@ def test_auto_emit_artifacts_shapes_competitive_intel_brief(tmp_path: Path) -> N
         assert "- Option period 1: 2022-11-17 to 2023-11-20" in brief
         assert "## Influential Points" in brief
         assert "- Option exercise pattern: P00005, P00014" in brief
+
+
+def test_auto_emit_artifacts_marks_failed_render_on_source_artifact(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    skill = _skill(tmp_path)
+    skill.frontmatter.metadata["auto_emit_formats"] = ["docx"]
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "response.md").write_text("hello world", encoding="utf-8")
+
+    repo_root = tmp_path / "repo"
+    renderers_dir = repo_root / ".github" / "skills" / "renderers" / "scripts"
+    renderers_dir.mkdir(parents=True)
+    _renderer_script(renderers_dir / "render_docx.py")
+
+    class _FailedProc:
+        returncode = 2
+        stdout = ""
+        stderr = "docx renderer blew up"
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: _FailedProc(),
+    )
+
+    auto_emit_artifacts(skill, run_dir, repo_root=repo_root)
+
+    manifest = json.loads((run_dir / "artifacts_manifest.json").read_text(encoding="utf-8"))
+    entry = manifest["report.md"]
+    assert entry["render_status"] == "failed"
+    assert entry["render_message"] == "docx renderer blew up"
+    assert entry["render_targets"] == ["demo_skill_brief.docx"]
+    assert entry["render_logs"] == ["render_docx.stdout.txt", "render_docx.stderr.txt"]
+    assert entry["render_log_excerpt"] == "docx renderer blew up"
