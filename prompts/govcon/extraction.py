@@ -31,7 +31,7 @@ Extract for all 8 Shipley user personas:
 - Proposal Writers — authoring volumes and sections
 - Cost Estimators — building BOE and pricing strategy
 - Contracts Managers — managing compliance and modifications
-- Technical SMEs — designing technical approach
+- Technical SMEs — designing technical approach foundation for BOEs
 - Legal/Compliance — ensuring regulatory compliance
 - Program Managers — planning delivery and transition
 

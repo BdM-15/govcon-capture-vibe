@@ -395,6 +395,15 @@ window.theseusPruneStudioSelection = function theseusPruneStudioSelection(app) {
   app.studio.selected = next;
 };
 
+window.theseusPruneStudioSelectionToFiltered = function theseusPruneStudioSelectionToFiltered(app) {
+  const live = new Set(window.theseusStudioFiltered(app).map(window.theseusStudioKey));
+  const next = {};
+  for (const key of Object.keys(app.studio.selected || {})) {
+    if (live.has(key)) next[key] = app.studio.selected[key];
+  }
+  app.studio.selected = next;
+};
+
 window.theseusToggleStudioSelection = function theseusToggleStudioSelection(
   app,
   deliverable,
@@ -535,6 +544,12 @@ window.theseusStudioKey = function theseusStudioKey(deliverable) {
   );
 };
 
+window.theseusStudioLatestGroupKey = function theseusStudioLatestGroupKey(
+  deliverable,
+) {
+  return (deliverable.skill || "") + "/" + (deliverable.filename || "");
+};
+
 window.theseusIsStudioPinned = function theseusIsStudioPinned(
   app,
   deliverable,
@@ -544,7 +559,7 @@ window.theseusIsStudioPinned = function theseusIsStudioPinned(
 
 window.theseusStudioFiltered = function theseusStudioFiltered(app) {
   const query = (app.studio.search || "").toLowerCase().trim();
-  const filtered = (app.studio.deliverables || []).filter((deliverable) => {
+  let filtered = (app.studio.deliverables || []).filter((deliverable) => {
     if (
       app.studio.filterSkill &&
       deliverable.skill !== app.studio.filterSkill
@@ -567,6 +582,14 @@ window.theseusStudioFiltered = function theseusStudioFiltered(app) {
     }
     return true;
   });
+  if (app.studio.latestOnly) {
+    const latest = new Map();
+    for (const deliverable of filtered) {
+      const key = window.theseusStudioLatestGroupKey(deliverable);
+      if (!latest.has(key)) latest.set(key, deliverable);
+    }
+    filtered = Array.from(latest.values());
+  }
   const pinned = app.studio.pinned || {};
   const pinKey = window.theseusStudioKey;
   return filtered

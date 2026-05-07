@@ -176,6 +176,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusClearStudioSelection(this);
     },
 
+    pruneStudioSelectionToFiltered() {
+      return window.theseusPruneStudioSelectionToFiltered(this);
+    },
+
     async deleteSelectedStudioArtifacts() {
       return window.theseusDeleteSelectedStudioArtifacts(this);
     },

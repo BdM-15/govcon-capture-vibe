@@ -68,6 +68,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       filterSkill: "",
       filterFormat: "",
       search: "",
+      latestOnly: true,
       pinned: {},
       selected: {},
       deleting: false,

@@ -3430,6 +3430,17 @@
                   x-model="studio.search"
                 />
               </div>
+              <label
+                class="inline-flex items-center gap-2 rounded-lg border border-edge bg-ink-900/70 px-3 py-2 text-xs text-slate-300"
+              >
+                <input
+                  type="checkbox"
+                  class="accent-neon-cyan"
+                  x-model="studio.latestOnly"
+                  @change="pruneStudioSelectionToFiltered()"
+                />
+                <span class="uppercase tracking-[0.14em] text-slate-400">Latest only</span>
+              </label>
               <span
                 class="text-xs text-slate-500 ml-auto"
                 x-text="studioFiltered().length + ' / ' + studio.deliverables.length + ' deliverables'"

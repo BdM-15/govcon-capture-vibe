@@ -70,3 +70,11 @@ def test_reasoning_drawer_exposes_run_artifact_actions() -> None:
     assert ':href="reasoningArtifactDownloadHref(artifact)"' in source
     assert '@click="promoteReasoningArtifact(artifact)"' in source
     assert "Render to Studio" in source
+
+
+def test_studio_filter_bar_exposes_latest_only_toggle() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+
+    assert 'x-model="studio.latestOnly"' in source
+    assert '@change="pruneStudioSelectionToFiltered()"' in source
+    assert "Latest only" in source
