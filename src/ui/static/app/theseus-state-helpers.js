@@ -92,6 +92,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       error: null,
       skill: "",
       run_id: "",
+      filename: "",
       title: "",
       created_at: "",
       steps: [],

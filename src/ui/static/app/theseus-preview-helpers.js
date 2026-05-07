@@ -13,6 +13,11 @@ window.theseusEnsureScript = function theseusEnsureScript(app, url) {
 };
 
 const THESEUS_TEXT_PREVIEW_KINDS = new Set(["md", "json", "csv", "text"]);
+const THESEUS_REASONING_SOURCE_EXTENSIONS = new Set(["md", "markdown", "json"]);
+
+const theseusNormalizeExtension = function theseusNormalizeExtension(value) {
+  return String(value || "").toLowerCase().replace(/^\./, "");
+};
 
 const theseusFetchPreviewResponse = async function theseusFetchPreviewResponse(
   href,
@@ -138,6 +143,7 @@ window.theseusOpenReasoning = async function theseusOpenReasoning(
   app.reasoning.open = true;
   app.reasoning.skill = deliverable.skill;
   app.reasoning.run_id = deliverable.run_id;
+  app.reasoning.filename = deliverable.filename || "";
   app.reasoning.title = deliverable.title || "";
   app.reasoning.created_at = deliverable.created_at || "";
   app.reasoning.steps = [];
@@ -172,6 +178,68 @@ window.theseusToggleReasoningStep = function theseusToggleReasoningStep(
   idx,
 ) {
   app.reasoning.expanded[idx] = !app.reasoning.expanded[idx];
+};
+
+const theseusReasoningArtifactDeliverable = function theseusReasoningArtifactDeliverable(
+  app,
+  artifact,
+) {
+  const filename = artifact.filename || artifact.name || "";
+  const ext = theseusNormalizeExtension(
+    artifact.ext || filename.split(".").pop() || "",
+  );
+  return {
+    skill: app.reasoning.skill,
+    run_id: app.reasoning.run_id,
+    filename,
+    display_name: artifact.display_name || filename,
+    title: app.reasoning.title || artifact.display_name || filename,
+    created_at: app.reasoning.created_at || "",
+    ext,
+    mime: artifact.mime || "",
+    size: Number(artifact.size || 0),
+  };
+};
+
+window.theseusReasoningArtifacts = function theseusReasoningArtifacts(app) {
+  const current = app.reasoning.filename || "";
+  const items = (app.reasoning.artifacts || []).map((artifact) => {
+    const deliverable = theseusReasoningArtifactDeliverable(app, artifact);
+    const isSource = THESEUS_REASONING_SOURCE_EXTENSIONS.has(deliverable.ext);
+    return {
+      ...artifact,
+      ...deliverable,
+      isCurrent: deliverable.filename === current,
+      isSource,
+    };
+  });
+  const rank = (item) => (item.isCurrent ? 0 : item.isSource ? 2 : 1);
+  return items.sort((left, right) => {
+    const byRank = rank(left) - rank(right);
+    if (byRank) return byRank;
+    return (left.display_name || left.filename || "").localeCompare(
+      right.display_name || right.filename || "",
+    );
+  });
+};
+
+window.theseusReasoningArtifactDownloadHref = function theseusReasoningArtifactDownloadHref(
+  app,
+  artifact,
+) {
+  return window.theseusStudioDownloadHref(
+    theseusReasoningArtifactDeliverable(app, artifact),
+  );
+};
+
+window.theseusOpenReasoningArtifactPreview = async function theseusOpenReasoningArtifactPreview(
+  app,
+  artifact,
+) {
+  return window.theseusOpenStudioPreview(
+    app,
+    theseusReasoningArtifactDeliverable(app, artifact),
+  );
 };
 
 window.theseusCopyToClipboard = async function theseusCopyToClipboard(

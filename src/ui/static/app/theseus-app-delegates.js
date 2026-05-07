@@ -244,6 +244,18 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusToggleReasoningStep(this, index);
     },
 
+    reasoningArtifacts() {
+      return window.theseusReasoningArtifacts(this);
+    },
+
+    reasoningArtifactDownloadHref(artifact) {
+      return window.theseusReasoningArtifactDownloadHref(this, artifact);
+    },
+
+    async openReasoningArtifactPreview(artifact) {
+      return window.theseusOpenReasoningArtifactPreview(this, artifact);
+    },
+
     reasoningStepIcon(kind) {
       return window.theseusReasoningStepIcon(kind);
     },

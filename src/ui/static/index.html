@@ -5253,6 +5253,74 @@
             </span>
           </div>
 
+          <div
+            x-show="!reasoning.loading && !reasoning.error && reasoningArtifacts().length"
+            class="mb-5"
+          >
+            <div class="reasoning-detail-label mb-2">Artifacts From This Run</div>
+            <div class="reasoning-artifact-grid">
+              <template x-for="artifact in reasoningArtifacts()" :key="artifact.filename">
+                <div
+                  class="reasoning-artifact-card"
+                  :class="artifact.isCurrent ? 'reasoning-artifact-current' : ''"
+                >
+                  <div class="flex items-start gap-3">
+                    <div class="reasoning-artifact-icon">
+                      <i
+                        :data-lucide="artifactIcon(artifact.mime, artifact.filename)"
+                        class="w-4 h-4"
+                      ></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <div
+                        class="reasoning-artifact-title"
+                        x-text="artifact.display_name || artifact.filename"
+                      ></div>
+                      <div
+                        class="reasoning-artifact-sub"
+                        x-text="artifact.filename"
+                      ></div>
+                    </div>
+                    <span
+                      class="reasoning-chip shrink-0"
+                      x-text="(artifact.ext || 'file').toUpperCase()"
+                    ></span>
+                  </div>
+
+                  <div class="reasoning-artifact-meta mt-3">
+                    <span
+                      class="reasoning-chip"
+                      x-text="artifact.isCurrent ? 'Current product' : (artifact.isSource ? 'Source' : 'Sibling product')"
+                    ></span>
+                    <span
+                      class="reasoning-chip"
+                      x-text="formatBytes(Number(artifact.size || 0))"
+                    ></span>
+                  </div>
+
+                  <div class="reasoning-artifact-actions mt-3">
+                    <button
+                      type="button"
+                      class="reasoning-artifact-action"
+                      @click="openReasoningArtifactPreview(artifact)"
+                    >
+                      <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                      <span>Open</span>
+                    </button>
+                    <a
+                      :href="reasoningArtifactDownloadHref(artifact)"
+                      :download="artifact.filename"
+                      class="reasoning-artifact-action"
+                    >
+                      <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                      <span>Download</span>
+                    </a>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
           <ol
             x-show="!reasoning.loading && !reasoning.error && reasoning.steps.length"
             class="reasoning-timeline"
@@ -5285,7 +5353,7 @@
                     <span
                       x-show="step.elapsed_ms"
                       class="reasoning-elapsed"
-                      x-text="`${(step.elapsed_ms).toFixed(0)} ms`"
+                      x-text="step.elapsed_ms != null ? `${Number(step.elapsed_ms).toFixed(0)} ms` : ''"
                     ></span>
                     <button
                       type="button"

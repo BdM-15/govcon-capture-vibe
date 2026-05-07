@@ -60,3 +60,11 @@ def test_studio_preview_header_hides_raw_filename_subline() -> None:
     header_slice = source[start:end]
 
     assert 'x-show="studioPreview.deliverable && studioPreview.deliverable.display_name && studioPreview.deliverable.display_name !== studioPreview.deliverable.filename"' not in header_slice
+
+
+def test_reasoning_drawer_exposes_run_artifact_actions() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+
+    assert "Artifacts From This Run" in source
+    assert '@click="openReasoningArtifactPreview(artifact)"' in source
+    assert ':href="reasoningArtifactDownloadHref(artifact)"' in source
