@@ -256,6 +256,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusOpenReasoningArtifactPreview(this, artifact);
     },
 
+    async promoteReasoningArtifact(artifact) {
+      return window.theseusPromoteReasoningArtifact(this, artifact);
+    },
+
     reasoningStepIcon(kind) {
       return window.theseusReasoningStepIcon(kind);
     },

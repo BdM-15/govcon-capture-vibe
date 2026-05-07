@@ -95,6 +95,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       filename: "",
       title: "",
       created_at: "",
+      promoting: "",
       steps: [],
       summary: null,
       artifacts: [],

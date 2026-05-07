@@ -181,6 +181,20 @@ def test_download_unknown_artifact_404(tmp_path: Path, client_factory) -> None:
     assert resp.status_code == 404
 
 
+def test_ui_static_assets_disable_browser_caching(
+    tmp_path: Path,
+    client_factory,
+) -> None:
+    client = client_factory(tmp_path)
+
+    response = client.get("/ui/app/theseus-app-delegates.js")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store, no-cache, must-revalidate"
+    assert response.headers["pragma"] == "no-cache"
+    assert response.headers["expires"] == "0"
+
+
 def test_studio_delete_selected_artifacts_removes_files(
     tmp_path: Path,
     client_factory,
@@ -267,3 +281,118 @@ def test_studio_zip_selected_artifacts_downloads_archive(
         manifest = json.loads(archive.read("manifest.json"))
     assert len(manifest["included"]) == 2
     assert len(manifest["missing"]) == 1
+
+
+def test_rerender_skill_run_artifacts_promotes_existing_source_run(
+        tmp_path: Path,
+        client_factory,
+) -> None:
+        skill = "competitive-intel"
+        run_id = "20260506_235024_provide_me_a_burn_rate_analysis"
+        _seed_artifact(
+                tmp_path,
+                skill=skill,
+                run_id=run_id,
+                filename="competitive_intel_obligation.json",
+                content=(
+                        """
+                        {
+                            "input_contract_number": "FA805122F0001",
+                            "resolved": {"scenario": "idiq_order"},
+                            "hierarchy": {"parent_award_id": "CONT_IDV_PARENT"},
+                            "obligations": {
+                                "total_obligated_usd": 44070085.27,
+                                "net_obligated_usd": 43659700.13,
+                                "rate_analysis": {
+                                    "monthly_burn_usd": 698555.2,
+                                    "annual_burn_usd": 8382662.42,
+                                    "daily_burn_usd": 23297.6
+                                },
+                                "by_transaction": [
+                                    {
+                                        "modification_number": "P00005",
+                                        "action_type": "G",
+                                        "action_date": "2022-11-17",
+                                        "amount_usd": 9183672.0
+                                    },
+                                    {
+                                        "modification_number": "P00014",
+                                        "action_type": "G",
+                                        "action_date": "2025-11-14",
+                                        "amount_usd": 8369667.0,
+                                        "modification_description": "Exercise option four"
+                                    }
+                                ]
+                            },
+                            "insights": {
+                                "headline": "Clean burn story.",
+                                "blocks": [
+                                    {
+                                        "id": "burn_posture",
+                                        "evidence": {
+                                            "recommended_ptw_baseline_usd": 8388921.37,
+                                            "pop_end_potential": "2026-12-15"
+                                        }
+                                    },
+                                    {
+                                        "id": "award_story",
+                                        "summary": "One award story across base and options.",
+                                        "evidence": {
+                                            "period_of_performance_segments": [
+                                                {
+                                                    "label": "Base period",
+                                                    "pop_start_date": "2021-10-28",
+                                                    "pop_end_date": "2022-11-17",
+                                                    "months": 13.0,
+                                                    "obligated_usd": 9229200.0,
+                                                    "monthly_rate_usd": 709938.46
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            "vehicle_context": {
+                                "child_order_count": 22,
+                                "net_obligated_usd": 390322586.54
+                            },
+                            "competitor_discovery": {
+                                "completeness_status": "high",
+                                "parent_vehicle_awardee_count": 8,
+                                "order_holder_count": 1
+                            },
+                            "warnings": []
+                        }
+                        """.encode("utf-8")
+                ),
+        )
+
+        client = client_factory(tmp_path)
+
+        response = client.post(
+                f"/api/ui/skills/{skill}/runs/{run_id}/artifacts/render"
+        )
+
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert payload["deliverable_count"] >= 1
+        assert any(
+                row["filename"] == "competitive_intel_brief.docx"
+                for row in payload["deliverables"]
+        )
+        assert (
+                tmp_path
+                / "skill_runs"
+                / skill
+                / run_id
+                / "artifacts"
+                / "competitive_intel_brief.docx"
+        ).is_file()
+
+        listing = client.get("/api/ui/studio").json()
+        assert any(
+                row["skill"] == skill
+                and row["run_id"] == run_id
+                and row["filename"] == "competitive_intel_brief.docx"
+                for row in listing["deliverables"]
+        )

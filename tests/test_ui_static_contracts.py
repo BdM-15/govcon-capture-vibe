@@ -68,3 +68,5 @@ def test_reasoning_drawer_exposes_run_artifact_actions() -> None:
     assert "Artifacts From This Run" in source
     assert '@click="openReasoningArtifactPreview(artifact)"' in source
     assert ':href="reasoningArtifactDownloadHref(artifact)"' in source
+    assert '@click="promoteReasoningArtifact(artifact)"' in source
+    assert "Render to Studio" in source

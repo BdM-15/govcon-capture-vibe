@@ -45,6 +45,17 @@ QueryDataFunc = Callable[
     Awaitable[dict],
 ]
 
+
+class TheseusStaticFiles(StaticFiles):
+    """StaticFiles variant that disables browser caching for live UI edits."""
+
+    def file_response(self, *args, **kwargs):  # type: ignore[override]
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+
 from src.core import get_settings
 from src.server.chat_store import ChatStore
 from src.server.chat_routes import (
@@ -279,7 +290,7 @@ def register_ui(
     # ---- Static SPA at /ui ------------------------------------------------
     app.mount(
         "/ui",
-        StaticFiles(directory=str(_STATIC_DIR), html=True),
+        TheseusStaticFiles(directory=str(_STATIC_DIR), html=True),
         name="theseus-ui",
     )
 

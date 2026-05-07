@@ -19,6 +19,7 @@ from src.skills.context import (
     build_skill_briefing_book,
     retrieve_relevant_entities_for_skill,
 )
+from src.skills.skill_emitters import auto_emit_artifacts
 from src.skills.runs import resolve_artifact_mime
 from src.skills.settings import (
     SkillSettingsStore,
@@ -104,6 +105,18 @@ def _zip_segment(value: str, fallback: str) -> str:
         for char in value.strip()
     ).strip("._")
     return (cleaned[:96] or fallback)
+
+
+def _run_dir_for_skill_run(workspace_root: Path, skill_name: str, run_id: str) -> Path | None:
+    base = (Path(workspace_root) / "skill_runs" / skill_name).resolve()
+    run_dir = (base / run_id).resolve()
+    try:
+        run_dir.relative_to(base)
+    except ValueError:
+        return None
+    if not run_dir.is_dir():
+        return None
+    return run_dir
 
 
 def _skill_response_payload(
@@ -533,6 +546,63 @@ def register_skill_run_ui_routes(
                 "created_at": (run.get("metadata") or {}).get("created_at"),
                 "artifacts": run.get("artifacts") or [],
                 **view,
+            }
+        )
+
+    @app.post(
+        "/api/ui/skills/{name}/runs/{run_id}/artifacts/render",
+        tags=["theseus-ui"],
+    )
+    async def rerender_skill_run_artifacts_route(name: str, run_id: str) -> JSONResponse:
+        mgr = get_skill_manager()
+        skill = mgr.get_skill(name)
+        if skill is None:
+            raise HTTPException(404, f"Unknown skill: {name}")
+        run = mgr.get_run(workspace_dir(), name, run_id)
+        if run is None:
+            raise HTTPException(404, f"Unknown run: {name}/{run_id}")
+        run_dir = _run_dir_for_skill_run(workspace_dir(), name, run_id)
+        if run_dir is None:
+            raise HTTPException(404, f"Unknown run: {name}/{run_id}")
+
+        def _rerender() -> dict[str, Any]:
+            before = [
+                row
+                for row in mgr.list_deliverables(workspace_dir(), limit=5000)
+                if row.get("skill") == name and row.get("run_id") == run_id
+            ]
+            before_names = {str(row.get("filename") or "") for row in before}
+            auto_emit_artifacts(skill, run_dir)
+            refreshed = mgr.get_run(workspace_dir(), name, run_id)
+            deliverables = [
+                row
+                for row in mgr.list_deliverables(workspace_dir(), limit=5000)
+                if row.get("skill") == name and row.get("run_id") == run_id
+            ]
+            created = [
+                row for row in deliverables if str(row.get("filename") or "") not in before_names
+            ]
+            return {
+                "run": refreshed,
+                "deliverables": deliverables,
+                "created": created,
+            }
+
+        result = await asyncio.to_thread(_rerender)
+        deliverables = result["deliverables"]
+        if not deliverables:
+            raise HTTPException(409, "No Studio deliverables were emitted for this run")
+        refreshed_run = result["run"] or run
+        return JSONResponse(
+            {
+                "workspace": get_settings().workspace,
+                "skill": name,
+                "run_id": run_id,
+                "deliverable_count": len(deliverables),
+                "created_count": len(result["created"]),
+                "deliverables": deliverables,
+                "created": result["created"],
+                "artifacts": refreshed_run.get("artifacts") or [],
             }
         )
 

@@ -146,6 +146,7 @@ window.theseusOpenReasoning = async function theseusOpenReasoning(
   app.reasoning.filename = deliverable.filename || "";
   app.reasoning.title = deliverable.title || "";
   app.reasoning.created_at = deliverable.created_at || "";
+  app.reasoning.promoting = "";
   app.reasoning.steps = [];
   app.reasoning.summary = null;
   app.reasoning.artifacts = [];
@@ -240,6 +241,56 @@ window.theseusOpenReasoningArtifactPreview = async function theseusOpenReasoning
     app,
     theseusReasoningArtifactDeliverable(app, artifact),
   );
+};
+
+window.theseusPromoteReasoningArtifact = async function theseusPromoteReasoningArtifact(
+  app,
+  artifact,
+) {
+  if (!artifact || !artifact.isSource) return;
+  const skill = app.reasoning.skill || artifact.skill;
+  const runId = app.reasoning.run_id || artifact.run_id;
+  const busyKey = artifact.filename || "__reasoning_render__";
+  if (!skill || !runId || app.reasoning.promoting === busyKey) return;
+  app.reasoning.promoting = busyKey;
+  try {
+    const response = await app.api(
+      "/api/ui/skills/" +
+        encodeURIComponent(skill) +
+        "/runs/" +
+        encodeURIComponent(runId) +
+        "/artifacts/render",
+      { method: "POST" },
+    );
+    if (
+      app.skills.current?.name === skill &&
+      app.skills.run?.run_id === runId
+    ) {
+      await app.loadSkillRun(skill, runId);
+    }
+    await window.theseusLoadStudio(app);
+    await window.theseusOpenReasoning(app, {
+      skill,
+      run_id: runId,
+      filename: app.reasoning.filename || artifact.filename || "",
+      title: app.reasoning.title || artifact.display_name || artifact.filename || "",
+      created_at: app.reasoning.created_at || "",
+    });
+    const created = (response.created || [])
+      .map((deliverable) => deliverable.display_name || deliverable.filename || "")
+      .filter(Boolean);
+    app.toast(
+      created.length
+        ? "Rendered to Studio: " + created.join(", ")
+        : "Studio products refreshed for this run",
+      "success",
+    );
+  } catch (error) {
+    app.toast("Render failed: " + (error?.message || error), "error");
+  } finally {
+    app.reasoning.promoting = "";
+    window.theseusAfterRender(app);
+  }
 };
 
 window.theseusCopyToClipboard = async function theseusCopyToClipboard(

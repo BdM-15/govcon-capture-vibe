@@ -5307,6 +5307,19 @@
                       <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                       <span>Open</span>
                     </button>
+                    <template x-if="artifact.isSource">
+                      <button
+                        type="button"
+                        class="reasoning-artifact-action"
+                        :disabled="reasoning.promoting === artifact.filename"
+                        @click="promoteReasoningArtifact(artifact)"
+                      >
+                        <i data-lucide="wand-sparkles" class="w-3.5 h-3.5"></i>
+                        <span
+                          x-text="reasoning.promoting === artifact.filename ? 'Rendering…' : 'Render to Studio'"
+                        ></span>
+                      </button>
+                    </template>
                     <a
                       :href="reasoningArtifactDownloadHref(artifact)"
                       :download="artifact.filename"
