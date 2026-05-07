@@ -170,7 +170,8 @@ def test_auto_emit_artifacts_shapes_competitive_intel_brief(tmp_path: Path) -> N
         auto_emit_artifacts(skill, run_dir, repo_root=repo_root)
 
         brief = (artifacts_dir / "competitive_intel_brief.md").read_text(encoding="utf-8")
-        assert brief.startswith("# Competitive Intel Brief\n\nClean burn story.")
+        manifest = json.loads((run_dir / "artifacts_manifest.json").read_text(encoding="utf-8"))
+        assert brief.startswith("# FA805122F0001 Order Burn Brief\n\nClean burn story.")
         assert "## Snapshot" in brief
         assert "- Scenario: Single order" in brief
         assert "## Burn posture" in brief
@@ -182,6 +183,10 @@ def test_auto_emit_artifacts_shapes_competitive_intel_brief(tmp_path: Path) -> N
         assert "- P00014 on 2025-11-14: Exercise option four; $8.37M." in brief
         assert "## Caveats" in brief
         assert "- No collector caveats reported." in brief
+        assert manifest["report.md"]["display_name"] == "FA805122F0001 Order Burn Final Response"
+        assert manifest["competitive_intel_brief.md"]["display_name"] == "FA805122F0001 Order Burn Brief Source"
+        assert manifest["competitive_intel_brief.docx"]["display_name"] == "FA805122F0001 Order Burn Brief"
+        assert manifest["competitive_intel_obligation.xlsx"]["display_name"] == "FA805122F0001 Order Burn Workbook"
 
 
 def test_build_competitive_intel_brief_markdown_keeps_vehicle_story_sharp() -> None:

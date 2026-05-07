@@ -11,7 +11,10 @@ from typing import Any
 
 from src.skills.run_metadata import read_artifact_manifest, write_artifact_manifest
 from src.skills.skill_models import Skill
-from src.skills.tool_competitive_intel import build_competitive_intel_brief_markdown
+from src.skills.tool_competitive_intel import (
+    build_competitive_intel_brief_markdown,
+    build_competitive_intel_product_title,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -229,6 +232,21 @@ def _brief_source_path(
     return None
 
 
+def _descriptive_profile_title(
+    skill: Skill,
+    artifacts_dir: Path,
+    profile: dict[str, object],
+    fallback_title: str,
+) -> str:
+    if skill.name != "competitive-intel":
+        return fallback_title
+    for source in _xlsx_source_paths(skill, artifacts_dir, profile):
+        payload = _load_json(source)
+        if isinstance(payload, dict) and payload.get("obligations"):
+            return build_competitive_intel_product_title(payload)
+    return fallback_title
+
+
 def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = None) -> None:
     """Render generic Studio artifacts for a completed skill run."""
     try:
@@ -245,7 +263,12 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
 
         profile = _profile(skill)
         base = _safe_output_stem(str(profile["base"]))
-        title = str(profile["label"])
+        title = _descriptive_profile_title(
+            skill,
+            artifacts_dir,
+            profile,
+            str(profile["label"]),
+        )
 
         report_md = artifacts_dir / "report.md"
         response_text = response_path.read_text(encoding="utf-8")

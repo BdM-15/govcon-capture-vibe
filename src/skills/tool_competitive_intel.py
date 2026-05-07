@@ -1935,6 +1935,24 @@ def build_competitive_intel_brief_markdown(
     return "\n".join(lines).strip() + "\n"
 
 
+def build_competitive_intel_product_title(payload: dict[str, Any]) -> str:
+    resolved = payload.get("resolved") if isinstance(payload.get("resolved"), dict) else {}
+    scenario = str(resolved.get("scenario") or payload.get("scope") or "").strip()
+    piid = _clean_text(payload.get("input_contract_number")) or _clean_text(
+        resolved.get("piid")
+    )
+    if not piid:
+        return "Competitive Intel"
+    suffix = {
+        "parent_idiq": "Vehicle Burn",
+        "idiq_order": "Order Burn",
+        "standalone_contract": "Contract Burn",
+    }.get(scenario)
+    if not suffix:
+        return f"{piid} Competitive Intel"
+    return f"{piid} {suffix}"
+
+
 def _scenario_label(scenario: str) -> str:
     return {
         "parent_idiq": "Vehicle rollup",

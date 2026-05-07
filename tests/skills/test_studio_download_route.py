@@ -424,6 +424,12 @@ def test_rerender_skill_run_artifacts_promotes_existing_source_run(
                 row["filename"] == "competitive_intel_brief.docx"
                 for row in payload["deliverables"]
         )
+        brief = next(
+            row
+            for row in payload["deliverables"]
+            if row["filename"] == "competitive_intel_brief.docx"
+        )
+        assert brief["display_name"] == "FA805122F0001 Order Burn Brief"
         assert (
                 tmp_path
                 / "skill_runs"
@@ -438,6 +444,7 @@ def test_rerender_skill_run_artifacts_promotes_existing_source_run(
                 row["skill"] == skill
                 and row["run_id"] == run_id
                 and row["filename"] == "competitive_intel_brief.docx"
+            and row["display_name"] == "FA805122F0001 Order Burn Brief"
                 for row in listing["deliverables"]
         )
 
