@@ -27,6 +27,21 @@ const theseusFetchPreviewResponse = async function theseusFetchPreviewResponse(
   return response;
 };
 
+const theseusFetchReasoningPayload = async function theseusFetchReasoningPayload(
+  skill,
+  runId,
+) {
+  const response = await fetch(
+    "/api/ui/skills/" +
+      encodeURIComponent(skill) +
+      "/runs/" +
+      encodeURIComponent(runId) +
+      "/reasoning",
+  );
+  if (!response.ok) throw new Error("HTTP " + response.status);
+  return response.json();
+};
+
 const theseusResetStudioPreview = function theseusResetStudioPreview(
   app,
   deliverable,
@@ -41,6 +56,11 @@ const theseusResetStudioPreview = function theseusResetStudioPreview(
   app.studioPreview.sheets = [];
   app.studioPreview.sheetIdx = 0;
   app.studioPreview.jsonChunks = [];
+  app.studioPreview.provenanceLoading = false;
+  app.studioPreview.provenanceError = null;
+  app.studioPreview.provenanceSummary = null;
+  app.studioPreview.provenanceSteps = [];
+  app.studioPreview.provenanceArtifacts = [];
 };
 
 const theseusLoadTextStudioPreview =
@@ -104,12 +124,35 @@ const theseusRunPreviewLoad = async function theseusRunPreviewLoad(
   }
 };
 
+const theseusLoadStudioPreviewProvenance = async function theseusLoadStudioPreviewProvenance(
+  app,
+  deliverable,
+) {
+  app.studioPreview.provenanceLoading = true;
+  app.studioPreview.provenanceError = null;
+  try {
+    const payload = await theseusFetchReasoningPayload(
+      deliverable.skill,
+      deliverable.run_id,
+    );
+    app.studioPreview.provenanceSummary = payload.summary || null;
+    app.studioPreview.provenanceSteps = payload.steps || [];
+    app.studioPreview.provenanceArtifacts = payload.artifacts || [];
+  } catch (error) {
+    app.studioPreview.provenanceError = error?.message || String(error);
+  } finally {
+    app.studioPreview.provenanceLoading = false;
+    window.theseusAfterRender(app);
+  }
+};
+
 window.theseusOpenStudioPreview = async function theseusOpenStudioPreview(
   app,
   deliverable,
 ) {
   app.studioPreview.loading = true;
   theseusResetStudioPreview(app, deliverable);
+  const provenancePromise = theseusLoadStudioPreviewProvenance(app, deliverable);
 
   try {
     const kind = app.studioPreview.kind;
@@ -126,6 +169,8 @@ window.theseusOpenStudioPreview = async function theseusOpenStudioPreview(
     app.studioPreview.loading = false;
     window.theseusAfterRender(app);
   }
+
+  await provenancePromise;
 };
 
 window.theseusCloseStudioPreview = function theseusCloseStudioPreview(app) {
@@ -153,15 +198,10 @@ window.theseusOpenReasoning = async function theseusOpenReasoning(
   app.reasoning.expanded = {};
 
   await theseusRunPreviewLoad(app, app.reasoning, async () => {
-    const response = await fetch(
-      "/api/ui/skills/" +
-        encodeURIComponent(deliverable.skill) +
-        "/runs/" +
-        encodeURIComponent(deliverable.run_id) +
-        "/reasoning",
+    const payload = await theseusFetchReasoningPayload(
+      deliverable.skill,
+      deliverable.run_id,
     );
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    const payload = await response.json();
     app.reasoning.steps = payload.steps || [];
     app.reasoning.summary = payload.summary || null;
     app.reasoning.artifacts = payload.artifacts || [];
@@ -182,7 +222,7 @@ window.theseusToggleReasoningStep = function theseusToggleReasoningStep(
 };
 
 const theseusReasoningArtifactDeliverable = function theseusReasoningArtifactDeliverable(
-  app,
+  scope,
   artifact,
 ) {
   const filename = artifact.filename || artifact.name || "";
@@ -190,22 +230,26 @@ const theseusReasoningArtifactDeliverable = function theseusReasoningArtifactDel
     artifact.ext || filename.split(".").pop() || "",
   );
   return {
-    skill: app.reasoning.skill,
-    run_id: app.reasoning.run_id,
+    skill: scope.skill,
+    run_id: scope.run_id,
     filename,
     display_name: artifact.display_name || filename,
-    title: app.reasoning.title || artifact.display_name || filename,
-    created_at: app.reasoning.created_at || "",
+    title: scope.title || artifact.display_name || filename,
+    created_at: scope.created_at || "",
     ext,
     mime: artifact.mime || "",
     size: Number(artifact.size || 0),
   };
 };
 
-window.theseusReasoningArtifacts = function theseusReasoningArtifacts(app) {
-  const current = app.reasoning.filename || "";
-  const items = (app.reasoning.artifacts || []).map((artifact) => {
-    const deliverable = theseusReasoningArtifactDeliverable(app, artifact);
+const theseusNormalizeRunArtifacts = function theseusNormalizeRunArtifacts(
+  scope,
+  artifacts,
+  currentFilename,
+) {
+  const current = currentFilename || "";
+  return (artifacts || []).map((artifact) => {
+    const deliverable = theseusReasoningArtifactDeliverable(scope, artifact);
     const isSource = THESEUS_REASONING_SOURCE_EXTENSIONS.has(deliverable.ext);
     const renderStatus = String(artifact.render_status || "").toLowerCase();
     return {
@@ -223,6 +267,19 @@ window.theseusReasoningArtifacts = function theseusReasoningArtifacts(app) {
       renderLogExcerpt: artifact.render_log_excerpt || "",
     };
   });
+};
+
+window.theseusReasoningArtifacts = function theseusReasoningArtifacts(app) {
+  const items = theseusNormalizeRunArtifacts(
+    {
+      skill: app.reasoning.skill,
+      run_id: app.reasoning.run_id,
+      title: app.reasoning.title,
+      created_at: app.reasoning.created_at,
+    },
+    app.reasoning.artifacts,
+    app.reasoning.filename,
+  );
   const rank = (item) =>
     item.isCurrent ? 0 : item.hasRenderFailure ? 1 : item.isSource ? 3 : 2;
   return items.sort((left, right) => {
@@ -239,7 +296,15 @@ window.theseusReasoningArtifactDownloadHref = function theseusReasoningArtifactD
   artifact,
 ) {
   return window.theseusStudioDownloadHref(
-    theseusReasoningArtifactDeliverable(app, artifact),
+    theseusReasoningArtifactDeliverable(
+      {
+        skill: app.reasoning.skill,
+        run_id: app.reasoning.run_id,
+        title: app.reasoning.title,
+        created_at: app.reasoning.created_at,
+      },
+      artifact,
+    ),
   );
 };
 
@@ -249,8 +314,43 @@ window.theseusOpenReasoningArtifactPreview = async function theseusOpenReasoning
 ) {
   return window.theseusOpenStudioPreview(
     app,
-    theseusReasoningArtifactDeliverable(app, artifact),
+    theseusReasoningArtifactDeliverable(
+      {
+        skill: app.reasoning.skill,
+        run_id: app.reasoning.run_id,
+        title: app.reasoning.title,
+        created_at: app.reasoning.created_at,
+      },
+      artifact,
+    ),
   );
+};
+
+window.theseusStudioPreviewArtifacts = function theseusStudioPreviewArtifacts(app) {
+  const deliverable = app.studioPreview.deliverable || {};
+  const items = theseusNormalizeRunArtifacts(
+    {
+      skill: deliverable.skill || "",
+      run_id: deliverable.run_id || "",
+      title:
+        deliverable.title ||
+        deliverable.display_name ||
+        deliverable.filename ||
+        "",
+      created_at: deliverable.created_at || "",
+    },
+    app.studioPreview.provenanceArtifacts,
+    deliverable.filename || "",
+  );
+  const rank = (item) =>
+    item.isCurrent ? 0 : item.hasRenderFailure ? 1 : item.isSource ? 3 : 2;
+  return items.sort((left, right) => {
+    const byRank = rank(left) - rank(right);
+    if (byRank) return byRank;
+    return (left.display_name || left.filename || "").localeCompare(
+      right.display_name || right.filename || "",
+    );
+  });
 };
 
 window.theseusPromoteReasoningArtifact = async function theseusPromoteReasoningArtifact(

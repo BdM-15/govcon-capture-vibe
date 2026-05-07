@@ -2760,6 +2760,97 @@ details.acc .summary-actions {
 }
 
 /* === Phase 6a-2 — Inline preview drawer === */
+.studio-preview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+}
+.studio-provenance-rail {
+  position: sticky;
+  top: 84px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.studio-provenance-section {
+  padding: 12px;
+  background: rgba(var(--ink-800-rgb), 0.55);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+}
+.studio-provenance-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.studio-provenance-kicker {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-500, #94a3b8);
+}
+.studio-provenance-title {
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-100, #e2e8f0);
+}
+.studio-provenance-link {
+  padding: 0;
+  color: var(--neon-cyan);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 12px;
+}
+.studio-provenance-link:hover {
+  text-decoration: underline;
+}
+.studio-provenance-artifacts,
+.studio-provenance-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.studio-provenance-artifact,
+.studio-provenance-step {
+  padding: 10px;
+  background: rgba(var(--ink-900-rgb), 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 6px;
+}
+.studio-provenance-artifact-current {
+  border-color: rgba(var(--neon-cyan-rgb), 0.45);
+  box-shadow: inset 0 0 0 1px rgba(var(--neon-cyan-rgb), 0.12);
+}
+.studio-provenance-step-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.studio-provenance-step-summary {
+  min-width: 0;
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-100, #e2e8f0);
+  line-height: 1.45;
+}
+.studio-provenance-step-preview {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-400, #cbd5e1);
+  line-height: 1.45;
+}
+.studio-provenance-step-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
 .studio-preview-pre {
   display: block;
   width: 100%;
@@ -2890,6 +2981,16 @@ details.acc .summary-actions {
   background: rgba(var(--neon-cyan-rgb), 0.1);
   border-color: rgba(var(--neon-cyan-rgb), 0.55);
   border-bottom-color: rgba(var(--neon-cyan-rgb), 0.55);
+}
+
+@media (max-width: 1180px) {
+  .studio-preview-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-provenance-rail {
+    position: static;
+  }
 }
 
 /* === Phase 6b — Reasoning view ("Why this artifact?") === */

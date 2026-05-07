@@ -244,6 +244,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusStudioSetSheet(this, index);
     },
 
+    studioPreviewArtifacts() {
+      return window.theseusStudioPreviewArtifacts(this);
+    },
+
     _extractJsonChunkIds(text) {
       return window.theseusExtractJsonChunkIds(text);
     },

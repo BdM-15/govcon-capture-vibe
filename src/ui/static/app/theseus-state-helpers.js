@@ -93,6 +93,11 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       sheets: [],
       sheetIdx: 0,
       jsonChunks: [],
+      provenanceLoading: false,
+      provenanceError: null,
+      provenanceSummary: null,
+      provenanceSteps: [],
+      provenanceArtifacts: [],
     },
     reasoning: {
       open: false,
