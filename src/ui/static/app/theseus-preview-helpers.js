@@ -614,6 +614,43 @@ window.theseusStudioLatestGroupKey = function theseusStudioLatestGroupKey(
   return (deliverable.skill || "") + "/" + (deliverable.filename || "");
 };
 
+window.theseusStudioGroupDescriptor = function theseusStudioGroupDescriptor(
+  deliverable,
+  mode,
+) {
+  if (mode === "skill") {
+    const skill = deliverable.skill || "unknown-skill";
+    return {
+      key: "skill/" + skill,
+      title: skill,
+      metaPrefix: "Skill",
+    };
+  }
+  if (mode === "run") {
+    const skill = deliverable.skill || "unknown-skill";
+    const runId = deliverable.run_id || "unknown-run";
+    return {
+      key: "run/" + skill + "/" + runId,
+      title: runId,
+      metaPrefix: skill,
+    };
+  }
+  if (mode === "date") {
+    const createdAt = String(deliverable.created_at || "");
+    const day = createdAt.slice(0, 10) || "unknown-date";
+    return {
+      key: "date/" + day,
+      title: day,
+      metaPrefix: "Created",
+    };
+  }
+  return {
+    key: "all",
+    title: "All deliverables",
+    metaPrefix: "Studio",
+  };
+};
+
 window.theseusIsStudioPinned = function theseusIsStudioPinned(
   app,
   deliverable,
@@ -666,6 +703,47 @@ window.theseusStudioFiltered = function theseusStudioFiltered(app) {
       (left, right) => right.pinned - left.pinned || left.index - right.index,
     )
     .map((entry) => entry.deliverable);
+};
+
+window.theseusStudioGrouped = function theseusStudioGrouped(app) {
+  const deliverables = window.theseusStudioFiltered(app);
+  const mode = app.studio.groupBy || "";
+  if (!mode) {
+    return [
+      {
+        key: "all",
+        title: "All deliverables",
+        meta: deliverables.length + " item(s)",
+        items: deliverables,
+      },
+    ];
+  }
+
+  const groups = [];
+  const index = new Map();
+  for (const deliverable of deliverables) {
+    const descriptor = window.theseusStudioGroupDescriptor(deliverable, mode);
+    let group = index.get(descriptor.key);
+    if (!group) {
+      group = {
+        key: descriptor.key,
+        title: descriptor.title,
+        metaPrefix: descriptor.metaPrefix,
+        items: [],
+      };
+      index.set(descriptor.key, group);
+      groups.push(group);
+    }
+    group.items.push(deliverable);
+  }
+
+  return groups.map((group) => ({
+    key: group.key,
+    title: group.title,
+    meta:
+      group.metaPrefix + " · " + group.items.length + " item(s)",
+    items: group.items,
+  }));
 };
 
 window.theseusStudioOpenRun = function theseusStudioOpenRun(app, deliverable) {

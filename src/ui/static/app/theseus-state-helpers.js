@@ -72,6 +72,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       trashOpen: false,
       filterSkill: "",
       filterFormat: "",
+      groupBy: "",
       search: "",
       latestOnly: true,
       pinned: {},

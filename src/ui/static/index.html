@@ -3428,6 +3428,19 @@
                   </template>
                 </select>
               </div>
+              <div class="flex items-center gap-2">
+                <label class="text-xs uppercase text-slate-500">Group</label>
+                <select
+                  class="bg-ink-800 border border-edge text-slate-200 text-sm rounded px-2 py-1.5"
+                  x-model="studio.groupBy"
+                  @change="pruneStudioSelectionToFiltered()"
+                >
+                  <option value="">None</option>
+                  <option value="skill">Skill</option>
+                  <option value="run">Run</option>
+                  <option value="date">Date</option>
+                </select>
+              </div>
               <div class="flex items-center gap-2 flex-1 min-w-[200px]">
                 <label class="text-xs uppercase text-slate-500">Search</label>
                 <input
@@ -3595,91 +3608,116 @@
                 </thead>
                 <tbody>
                   <template
-                    x-for="d in studioFiltered()"
-                    :key="d.skill + '/' + d.run_id + '/' + d.filename"
+                    x-for="group in studioGrouped()"
+                    :key="group.key"
                   >
-                    <tr
-                      class="studio-row"
-                      :class="isStudioPinned(d) ? 'studio-row-pinned' : ''"
-                    >
-                      <td class="text-center">
-                        <input
-                          type="checkbox"
-                          class="studio-check"
-                          :checked="!!studio.selected[studioKey(d)]"
-                          @click.stop="toggleStudioSelection(d)"
-                          :title="`Select ${d.display_name || d.filename}`"
-                        />
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          class="studio-filename-btn text-neon-cyan"
-                          @click="openStudioPreview(d)"
-                          :title="`Preview ${d.display_name || d.filename}`"
+                    <template>
+                      <tr x-show="studio.groupBy" class="studio-group-row">
+                        <td colspan="7" class="border-t border-edge bg-ink-900/85 px-4 py-3">
+                          <div class="flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                              <div class="text-xs uppercase tracking-[0.18em] text-neon-amber" x-text="group.title"></div>
+                              <div class="text-xs text-slate-500" x-text="group.meta"></div>
+                            </div>
+                            <button
+                              x-show="studio.groupBy === 'run' && group.items.length"
+                              type="button"
+                              class="btn btn-ghost text-[11px] px-2 py-1"
+                              @click="studioOpenRun(group.items[0])"
+                            >
+                              Open run
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      <template
+                        x-for="d in group.items"
+                        :key="d.skill + '/' + d.run_id + '/' + d.filename"
+                      >
+                        <tr
+                          class="studio-row"
+                          :class="isStudioPinned(d) ? 'studio-row-pinned' : ''"
                         >
-                          <span x-text="d.display_name || d.filename"></span>
-                        </button>
-                      </td>
-                      <td>
-                        <span class="studio-pill" x-text="d.skill"></span>
-                      </td>
-                      <td>
-                        <span
-                          class="studio-format"
-                          x-text="(d.ext || '').toUpperCase()"
-                        ></span>
-                      </td>
-                      <td
-                        class="text-right text-slate-400"
-                        x-text="formatBytes(d.size)"
-                      ></td>
-                      <td
-                        class="text-slate-400"
-                        x-text="(d.created_at || '').slice(0, 19).replace('T', ' ')"
-                      ></td>
-                      <td class="text-right">
-                        <button
-                          type="button"
-                          class="studio-action studio-anchor"
-                          :class="isStudioPinned(d) ? 'studio-anchor-active' : ''"
-                          :title="isStudioPinned(d) ? 'Unpin (release anchor)' : 'Pin to top (drop anchor)'"
-                          @click="toggleStudioPin(d)"
-                        >
-                          <i data-lucide="anchor" class="w-3.5 h-3.5"></i>
-                        </button>
-                        <a
-                          :href="studioDownloadHref(d)"
-                          :download="d.filename"
-                          class="studio-action"
-                          title="Download"
-                        >
-                          <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                        </a>
-                        <button
-                          type="button"
-                          class="studio-action"
-                          title="Why this artifact? (reasoning view)"
-                          @click="openReasoning(d)"
-                        >
-                          <i
-                            data-lucide="brain-circuit"
-                            class="w-3.5 h-3.5"
-                          ></i>
-                        </button>
-                        <button
-                          type="button"
-                          class="studio-action"
-                          title="Open originating run"
-                          @click="studioOpenRun(d)"
-                        >
-                          <i
-                            data-lucide="external-link"
-                            class="w-3.5 h-3.5"
-                          ></i>
-                        </button>
-                      </td>
-                    </tr>
+                          <td class="text-center">
+                            <input
+                              type="checkbox"
+                              class="studio-check"
+                              :checked="!!studio.selected[studioKey(d)]"
+                              @click.stop="toggleStudioSelection(d)"
+                              :title="`Select ${d.display_name || d.filename}`"
+                            />
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              class="studio-filename-btn text-neon-cyan"
+                              @click="openStudioPreview(d)"
+                              :title="`Preview ${d.display_name || d.filename}`"
+                            >
+                              <span x-text="d.display_name || d.filename"></span>
+                            </button>
+                          </td>
+                          <td>
+                            <span class="studio-pill" x-text="d.skill"></span>
+                          </td>
+                          <td>
+                            <span
+                              class="studio-format"
+                              x-text="(d.ext || '').toUpperCase()"
+                            ></span>
+                          </td>
+                          <td
+                            class="text-right text-slate-400"
+                            x-text="formatBytes(d.size)"
+                          ></td>
+                          <td
+                            class="text-slate-400"
+                            x-text="(d.created_at || '').slice(0, 19).replace('T', ' ')"
+                          ></td>
+                          <td class="text-right">
+                            <button
+                              type="button"
+                              class="studio-action studio-anchor"
+                              :class="isStudioPinned(d) ? 'studio-anchor-active' : ''"
+                              :title="isStudioPinned(d) ? 'Unpin (release anchor)' : 'Pin to top (drop anchor)'"
+                              @click="toggleStudioPin(d)"
+                            >
+                              <i data-lucide="anchor" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <a
+                              :href="studioDownloadHref(d)"
+                              :download="d.filename"
+                              class="studio-action"
+                              title="Download"
+                            >
+                              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                            </a>
+                            <button
+                              type="button"
+                              class="studio-action"
+                              title="Why this artifact? (reasoning view)"
+                              @click="openReasoning(d)"
+                            >
+                              <i
+                                data-lucide="brain-circuit"
+                                class="w-3.5 h-3.5"
+                              ></i>
+                            </button>
+                            <button
+                              type="button"
+                              class="studio-action"
+                              title="Open originating run"
+                              @click="studioOpenRun(d)"
+                            >
+                              <i
+                                data-lucide="external-link"
+                                class="w-3.5 h-3.5"
+                              ></i>
+                            </button>
+                          </td>
+                        </tr>
+                      </template>
+                    </template>
                   </template>
                 </tbody>
               </table>

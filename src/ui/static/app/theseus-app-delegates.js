@@ -164,6 +164,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusStudioFiltered(this);
     },
 
+    studioGrouped() {
+      return window.theseusStudioGrouped(this);
+    },
+
     studioSelectedCount() {
       return window.theseusStudioSelectedCount(this);
     },

@@ -82,6 +82,17 @@ def test_studio_filter_bar_exposes_latest_only_toggle() -> None:
     assert "Latest only" in source
 
 
+def test_studio_filter_bar_exposes_grouping_control() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+
+    assert 'x-model="studio.groupBy"' in source
+    assert '<option value="skill">Skill</option>' in source
+    assert '<option value="run">Run</option>' in source
+    assert '<option value="date">Date</option>' in source
+    assert 'x-for="group in studioGrouped()"' in source
+    assert "Open run" in source
+
+
 def test_studio_exposes_trash_toggle_and_restore_action() -> None:
     source = _INDEX_HTML.read_text(encoding="utf-8")
 
