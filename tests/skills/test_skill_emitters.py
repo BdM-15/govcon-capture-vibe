@@ -181,7 +181,7 @@ def test_auto_emit_artifacts_shapes_competitive_intel_brief(tmp_path: Path) -> N
 
         brief = (artifacts_dir / "competitive_intel_brief.md").read_text(encoding="utf-8")
         manifest = json.loads((run_dir / "artifacts_manifest.json").read_text(encoding="utf-8"))
-        assert brief.startswith("# FA805122F0001 Order Burn Brief")
+        assert brief.startswith("# FA805122F0001 Task Order Burn Brief")
         # BLUF prose, not raw bullets
         assert "**FA805122F0001** is best read as a single-order story" in brief
         assert "**$43.66M net** obligated across **4 transaction(s)**" in brief
@@ -217,10 +217,10 @@ def test_auto_emit_artifacts_shapes_competitive_intel_brief(tmp_path: Path) -> N
         assert "- Contains 1 deobligation action(s) totaling -$350.4K" in brief
         assert "- Current POP end (2023-11-20) is in the past while potential end is 2026-12-15" in brief
         # Manifest still uses descriptive labels
-        assert manifest["report.md"]["display_name"] == "FA805122F0001 Order Burn Final Response"
-        assert manifest["competitive_intel_brief.md"]["display_name"] == "FA805122F0001 Order Burn Brief Source"
-        assert manifest["competitive_intel_brief.docx"]["display_name"] == "FA805122F0001 Order Burn Brief"
-        assert manifest["competitive_intel_obligation.xlsx"]["display_name"] == "FA805122F0001 Order Burn Workbook"
+        assert manifest["report.md"]["display_name"] == "FA805122F0001 Task Order Burn Final Response"
+        assert manifest["competitive_intel_brief.md"]["display_name"] == "FA805122F0001 Task Order Burn Brief Source"
+        assert manifest["competitive_intel_brief.docx"]["display_name"] == "FA805122F0001 Task Order Burn Brief"
+        assert manifest["competitive_intel_obligation.xlsx"]["display_name"] == "FA805122F0001 Task Order Burn Workbook"
 
 
 def test_build_competitive_intel_brief_markdown_keeps_vehicle_story_sharp() -> None:
@@ -308,7 +308,7 @@ def test_build_competitive_intel_brief_markdown_keeps_vehicle_story_sharp() -> N
         "Competitive Intel",
     )
 
-    assert "**PARENT-001** is best read as a parent IDV rollup" in brief
+    assert "**PARENT-001** is best read as a vehicle rollup" in brief
     assert "**$500.00 net** obligated across **2 transaction(s)**" in brief
     assert "## Burn Posture" in brief
     assert "- Gross / Net Obligated: $525.00 / $500.00 (deobligations: -$25.00 across 1 action(s))" in brief

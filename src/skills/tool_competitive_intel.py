@@ -1835,6 +1835,8 @@ def build_competitive_intel_brief_markdown(
     ]
 
     scenario = str(resolved.get("scenario") or payload.get("scope") or "unknown")
+    scope = str(payload.get("scope") or "").strip().lower()
+    is_vehicle_scope = scope == "vehicle" or scenario == "parent_idiq"
     piid = str(
         payload.get("input_contract_number")
         or resolved.get("piid")
@@ -1842,6 +1844,18 @@ def build_competitive_intel_brief_markdown(
     )
     headline = str(insights.get("headline") or "").strip()
     parent_award_id = hierarchy.get("parent_award_id") or vehicle.get("parent_award_id")
+    child_orders = [
+        item for item in (obligations.get("by_child_order") or [])
+        if isinstance(item, dict)
+    ]
+    by_award = [
+        item for item in (obligations.get("by_award") or [])
+        if isinstance(item, dict)
+    ]
+    parent_vehicle_awardees = [
+        item for item in (competitor.get("parent_vehicle_awardees") or [])
+        if isinstance(item, dict)
+    ]
 
     burn_evidence = _evidence_for_block(blocks, "burn_posture")
     award_evidence = _evidence_for_block(blocks, "award_story")
@@ -1880,8 +1894,11 @@ def build_competitive_intel_brief_markdown(
     bluf = _build_bluf(
         piid=piid,
         scenario=scenario,
+        scope=scope,
         net_obligated=net_obligated,
         transaction_count=len(transactions),
+        child_order_count=len(child_orders),
+        awardee_count=len(parent_vehicle_awardees) or competitor.get("parent_vehicle_awardee_count") or 0,
         annual_burn=annual_burn,
         monthly_burn=monthly_burn,
         daily_burn=daily_burn,
@@ -1926,55 +1943,75 @@ def build_competitive_intel_brief_markdown(
         lines.append(f"- *{recency_note}*")
 
     # --- Award Story ---------------------------------------------------------
-    lines.extend(["", "## Award Story & Key Inflection Points"])
-    award_summary = str(award_evidence.get("summary") or "").strip()
-    award_block = next(
-        (b for b in blocks if isinstance(b, dict) and b.get("id") == "award_story"),
-        None,
-    )
-    if not award_summary and award_block:
-        award_summary = str(award_block.get("summary") or "").strip()
-    lead = _build_award_story_lead(
-        piid=piid,
-        scenario=scenario,
-        transactions=transactions,
-        net_obligated=net_obligated,
-        award_summary=award_summary,
-    )
-    lines.append(lead)
-
-    ledger_segments = award_evidence.get("period_of_performance_segments") or []
-    if isinstance(ledger_segments, list) and ledger_segments:
-        seg_lines = _format_pop_segment_ledger(ledger_segments)
-        if seg_lines:
-            lines.append("")
-            lines.extend(seg_lines)
-    else:
-        ledger = _format_transaction_ledger(transactions)
+    if is_vehicle_scope and child_orders:
+        lines.extend(["", "## Vehicle Composition (Child Orders)"])
+        lines.append(
+            f"Parent IDV **{parent_award_id or '(unknown)'}** carries **{len(child_orders)}** child order(s) "
+            f"totaling **{_fmt_money(net_obligated)} net** obligated. Top orders by net obligated:"
+        )
+        ledger = _format_child_order_ledger(child_orders, by_award, net_obligated)
         if ledger:
             lines.append("")
             lines.extend(ledger)
-            mix_line = _format_modification_mix(transactions)
-            if mix_line:
-                lines.extend(["", mix_line])
-            largest_line = _format_largest_action(transactions, net_obligated)
-            if largest_line:
-                lines.append(largest_line)
+    else:
+        lines.extend(["", "## Award Story & Key Inflection Points"])
+        award_summary = str(award_evidence.get("summary") or "").strip()
+        award_block = next(
+            (b for b in blocks if isinstance(b, dict) and b.get("id") == "award_story"),
+            None,
+        )
+        if not award_summary and award_block:
+            award_summary = str(award_block.get("summary") or "").strip()
+        lead = _build_award_story_lead(
+            piid=piid,
+            scenario=scenario,
+            transactions=transactions,
+            net_obligated=net_obligated,
+            award_summary=award_summary,
+        )
+        lines.append(lead)
+
+        ledger_segments = award_evidence.get("period_of_performance_segments") or []
+        if isinstance(ledger_segments, list) and ledger_segments:
+            seg_lines = _format_pop_segment_ledger(ledger_segments)
+            if seg_lines:
+                lines.append("")
+                lines.extend(seg_lines)
+        else:
+            ledger = _format_transaction_ledger(transactions)
+            if ledger:
+                lines.append("")
+                lines.extend(ledger)
+                mix_line = _format_modification_mix(transactions)
+                if mix_line:
+                    lines.extend(["", mix_line])
+                largest_line = _format_largest_action(transactions, net_obligated)
+                if largest_line:
+                    lines.append(largest_line)
 
     fy_line = _format_fiscal_trajectory(by_fiscal_year, annual_burn)
     if fy_line:
         lines.extend(["", fy_line])
 
+    # --- Awardee Roster (vehicle scope only) ---------------------------------
+    if is_vehicle_scope and parent_vehicle_awardees:
+        roster_lines = _format_awardee_roster(parent_vehicle_awardees)
+        if roster_lines:
+            lines.extend(["", "## Awardee Roster (Parent Vehicle)", *roster_lines])
+
     # --- Competitive Context -------------------------------------------------
-    comp_para = _format_competitive_paragraph(
-        scenario=scenario,
-        competitor=competitor,
-        competitive_evidence=competitive_evidence,
-        parent_award_id=parent_award_id,
-        vehicle=vehicle,
-    )
-    if comp_para:
-        lines.extend(["", "## Competitive Context", comp_para])
+    # On vehicle scope we already emitted the full awardee roster, so the
+    # short "N awardees" paragraph is redundant. Skip it in that case.
+    if not (is_vehicle_scope and parent_vehicle_awardees):
+        comp_para = _format_competitive_paragraph(
+            scenario=scenario,
+            competitor=competitor,
+            competitive_evidence=competitive_evidence,
+            parent_award_id=parent_award_id,
+            vehicle=vehicle,
+        )
+        if comp_para:
+            lines.extend(["", "## Competitive Context", comp_para])
 
     # --- Caveats -------------------------------------------------------------
     caveat_lines: list[str] = []
@@ -2023,8 +2060,11 @@ def _build_bluf(
     *,
     piid: str,
     scenario: str,
+    scope: str,
     net_obligated: float,
     transaction_count: int,
+    child_order_count: int,
+    awardee_count: int,
     annual_burn: Any,
     monthly_burn: Any,
     daily_burn: Any,
@@ -2035,11 +2075,23 @@ def _build_bluf(
     ptw_basis: str,
     headline: str,
 ) -> str:
-    scenario_phrase = {
-        "parent_idiq": "parent IDV rollup",
-        "idiq_order": "single-order story",
-        "standalone_contract": "standalone contract",
-    }.get(scenario, "single award")
+    is_vehicle_scope = scope == "vehicle" or scenario == "parent_idiq"
+    if is_vehicle_scope:
+        rollup_bits = []
+        if child_order_count:
+            rollup_bits.append(f"**{child_order_count} child order(s)**")
+        if awardee_count:
+            rollup_bits.append(f"**{awardee_count} awardee(s)** on the parent IDV")
+        rollup_clause = (
+            f" spanning {' and '.join(rollup_bits)}" if rollup_bits else ""
+        )
+        scenario_phrase = f"vehicle rollup{rollup_clause}"
+    else:
+        scenario_phrase = {
+            "parent_idiq": "parent IDV rollup",
+            "idiq_order": "single-order story",
+            "standalone_contract": "standalone contract",
+        }.get(scenario, "single award")
     cadence_clause = ""
     if annual_burn:
         sub_parts = []
@@ -2071,6 +2123,13 @@ def _build_bluf(
         f"{cadence_clause}{horizon_clause}.{parent_clause}{ptw_clause}"
     )
     if headline and headline.lower() not in paragraph.lower():
+        # On vehicle scope, the collector's headline is often phrased as a
+        # single-order story even when we are rolling up the parent IDV.
+        # Suppress it to avoid contradicting the vehicle BLUF.
+        is_vehicle_scope = scope == "vehicle" or scenario == "parent_idiq"
+        order_phrases = ("single-order story", "one order story", "single order story")
+        if is_vehicle_scope and any(phrase in headline.lower() for phrase in order_phrases):
+            return paragraph
         paragraph = f"{paragraph}\n\n*Collector headline:* {headline}"
     return paragraph
 
@@ -2221,6 +2280,103 @@ def _normalize_action_type(value: Any) -> str:
         return _ACTION_TYPE_NORMALIZATIONS[upper]
     # Fallback: title-case but preserve common acronyms
     return text.title()
+
+
+def _format_child_order_ledger(
+    child_orders: list[dict[str, Any]],
+    by_award: list[dict[str, Any]],
+    vehicle_total: float,
+) -> list[str]:
+    """Render top child orders under a parent IDV with share, POP, recipient."""
+    if not child_orders:
+        return []
+    # Index by_award (which has recipient + net obligated) by piid for lookup.
+    award_by_piid: dict[str, dict[str, Any]] = {}
+    for award in by_award:
+        piid = str(award.get("piid") or "").strip()
+        if piid:
+            award_by_piid[piid] = award
+    enriched: list[dict[str, Any]] = []
+    for order in child_orders:
+        piid = str(order.get("piid") or "").strip() or "(unknown)"
+        award = award_by_piid.get(piid, {})
+        amount = (
+            _to_float(award.get("net_obligated_usd"))
+            or _to_float(award.get("total_obligated_usd"))
+            or _to_float(order.get("amount_usd"))
+        )
+        enriched.append(
+            {
+                "piid": piid,
+                "recipient": _clean_text(award.get("recipient_name")) or "(recipient unknown)",
+                "description": _clean_text(award.get("description") or order.get("description")),
+                "pop_start": order.get("pop_start_date") or award.get("pop_start_date"),
+                "pop_end": order.get("pop_end_current_date") or award.get("pop_end_current_date"),
+                "amount_usd": amount,
+            }
+        )
+    enriched.sort(key=lambda r: r["amount_usd"], reverse=True)
+    top = enriched[:10]
+    lines: list[str] = []
+    for row in top:
+        share = (
+            f" — {(row['amount_usd'] / vehicle_total * 100):.1f}% of vehicle"
+            if vehicle_total
+            else ""
+        )
+        pop = ""
+        if row["pop_start"] or row["pop_end"]:
+            pop = f" ({row['pop_start'] or '?'} → {row['pop_end'] or '?'})"
+        desc = f": {row['description']}" if row["description"] else ""
+        lines.append(
+            f"- **{row['piid']}** — {row['recipient']} — "
+            f"**{_fmt_money(row['amount_usd'])}**{share}{pop}{desc}"
+        )
+    if len(enriched) > len(top):
+        remainder_total = sum(r["amount_usd"] for r in enriched[len(top):])
+        lines.append(
+            f"- *…and {len(enriched) - len(top)} more child order(s) totaling "
+            f"**{_fmt_money(remainder_total)}**.*"
+        )
+    return lines
+
+
+def _format_awardee_roster(awardees: list[dict[str, Any]]) -> list[str]:
+    """Render the parent-vehicle awardee roster (siblings on the IDIQ)."""
+    if not awardees:
+        return []
+    lines: list[str] = []
+    lines.append(
+        f"The parent IDV has **{len(awardees)} awardee(s)** competing for orders. "
+        "Sibling vehicles observed:"
+    )
+    lines.append("")
+    rows = sorted(
+        awardees,
+        key=lambda a: (
+            -_to_float(a.get("award_amount_usd")),
+            str(a.get("recipient_name") or ""),
+        ),
+    )
+    for row in rows[:25]:
+        recipient = _clean_text(row.get("recipient_name")) or "(recipient unknown)"
+        piid = _clean_text(row.get("piid")) or ""
+        uei = _clean_text(row.get("recipient_uei"))
+        amount = _to_float(row.get("award_amount_usd"))
+        amount_str = f" — ceiling **{_fmt_money(amount)}**" if amount else ""
+        pop = ""
+        start = row.get("start_date")
+        end = row.get("end_date")
+        if start or end:
+            pop = f" ({start or '?'} → {end or '?'})"
+        uei_str = f" [UEI {uei}]" if uei else ""
+        piid_str = f" `{piid}`" if piid else ""
+        desc = _clean_text(row.get("description"))
+        desc_str = f": {desc}" if desc else ""
+        lines.append(f"- **{recipient}**{piid_str}{uei_str}{amount_str}{pop}{desc_str}")
+    if len(rows) > 25:
+        lines.append(f"- *…and {len(rows) - 25} more awardee(s).*")
+    return lines
 
 
 def _format_pop_segment_ledger(segments: list[Any]) -> list[str]:
@@ -2427,17 +2583,21 @@ def _format_competitive_paragraph(
 def build_competitive_intel_product_title(payload: dict[str, Any]) -> str:
     resolved = payload.get("resolved") if isinstance(payload.get("resolved"), dict) else {}
     scenario = str(resolved.get("scenario") or payload.get("scope") or "").strip()
+    scope = str(payload.get("scope") or "").strip().lower()
     piid = _clean_text(payload.get("input_contract_number")) or _clean_text(
         resolved.get("piid")
     )
     if not piid:
         return "Competitive Intel"
-    suffix = {
-        "parent_idiq": "Vehicle Burn",
-        "idiq_order": "Order Burn",
-        "standalone_contract": "Contract Burn",
-    }.get(scenario)
-    if not suffix:
+    # Scope wins over scenario: a vehicle-scope rollup of an idiq_order PIID is
+    # still a Vehicle Burn, not an Order Burn.
+    if scope == "vehicle" or scenario == "parent_idiq":
+        suffix = "IDIQ Vehicle Burn"
+    elif scenario == "idiq_order":
+        suffix = "Task Order Burn"
+    elif scenario == "standalone_contract":
+        suffix = "Standalone Contract Burn"
+    else:
         return f"{piid} Competitive Intel"
     return f"{piid} {suffix}"
 
