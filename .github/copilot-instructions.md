@@ -205,6 +205,20 @@ Skills run as **multi-turn tool-calling agents**, not single-shot prompt dumps. 
 
 Every tool call is captured in `<run_dir>/transcript.json` for grounding audit. **The skill body is the contract; the transcript is the proof.** This mirrors how a human analyst works: read the assignment → query the KG → fetch supporting chunks → run scripts → write the draft → cite sources.
 
+### Skill Chain Contracts — Required Review
+
+Theseus also maintains machine-readable skill handoff contracts for dynamic skill chaining in `src/skills/chain_contracts.py`. A skill contract is the planner-facing interface promise for a skill: accepted upstream semantic products, produced semantic products, artifact extensions, downstream-compatible skills, planner keywords, phase rank, role, and quality gate.
+
+**Any time a skill is added, imported from GitHub / skills.sh, removed, renamed, split, decomposed, merged, or materially changed, you MUST review the chain contract surface:**
+
+1. Update or add the skill's `SkillChainContract` in `src/skills/chain_contracts.py` if it can participate in chains.
+2. Keep `accepts`, `produces`, `artifact_extensions`, `downstream_skills`, `role`, and `quality_gate` aligned with the actual SKILL.md workflow and emitted artifacts.
+3. Avoid broad planner keywords like `win`, `data`, or `analysis` unless the skill truly owns that intent; ambiguous terms cause noisy chains.
+4. Update planner tests in `tests/skills/test_skill_chain_planner.py` for new handoff edges, decomposition changes, or expected chain shape changes.
+5. If the skill should not chain, confirm no contract is needed and that the planner still handles it only as a direct fallback when appropriate.
+
+**Rule:** No PR or commit that creates, imports, decomposes, or materially changes a skill should be proposed without explicitly stating whether the chain contract was added, updated, or intentionally left absent.
+
 ### Cross-cutting rules for ANY skill change
 
 When modifying a skill or the runtime, you MUST:

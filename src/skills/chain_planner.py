@@ -13,6 +13,7 @@ from src.skills.chain_models import (
     ChainSpec,
     ChainStepSpec,
 )
+from src.skills.chain_contracts import CONTRACT_REGISTRY
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
 _STEP_SAFE = re.compile(r"[^a-z0-9_-]+")
@@ -33,21 +34,6 @@ _EXCLUDED_BY_DEFAULT = {
     "to-prd",
 }
 
-_PHASE_RANK = {
-    "competitive-intel": 10,
-    "rfp-reverse-engineer": 15,
-    "workload-analyzer": 20,
-    "data-analyzer": 20,
-    "compliance-auditor": 30,
-    "oci-sweeper": 30,
-    "ot-prototype-strategist": 35,
-    "price-to-win": 40,
-    "proposal-generator": 50,
-    "subcontractor-sow-builder": 50,
-    "renderers": 80,
-    "huashu-design": 85,
-}
-
 _OUTPUT_TERMS = {
     "docx",
     "document",
@@ -62,102 +48,6 @@ _OUTPUT_TERMS = {
     "deliverable",
     "artifact",
     "package",
-}
-
-_CONTRACTS: dict[str, dict[str, Any]] = {
-    "competitive-intel": {
-        "keywords": {
-            "competitor", "competitive", "incumbent", "award", "awards",
-            "obligation", "obligations", "idiq", "order", "orders", "burn",
-            "black", "hat", "contract", "naics", "psc",
-        },
-        "produces": {"competitor_intel", "award_history", "obligation_data"},
-        "extensions": ["json", "md", "html", "docx", "xlsx"],
-    },
-    "workload-analyzer": {
-        "keywords": {
-            "workload", "site", "sites", "staffing", "labor", "volume",
-            "demand", "section", "spreadsheet", "clin", "hours", "attachment",
-        },
-        "produces": {"workload_handoff", "pricing_inputs"},
-        "extensions": ["json", "xlsx", "md"],
-    },
-    "rfp-reverse-engineer": {
-        "keywords": {
-            "reverse", "engineer", "scope", "hot", "button", "buttons",
-            "hidden", "decision", "tree", "pws", "sow", "qasp", "trap",
-        },
-        "produces": {"strategy_handoff", "scope_read"},
-        "extensions": ["json", "md", "html"],
-    },
-    "compliance-auditor": {
-        "keywords": {
-            "compliance", "audit", "far", "dfars", "clause", "clauses",
-            "shall", "l", "m", "matrix", "instruction", "evaluation",
-        },
-        "produces": {"compliance_findings", "gap_list"},
-        "extensions": ["json", "md", "xlsx", "docx"],
-    },
-    "oci-sweeper": {
-        "keywords": {"oci", "conflict", "impaired", "objectivity", "unequal", "access"},
-        "produces": {"oci_findings"},
-        "extensions": ["json", "md", "docx"],
-    },
-    "price-to-win": {
-        "keywords": {
-            "price", "pricing", "ptw", "cost", "costing", "estimate",
-            "should", "wrap", "rate", "rates", "labor", "boe", "target",
-        },
-        "produces": {"pricing_stack", "ptw_workbook"},
-        "extensions": ["json", "xlsx", "md", "docx"],
-    },
-    "ot-prototype-strategist": {
-        "keywords": {"ot", "prototype", "trl", "milestone", "cost", "share", "4022", "4021"},
-        "produces": {"ot_strategy", "prototype_cost_stack"},
-        "extensions": ["json", "xlsx", "md"],
-    },
-    "proposal-generator": {
-        "keywords": {
-            "proposal", "respond", "response", "draft", "outline", "volume",
-            "executive", "summary", "theme", "themes", "fab", "matrix",
-        },
-        "produces": {"proposal_draft", "compliance_matrix"},
-        "extensions": ["json", "md", "html", "docx", "xlsx"],
-    },
-    "subcontractor-sow-builder": {
-        "keywords": {"subcontractor", "sub", "teaming", "partner", "sow", "pws"},
-        "produces": {"sub_sow", "sub_pws"},
-        "extensions": ["md", "docx"],
-    },
-    "renderers": {
-        "keywords": {"render", "docx", "word", "xlsx", "excel", "workbook"},
-        "produces": {"docx", "xlsx"},
-        "extensions": ["md", "json"],
-    },
-    "huashu-design": {
-        "keywords": {"slides", "pptx", "pdf", "html", "deck", "prototype", "visual"},
-        "produces": {"presentation", "html", "pdf"},
-        "extensions": ["html", "json", "md"],
-    },
-}
-
-_HANDOFFS: dict[str, set[str]] = {
-    "competitive-intel": {"price-to-win", "proposal-generator"},
-    "workload-analyzer": {"price-to-win", "proposal-generator"},
-    "rfp-reverse-engineer": {"proposal-generator"},
-    "compliance-auditor": {"proposal-generator"},
-    "oci-sweeper": {"proposal-generator"},
-    "price-to-win": {"proposal-generator", "renderers"},
-    "ot-prototype-strategist": {"proposal-generator", "renderers"},
-    "proposal-generator": {"renderers", "huashu-design"},
-    "subcontractor-sow-builder": {"renderers"},
-}
-
-_RENDERABLE_UPSTREAM = {
-    "proposal-generator",
-    "price-to-win",
-    "subcontractor-sow-builder",
-    "ot-prototype-strategist",
 }
 
 
@@ -288,15 +178,15 @@ class SkillChainPlanner:
     @staticmethod
     def _score(summary: SkillSummary, tokens: set[str]) -> int:
         name = summary.name
-        contract = _CONTRACTS.get(name, {})
-        keywords = set(contract.get("keywords") or set())
+        contract = CONTRACT_REGISTRY.get(name)
+        keywords = set(contract.keywords) if contract else set()
         name_tokens = _tokens(name)
         capability_tokens = _tokens(summary.capability)
         score = 0
         score += 4 * len(tokens & keywords)
         score += 2 * len(tokens & name_tokens)
         score += len(tokens & capability_tokens)
-        if not contract:
+        if contract is None:
             text_tokens = _tokens(summary.description)
             score += min(len(tokens & text_tokens), 3)
         if summary.capability in {"research", "analyze", "audit", "estimate", "draft", "render"}:
@@ -323,10 +213,11 @@ class SkillChainPlanner:
             renderer = self._renderer_for(tokens, available)
             if renderer and selected and selected[-1] != renderer:
                 upstream = selected[-1]
-                if upstream in _RENDERABLE_UPSTREAM and renderer in _HANDOFFS.get(upstream, set()):
+                downstreams = CONTRACT_REGISTRY.downstream_skills(upstream)
+                if CONTRACT_REGISTRY.is_renderable_upstream(upstream) and renderer in downstreams:
                     _append_unique(selected, renderer)
 
-        selected.sort(key=lambda name: _PHASE_RANK.get(name, 60))
+        selected.sort(key=CONTRACT_REGISTRY.phase_rank)
         selected = self._prune_disconnected(selected)
         return selected[:max_steps]
 
@@ -337,7 +228,7 @@ class SkillChainPlanner:
         tokens: set[str],
     ) -> list[str]:
         targets: list[str] = []
-        for name in _CONTRACTS:
+        for name in CONTRACT_REGISTRY.names():
             if name in available and scores.get(name, 0) >= 4:
                 _append_unique(targets, name)
         if _needs_rendering(tokens):
@@ -348,14 +239,14 @@ class SkillChainPlanner:
             best = max(scores.items(), key=lambda item: item[1], default=("", 0))
             if best[0] and best[1] > 0:
                 targets.append(best[0])
-        targets.sort(key=lambda name: (_PHASE_RANK.get(name, 60), -scores.get(name, 0)))
+        targets.sort(key=lambda name: (CONTRACT_REGISTRY.phase_rank(name), -scores.get(name, 0)))
         # Prefer latest-phase matched target as outcome, but retain explicitly matched independent goals.
         if len(targets) > 1:
-            last_rank = max(_PHASE_RANK.get(name, 60) for name in targets)
-            late = [name for name in targets if _PHASE_RANK.get(name, 60) == last_rank]
+            last_rank = max(CONTRACT_REGISTRY.phase_rank(name) for name in targets)
+            late = [name for name in targets if CONTRACT_REGISTRY.phase_rank(name) == last_rank]
             early = [
                 name for name in targets
-                if any(name in _HANDOFFS.get(candidate, set()) for candidate in targets)
+                if any(name in CONTRACT_REGISTRY.downstream_skills(candidate) for candidate in targets)
             ]
             return [*early, *late]
         return targets
@@ -368,8 +259,8 @@ class SkillChainPlanner:
         tokens: set[str],
     ) -> list[str]:
         upstreams: list[str] = []
-        for candidate, downstreams in _HANDOFFS.items():
-            if target not in downstreams or candidate not in available:
+        for candidate in CONTRACT_REGISTRY.upstream_skills(target):
+            if candidate not in available:
                 continue
             score = scores.get(candidate, 0)
             if score >= 4 or _default_upstream(candidate, target, tokens):
@@ -377,7 +268,7 @@ class SkillChainPlanner:
                     SkillChainPlanner._matched_upstreams(candidate, available, scores, tokens)
                 )
                 _append_unique(upstreams, candidate)
-        upstreams.sort(key=lambda name: _PHASE_RANK.get(name, 60))
+        upstreams.sort(key=CONTRACT_REGISTRY.phase_rank)
         return upstreams
 
     @staticmethod
@@ -407,12 +298,12 @@ class SkillChainPlanner:
             if not pruned:
                 pruned.append(name)
                 continue
-            has_prev_edge = any(name in _HANDOFFS.get(prev, set()) for prev in pruned)
+            has_prev_edge = any(name in CONTRACT_REGISTRY.downstream_skills(prev) for prev in pruned)
             has_next_edge = any(
-                downstream in _HANDOFFS.get(name, set())
+                downstream in CONTRACT_REGISTRY.downstream_skills(name)
                 for downstream in selected[index + 1 :]
             )
-            direct_goal = name not in _CONTRACTS
+            direct_goal = not CONTRACT_REGISTRY.has(name)
             if has_prev_edge or has_next_edge or direct_goal:
                 pruned.append(name)
         return pruned
@@ -433,7 +324,7 @@ class SkillChainPlanner:
             deps = [
                 step_ids[prev]
                 for prev in selected[: index - 1]
-                if name in _HANDOFFS.get(prev, set())
+                if name in CONTRACT_REGISTRY.downstream_skills(prev)
             ]
             requirements = [
                 ChainArtifactRequirement(
@@ -488,11 +379,11 @@ class SkillChainPlanner:
 
     @staticmethod
     def _reason_for(name: str, tokens: set[str], selected: list[str]) -> str:
-        contract = _CONTRACTS.get(name, {})
-        hits = sorted(tokens & set(contract.get("keywords") or set()))
+        contract = CONTRACT_REGISTRY.get(name)
+        hits = sorted(tokens & set(contract.keywords if contract else frozenset()))
         if hits:
             return "Matched goal terms: " + ", ".join(hits[:8])
-        if any(next_name in _HANDOFFS.get(name, set()) for next_name in selected):
+        if any(next_name in CONTRACT_REGISTRY.downstream_skills(name) for next_name in selected):
             return "Selected as logical upstream handoff."
         return "Selected as best direct skill match."
 
@@ -517,11 +408,7 @@ def _needs_rendering(tokens: set[str]) -> bool:
 
 
 def _default_upstream(candidate: str, target: str, tokens: set[str]) -> bool:
-    if target == "proposal-generator" and candidate == "rfp-reverse-engineer":
-        return bool({"proposal", "respond", "response", "draft"} & tokens)
-    if target == "price-to-win" and candidate == "competitive-intel":
-        return bool({"price", "pricing", "ptw", "incumbent", "competitor"} & tokens)
-    return False
+    return CONTRACT_REGISTRY.default_upstream(candidate, target, tokens)
 
 
 def _step_id(skill: str, existing: Iterable[str]) -> str:
@@ -548,24 +435,11 @@ def _chain_name(selected: list[str], tokens: set[str]) -> str:
 
 
 def _role_for(skill: str) -> str:
-    return {
-        "competitive-intel": "research competitor, incumbent, and obligation context",
-        "workload-analyzer": "turn workload data into pricing inputs",
-        "rfp-reverse-engineer": "extract hidden scope and strategy signals",
-        "compliance-auditor": "audit instructions, clauses, and compliance gaps",
-        "oci-sweeper": "surface OCI risk and mitigation notes",
-        "price-to-win": "build price-to-win / should-cost estimate",
-        "ot-prototype-strategist": "build OT prototype strategy and milestone cost stack",
-        "proposal-generator": "draft proposal response artifacts from upstream evidence",
-        "subcontractor-sow-builder": "draft downstream SOW/PWS artifact",
-        "renderers": "render structured source artifacts into Office deliverables",
-        "huashu-design": "render visual/presentation deliverables",
-    }.get(skill, "perform directly matched skill work")
+    return CONTRACT_REGISTRY.role(skill) or "perform directly matched skill work"
 
 
 def _quality_gate(skill: str, expected_outcome: str) -> str:
-    target = expected_outcome.strip() or "requested outcome"
-    return f"Output must advance '{target}' and name any missing upstream inputs."
+    return CONTRACT_REGISTRY.quality_gate(skill, expected_outcome)
 
 
 def _edge_extensions(
@@ -575,7 +449,7 @@ def _edge_extensions(
 ) -> list[str]:
     inverse = {step_id: skill for skill, step_id in step_ids.items()}
     upstream = inverse.get(dep_step_id, "")
-    return list(_CONTRACTS.get(upstream, {}).get("extensions") or ["json", "md"])
+    return list(CONTRACT_REGISTRY.artifact_extensions(upstream))
 
 
 __all__ = ["ChainPlan", "PlannedSkill", "SkillChainPlanner"]

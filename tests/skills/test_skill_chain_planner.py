@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from src.skills.chain_contracts import CONTRACT_REGISTRY, SkillChainContract
 from src.skills.chain_planner import SkillChainPlanner
 
 
@@ -65,6 +66,7 @@ def test_planner_builds_logical_ptw_chain_with_rendering() -> None:
     assert plan.spec.steps[3].depends_on == ["price-to-win"]
     assert plan.spec.context["expected_outcome"] == "Excel workbook and brief"
     assert plan.iteration_policy["mode"] == "outcome-gated-linear"
+    assert "low/mid/high" in plan.spec.steps[2].context["quality_gate"]
 
 
 def test_planner_defaults_reverse_engineer_before_proposal() -> None:
@@ -86,3 +88,24 @@ def test_planner_rejects_no_matching_skill() -> None:
 
     with pytest.raises(ValueError, match="No installed skill matches chain goal"):
         planner.plan(prompt="Build a proposal")
+
+
+def test_contract_registry_defines_handoff_edges_and_artifacts() -> None:
+    ptw = CONTRACT_REGISTRY.require("price-to-win")
+
+    assert "obligation_data" in ptw.accepts
+    assert "pricing_stack" in ptw.produces
+    assert CONTRACT_REGISTRY.upstream_skills("price-to-win") == (
+        "competitive-intel",
+        "workload-analyzer",
+    )
+    assert CONTRACT_REGISTRY.default_upstream(
+        "competitive-intel",
+        "price-to-win",
+        {"ptw"},
+    )
+
+
+def test_contract_model_rejects_unknown_top_level_fields() -> None:
+    with pytest.raises(ValueError):
+        SkillChainContract(skill="demo", unsupported=True)  # type: ignore[call-arg]
