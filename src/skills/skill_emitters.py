@@ -7,6 +7,7 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 from src.skills.run_metadata import read_artifact_manifest, write_artifact_manifest
 from src.skills.skill_models import Skill
@@ -150,6 +151,182 @@ def _safe_output_stem(stem: str) -> str:
     return cleaned or "artifact"
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _as_list(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _money(value: Any) -> str:
+    try:
+        amount = float(value)
+    except (TypeError, ValueError):
+        return "n/a"
+    sign = "-" if amount < 0 else ""
+    amount = abs(amount)
+    if amount >= 1_000_000_000:
+        return f"{sign}${amount / 1_000_000_000:,.2f}B"
+    if amount >= 1_000_000:
+        return f"{sign}${amount / 1_000_000:,.2f}M"
+    if amount >= 1_000:
+        return f"{sign}${amount / 1_000:,.1f}K"
+    return f"{sign}${amount:,.0f}"
+
+
+def _months(value: Any) -> str:
+    try:
+        return f"{float(value):.1f} months"
+    except (TypeError, ValueError):
+        return "n/a"
+
+
+def _load_json(path: Path) -> Any | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _block_by_id(payload: dict[str, Any], block_id: str) -> dict[str, Any]:
+    blocks = _as_list(_as_dict(payload.get("insights")).get("blocks"))
+    for block in blocks:
+        block_dict = _as_dict(block)
+        if block_dict.get("id") == block_id:
+            return block_dict
+    return {}
+
+
+def _competitive_intel_brief_markdown(payload: dict[str, Any], title: str) -> str:
+    insights = _as_dict(payload.get("insights"))
+    obligations = _as_dict(payload.get("obligations"))
+    rate = _as_dict(obligations.get("rate_analysis"))
+    ptw = _as_dict(payload.get("ptw_seed"))
+    resolved = _as_dict(payload.get("resolved"))
+    hierarchy = _as_dict(payload.get("hierarchy"))
+    vehicle = _as_dict(payload.get("vehicle_context"))
+    competitor = _as_dict(payload.get("competitor_discovery"))
+    burn = _as_dict(_block_by_id(payload, "burn_posture").get("evidence"))
+    award = _block_by_id(payload, "award_story")
+    award_evidence = _as_dict(award.get("evidence"))
+    periods = _as_list(award_evidence.get("period_of_performance_segments"))
+    transactions = [item for item in _as_list(obligations.get("by_transaction")) if isinstance(item, dict)]
+    option_mods = [item for item in transactions if item.get("action_type") == "G"]
+    negative_mods = sorted(
+        [item for item in transactions if float(item.get("amount_usd") or 0) < 0],
+        key=lambda item: float(item.get("amount_usd") or 0),
+    )
+    latest = max(transactions, key=lambda item: str(item.get("action_date") or ""), default={})
+
+    headline = str(insights.get("headline") or "No headline available.")
+    piid = str(payload.get("input_contract_number") or resolved.get("piid") or award_evidence.get("piid") or "Unknown")
+    scenario = str(resolved.get("scenario") or payload.get("scope") or "unknown")
+
+    lines: list[str] = [
+        f"# {title} Brief",
+        "",
+        "## Executive Snapshot",
+        headline,
+        "",
+        f"- Contract: {piid}",
+        f"- Scenario: {scenario.replace('_', ' ')}",
+    ]
+    parent_award_id = hierarchy.get("parent_award_id") or vehicle.get("parent_award_id")
+    if parent_award_id:
+        lines.append(f"- Parent vehicle: {parent_award_id}")
+
+    lines.extend(
+        [
+            "",
+            "## Burn Posture",
+            f"- Gross obligations: {_money(burn.get('gross_obligated_usd') or obligations.get('total_obligated_usd'))}",
+            f"- Net obligations: {_money(burn.get('net_obligated_usd') or obligations.get('net_obligated_usd'))}",
+            f"- Monthly burn: {_money(burn.get('monthly_burn_usd') or rate.get('monthly_burn_usd'))}",
+            f"- Annualized burn: {_money(burn.get('annual_burn_usd') or rate.get('annual_burn_usd'))}",
+            f"- Daily burn: {_money(burn.get('daily_burn_usd') or rate.get('daily_burn_usd'))}",
+            f"- PTW baseline: {_money(burn.get('recommended_ptw_baseline_usd') or ptw.get('recommended_baseline_usd'))}",
+            f"- Forecast expiration: {burn.get('pop_end_potential') or rate.get('forecast_expiration_date') or 'n/a'}",
+            "",
+            "## Award Story",
+            str(award.get("summary") or "No award-story summary available.").replace(" -> ", " to "),
+            "",
+        ]
+    )
+    for period in periods:
+        period_dict = _as_dict(period)
+        label = str(period_dict.get("label") or period_dict.get("raw_label") or "Period")
+        start = period_dict.get("pop_start_date") or period_dict.get("estimated_start") or "n/a"
+        end = period_dict.get("pop_end_date") or period_dict.get("estimated_end") or "n/a"
+        lines.append(
+            "- "
+            f"{label}: {start} to {end}; "
+            f"{_money(period_dict.get('obligated_usd'))} obligated; "
+            f"{_money(period_dict.get('monthly_rate_usd'))}/month; "
+            f"{_months(period_dict.get('months'))}."
+        )
+
+    lines.extend(["", "## Influential Points"])
+    if option_mods:
+        mods = ", ".join(str(item.get("modification_number") or item.get("action_date")) for item in option_mods)
+        lines.append(f"- Option exercise pattern: {mods} carry the base/option-year funding story.")
+    if negative_mods:
+        mod = negative_mods[0]
+        lines.append(
+            "- Deobligation posture: "
+            f"{mod.get('modification_number') or 'unknown mod'} on {mod.get('action_date') or 'unknown date'} "
+            f"moved {_money(mod.get('amount_usd'))}."
+        )
+    if latest:
+        lines.append(
+            "- Latest action: "
+            f"{latest.get('modification_number') or 'initial award'} on {latest.get('action_date') or 'unknown date'} "
+            f"for {_money(latest.get('amount_usd'))}; "
+            f"{latest.get('modification_description') or 'no description'}"
+        )
+    if vehicle:
+        lines.append(
+            "- Parent vehicle scale: "
+            f"{vehicle.get('child_order_count') or 0} child orders; "
+            f"{_money(vehicle.get('net_obligated_usd'))} net obligations."
+        )
+    if competitor:
+        awardee_count = int(competitor.get("parent_vehicle_awardee_count") or 0)
+        order_holder_count = int(competitor.get("order_holder_count") or 0)
+        awardee_word = "awardee" if awardee_count == 1 else "awardees"
+        holder_word = "holder" if order_holder_count == 1 else "holders"
+        lines.append(
+            "- Competitive context: "
+            f"{competitor.get('completeness_status') or 'unknown'} roster confidence; "
+            f"{awardee_count} parent {awardee_word}; "
+            f"{order_holder_count} order {holder_word}."
+        )
+    warnings = _as_list(payload.get("warnings"))
+    if warnings:
+        lines.extend(f"- Warning: {warning}" for warning in warnings)
+    else:
+        lines.append("- Warnings: none reported by the collector.")
+    return "\n".join(lines).strip() + "\n"
+
+
+def _brief_source_path(
+    skill: Skill,
+    artifacts_dir: Path,
+    profile: dict[str, object],
+    base: str,
+    title: str,
+) -> Path | None:
+    if skill.name != "competitive-intel":
+        return None
+    for source in _xlsx_source_paths(skill, artifacts_dir, profile):
+        payload = _load_json(source)
+        if isinstance(payload, dict) and payload.get("obligations"):
+            out = artifacts_dir / f"{base}_brief.md"
+            out.write_text(_competitive_intel_brief_markdown(payload, title), encoding="utf-8")
+            return out
+    return None
+
+
 def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = None) -> None:
     """Render generic Studio artifacts for a completed skill run."""
     try:
@@ -214,10 +391,13 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
 
         docx_script = renderers_dir / "render_docx.py"
         if "docx" in formats and docx_script.is_file():
+            docx_input = _brief_source_path(skill, artifacts_dir, profile, base, title) or report_md
+            if docx_input != report_md:
+                labels[docx_input.name] = f"{title} Brief Source"
             out_docx = artifacts_dir / f"{base}_brief.docx"
             args = [
                 "--input",
-                str(report_md),
+                str(docx_input),
                 "--output",
                 str(out_docx),
                 "--metadata",

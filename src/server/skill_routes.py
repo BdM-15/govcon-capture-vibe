@@ -1,13 +1,16 @@
 """Agent-skill UI routes for Project Theseus."""
 
 import asyncio
+import io
 import json
 import logging
 from pathlib import Path
+import zipfile
+from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Optional
 
 from fastapi import Body, FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from src.core import get_settings
@@ -87,6 +90,20 @@ class StudioArtifactDeletePayload(BaseModel):
     """Bulk deletion request for Studio artifacts."""
 
     artifacts: list[StudioArtifactDeleteItem] = Field(..., min_length=1, max_length=200)
+
+
+class StudioArtifactZipPayload(BaseModel):
+    """Bulk download request for Studio artifacts."""
+
+    artifacts: list[StudioArtifactDeleteItem] = Field(..., min_length=1, max_length=200)
+
+
+def _zip_segment(value: str, fallback: str) -> str:
+    cleaned = "".join(
+        char if char.isalnum() or char in {"-", "_", "."} else "_"
+        for char in value.strip()
+    ).strip("._")
+    return (cleaned[:96] or fallback)
 
 
 def _skill_response_payload(
@@ -595,6 +612,65 @@ def register_skill_run_ui_routes(
                 "count": len(deliverables),
                 "deliverables": deliverables,
             }
+        )
+
+    @app.post("/api/ui/studio/artifacts.zip", tags=["theseus-ui"])
+    async def zip_studio_artifacts_route(
+        payload: StudioArtifactZipPayload = Body(...),
+    ) -> Response:
+        mgr = get_skill_manager()
+        refs = [item.model_dump() for item in payload.artifacts]
+
+        def _build_zip() -> tuple[bytes, list[dict[str, str]], list[dict[str, str]]]:
+            buffer = io.BytesIO()
+            included: list[dict[str, str]] = []
+            missing: list[dict[str, str]] = []
+            with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                for ref in refs:
+                    path = mgr.get_artifact_path(
+                        workspace_dir(),
+                        ref["skill"],
+                        ref["run_id"],
+                        ref["filename"],
+                    )
+                    if path is None:
+                        missing.append(ref)
+                        continue
+                    archive_name = "/".join(
+                        [
+                            _zip_segment(ref["skill"], "skill"),
+                            _zip_segment(ref["run_id"], "run"),
+                            path.name,
+                        ]
+                    )
+                    archive.write(path, archive_name)
+                    included.append({**ref, "archive_path": archive_name})
+                archive.writestr(
+                    "manifest.json",
+                    json.dumps(
+                        {
+                            "workspace": get_settings().workspace,
+                            "included": included,
+                            "missing": missing,
+                        },
+                        indent=2,
+                    ),
+                )
+            return buffer.getvalue(), included, missing
+
+        content, included, missing = await asyncio.to_thread(_build_zip)
+        if not included:
+            raise HTTPException(404, "No selected artifacts could be found for ZIP download")
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        filename = f"theseus-studio-products-{stamp}.zip"
+        return Response(
+            content,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "X-Theseus-Zip-Count": str(len(included)),
+                "X-Theseus-Zip-Missing": str(len(missing)),
+            },
         )
 
     @app.delete("/api/ui/studio/artifacts", tags=["theseus-ui"])

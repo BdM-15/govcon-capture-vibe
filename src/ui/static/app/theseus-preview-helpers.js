@@ -357,6 +357,41 @@ window.theseusDeleteSelectedStudioArtifacts = async function theseusDeleteSelect
   }
 };
 
+window.theseusDownloadSelectedStudioZip = async function theseusDownloadSelectedStudioZip(app) {
+  const artifacts = Object.values(app.studio.selected || {});
+  if (!artifacts.length || app.studio.zipping) return;
+  app.studio.zipping = true;
+  try {
+    const response = await fetch("/api/ui/studio/artifacts.zip", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ artifacts }),
+    });
+    if (!response.ok) {
+      throw new Error(response.status + " " + response.statusText);
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get("content-disposition") || "";
+    const match = disposition.match(/filename="?([^";]+)"?/i);
+    const filename = match ? match[1] : "theseus-studio-products.zip";
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    const count = response.headers.get("x-theseus-zip-count") || artifacts.length;
+    app.toast("Downloaded " + count + " product(s) as ZIP", "success");
+  } catch (error) {
+    app.toast("ZIP download failed: " + (error?.message || error), "error");
+  } finally {
+    app.studio.zipping = false;
+    window.theseusAfterRender(app);
+  }
+};
+
 window.theseusStudioSkillOptions = function theseusStudioSkillOptions(app) {
   const set = new Set(
     (app.studio.deliverables || []).map((deliverable) => deliverable.skill),

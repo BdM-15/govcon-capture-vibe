@@ -180,6 +180,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusDeleteSelectedStudioArtifacts(this);
     },
 
+    async downloadSelectedStudioZip() {
+      return window.theseusDownloadSelectedStudioZip(this);
+    },
+
     studioDownloadHref(deliverable) {
       return window.theseusStudioDownloadHref(deliverable);
     },

@@ -3449,15 +3449,24 @@
                   type="button"
                   class="btn btn-ghost text-xs px-3 py-1.5"
                   @click="clearStudioSelection()"
-                  :disabled="studio.deleting"
+                  :disabled="studio.deleting || studio.zipping"
                 >
                   Clear
                 </button>
                 <button
                   type="button"
+                  class="btn btn-ghost border border-edge text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+                  @click="downloadSelectedStudioZip()"
+                  :disabled="studio.deleting || studio.zipping"
+                >
+                  <i data-lucide="archive" class="w-3.5 h-3.5"></i>
+                  <span x-text="studio.zipping ? 'Building ZIP…' : 'Download ZIP'"></span>
+                </button>
+                <button
+                  type="button"
                   class="btn btn-danger text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
                   @click="deleteSelectedStudioArtifacts()"
-                  :disabled="studio.deleting"
+                  :disabled="studio.deleting || studio.zipping"
                 >
                   <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                   <span x-text="studio.deleting ? 'Deleting…' : 'Delete selected'"></span>

@@ -14,7 +14,10 @@ Both routes are exercised against a temp workspace via FastAPI's
 
 from __future__ import annotations
 
+import io
+import json
 from pathlib import Path
+import zipfile
 
 import pytest
 from fastapi import FastAPI
@@ -218,3 +221,49 @@ def test_studio_delete_selected_artifacts_removes_files(
     assert not html_path.exists()
     assert source_path.exists()
     assert client.get("/api/ui/studio").json()["deliverables"] == []
+
+
+def test_studio_zip_selected_artifacts_downloads_archive(
+    tmp_path: Path,
+    client_factory,
+) -> None:
+    skill = "competitive-intel"
+    run_id = "20260430_120000_test_run"
+    _seed_artifact(
+        tmp_path,
+        skill=skill,
+        run_id=run_id,
+        filename="brief.docx",
+        content=b"PK\x03\x04brief",
+    )
+    _seed_artifact(
+        tmp_path,
+        skill=skill,
+        run_id=run_id,
+        filename="workbook.xlsx",
+        content=b"PK\x03\x04workbook",
+    )
+    client = client_factory(tmp_path)
+
+    response = client.post(
+        "/api/ui/studio/artifacts.zip",
+        json={
+            "artifacts": [
+                {"skill": skill, "run_id": run_id, "filename": "brief.docx"},
+                {"skill": skill, "run_id": run_id, "filename": "workbook.xlsx"},
+                {"skill": skill, "run_id": run_id, "filename": "missing.xlsx"},
+            ]
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].split(";")[0] == "application/zip"
+    assert response.headers["x-theseus-zip-count"] == "2"
+    assert response.headers["x-theseus-zip-missing"] == "1"
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        names = set(archive.namelist())
+        assert f"{skill}/{run_id}/brief.docx" in names
+        assert f"{skill}/{run_id}/workbook.xlsx" in names
+        manifest = json.loads(archive.read("manifest.json"))
+    assert len(manifest["included"]) == 2
+    assert len(manifest["missing"]) == 1

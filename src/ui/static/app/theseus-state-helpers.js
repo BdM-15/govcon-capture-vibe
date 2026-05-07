@@ -71,6 +71,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       pinned: {},
       selected: {},
       deleting: false,
+      zipping: false,
     },
     studioPreview: {
       open: false,
