@@ -144,6 +144,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusLoadStudio(this);
     },
 
+    toggleStudioTrash() {
+      return window.theseusToggleStudioTrash(this);
+    },
+
+    async restoreTrashedStudioArtifact(artifact) {
+      return window.theseusRestoreTrashedStudioArtifact(this, artifact);
+    },
+
     studioSkillOptions() {
       return window.theseusStudioSkillOptions(this);
     },

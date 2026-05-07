@@ -99,6 +99,18 @@ class StudioArtifactZipPayload(BaseModel):
     artifacts: list[StudioArtifactDeleteItem] = Field(..., min_length=1, max_length=200)
 
 
+class StudioTrashRestoreItem(BaseModel):
+    """One trashed artifact selected for restore."""
+
+    trash_id: str = Field(..., min_length=1, max_length=255)
+
+
+class StudioTrashRestorePayload(BaseModel):
+    """Bulk restore request for trashed Studio artifacts."""
+
+    artifacts: list[StudioTrashRestoreItem] = Field(..., min_length=1, max_length=200)
+
+
 def _zip_segment(value: str, fallback: str) -> str:
     cleaned = "".join(
         char if char.isalnum() or char in {"-", "_", "."} else "_"
@@ -684,6 +696,22 @@ def register_skill_run_ui_routes(
             }
         )
 
+    @app.get("/api/ui/studio/trash", tags=["theseus-ui"])
+    async def list_studio_trash_route(limit: int = 200) -> JSONResponse:
+        mgr = get_skill_manager()
+        artifacts = await asyncio.to_thread(
+            mgr.list_trashed_artifacts,
+            workspace_dir(),
+            limit,
+        )
+        return JSONResponse(
+            {
+                "workspace": get_settings().workspace,
+                "count": len(artifacts),
+                "artifacts": artifacts,
+            }
+        )
+
     @app.post("/api/ui/studio/artifacts.zip", tags=["theseus-ui"])
     async def zip_studio_artifacts_route(
         payload: StudioArtifactZipPayload = Body(...),
@@ -749,16 +777,37 @@ def register_skill_run_ui_routes(
     ) -> JSONResponse:
         mgr = get_skill_manager()
         result = await asyncio.to_thread(
-            mgr.delete_artifacts,
+            mgr.trash_artifacts,
             workspace_dir(),
             [item.model_dump() for item in payload.artifacts],
         )
         return JSONResponse(
             {
-                "deleted": result["deleted"],
+                "trashed": result["trashed"],
                 "missing": result["missing"],
-                "deleted_count": len(result["deleted"]),
+                "trashed_count": len(result["trashed"]),
                 "missing_count": len(result["missing"]),
+            }
+        )
+
+    @app.post("/api/ui/studio/trash/restore", tags=["theseus-ui"])
+    async def restore_studio_artifacts_route(
+        payload: StudioTrashRestorePayload = Body(...),
+    ) -> JSONResponse:
+        mgr = get_skill_manager()
+        result = await asyncio.to_thread(
+            mgr.restore_trashed_artifacts,
+            workspace_dir(),
+            [item.trash_id for item in payload.artifacts],
+        )
+        return JSONResponse(
+            {
+                "restored": result["restored"],
+                "missing": result["missing"],
+                "conflicts": result["conflicts"],
+                "restored_count": len(result["restored"]),
+                "missing_count": len(result["missing"]),
+                "conflict_count": len(result["conflicts"]),
             }
         )
 

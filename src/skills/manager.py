@@ -434,6 +434,27 @@ class SkillManager:
     ) -> dict[str, list[dict[str, str]]]:
         return self._run_store.delete_artifacts(workspace_root, artifacts)
 
+    def trash_artifacts(
+        self,
+        workspace_root: Path,
+        artifacts: list[dict[str, str]],
+    ) -> dict[str, list[dict[str, Any]]]:
+        return self._run_store.trash_artifacts(workspace_root, artifacts)
+
+    def list_trashed_artifacts(
+        self,
+        workspace_root: Path,
+        limit: int = 200,
+    ) -> list[dict[str, Any]]:
+        return self._run_store.list_trashed_artifacts(workspace_root, limit=limit)
+
+    def restore_trashed_artifacts(
+        self,
+        workspace_root: Path,
+        trash_ids: list[str],
+    ) -> dict[str, list[dict[str, Any]]]:
+        return self._run_store.restore_trashed_artifacts(workspace_root, trash_ids)
+
 # ---------------------------------------------------------------------------
 # Singleton accessor
 # ---------------------------------------------------------------------------

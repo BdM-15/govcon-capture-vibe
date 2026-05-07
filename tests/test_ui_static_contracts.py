@@ -80,3 +80,12 @@ def test_studio_filter_bar_exposes_latest_only_toggle() -> None:
     assert 'x-model="studio.latestOnly"' in source
     assert '@change="pruneStudioSelectionToFiltered()"' in source
     assert "Latest only" in source
+
+
+def test_studio_exposes_trash_toggle_and_restore_action() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+
+    assert "Studio Trash" in source
+    assert "Trash empty." in source
+    assert '@click="toggleStudioTrash()"' in source
+    assert '@click="restoreTrashedStudioArtifact(artifact)"' in source

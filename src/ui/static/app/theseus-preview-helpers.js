@@ -390,22 +390,34 @@ window.theseusCloseChunkPreview = function theseusCloseChunkPreview(app) {
 };
 
 window.theseusLoadStudio = async function theseusLoadStudio(app) {
-  await theseusRunPreviewLoad(
-    app,
-    app.studio,
-    async () => {
-      const response = await app.api("/api/ui/studio");
-      app.studio.deliverables = response.deliverables || [];
-      window.theseusPruneStudioSelection(app);
-      app.studio.loaded = true;
-    },
-    {
-      onError: (error) => {
-        app.studio.deliverables = [];
-        return "Failed to load deliverables: " + (error?.message || error);
-      },
-    },
-  );
+  app.studio.loading = true;
+  app.studio.error = null;
+  app.studio.trashLoading = true;
+  app.studio.trashError = null;
+  try {
+    const [studioResponse, trashResponse] = await Promise.all([
+      app.api("/api/ui/studio"),
+      app.api("/api/ui/studio/trash"),
+    ]);
+    app.studio.deliverables = studioResponse.deliverables || [];
+    app.studio.trash = trashResponse.artifacts || [];
+    window.theseusPruneStudioSelection(app);
+    app.studio.loaded = true;
+    app.studio.trashLoaded = true;
+  } catch (error) {
+    app.studio.deliverables = [];
+    app.studio.trash = [];
+    app.studio.error = "Failed to load deliverables: " + (error?.message || error);
+    app.studio.trashError = "Failed to load trash: " + (error?.message || error);
+  } finally {
+    app.studio.loading = false;
+    app.studio.trashLoading = false;
+    window.theseusAfterRender(app);
+  }
+};
+
+window.theseusToggleStudioTrash = function theseusToggleStudioTrash(app) {
+  app.studio.trashOpen = !app.studio.trashOpen;
 };
 
 window.theseusStudioSelectedCount = function theseusStudioSelectedCount(app) {
@@ -486,9 +498,9 @@ window.theseusDeleteSelectedStudioArtifacts = async function theseusDeleteSelect
     .join("\n");
   const extra = artifacts.length > 12 ? "\n- ...and " + (artifacts.length - 12) + " more" : "";
   const message =
-    "Delete " +
+    "Move " +
     label +
-    " from Studio? This removes selected files from disk.\n\n" +
+    " to Studio trash? You can recover them later.\n\n" +
     names +
     extra;
   if (!confirm(message)) {
@@ -500,13 +512,39 @@ window.theseusDeleteSelectedStudioArtifacts = async function theseusDeleteSelect
       method: "DELETE",
       body: JSON.stringify({ artifacts }),
     });
-    app.toast("Deleted " + result.deleted_count + " artifact(s)", "success");
+    app.toast("Moved " + result.trashed_count + " artifact(s) to trash", "success");
     window.theseusClearStudioSelection(app);
     await window.theseusLoadStudio(app);
   } catch (error) {
-    app.toast("Delete failed: " + (error?.message || error), "error");
+    app.toast("Trash move failed: " + (error?.message || error), "error");
   } finally {
     app.studio.deleting = false;
+    window.theseusAfterRender(app);
+  }
+};
+
+window.theseusRestoreTrashedStudioArtifact = async function theseusRestoreTrashedStudioArtifact(
+  app,
+  artifact,
+) {
+  const trashId = artifact && artifact.trash_id;
+  if (!trashId || app.studio.restoringTrash === trashId) return;
+  app.studio.restoringTrash = trashId;
+  try {
+    const result = await app.api("/api/ui/studio/trash/restore", {
+      method: "POST",
+      body: JSON.stringify({ artifacts: [{ trash_id: trashId }] }),
+    });
+    if (result.conflict_count) {
+      const conflict = (result.conflicts || [])[0];
+      throw new Error(conflict?.reason || "restore-conflict");
+    }
+    app.toast("Restored " + (artifact.display_name || artifact.filename), "success");
+    await window.theseusLoadStudio(app);
+  } catch (error) {
+    app.toast("Restore failed: " + (error?.message || error), "error");
+  } finally {
+    app.studio.restoringTrash = "";
     window.theseusAfterRender(app);
   }
 };

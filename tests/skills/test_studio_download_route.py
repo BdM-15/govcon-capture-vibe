@@ -230,11 +230,55 @@ def test_studio_delete_selected_artifacts_removes_files(
 
     assert response.status_code == 200, response.text
     payload = response.json()
-    assert payload["deleted_count"] == 1
+    assert payload["trashed_count"] == 1
     assert payload["missing_count"] == 1
     assert not html_path.exists()
     assert source_path.exists()
     assert client.get("/api/ui/studio").json()["deliverables"] == []
+    trash = client.get("/api/ui/studio/trash").json()
+    assert trash["count"] == 1
+    assert trash["artifacts"][0]["filename"] == "final.html"
+
+
+def test_studio_trash_restore_recovers_selected_artifact(
+    tmp_path: Path,
+    client_factory,
+) -> None:
+    skill = "competitive-intel"
+    run_id = "20260430_120000_test_run"
+    html_path = _seed_artifact(
+        tmp_path,
+        skill=skill,
+        run_id=run_id,
+        filename="final.html",
+        content=b"<h1>final</h1>",
+    )
+    client = client_factory(tmp_path)
+
+    trash_response = client.request(
+        "DELETE",
+        "/api/ui/studio/artifacts",
+        json={
+            "artifacts": [
+                {"skill": skill, "run_id": run_id, "filename": "final.html"},
+            ]
+        },
+    )
+    assert trash_response.status_code == 200, trash_response.text
+    trash_id = trash_response.json()["trashed"][0]["trash_id"]
+
+    restore_response = client.post(
+        "/api/ui/studio/trash/restore",
+        json={"artifacts": [{"trash_id": trash_id}]},
+    )
+
+    assert restore_response.status_code == 200, restore_response.text
+    payload = restore_response.json()
+    assert payload["restored_count"] == 1
+    assert payload["conflict_count"] == 0
+    assert html_path.exists()
+    listing = client.get("/api/ui/studio").json()
+    assert any(row["filename"] == "final.html" for row in listing["deliverables"])
 
 
 def test_studio_zip_selected_artifacts_downloads_archive(

@@ -62,9 +62,14 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     },
     studio: {
       deliverables: [],
+      trash: [],
       loading: false,
+      trashLoading: false,
       error: null,
+      trashError: null,
       loaded: false,
+      trashLoaded: false,
+      trashOpen: false,
       filterSkill: "",
       filterFormat: "",
       search: "",
@@ -73,6 +78,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       selected: {},
       deleting: false,
       zipping: false,
+      restoringTrash: "",
     },
     studioPreview: {
       open: false,

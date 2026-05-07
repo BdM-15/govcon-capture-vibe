@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 from datetime import datetime, timezone
@@ -24,6 +25,7 @@ from src.skills.run_metadata import (
 )
 
 _SAFE_RUN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")
+_TRASH_SAFE_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[0-9]{6}_[a-z0-9._-]+$")
 
 
 class SkillRunIndex:
@@ -46,6 +48,39 @@ class SkillRunIndex:
             for run_dir in skill_root.iterdir():
                 if run_dir.is_dir():
                     yield skill_root.name, run_dir
+
+    def _trash_root(self, workspace_root: Path) -> Path:
+        return Path(workspace_root) / ".trash" / "studio_artifacts"
+
+    def _trash_item_dir(self, workspace_root: Path, trash_id: str) -> Optional[Path]:
+        if not _TRASH_SAFE_ID.fullmatch(trash_id):
+            return None
+        trash_root = self._trash_root(workspace_root).resolve()
+        item_dir = (trash_root / trash_id).resolve()
+        try:
+            item_dir.relative_to(trash_root)
+        except ValueError:
+            return None
+        return item_dir
+
+    def _trash_meta_path(self, workspace_root: Path, trash_id: str) -> Optional[Path]:
+        item_dir = self._trash_item_dir(workspace_root, trash_id)
+        if item_dir is None:
+            return None
+        return item_dir / "meta.json"
+
+    def _read_trash_meta(self, workspace_root: Path, trash_id: str) -> Optional[dict[str, Any]]:
+        meta_path = self._trash_meta_path(workspace_root, trash_id)
+        if meta_path is None or not meta_path.is_file():
+            return None
+        try:
+            payload = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if not isinstance(payload, dict):
+            return None
+        payload["trash_id"] = trash_id
+        return payload
 
     def list_runs(
         self,
@@ -285,6 +320,43 @@ class SkillRunStore:
     def is_safe_run_id(run_id: str) -> bool:
         return bool(_SAFE_RUN_ID.match(run_id))
 
+    @staticmethod
+    def _trash_root(workspace_root: Path) -> Path:
+        return Path(workspace_root) / ".trash" / "studio_artifacts"
+
+    @classmethod
+    def _trash_item_dir(cls, workspace_root: Path, trash_id: str) -> Optional[Path]:
+        if not _TRASH_SAFE_ID.fullmatch(trash_id):
+            return None
+        trash_root = cls._trash_root(workspace_root).resolve()
+        item_dir = (trash_root / trash_id).resolve()
+        try:
+            item_dir.relative_to(trash_root)
+        except ValueError:
+            return None
+        return item_dir
+
+    @classmethod
+    def _trash_meta_path(cls, workspace_root: Path, trash_id: str) -> Optional[Path]:
+        item_dir = cls._trash_item_dir(workspace_root, trash_id)
+        if item_dir is None:
+            return None
+        return item_dir / "meta.json"
+
+    @classmethod
+    def _read_trash_meta(cls, workspace_root: Path, trash_id: str) -> Optional[dict[str, Any]]:
+        meta_path = cls._trash_meta_path(workspace_root, trash_id)
+        if meta_path is None or not meta_path.is_file():
+            return None
+        try:
+            payload = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if not isinstance(payload, dict):
+            return None
+        payload["trash_id"] = trash_id
+        return payload
+
     def create_run_dir(
         self,
         *,
@@ -488,3 +560,147 @@ class SkillRunStore:
             else:
                 missing.append(ref)
         return {"deleted": deleted, "missing": missing}
+
+    def trash_artifact(
+        self,
+        workspace_root: Path,
+        skill_name: str,
+        run_id: str,
+        filename: str,
+    ) -> Optional[dict[str, Any]]:
+        path = self.get_artifact_path(workspace_root, skill_name, run_id, filename)
+        if path is None:
+            return None
+        run_dir = self.runs_root(workspace_root, skill_name) / run_id
+        artifacts_dir = run_dir / "artifacts"
+        manifest = read_artifact_manifest(run_dir)
+        try:
+            rel = path.relative_to(artifacts_dir.resolve()).as_posix()
+        except ValueError:
+            rel = path.name
+        manifest_entry = dict(manifest.get(rel) or manifest.get(path.name) or {})
+        deleted_at = datetime.now(timezone.utc).isoformat()
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+        slug = slugify_for_filename(f"{skill_name}_{run_id}_{filename}")[:80] or "artifact"
+        trash_id = f"{stamp}_{slug}"
+        item_dir = self._trash_root(workspace_root) / trash_id
+        trashed_path = item_dir / path.name
+        item_dir.mkdir(parents=True, exist_ok=False)
+        try:
+            shutil.move(str(path), str(trashed_path))
+        except Exception:
+            shutil.rmtree(item_dir, ignore_errors=True)
+            return None
+        meta = {
+            "skill": skill_name,
+            "run_id": run_id,
+            "filename": path.name,
+            "display_name": resolve_artifact_display_name(path.name, manifest_entry),
+            "mime": resolve_artifact_mime(path.name),
+            "size": trashed_path.stat().st_size if trashed_path.exists() else 0,
+            "deleted_at": deleted_at,
+            "original_rel": rel,
+            "manifest_entry": manifest_entry,
+        }
+        (item_dir / "meta.json").write_text(
+            json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        if rel in manifest or path.name in manifest:
+            manifest.pop(rel, None)
+            manifest.pop(path.name, None)
+            write_artifact_manifest(run_dir, manifest)
+        return {"trash_id": trash_id, **meta}
+
+    def trash_artifacts(
+        self,
+        workspace_root: Path,
+        artifacts: list[dict[str, str]],
+    ) -> dict[str, list[dict[str, Any]]]:
+        trashed: list[dict[str, Any]] = []
+        missing: list[dict[str, str]] = []
+        for item in artifacts:
+            ref = {
+                "skill": str(item.get("skill") or ""),
+                "run_id": str(item.get("run_id") or ""),
+                "filename": str(item.get("filename") or ""),
+            }
+            moved = self.trash_artifact(
+                workspace_root,
+                ref["skill"],
+                ref["run_id"],
+                ref["filename"],
+            )
+            if moved is None:
+                missing.append(ref)
+            else:
+                trashed.append(moved)
+        return {"trashed": trashed, "missing": missing}
+
+    def list_trashed_artifacts(
+        self,
+        workspace_root: Path,
+        *,
+        limit: int = 200,
+    ) -> list[dict[str, Any]]:
+        trash_root = self._trash_root(workspace_root)
+        if not trash_root.is_dir():
+            return []
+        rows: list[dict[str, Any]] = []
+        for item_dir in trash_root.iterdir():
+            if not item_dir.is_dir():
+                continue
+            payload = self._read_trash_meta(workspace_root, item_dir.name)
+            if payload is None:
+                continue
+            rows.append(payload)
+        rows.sort(key=lambda row: str(row.get("deleted_at") or ""), reverse=True)
+        return rows[:limit]
+
+    def restore_trashed_artifacts(
+        self,
+        workspace_root: Path,
+        trash_ids: list[str],
+    ) -> dict[str, list[dict[str, Any]]]:
+        restored: list[dict[str, Any]] = []
+        missing: list[dict[str, str]] = []
+        conflicts: list[dict[str, Any]] = []
+        for trash_id in trash_ids:
+            payload = self._read_trash_meta(workspace_root, trash_id)
+            item_dir = self._trash_item_dir(workspace_root, trash_id)
+            if payload is None or item_dir is None:
+                missing.append({"trash_id": trash_id})
+                continue
+            skill = str(payload.get("skill") or "")
+            run_id = str(payload.get("run_id") or "")
+            filename = str(payload.get("filename") or "")
+            if not self.is_safe_run_id(run_id) or not skill or not filename:
+                conflicts.append({"trash_id": trash_id, **payload, "reason": "invalid-metadata"})
+                continue
+            source_path = item_dir / filename
+            if not source_path.is_file():
+                missing.append({"trash_id": trash_id, **payload})
+                continue
+            run_dir = self.runs_root(workspace_root, skill) / run_id
+            artifacts_dir = run_dir / "artifacts"
+            artifacts_dir.mkdir(parents=True, exist_ok=True)
+            target = artifacts_dir / filename
+            if target.exists():
+                conflicts.append({"trash_id": trash_id, **payload, "reason": "target-exists"})
+                continue
+            shutil.move(str(source_path), str(target))
+            manifest = read_artifact_manifest(run_dir)
+            original_rel = str(payload.get("original_rel") or filename)
+            manifest_entry = payload.get("manifest_entry")
+            if isinstance(manifest_entry, dict) and manifest_entry:
+                manifest[original_rel] = manifest_entry
+                write_artifact_manifest(run_dir, manifest)
+            try:
+                (item_dir / "meta.json").unlink(missing_ok=True)
+            except TypeError:
+                meta_path = item_dir / "meta.json"
+                if meta_path.exists():
+                    meta_path.unlink()
+            shutil.rmtree(item_dir, ignore_errors=True)
+            restored.append({"trash_id": trash_id, **payload})
+        return {"restored": restored, "missing": missing, "conflicts": conflicts}

@@ -3386,6 +3386,13 @@
                   ></i>
                   Refresh
                 </button>
+                <button
+                  class="pill bg-ink-800 border border-edge text-slate-300 hover:text-neon-amber hover:border-neon-amber/50 px-3 py-1.5 text-xs"
+                  @click="toggleStudioTrash()"
+                >
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5 inline mr-1"></i>
+                  <span x-text="`Trash (${(studio.trash || []).length})`"></span>
+                </button>
               </div>
             </div>
 
@@ -3482,6 +3489,52 @@
                   <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                   <span x-text="studio.deleting ? 'Deleting…' : 'Delete selected'"></span>
                 </button>
+              </div>
+            </div>
+
+            <div
+              x-show="studio.trashOpen"
+              class="card p-4 mb-4"
+            >
+              <div class="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <div class="text-sm font-semibold text-slate-200">Studio Trash</div>
+                  <div class="text-xs text-slate-500">Soft-deleted products. Restore puts them back in Studio.</div>
+                </div>
+                <div class="text-xs text-slate-500" x-text="(studio.trash || []).length + ' item(s)'"></div>
+              </div>
+              <div
+                x-show="studio.trashLoading"
+                class="text-sm text-slate-500"
+              >Loading trash…</div>
+              <div
+                x-show="studio.trashError"
+                class="text-sm text-red-300"
+                x-text="studio.trashError"
+              ></div>
+              <div
+                x-show="!studio.trashLoading && !(studio.trash || []).length"
+                class="text-sm text-slate-500"
+              >Trash empty.</div>
+              <div class="space-y-2" x-show="(studio.trash || []).length">
+                <template x-for="artifact in studio.trash" :key="artifact.trash_id">
+                  <div class="studio-trash-item border border-edge rounded-lg px-3 py-3 bg-ink-900/50 flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                      <div class="text-sm font-semibold text-slate-200" x-text="artifact.display_name || artifact.filename"></div>
+                      <div class="text-xs font-mono text-slate-500 mt-1" x-text="artifact.filename"></div>
+                      <div class="text-xs text-slate-500 mt-1" x-text="`${artifact.skill} · ${artifact.run_id}`"></div>
+                      <div class="text-xs text-slate-500 mt-1" x-text="`Trashed ${String(artifact.deleted_at || '').slice(0, 19).replace('T', ' ')}`"></div>
+                    </div>
+                    <button
+                      type="button"
+                      class="btn btn-ghost text-xs px-3 py-1.5 shrink-0"
+                      :disabled="studio.restoringTrash === artifact.trash_id"
+                      @click="restoreTrashedStudioArtifact(artifact)"
+                    >
+                      <span x-text="studio.restoringTrash === artifact.trash_id ? 'Restoring…' : 'Restore'"></span>
+                    </button>
+                  </div>
+                </template>
               </div>
             </div>
 
