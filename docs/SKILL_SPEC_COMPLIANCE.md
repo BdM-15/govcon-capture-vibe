@@ -234,19 +234,19 @@ tools-mode runtime declared by `metadata.runtime: tools`. Tools-mode skills run
 through `src/skills/runtime.py` with a persisted `transcript.json`, bounded tool
 calls, and Studio-visible artifacts under `<run_dir>/artifacts/`.
 
-| Capability                           | Current state                                                                                                 |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| Tool-calling loop                    | xAI Grok function-calling, multi-turn until the model emits no tool calls                                     |
-| `read_file` tool                     | Reads files under `<skill_root>/{references,assets,scripts}/` (read-only)                                     |
-| `run_script` tool                    | Subprocess sandbox: timeout, cwd locked to skill dir, captures stdout/stderr                                  |
-| Default renderer roots               | Every tools-mode skill can call `renderers/scripts` and `huashu-design/scripts` without wrapper code          |
-| `write_file` tool                    | Writes confined to `<run_dir>/artifacts/` with optional Studio display labels                                 |
-| `kg_query(cypher)` tool              | Calls Neo4j directly via existing client                                                                      |
-| `kg_entities(types[], limit)` tool   | Typed slicing via the current workspace KG                                                                    |
-| `kg_chunks(query, top_k, mode)` tool | Chat-grade hybrid retrieval via the Phase 1.6 retrieval path                                                  |
-| `invoke_skill(name, prompt)` tool    | Tier A synchronous child skill invocation, depth=1, same workspace, child run/artifacts returned              |
-| Tool-call transcript                 | `transcript.json` in `<run_dir>/` capturing every call, args, result, timing                                  |
-| Per-script outputs                   | `tool_outputs/<NN>_<tool>_<descriptor>.{stdout,stderr}.txt`                                                   |
+| Capability                           | Current state                                                                                                                                                                                                                                         |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tool-calling loop                    | xAI Grok function-calling, multi-turn until the model emits no tool calls                                                                                                                                                                             |
+| `read_file` tool                     | Reads files under `<skill_root>/{references,assets,scripts}/` (read-only)                                                                                                                                                                             |
+| `run_script` tool                    | Subprocess sandbox: timeout, cwd locked to skill dir, captures stdout/stderr                                                                                                                                                                          |
+| Default renderer roots               | Every tools-mode skill can call `renderers/scripts` and `huashu-design/scripts` without wrapper code                                                                                                                                                  |
+| `write_file` tool                    | Writes confined to `<run_dir>/artifacts/` with optional Studio display labels                                                                                                                                                                         |
+| `kg_query(cypher)` tool              | Calls Neo4j directly via existing client                                                                                                                                                                                                              |
+| `kg_entities(types[], limit)` tool   | Typed slicing via the current workspace KG                                                                                                                                                                                                            |
+| `kg_chunks(query, top_k, mode)` tool | Chat-grade hybrid retrieval via the Phase 1.6 retrieval path                                                                                                                                                                                          |
+| `invoke_skill(name, prompt)` tool    | Tier A synchronous child skill invocation, depth=1, same workspace, child run/artifacts returned                                                                                                                                                      |
+| Tool-call transcript                 | `transcript.json` in `<run_dir>/` capturing every call, args, result, timing                                                                                                                                                                          |
+| Per-script outputs                   | `tool_outputs/<NN>_<tool>_<descriptor>.{stdout,stderr}.txt`                                                                                                                                                                                           |
 | Generic product emission             | Enabled by default unless `metadata.auto_emit_artifacts: false`; emits source `report.md/json`, a Studio-visible DOCX brief, and XLSX workbooks only when real JSON array data exists. HTML is shown only when a skill writes or renders HTML itself. |
 
 The existing Phase 1.6 hybrid retrieval pipeline is **fully reused** — it

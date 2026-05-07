@@ -78,11 +78,11 @@ The collector also emits grouped `award_rollups` in tool output and `obligations
 
 These fields do **not** come from MCP calls — the skill computes them from fetched data:
 
-| Derived field              | How computed                                                                                                                                                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `cumulative_obligated_usd` | Running sum of `amount_usd` across `by_transaction`, sorted by `action_date` ascending. Respects negative deobligations.                                                                                           |
-| `inferred_pop_segment`     | First transaction → `base_year`. Each action-type `G` in sequence → `option_year_1`, `option_year_2`, etc. Action-type `B`/`J` within a segment → `supplemental`. `M`/`X`/`R` → `admin`. Null/unknown → `unknown`. |
-| `rate_analysis`            | Computed from `net_obligated_usd` and the strongest POP window in `by_period_of_performance`. `monthly_burn_usd` = net / months. `by_option_year` uses G-type action dates as segment boundaries.                  |
+| Derived field              | How computed                                                                                                                                                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cumulative_obligated_usd` | Running sum of `amount_usd` across `by_transaction`, sorted by `action_date` ascending. Respects negative deobligations.                                                                                                  |
+| `inferred_pop_segment`     | First transaction → `base_year`. Each action-type `G` in sequence → `option_year_1`, `option_year_2`, etc. Action-type `B`/`J` within a segment → `supplemental`. `M`/`X`/`R` → `admin`. Null/unknown → `unknown`.        |
+| `rate_analysis`            | Computed from `net_obligated_usd` and the strongest POP window in `by_period_of_performance`. `monthly_burn_usd` = net / months. `by_option_year` uses G-type action dates as segment boundaries.                         |
 | `insights`                 | Deterministic narrative seed built from `rate_analysis`, `award_rollups`, child-order concentration, competitor completeness, PTW baseline, and warnings. `headline` is opener. `blocks[]` provide ordered prose anchors. |
 
 Always include `derivation_notes` in `rate_analysis` to document which POP window and assumptions were used.
