@@ -107,22 +107,25 @@ window.theseusChainInputRequest = function theseusChainInputRequest(chain) {
   return request && request.needed ? request : null;
 };
 
-window.theseusChainResumePlaceholder =
-  function theseusChainResumePlaceholder(chain) {
-    const request = window.theseusChainInputRequest(chain);
-    const missing = (request?.missing_inputs || []).join("\n- ");
-    if (!missing) {
-      return "Add the missing facts you now have, then click Resume.";
-    }
-    return "Provide the missing facts to unblock this chain:\n- " + missing;
-  };
+window.theseusChainResumePlaceholder = function theseusChainResumePlaceholder(
+  chain,
+) {
+  const request = window.theseusChainInputRequest(chain);
+  const missing = (request?.missing_inputs || []).join("\n- ");
+  if (!missing) {
+    return "Add the missing facts you now have, then click Resume.";
+  }
+  return "Provide the missing facts to unblock this chain:\n- " + missing;
+};
 
 window.theseusMountChainInputPanel = function theseusMountChainInputPanel(
   app,
   host,
 ) {
   if (!host || host.dataset.chainInputMounted === "true") return;
-  const template = document.getElementById("chain-input-request-panel-template");
+  const template = document.getElementById(
+    "chain-input-request-panel-template",
+  );
   if (!template?.content) return;
   host.replaceChildren(template.content.cloneNode(true));
   host.dataset.chainInputMounted = "true";
@@ -286,7 +289,10 @@ window.theseusResumeChain = async function theseusResumeChain(app, chainId) {
       chain.resume_step_id || window.theseusChainResumeStepId(chain);
     const resumeNotes = (app.chains.resumeDrafts?.[chainId] || "").trim();
     if (window.theseusChainInputRequest(chain) && !resumeNotes) {
-      app.toast("Reply in the Missing Input composer, then click Resume.", "info");
+      app.toast(
+        "Reply in the Missing Input composer, then click Resume.",
+        "info",
+      );
       return;
     }
     const response = await app.api(
