@@ -184,6 +184,54 @@ def test_project_run_payload_marks_question_run_as_resumeable(tmp_path: Path) ->
     }
 
 
+def test_project_run_payload_marks_long_question_run_as_resumeable(
+    tmp_path: Path,
+) -> None:
+    store = SkillRunStore()
+    started = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+
+    run_id, _run_dir = store.persist_legacy_run(
+        workspace_root=tmp_path,
+        skill_name="grill-me-govcon",
+        workspace="demo-ws",
+        user_prompt="Grill me on AFCAP VI",
+        composed_prompt="full prompt",
+        response=(
+            "**Which area should I stress-test for your AFCAP VI pursuit - Bid Strategy (Pursuit Decision Phase gate, Pwin assessment), Capture Plan (customer engagement, teaming, Black Hat), Proposal Approach (technical scenario response per Subfactor 1 [doc-d476d6ecf16e6cd2b3a76545f5d2a3d7-chunk-000], program management plans per L.3.3 Subfactor 2 [doc-1dd044e7c06a80c3590c3781850f25af-chunk-000]), or Pricing (FFP/CPIF task orders per H001 [doc-455de3cb2b36b30f23fd10100248faec-chunk-000])?**\n\n"
+            "*Recommended: Bid Strategy - AFCAP VI is an IDIQ with multiple awards and a technically acceptable gate.*\n"
+        ),
+        entities_used=[],
+        warnings=[],
+        elapsed_ms=123,
+        started_at=started,
+    )
+
+    listed = store.list_runs(tmp_path, skill_name="grill-me-govcon")
+    assert listed[0]["run_id"] == run_id
+    assert listed[0]["status"] == "interrupted"
+    assert listed[0]["can_resume"] is True
+
+    detail = store.get_run(tmp_path, "grill-me-govcon", run_id)
+    assert detail is not None
+
+    projected = store.project_run_payload(detail)
+
+    expected_question = (
+        "Which area should I stress-test for your AFCAP VI pursuit - Bid Strategy (Pursuit Decision Phase gate, Pwin assessment), Capture Plan (customer engagement, teaming, Black Hat), Proposal Approach (technical scenario response per Subfactor 1 [doc-d476d6ecf16e6cd2b3a76545f5d2a3d7-chunk-000], program management plans per L.3.3 Subfactor 2 [doc-1dd044e7c06a80c3590c3781850f25af-chunk-000]), or Pricing (FFP/CPIF task orders per H001 [doc-455de3cb2b36b30f23fd10100248faec-chunk-000])?"
+    )
+    assert projected["status"] == "interrupted"
+    assert projected["can_resume"] is True
+    assert projected["missing_inputs"] == [expected_question]
+    assert projected["input_request"] == {
+        "needed": True,
+        "kind": "question",
+        "title": "Question",
+        "skill": "grill-me-govcon",
+        "prompt": expected_question,
+        "missing_inputs": [expected_question],
+    }
+
+
 def test_get_artifact_path_rejects_unsafe_inputs(tmp_path: Path) -> None:
     store = SkillRunStore()
     started = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)

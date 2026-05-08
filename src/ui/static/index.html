@@ -2934,6 +2934,11 @@
                     </p>
                   </div>
 
+                  <div
+                    x-show="skillRunInputRequest(skills.run)"
+                    x-effect="if (skillRunInputRequest(skills.run)) mountSkillRunInputPanel($el)"
+                  ></div>
+
                   <div x-show="skills.detailOpen">
                     <div class="flex items-center justify-between mb-1">
                       <h3 class="text-xs font-mono text-slate-400">
@@ -3108,11 +3113,6 @@
                       </ul>
                     </div>
                   </div>
-
-                  <div
-                    x-show="skillRunInputRequest(skills.run)"
-                    x-effect="if (skillRunInputRequest(skills.run)) mountSkillRunInputPanel($el)"
-                  ></div>
 
                   <!-- Artifacts download panel (any run that wrote files) -->
                   <template

@@ -80,8 +80,8 @@ def _extract_follow_up_question(response: str) -> str:
         matched = _QUESTION_PREFIX.match(line)
         if matched:
             question = _normalize_interaction_line(matched.group(1))
-        elif line.endswith("?") and len(line) <= 280:
-            question = line
+        elif "?" in line:
+            question = line.split("?", 1)[0].strip() + "?"
         if not question or not question.endswith("?"):
             continue
         next_nonempty = ""
