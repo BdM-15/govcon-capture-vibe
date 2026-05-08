@@ -161,6 +161,13 @@ def _project_chain_payload(mgr: Any, payload: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def _project_skill_run_payload(mgr: Any, payload: dict[str, Any]) -> dict[str, Any]:
+    projector = getattr(mgr, "project_run", None)
+    if callable(projector):
+        return projector(payload)
+    return payload
+
+
 def register_skill_catalog_ui_routes(
     app: FastAPI,
     *,
@@ -401,6 +408,34 @@ def register_skill_invoke_ui_routes(
             le=500,
         )
 
+    class SkillRunRepeatPayload(BaseModel):
+        """Body for POST /api/ui/skills/{name}/runs/{run_id}/resume."""
+
+        user_addendum: str = Field("", max_length=8000)
+        answers: dict[str, Any] = Field(default_factory=dict)
+        entity_types: Optional[list[str]] = Field(None)
+        max_entities_per_type: int = Field(
+            default_factory=_default_max_entities_per_type,
+            ge=1,
+            le=500,
+        )
+        max_chunks_per_entity: int = Field(
+            default_factory=_default_max_chunks_per_entity,
+            ge=0,
+            le=10,
+        )
+        max_relationships_per_entity: int = Field(
+            default_factory=_default_max_relationships_per_entity,
+            ge=0,
+            le=50,
+        )
+        retrieval_mode: str = Field(default_factory=_default_skill_retrieval_mode)
+        retrieval_top_k: int = Field(
+            default_factory=_default_skill_retrieval_top_k,
+            ge=5,
+            le=500,
+        )
+
     class SkillChainPlanPayload(BaseModel):
         """Body for dynamic chain plan/run routes."""
 
@@ -486,6 +521,46 @@ def register_skill_invoke_ui_routes(
             mode,
             top_k,
         )
+
+    def _format_skill_resume_answers(answers: dict[str, Any]) -> str:
+        lines: list[str] = []
+        for key, value in (answers or {}).items():
+            label = str(key or "").strip()
+            if not label:
+                continue
+            if isinstance(value, list):
+                rendered = ", ".join(
+                    str(item).strip() for item in value if str(item).strip()
+                )
+            else:
+                rendered = str(value or "").strip()
+            if rendered:
+                lines.append(f"- {label}: {rendered}")
+        return "\n".join(lines)
+
+    def _skill_prompt(prompt: str, *, user_addendum: str = "") -> str:
+        parts = [str(prompt or "").strip()]
+        if user_addendum.strip():
+            parts.append("User-supplied missing input:\n" + user_addendum.strip())
+        return "\n\n".join(part for part in parts if part)
+
+    def _skill_response_with_run(
+        mgr: Any,
+        result: Any,
+        *,
+        runtime_mode: str,
+        retrieval: dict[str, Any],
+    ) -> dict[str, Any]:
+        body = _skill_response_payload(
+            result,
+            runtime_mode=runtime_mode,
+            retrieval=retrieval,
+        )
+        if result.run_id:
+            run = mgr.get_run(workspace_dir(), result.skill, result.run_id)
+            if run is not None:
+                body["run"] = _project_skill_run_payload(mgr, run)
+        return body
 
     def _require_chain_skills(mgr: Any, spec: ChainSpec) -> dict[str, Any]:
         skills_by_name = {step.skill: mgr.get_skill(step.skill) for step in spec.steps}
@@ -642,7 +717,8 @@ def register_skill_invoke_ui_routes(
             except KeyError as exc:
                 raise HTTPException(404, str(exc)) from exc
             return JSONResponse(
-                _skill_response_payload(
+                _skill_response_with_run(
+                    mgr,
                     result,
                     runtime_mode="tools",
                     retrieval={
@@ -684,7 +760,155 @@ def register_skill_invoke_ui_routes(
         except KeyError as exc:
             raise HTTPException(404, str(exc)) from exc
         return JSONResponse(
-            _skill_response_payload(
+            _skill_response_with_run(
+                mgr,
+                result,
+                runtime_mode="legacy",
+                retrieval=retrieval["metadata"],
+            )
+        )
+
+    @app.post("/api/ui/skills/{name}/runs/{run_id}/resume", tags=["theseus-ui"])
+    async def resume_skill_run_route(
+        name: str,
+        run_id: str,
+        payload: SkillRunRepeatPayload = Body(...),
+    ) -> JSONResponse:
+        if llm_func is None:
+            raise HTTPException(
+                503,
+                "Skill invocation requires an llm_func; server was started without one",
+            )
+        mgr = manager_factory()
+        skill = mgr.get_skill(name)
+        if skill is None:
+            raise HTTPException(404, f"Unknown skill: {name}")
+        run = mgr.get_run(workspace_dir(), name, run_id)
+        if run is None:
+            raise HTTPException(404, f"Unknown run: {name}/{run_id}")
+        projected = _project_skill_run_payload(mgr, run)
+        if not projected.get("can_resume"):
+            raise HTTPException(409, "Run does not require user input")
+
+        answer_text = _format_skill_resume_answers(payload.answers)
+        user_addendum = str(payload.user_addendum or "").strip() or answer_text
+        if not user_addendum:
+            raise HTTPException(400, "user_addendum or answers required")
+
+        original_prompt = str(
+            ((projected.get("metadata") or {}).get("user_prompt") or "")
+        ).strip()
+        effective_prompt = _skill_prompt(original_prompt, user_addendum=user_addendum)
+        missing_inputs = list(projected.get("missing_inputs") or [])
+        skill_desc = skill.frontmatter.description
+        frontmatter_mode = skill.frontmatter.runtime_mode
+        effective_mode = resolve_skill_runtime_mode(frontmatter_mode)
+
+        if effective_mode == "tools":
+
+            def _tools_slice_workspace_entities(
+                entity_types: Optional[list[str]],
+                max_per_type: int,
+                max_chunks_per_entity: int = 2,
+                max_relationships_per_entity: int = 5,
+                relevant_entity_names: Optional[set[str]] = None,
+            ) -> dict[str, Any]:
+                return _slice_workspace_entities(
+                    entity_types,
+                    min(max_per_type, payload.max_entities_per_type),
+                    max_chunks_per_entity=min(
+                        max_chunks_per_entity,
+                        payload.max_chunks_per_entity,
+                    ),
+                    max_relationships_per_entity=min(
+                        max_relationships_per_entity,
+                        payload.max_relationships_per_entity,
+                    ),
+                    relevant_entity_names=relevant_entity_names,
+                )
+
+            async def _tools_retrieve_relevant_entities_for_skill(
+                prompt: str,
+                skill_description: str,
+                mode: str,
+                top_k: int,
+            ) -> dict[str, Any]:
+                return await _retrieve_relevant_entities_for_skill(
+                    prompt,
+                    skill_description,
+                    payload.retrieval_mode,
+                    min(top_k, payload.retrieval_top_k),
+                )
+
+            try:
+                result = await mgr.invoke(
+                    name,
+                    workspace=workspace_name(),
+                    user_prompt=effective_prompt,
+                    entity_payload={
+                        "user_supplied_context": {
+                            "resume_notes": user_addendum,
+                            "missing_inputs": missing_inputs,
+                            "answers": payload.answers,
+                        }
+                    },
+                    llm=llm_func,
+                    workspace_root=workspace_dir(),
+                    slice_fn=_tools_slice_workspace_entities,
+                    retrieve_fn=_tools_retrieve_relevant_entities_for_skill,
+                )
+            except KeyError as exc:
+                raise HTTPException(404, str(exc)) from exc
+            return JSONResponse(
+                _skill_response_with_run(
+                    mgr,
+                    result,
+                    runtime_mode="tools",
+                    retrieval={
+                        "mode": payload.retrieval_mode,
+                        "top_k": payload.retrieval_top_k,
+                        "used": payload.retrieval_mode != "off",
+                        "reason": "tools-mode runtime",
+                        "max_entities_per_type": payload.max_entities_per_type,
+                        "max_chunks_per_entity": payload.max_chunks_per_entity,
+                        "max_relationships_per_entity": payload.max_relationships_per_entity,
+                    },
+                )
+            )
+
+        retrieval = await _retrieve_relevant_entities_for_skill(
+            prompt=effective_prompt,
+            skill_description=skill_desc,
+            mode=payload.retrieval_mode,
+            top_k=payload.retrieval_top_k,
+        )
+        context = _slice_workspace_entities(
+            payload.entity_types,
+            payload.max_entities_per_type,
+            max_chunks_per_entity=payload.max_chunks_per_entity,
+            max_relationships_per_entity=payload.max_relationships_per_entity,
+            relevant_entity_names=retrieval["names"] or None,
+        )
+        context["retrieval_metadata"] = retrieval["metadata"]
+        context["user_supplied_context"] = {
+            "resume_notes": user_addendum,
+            "missing_inputs": missing_inputs,
+            "answers": payload.answers,
+        }
+        try:
+            result = await mgr.invoke(
+                name,
+                workspace=workspace_name(),
+                user_prompt=effective_prompt,
+                entity_payload=context,
+                llm=llm_func,
+                workspace_root=workspace_dir(),
+            )
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        return JSONResponse(
+            _skill_response_with_run(
+                mgr,
                 result,
                 runtime_mode="legacy",
                 retrieval=retrieval["metadata"],
@@ -951,7 +1175,7 @@ def register_skill_run_ui_routes(
         run = mgr.get_run(workspace_dir(), name, run_id)
         if run is None:
             raise HTTPException(404, f"Unknown run: {name}/{run_id}")
-        return JSONResponse(run)
+        return JSONResponse(_project_skill_run_payload(mgr, run))
 
     @app.get(
         "/api/ui/skills/{name}/runs/{run_id}/reasoning",

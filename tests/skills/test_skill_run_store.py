@@ -94,6 +94,48 @@ def test_tools_run_detail_includes_transcript_artifacts_and_tool_outputs(
     assert detail["tool_outputs"] == [{"name": "001.stdout.txt", "size": "2"}]
 
 
+def test_project_run_payload_marks_interrupted_run_as_resumeable(tmp_path: Path) -> None:
+    store = SkillRunStore()
+    started = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+
+    run_id, _run_dir = store.persist_legacy_run(
+        workspace_root=tmp_path,
+        skill_name="huashu-design",
+        workspace="demo-ws",
+        user_prompt="Build briefing deck",
+        composed_prompt="full prompt",
+        response=(
+            "**GAP IDENTIFIED - Cannot fully satisfy quality gate.**\n\n"
+            "**Exact gaps (per quality gate):**\n"
+            "- Choose design direction\n"
+            "- Confirm output format\n"
+        ),
+        entities_used=[],
+        warnings=[],
+        elapsed_ms=123,
+        started_at=started,
+    )
+
+    detail = store.get_run(tmp_path, "huashu-design", run_id)
+    assert detail is not None
+
+    projected = store.project_run_payload(detail)
+
+    assert projected["metadata"]["user_prompt"] == "Build briefing deck"
+    assert projected["status"] == "interrupted"
+    assert projected["can_resume"] is True
+    assert projected["input_request"] == {
+        "needed": True,
+        "kind": "missing_input",
+        "title": "Missing Input",
+        "skill": "huashu-design",
+        "missing_inputs": [
+            "Choose design direction",
+            "Confirm output format",
+        ],
+    }
+
+
 def test_get_artifact_path_rejects_unsafe_inputs(tmp_path: Path) -> None:
     store = SkillRunStore()
     started = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)

@@ -55,6 +55,8 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       runsLoading: false,
       runTrashLoading: false,
       run: null,
+      resumingRun: "",
+      resumeDrafts: {},
       runTrashOpen: false,
       restoringRunTrash: "",
       transcriptOpen: false,

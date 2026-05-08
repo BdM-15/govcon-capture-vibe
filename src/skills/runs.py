@@ -38,6 +38,131 @@ def _contract_products(skill_name: str) -> list[str]:
     return sorted(contract.produces)
 
 
+def _extract_missing_inputs(response: str) -> list[str]:
+    lines = str(response or "").splitlines()
+    collecting = False
+    missing: list[str] = []
+    seen: set[str] = set()
+    for raw in lines:
+        stripped = raw.strip()
+        lowered = stripped.lower()
+        if "exact gaps" in lowered or "missing inputs" in lowered:
+            collecting = True
+            continue
+        if collecting and stripped.startswith(("- ", "* ")):
+            cleaned = stripped[2:].strip()
+            if cleaned and cleaned not in seen:
+                seen.add(cleaned)
+                missing.append(cleaned)
+            continue
+        if collecting and stripped and not stripped.startswith(("- ", "* ")):
+            break
+    if missing:
+        return missing
+    generic_markers = ("gap identified", "missing input", "missing inputs")
+    if any(marker in str(response or "").lower() for marker in generic_markers):
+        return ["See response for exact gaps."]
+    return []
+
+
+def _extract_missing_outputs(artifacts: list[dict[str, Any]]) -> list[str]:
+    missing: list[str] = []
+    seen: set[str] = set()
+    for artifact in artifacts:
+        if str(artifact.get("render_status") or "").strip().lower() != "failed":
+            continue
+        for target in artifact.get("render_targets") or []:
+            text = str(target or "").strip()
+            ext = text.rsplit(".", 1)[-1].lower() if "." in text else ""
+            if ext and ext not in seen:
+                seen.add(ext)
+                missing.append(ext)
+    return missing
+
+
+def _normalize_input_request(request: Any, *, skill: str = "") -> dict[str, Any]:
+    if not isinstance(request, dict):
+        return {}
+    missing_inputs = [
+        str(item).strip()
+        for item in (request.get("missing_inputs") or [])
+        if str(item).strip()
+    ]
+    questions = [
+        item for item in (request.get("questions") or []) if isinstance(item, dict)
+    ]
+    prompt = str(request.get("prompt") or "").strip()
+    title = str(request.get("title") or "").strip()
+    kind = str(request.get("kind") or "").strip().lower()
+    skill_name = str(request.get("skill") or skill).strip()
+    needed = bool(request.get("needed")) or bool(missing_inputs or questions or prompt)
+    if not needed:
+        return {}
+    normalized: dict[str, Any] = {"needed": True}
+    if kind:
+        normalized["kind"] = kind
+    if title:
+        normalized["title"] = title
+    if prompt:
+        normalized["prompt"] = prompt
+    if skill_name:
+        normalized["skill"] = skill_name
+    if missing_inputs:
+        normalized["missing_inputs"] = missing_inputs
+    if questions:
+        normalized["questions"] = questions
+    return normalized
+
+
+def _build_run_input_request(payload: dict[str, Any]) -> dict[str, Any]:
+    explicit = _normalize_input_request(
+        payload.get("input_request"),
+        skill=str(payload.get("skill") or ""),
+    )
+    if explicit:
+        return explicit
+    missing_inputs = _extract_missing_inputs(str(payload.get("response") or ""))
+    if not missing_inputs:
+        return {}
+    return {
+        "needed": True,
+        "kind": "missing_input",
+        "title": "Missing Input",
+        "skill": str(payload.get("skill") or ""),
+        "missing_inputs": missing_inputs,
+    }
+
+
+def _project_run_summary_payload(payload: dict[str, Any], response: str) -> dict[str, Any]:
+    projected = dict(payload)
+    metadata = dict(projected.get("metadata") or {})
+    projected["metadata"] = metadata
+    if metadata.get("user_prompt"):
+        projected["user_prompt"] = metadata["user_prompt"]
+    input_request = _build_run_input_request({**projected, "response": response})
+    projected["input_request"] = input_request
+    projected["missing_inputs"] = list(input_request.get("missing_inputs") or [])
+    projected["status"] = "interrupted" if input_request else "completed"
+    projected["can_resume"] = bool(input_request)
+    return projected
+
+
+def _project_run_detail_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    projected = dict(payload)
+    metadata = dict(projected.get("metadata") or {})
+    projected["metadata"] = metadata
+    if metadata.get("user_prompt"):
+        projected["user_prompt"] = metadata["user_prompt"]
+    input_request = _build_run_input_request(projected)
+    missing_outputs = _extract_missing_outputs(list(projected.get("artifacts") or []))
+    projected["input_request"] = input_request
+    projected["missing_inputs"] = list(input_request.get("missing_inputs") or [])
+    projected["missing_outputs"] = missing_outputs
+    projected["status"] = "interrupted" if input_request else "completed"
+    projected["can_resume"] = bool(input_request)
+    return projected
+
+
 class SkillRunIndex:
     """Own disk-walking and detail reads under a ``skill_runs/`` root."""
 
@@ -112,7 +237,13 @@ class SkillRunIndex:
                     meta["response_chars"] = response_path.stat().st_size
                 except OSError:
                     pass
-            runs.append(meta)
+            response = ""
+            if response_path.exists():
+                try:
+                    response = response_path.read_text(encoding="utf-8")
+                except OSError:
+                    response = ""
+            runs.append(_project_run_summary_payload(meta, response))
         runs.sort(key=lambda run: run.get("created_at", ""), reverse=True)
         return runs[:limit]
 
@@ -392,6 +523,10 @@ class SkillRunStore:
             return None
         payload.setdefault("chain_id", chain_id)
         return payload
+
+    @classmethod
+    def project_run_payload(cls, payload: dict[str, Any]) -> dict[str, Any]:
+        return _project_run_detail_payload(payload)
 
     @classmethod
     def project_chain_payload(cls, payload: dict[str, Any]) -> dict[str, Any]:

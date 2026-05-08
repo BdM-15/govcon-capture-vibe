@@ -48,6 +48,7 @@ class _FakeManager:
         self.resume_calls = []
         self.plan_calls = []
         self.chain_payload = None
+        self.run_payload = None
 
     def get_skill(self, name: str):
         if self.known_skills and name not in self.known_skills:
@@ -98,6 +99,15 @@ class _FakeManager:
             return self.chain_payload
         return None
 
+    def get_run(self, _workspace_root, skill_name, run_id):
+        if (
+            self.run_payload
+            and skill_name == self.run_payload.get("skill")
+            and run_id == self.run_payload.get("run_id")
+        ):
+            return self.run_payload
+        return None
+
     def project_chain_run(self, payload):
         projected = dict(payload)
         step_count = len((projected.get("spec") or {}).get("steps") or []) or len(
@@ -109,6 +119,15 @@ class _FakeManager:
         projected["step_count"] = step_count
         projected["resume_step_id"] = resume_step_id
         projected["can_resume"] = bool(resume_step_id)
+        return projected
+
+    def project_run(self, payload):
+        projected = dict(payload)
+        input_request = dict(projected.get("input_request") or {})
+        projected["input_request"] = input_request
+        projected["missing_inputs"] = list(input_request.get("missing_inputs") or [])
+        projected["status"] = "interrupted" if input_request.get("needed") else "completed"
+        projected["can_resume"] = bool(input_request.get("needed"))
         return projected
 
 
@@ -188,6 +207,16 @@ def test_skill_invoke_route_legacy_mode(tmp_path) -> None:
 
 def test_skill_invoke_route_tools_mode(tmp_path) -> None:
     manager = _FakeManager("tools")
+    manager.run_payload = {
+        "run_id": "run-1",
+        "skill": "demo",
+        "metadata": {"user_prompt": "hello"},
+        "response": "tools response",
+        "artifacts": [],
+        "transcript": [],
+        "tool_outputs": [],
+        "input_request": {},
+    }
     captured = {}
 
     def fake_slice(
@@ -250,6 +279,7 @@ def test_skill_invoke_route_tools_mode(tmp_path) -> None:
     body = response.json()
     assert body["runtime_mode"] == "tools"
     assert body["finish_reason"] == "max_turns"
+    assert body["run"]["run_id"] == "run-1"
     assert body["retrieval"] == {
         "mode": "off",
         "top_k": 9,
@@ -518,6 +548,88 @@ def test_skill_chain_detail_route_projects_resume_fields(tmp_path) -> None:
     assert body["resume_step_id"] == "ptw"
     assert body["can_resume"] is True
     assert body["step_count"] == 2
+
+
+def test_skill_run_detail_route_projects_resume_fields(tmp_path) -> None:
+    manager = _FakeManager("tools")
+    manager.run_payload = {
+        "run_id": "20260507_120000_huashu",
+        "skill": "huashu-design",
+        "metadata": {"user_prompt": "Build deck"},
+        "response": "Need direction",
+        "artifacts": [],
+        "transcript": [],
+        "tool_outputs": [],
+        "input_request": {
+            "needed": True,
+            "skill": "huashu-design",
+            "missing_inputs": ["Choose design direction"],
+        },
+    }
+
+    app = FastAPI()
+    register_skill_run_ui_routes(
+        app,
+        workspace_dir=lambda: tmp_path,
+        manager_factory=lambda: manager,
+    )
+    client = TestClient(app)
+
+    response = client.get("/api/ui/skills/huashu-design/runs/20260507_120000_huashu")
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "interrupted"
+    assert body["can_resume"] is True
+    assert body["missing_inputs"] == ["Choose design direction"]
+
+
+def test_skill_run_resume_route_reinvokes_skill_with_user_addendum(tmp_path) -> None:
+    manager = _FakeManager("tools")
+    manager.run_payload = {
+        "run_id": "20260507_120000_huashu",
+        "skill": "huashu-design",
+        "metadata": {"user_prompt": "Build briefing deck"},
+        "response": "Need direction",
+        "artifacts": [],
+        "transcript": [],
+        "tool_outputs": [],
+        "input_request": {
+            "needed": True,
+            "skill": "huashu-design",
+            "missing_inputs": ["Choose design direction"],
+        },
+    }
+
+    app = FastAPI()
+    register_skill_invoke_ui_routes(
+        app,
+        workspace_dir=lambda: tmp_path,
+        settings_store=SkillSettingsStore(lambda: tmp_path),
+        data_func=None,
+        llm_func=_llm,
+        workspace_name=lambda: "ws-a",
+        manager_factory=lambda: manager,
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/ui/skills/huashu-design/runs/20260507_120000_huashu/resume",
+        json={"user_addendum": "Use reference template and export PPTX."},
+    )
+
+    assert response.status_code == 200, response.text
+    _, invoke_kwargs = manager.invoke_calls[-1]
+    assert invoke_kwargs["user_prompt"] == (
+        "Build briefing deck\n\n"
+        "User-supplied missing input:\n"
+        "Use reference template and export PPTX."
+    )
+    assert invoke_kwargs["entity_payload"]["user_supplied_context"] == {
+        "resume_notes": "Use reference template and export PPTX.",
+        "missing_inputs": ["Choose design direction"],
+        "answers": {},
+    }
 
 
 def test_skill_chain_plan_and_invoke_planned_routes(tmp_path) -> None:

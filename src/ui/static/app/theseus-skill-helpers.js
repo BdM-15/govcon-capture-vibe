@@ -201,6 +201,9 @@ window.theseusLoadSkillRun = async function theseusLoadSkillRun(
       run_dir: response.run_dir,
     };
     app.skills.run = response;
+    if (typeof app.skills.resumeDrafts?.[runId] !== "string") {
+      app.skills.resumeDrafts[runId] = "";
+    }
     app.skills.transcriptExpanded = {};
     app.skills.transcriptOpen = (response.transcript || []).length > 0;
     window.theseusAfterRender(app);
@@ -432,6 +435,14 @@ window.theseusInvokeSkill = async function theseusInvokeSkill(app) {
       run_id: response.run_id,
       run_dir: response.run_dir,
     };
+    if (response.run) {
+      app.skills.run = response.run;
+      app.skills.transcriptExpanded = {};
+      app.skills.transcriptOpen = (response.run.transcript || []).length > 0;
+      if (typeof app.skills.resumeDrafts?.[response.run.run_id] !== "string") {
+        app.skills.resumeDrafts[response.run.run_id] = "";
+      }
+    }
     if ((response.warnings || []).length) {
       app.toast(response.warnings.join("; "), "warn");
     }
@@ -453,6 +464,107 @@ window.theseusInvokeSkill = async function theseusInvokeSkill(app) {
     app.toast("Skill invocation failed: " + (error?.message || error), "error");
   } finally {
     app.skills.invoking = false;
+    window.theseusAfterRender(app);
+  }
+};
+
+window.theseusSkillRunInputRequest = function theseusSkillRunInputRequest(run) {
+  const request = run?.input_request;
+  return request && request.needed ? request : null;
+};
+
+window.theseusSkillRunCanResume = function theseusSkillRunCanResume(run) {
+  if (!run) return false;
+  if (typeof run.can_resume === "boolean") return run.can_resume;
+  return !!window.theseusSkillRunInputRequest(run);
+};
+
+window.theseusSkillRunResumePlaceholder =
+  function theseusSkillRunResumePlaceholder(run) {
+    const request = window.theseusSkillRunInputRequest(run);
+    const missing = (request?.missing_inputs || []).join("\n- ");
+    if (!missing) {
+      return "Reply with missing info, decision, or direction. Then resume.";
+    }
+    return "Provide missing input to continue this skill:\n- " + missing;
+  };
+
+window.theseusMountSkillRunInputPanel = function theseusMountSkillRunInputPanel(
+  app,
+  host,
+) {
+  if (!host || host.dataset.skillRunInputMounted === "true") return;
+  const template = document.getElementById(
+    "skill-run-input-request-panel-template",
+  );
+  if (!template?.content) return;
+  host.replaceChildren(template.content.cloneNode(true));
+  host.dataset.skillRunInputMounted = "true";
+  if (window.Alpine?.initTree) {
+    window.Alpine.initTree(host);
+  }
+  if (window.lucide?.createIcons) {
+    window.lucide.createIcons();
+  }
+  window.theseusAfterRender(app);
+};
+
+window.theseusResumeSkillRun = async function theseusResumeSkillRun(
+  app,
+  name,
+  runId,
+) {
+  if (!name || !runId || app.skills.resumingRun === runId) return;
+  const run = app.skills.run?.run_id === runId ? app.skills.run : null;
+  const draft = (app.skills.resumeDrafts?.[runId] || "").trim();
+  if (window.theseusSkillRunInputRequest(run) && !draft) {
+    app.toast("Reply in Missing Input composer, then click Resume.", "info");
+    return;
+  }
+  app.skills.resumingRun = runId;
+  try {
+    const response = await app.api(
+      "/api/ui/skills/" +
+        encodeURIComponent(name) +
+        "/runs/" +
+        encodeURIComponent(runId) +
+        "/resume",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_addendum: draft }),
+      },
+    );
+    app.skills.invokeResult = response.response || "(empty response)";
+    app.skills.invokeMeta = {
+      entities_used: response.entities_used || [],
+      elapsed_ms: response.elapsed_ms || 0,
+      finish_reason: response.finish_reason || "",
+      warnings: response.warnings || [],
+      run_id: response.run_id,
+      run_dir: response.run_dir,
+    };
+    app.skills.run = response.run || null;
+    app.skills.resumeDrafts[runId] = "";
+    if (response.run?.run_id) {
+      app.skills.resumeDrafts[response.run.run_id] = "";
+    }
+    app.skills.transcriptExpanded = {};
+    app.skills.transcriptOpen = (response.run?.transcript || []).length > 0;
+    if ((response.warnings || []).length) {
+      app.toast(response.warnings.join("; "), "warn");
+    } else {
+      app.toast("Skill resumed", "ok");
+    }
+    await Promise.all([
+      app.loadSkillRuns(name),
+      app.loadSkillRunTrash(name),
+      app.studio && app.studio.loaded ? app.loadStudio() : Promise.resolve(),
+    ]);
+  } catch (error) {
+    app.toast("Skill resume failed: " + (error?.message || error), "error");
+  } finally {
+    app.skills.resumingRun = "";
     window.theseusAfterRender(app);
   }
 };

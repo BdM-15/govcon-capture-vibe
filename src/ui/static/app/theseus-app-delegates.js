@@ -500,6 +500,26 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusLoadSkillRun(this, name, runId);
     },
 
+    skillRunInputRequest(run) {
+      return window.theseusSkillRunInputRequest(run);
+    },
+
+    skillRunCanResume(run) {
+      return window.theseusSkillRunCanResume(run);
+    },
+
+    skillRunResumePlaceholder(run) {
+      return window.theseusSkillRunResumePlaceholder(run);
+    },
+
+    mountSkillRunInputPanel(el) {
+      return window.theseusMountSkillRunInputPanel(this, el);
+    },
+
+    async resumeSkillRun(name, runId) {
+      return window.theseusResumeSkillRun(this, name, runId);
+    },
+
     async deleteSkillRun(name, runId) {
       return window.theseusDeleteSkillRun(this, name, runId);
     },

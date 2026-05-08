@@ -8,6 +8,7 @@ _INDEX_HTML = _ROOT / "src" / "ui" / "static" / "index.html"
 _UI_STATIC_ROOT = _ROOT / "src" / "ui" / "static"
 _PREVIEW_HELPERS = _ROOT / "src" / "ui" / "static" / "app" / "theseus-preview-helpers.js"
 _CHAIN_HELPERS = _ROOT / "src" / "ui" / "static" / "app" / "theseus-chain-helpers.js"
+_SKILL_HELPERS = _ROOT / "src" / "ui" / "static" / "app" / "theseus-skill-helpers.js"
 _BANNED_MOJIBAKE = (
     "Î",
     "Â",
@@ -136,6 +137,37 @@ def test_skills_expose_run_trash_and_restore_action() -> None:
     assert "Run trash empty." in source
     assert '@click="toggleSkillRunTrash()"' in source
     assert '@click="restoreSkillRun(skills.current?.name, run.trash_id)"' in source
+
+
+def test_skills_expose_resume_panel_for_interrupted_runs() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+    helpers = _SKILL_HELPERS.read_text(encoding="utf-8")
+
+    assert 'x-show="skillRunInputRequest(skills.run)"' in source
+    assert 'id="skill-run-input-request-panel-template"' in source
+    assert 'x-effect="if (skillRunInputRequest(skills.run)) mountSkillRunInputPanel($el)"' in source
+    assert '@input="if (skills.run) skills.resumeDrafts[skills.run.run_id] = $event.target.value"' in source
+    assert '@submit.prevent="resumeSkillRun(skills.current?.name, skills.run.run_id)"' in source
+    assert "window.theseusSkillRunInputRequest" in helpers
+    assert "window.theseusResumeSkillRun" in helpers
+    assert "window.theseusMountSkillRunInputPanel" in helpers
+
+
+def test_skill_run_missing_input_panel_reuses_chat_like_composer_language() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+    helpers = _SKILL_HELPERS.read_text(encoding="utf-8")
+
+    first_panel_start = source.index('id="skill-run-input-request-panel-template"')
+    first_panel_end = source.index('id="chain-input-request-panel-template"')
+    panel_slice = source[first_panel_start:first_panel_end]
+
+    assert "bubble-assistant" in panel_slice
+    assert "bubble-user" in panel_slice
+    assert "composer-bar" in panel_slice
+    assert "Reply to continue this skill" in panel_slice
+    assert "send-horizontal" in panel_slice
+    assert "Reply in Missing Input composer, then click Resume." in helpers
+    assert source.count("Reply to continue this skill") == 1
 
 
 def test_studio_chain_trace_exposes_resume_action_for_resumeable_chain() -> None:

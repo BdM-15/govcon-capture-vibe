@@ -2989,10 +2989,17 @@
                               @click="loadSkillRun(skills.current?.name, run.run_id)"
                               class="text-left flex-1 min-w-0"
                             >
-                              <div
-                                class="text-neon-cyan truncate"
-                                x-text="run.run_id"
-                              ></div>
+                              <div class="flex items-center gap-2">
+                                <div
+                                  class="text-neon-cyan truncate"
+                                  x-text="run.run_id"
+                                ></div>
+                                <span
+                                  x-show="run.can_resume"
+                                  class="pill text-[9px] border border-neon-amber/40 bg-neon-amber/10 text-neon-amber"
+                                  >awaiting input</span
+                                >
+                              </div>
                               <div
                                 class="text-slate-400 mt-0.5 truncate"
                                 x-text="run.prompt_preview || '(skill defaults)'"
@@ -3101,6 +3108,11 @@
                       </ul>
                     </div>
                   </div>
+
+                  <div
+                    x-show="skillRunInputRequest(skills.run)"
+                    x-effect="if (skillRunInputRequest(skills.run)) mountSkillRunInputPanel($el)"
+                  ></div>
 
                   <!-- Artifacts download panel (any run that wrote files) -->
                   <template
@@ -7694,6 +7706,100 @@
     <script src="/ui/app/theseus-palette-helpers.js"></script>
     <script src="/ui/app/theseus-view-helpers.js"></script>
     <script src="/ui/app/theseus-app-factory.js"></script>
+    <template id="skill-run-input-request-panel-template">
+      <div class="space-y-3">
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center gap-2 pl-1">
+            <span class="assistant-avatar">
+              <i data-lucide="workflow" class="w-3.5 h-3.5"></i>
+            </span>
+            <div class="min-w-0 flex items-center gap-2 flex-wrap">
+              <span
+                class="text-[10px] font-mono uppercase tracking-[0.2em] bg-clip-text text-transparent bg-gradient-to-r from-neon-magenta via-purple-400 to-neon-cyan font-bold"
+              >
+                Missing Input
+              </span>
+              <span
+                class="pill text-[10px] border border-neon-amber/40 bg-neon-amber/10 text-neon-amber"
+                x-text="skillRunInputRequest(skills.run)?.skill || skills.current?.name || 'skill'"
+              ></span>
+            </div>
+          </div>
+          <div
+            class="max-w-[92%] rounded-2xl rounded-bl-md px-4 py-3 text-sm leading-relaxed bubble-assistant"
+          >
+            <p class="text-sm text-slate-200">
+              Supply missing info or decision, then click Resume.
+            </p>
+            <div class="mt-3 flex flex-wrap gap-1.5 text-[10px] font-mono">
+              <template
+                x-for="item in (skillRunInputRequest(skills.run)?.missing_inputs || [])"
+                :key="item"
+              >
+                <span
+                  class="pill border border-edge bg-ink-900/90 text-slate-300"
+                  x-text="item"
+                ></span>
+              </template>
+            </div>
+          </div>
+          <div
+            x-show="skills.run && (skills.resumeDrafts[skills.run.run_id] || '').trim()"
+            class="flex flex-col items-end gap-1"
+          >
+            <div
+              class="max-w-[92%] rounded-2xl rounded-br-md px-4 py-3 text-sm leading-relaxed bubble-user"
+            >
+              <div
+                class="text-[10px] font-mono uppercase tracking-[0.18em] text-neon-cyan/75"
+              >
+                Your Reply
+              </div>
+              <div
+                class="mt-1 whitespace-pre-wrap text-sm text-slate-100"
+                x-text="skills.run ? (skills.resumeDrafts[skills.run.run_id] || '') : ''"
+              ></div>
+            </div>
+          </div>
+          <div class="composer-bar rounded-2xl border border-edge/70 p-4">
+            <div
+              class="flex items-center justify-between gap-3 mb-3 text-[10px] font-mono"
+            >
+              <span class="text-slate-400">Reply to continue this skill</span>
+              <span class="text-slate-600"
+                >Enter to resume · Shift+Enter newline</span
+              >
+            </div>
+            <form
+              class="relative"
+              @submit.prevent="resumeSkillRun(skills.current?.name, skills.run.run_id)"
+            >
+              <textarea
+                :value="skills.run ? (skills.resumeDrafts[skills.run.run_id] || '') : ''"
+                rows="4"
+                class="w-full bg-ink-900 border border-edge focus:border-neon-cyan/60 focus:shadow-glow outline-none rounded-xl px-4 py-3 pr-32 text-sm resize-none transition"
+                :placeholder="skillRunResumePlaceholder(skills.run)"
+                @input="if (skills.run) skills.resumeDrafts[skills.run.run_id] = $event.target.value"
+                @keydown.enter.prevent="if (!$event.shiftKey) { if (skills.run) resumeSkillRun(skills.current?.name, skills.run.run_id); } else if (skills.run) { skills.resumeDrafts[skills.run.run_id] = (skills.resumeDrafts[skills.run.run_id] || '') + '\n'; }"
+                @keydown.ctrl.enter.prevent="resumeSkillRun(skills.current?.name, skills.run.run_id)"
+              ></textarea>
+              <div class="absolute bottom-2.5 right-2.5">
+                <button
+                  type="submit"
+                  class="btn-hero-cyan inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold text-ink-950"
+                  :disabled="!skills.run || !(skills.resumeDrafts[skills.run.run_id] || '').trim() || skills.resumingRun === skills.run.run_id"
+                >
+                  <span
+                    x-text="skills.run && skills.resumingRun === skills.run.run_id ? 'Resuming…' : 'Resume'"
+                  ></span>
+                  <i data-lucide="send-horizontal" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </template>
     <template id="chain-input-request-panel-template">
       <div class="space-y-3">
         <div class="flex flex-col gap-3">
@@ -7758,7 +7864,10 @@
                 >Enter to resume · Shift+Enter newline</span
               >
             </div>
-            <form class="relative" @submit.prevent="resumeChain(chains.current.chain_id)">
+            <form
+              class="relative"
+              @submit.prevent="resumeChain(chains.current.chain_id)"
+            >
               <textarea
                 x-model="chains.resumeDrafts[chains.current.chain_id]"
                 rows="4"

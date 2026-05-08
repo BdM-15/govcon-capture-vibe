@@ -521,6 +521,9 @@ class SkillManager:
     ) -> Optional[dict[str, Any]]:
         return self._run_store.get_run(workspace_root, skill_name, run_id)
 
+    def project_run(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._run_store.project_run_payload(payload)
+
     def delete_run(
         self, workspace_root: Path, skill_name: str, run_id: str
     ) -> bool:

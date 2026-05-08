@@ -232,8 +232,11 @@ def parse_run_envelope(text: str) -> dict[str, Any]:
         body_start = text.find("\n## User Prompt\n")
         if body_start >= 0:
             tail = text[body_start + len("\n## User Prompt\n") :].strip()
-            preview = tail.split("\n## ", 1)[0].strip()
-            out["prompt_preview"] = preview[:160] + "..." if len(preview) > 160 else preview
+            user_prompt = tail.split("\n## ", 1)[0].strip()
+            out["user_prompt"] = user_prompt
+            out["prompt_preview"] = (
+                user_prompt[:160] + "..." if len(user_prompt) > 160 else user_prompt
+            )
     except Exception:  # noqa: BLE001
         pass
     return out
