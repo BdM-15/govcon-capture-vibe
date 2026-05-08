@@ -31,6 +31,16 @@ InvokeSkillCallable = Callable[..., Awaitable[SkillInvocationResult]]
 class SkillChainExecutor:
     """Execute a validated chain spec with existing skill invocation primitives."""
 
+    _OUTCOME_FORMAT_HINTS: dict[str, tuple[str, ...]] = {
+        "docx": ("docx", "word", "brief", "document", "draft", "report"),
+        "xlsx": ("xlsx", "excel", "workbook", "spreadsheet"),
+        "pptx": ("pptx", "powerpoint", "deck", "slides", "presentation"),
+        "pdf": ("pdf",),
+        "html": ("html", "web"),
+        "gif": ("gif",),
+        "mp4": ("mp4", "video"),
+    }
+
     def __init__(
         self,
         *,
@@ -103,12 +113,17 @@ class SkillChainExecutor:
         retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]] = None,
         runtime_mode_override: Optional[str] = None,
         from_step_id: str = "",
+        resume_notes: str = "",
     ) -> ChainRunState:
         chain_dir = self._run_store.chain_run_dir(workspace_root, chain.chain_id)
         if not chain_dir.is_dir():
             raise FileNotFoundError(f"Unknown chain: {chain.chain_id}")
 
-        resume_state = self._reset_for_resume(chain, from_step_id=from_step_id)
+        resume_state = self._reset_for_resume(
+            chain,
+            from_step_id=from_step_id,
+            resume_notes=resume_notes,
+        )
         self._run_store.write_chain_run(chain_dir, resume_state.model_dump())
         graph = self._build_graph(
             spec=resume_state.spec,
@@ -182,7 +197,7 @@ class SkillChainExecutor:
     ):
         async def _run(state: ChainExecutionState) -> ChainExecutionState:
             chain = ChainRunState.model_validate(state["chain"])
-            if chain.steps[step.id].status == "completed":
+            if chain.steps[step.id].status in {"completed", "partial"}:
                 return {"chain": chain.model_dump(), "blocked": False}
 
             if state.get("blocked"):
@@ -193,7 +208,11 @@ class SkillChainExecutor:
                 self._run_store.write_chain_run(chain_dir, chain.model_dump())
                 return {"chain": chain.model_dump(), "blocked": True}
 
-            missing = [dep for dep in step.depends_on if chain.steps[dep].status != "completed"]
+            missing = [
+                dep
+                for dep in step.depends_on
+                if chain.steps[dep].status not in {"completed", "partial"}
+            ]
             if missing:
                 chain.steps[step.id].status = "skipped"
                 chain.steps[step.id].error = "dependency not completed: " + ", ".join(missing)
@@ -260,6 +279,10 @@ class SkillChainExecutor:
                 detail = self._run_store.get_run(workspace_root, step.skill, result.run_id)
                 if detail:
                     step_run.artifacts = list(detail.get("artifacts") or [])
+            step_run.missing_inputs = self._extract_missing_inputs(result.response)
+            step_run.missing_outputs = self._extract_missing_outputs(step_run.artifacts)
+            if step_run.missing_inputs or step_run.missing_outputs:
+                step_run.status = "partial"
             chain.updated_at = step_run.finished_at
             self._finalize_if_terminal(chain, step_run.finished_at)
             self._run_store.write_chain_run(chain_dir, chain.model_dump())
@@ -268,7 +291,12 @@ class SkillChainExecutor:
         return _run
 
     @staticmethod
-    def _reset_for_resume(chain: ChainRunState, *, from_step_id: str = "") -> ChainRunState:
+    def _reset_for_resume(
+        chain: ChainRunState,
+        *,
+        from_step_id: str = "",
+        resume_notes: str = "",
+    ) -> ChainRunState:
         if from_step_id and from_step_id not in chain.steps:
             raise ValueError(f"Unknown chain step: {from_step_id}")
         resume = chain.model_copy(deep=True)
@@ -282,6 +310,11 @@ class SkillChainExecutor:
         resume.status = "running"
         resume.mode = "resume"
         resume.source_chain_id = resume.source_chain_id or resume.chain_id
+        resume.promoted_artifacts = []
+        resume.missing_inputs = []
+        resume.missing_outputs = []
+        resume.input_request = {}
+        resume.resume_notes = (resume_notes or "").strip()
         resume.error = ""
         resume.finished_at = ""
         resume.updated_at = utc_now_iso()
@@ -298,7 +331,7 @@ class SkillChainExecutor:
         upstream_ids = [
             step_id
             for step_id, run in chain.steps.items()
-            if run.status == "completed" and step_id != step.id
+            if run.status in {"completed", "partial"} and step_id != step.id
         ]
 
         if not step.artifact_requirements:
@@ -351,6 +384,7 @@ class SkillChainExecutor:
                         skill=run.skill,
                         run_id=run.run_id,
                         filename=filename,
+                        path=str(Path(run.run_dir) / "artifacts" / filename) if run.run_dir else "",
                         display_name=str(artifact.get("display_name") or filename),
                         mime=str(artifact.get("mime") or ""),
                         size=size,
@@ -394,20 +428,231 @@ class SkillChainExecutor:
 
     @staticmethod
     def _finalize_if_terminal(chain: ChainRunState, finished_at: str) -> None:
-        terminal = {"completed", "failed", "skipped"}
+        terminal = {"completed", "partial", "failed", "skipped"}
         if not all(run.status in terminal for run in chain.steps.values()):
             return
+        chain.promoted_artifacts = SkillChainExecutor._promoted_artifacts(chain)
+        chain.missing_inputs = SkillChainExecutor._collect_missing_inputs(chain)
+        chain.missing_outputs = SkillChainExecutor._collect_missing_outputs(chain)
+        chain.input_request = SkillChainExecutor._build_input_request(chain)
         failed = any(run.status == "failed" for run in chain.steps.values())
         blocked = any(run.status == "skipped" and run.error for run in chain.steps.values())
-        chain.status = "failed" if failed or blocked else "completed"
+        partial = (
+            any(run.status == "partial" for run in chain.steps.values())
+            or bool(chain.missing_inputs)
+            or bool(chain.missing_outputs)
+        )
+        if failed or blocked:
+            chain.status = "failed"
+        elif partial:
+            chain.status = "partial"
+        else:
+            chain.status = "completed"
         chain.finished_at = finished_at
+
+    @classmethod
+    def _collect_missing_inputs(cls, chain: ChainRunState) -> list[str]:
+        seen: set[str] = set()
+        missing: list[str] = []
+        for run in chain.steps.values():
+            for item in run.missing_inputs:
+                cleaned = str(item).strip()
+                if cleaned and cleaned not in seen:
+                    seen.add(cleaned)
+                    missing.append(cleaned)
+        return missing
+
+    @classmethod
+    def _collect_missing_outputs(cls, chain: ChainRunState) -> list[str]:
+        seen: set[str] = set()
+        missing: list[str] = []
+        for run in chain.steps.values():
+            for item in run.missing_outputs:
+                cleaned = str(item).strip().lower()
+                if cleaned and cleaned not in seen:
+                    seen.add(cleaned)
+                    missing.append(cleaned)
+        expected = cls._expected_output_formats(chain)
+        present = {
+            cls._artifact_extension(ref.filename)
+            for ref in chain.promoted_artifacts
+            if cls._artifact_extension(ref.filename)
+        }
+        for ext in expected:
+            if ext and ext not in present and ext not in seen:
+                missing.append(ext)
+        return missing
+
+    @staticmethod
+    def _build_input_request(chain: ChainRunState) -> dict[str, Any]:
+        resume_step_id = ""
+        for step in chain.spec.steps:
+            run = chain.steps.get(step.id)
+            if run and run.status == "partial" and run.missing_inputs:
+                resume_step_id = step.id
+                return {
+                    "needed": True,
+                    "step_id": step.id,
+                    "skill": run.skill,
+                    "missing_inputs": list(run.missing_inputs),
+                    "resume_step_id": step.id,
+                }
+        if chain.missing_inputs:
+            return {
+                "needed": True,
+                "step_id": resume_step_id,
+                "skill": "",
+                "missing_inputs": list(chain.missing_inputs),
+                "resume_step_id": resume_step_id,
+            }
+        return {}
+
+    @classmethod
+    def _promoted_artifacts(cls, chain: ChainRunState) -> list[ChainArtifactRef]:
+        expected_formats = cls._expected_output_formats(chain)
+        terminal_ids = cls._terminal_step_ids(chain.spec)
+        promoted: list[ChainArtifactRef] = []
+        for step_id in terminal_ids:
+            run = chain.steps.get(step_id)
+            if not run or run.status not in {"completed", "partial"}:
+                continue
+            for artifact in run.artifacts:
+                filename = str(artifact.get("filename") or artifact.get("name") or "")
+                if not filename:
+                    continue
+                ext = cls._artifact_extension(filename)
+                if expected_formats and ext not in expected_formats:
+                    continue
+                if ext not in cls._OUTCOME_FORMAT_HINTS:
+                    continue
+                promoted.append(
+                    ChainArtifactRef(
+                        step_id=step_id,
+                        skill=run.skill,
+                        run_id=run.run_id,
+                        filename=filename,
+                        path=str(Path(run.run_dir) / "artifacts" / filename) if run.run_dir else "",
+                        display_name=str(artifact.get("display_name") or filename),
+                        mime=str(artifact.get("mime") or ""),
+                        size=cls._artifact_size(artifact),
+                        products=[
+                            str(product).strip().lower()
+                            for product in artifact.get("products") or []
+                            if str(product).strip()
+                        ],
+                    )
+                )
+        if promoted or expected_formats:
+            return cls._dedupe_artifacts(promoted)
+
+        fallback: list[ChainArtifactRef] = []
+        for step_id in terminal_ids:
+            run = chain.steps.get(step_id)
+            if not run or run.status not in {"completed", "partial"}:
+                continue
+            for artifact in run.artifacts:
+                filename = str(artifact.get("filename") or artifact.get("name") or "")
+                ext = cls._artifact_extension(filename)
+                if ext not in cls._OUTCOME_FORMAT_HINTS:
+                    continue
+                fallback.append(
+                    ChainArtifactRef(
+                        step_id=step_id,
+                        skill=run.skill,
+                        run_id=run.run_id,
+                        filename=filename,
+                        path=str(Path(run.run_dir) / "artifacts" / filename) if run.run_dir else "",
+                        display_name=str(artifact.get("display_name") or filename),
+                        mime=str(artifact.get("mime") or ""),
+                        size=cls._artifact_size(artifact),
+                        products=[
+                            str(product).strip().lower()
+                            for product in artifact.get("products") or []
+                            if str(product).strip()
+                        ],
+                    )
+                )
+        return cls._dedupe_artifacts(fallback)
+
+    @classmethod
+    def _expected_output_formats(cls, chain: ChainRunState) -> list[str]:
+        raw = str(chain.spec.context.get("expected_outcome") or "").lower()
+        if not raw:
+            return []
+        expected: list[str] = []
+        for ext, hints in cls._OUTCOME_FORMAT_HINTS.items():
+            if any(hint in raw for hint in hints):
+                expected.append(ext)
+        return expected
+
+    @staticmethod
+    def _terminal_step_ids(spec: ChainSpec) -> list[str]:
+        upstream_ids = {
+            dependency
+            for step in spec.steps
+            for dependency in step.depends_on
+        }
+        return [step.id for step in spec.steps if step.id not in upstream_ids]
+
+    @staticmethod
+    def _artifact_extension(filename: str) -> str:
+        return filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+
+    @staticmethod
+    def _artifact_size(artifact: dict[str, Any]) -> int:
+        try:
+            return int(artifact.get("size") or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _extract_missing_inputs(response: str) -> list[str]:
+        lines = str(response or "").splitlines()
+        collecting = False
+        missing: list[str] = []
+        seen: set[str] = set()
+        for raw in lines:
+            stripped = raw.strip()
+            lowered = stripped.lower()
+            if "exact gaps" in lowered or "missing inputs" in lowered:
+                collecting = True
+                continue
+            if collecting and stripped.startswith(("- ", "* ")):
+                cleaned = stripped[2:].strip()
+                if cleaned and cleaned not in seen:
+                    seen.add(cleaned)
+                    missing.append(cleaned)
+                continue
+            if collecting and stripped and not stripped.startswith(("- ", "* ")):
+                break
+        if missing:
+            return missing
+        generic_markers = ("gap identified", "missing input", "missing inputs")
+        if any(marker in str(response or "").lower() for marker in generic_markers):
+            return ["See response_preview for exact gaps."]
+        return []
+
+    @classmethod
+    def _extract_missing_outputs(cls, artifacts: list[dict[str, Any]]) -> list[str]:
+        missing: list[str] = []
+        seen: set[str] = set()
+        for artifact in artifacts:
+            if str(artifact.get("render_status") or "").strip().lower() != "failed":
+                continue
+            targets = artifact.get("render_targets") or []
+            for target in targets:
+                ext = cls._artifact_extension(str(target or ""))
+                if ext and ext not in seen:
+                    seen.add(ext)
+                    missing.append(ext)
+        return missing
 
     @staticmethod
     def _compose_step_prompt(chain: ChainRunState, step: ChainStepSpec) -> str:
         upstream = {
             step_id: run.model_dump()
             for step_id, run in chain.steps.items()
-            if run.status == "completed"
+            if run.status in {"completed", "partial"}
         }
         handoff = {
             "chain_id": chain.chain_id,
@@ -427,6 +672,19 @@ class SkillChainExecutor:
         }
         return (
             (step.prompt or chain.spec.prompt or "Run this chain step.").strip()
+            + "\nUse input_artifacts[].path when a tool needs an upstream file path; do not reconstruct paths from run_dir."
+            + (
+                f"\nSkill-specific retrieval hook: {step.context.get('retrieval_query')}"
+                if step.context.get("retrieval_query")
+                else ""
+            )
+            + (
+                "\n\n## User-Supplied Missing Input\n"
+                + chain.resume_notes.strip()
+                if chain.resume_notes.strip()
+                else ""
+            )
+            + "\nIf critical evidence is missing, emit an explicit missing-input list the user can supply and still produce the best partial artifact."
             + "\n\n## Theseus Chain Handoff\n"
             + "```json\n"
             + json.dumps(handoff, ensure_ascii=False, indent=2, default=str)

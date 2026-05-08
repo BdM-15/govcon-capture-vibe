@@ -168,6 +168,18 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusChainCanResume(chain);
     },
 
+    chainInputRequest(chain) {
+      return window.theseusChainInputRequest(chain);
+    },
+
+    chainResumePlaceholder(chain) {
+      return window.theseusChainResumePlaceholder(chain);
+    },
+
+    mountChainInputPanel(el) {
+      return window.theseusMountChainInputPanel(this, el);
+    },
+
     async rerunChain(chainId) {
       return window.theseusRerunChain(this, chainId);
     },

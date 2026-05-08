@@ -87,6 +87,45 @@ def test_planner_defaults_reverse_engineer_before_proposal() -> None:
     skills = [step.skill for step in plan.spec.steps]
     assert skills == ["rfp-reverse-engineer", "proposal-generator"]
     assert plan.spec.steps[1].depends_on == ["rfp-reverse-engineer"]
+    assert plan.spec.steps[0].context["retrieval_query"]
+    assert plan.spec.steps[1].context["ask_for_input_when_missing"] is True
+
+
+def test_planner_routes_content_brief_to_content_skill_instead_of_renderer_only() -> None:
+    planner = SkillChainPlanner(_SKILLS)
+
+    plan = planner.plan(
+        prompt="Competitive intel brief",
+        outcome="DOCX brief",
+    )
+
+    assert [step.skill for step in plan.spec.steps] == ["competitive-intel"]
+
+
+def test_planner_allows_renderer_only_for_explicit_render_request() -> None:
+    planner = SkillChainPlanner(_SKILLS)
+
+    plan = planner.plan(
+        prompt="Render existing markdown artifact to DOCX",
+        outcome="DOCX",
+    )
+
+    assert [step.skill for step in plan.spec.steps] == ["renderers"]
+
+
+def test_planner_embeds_step_scoped_retrieval_hints() -> None:
+    planner = SkillChainPlanner(_SKILLS)
+
+    plan = planner.plan(
+        prompt="Build a price to win package using incumbent obligations",
+        outcome="Excel workbook and brief",
+    )
+
+    ptw_step = next(step for step in plan.spec.steps if step.skill == "price-to-win")
+    assert plan.spec.context["retrieval_strategy"] == "step-scoped-hints"
+    assert plan.spec.context["hitl_mode"] == "resume-after-missing-input"
+    assert "retrieval_query" in ptw_step.context
+    assert "pricing_stack" in ptw_step.context["retrieval_focus"]
 
 
 def test_planner_rejects_no_matching_skill() -> None:

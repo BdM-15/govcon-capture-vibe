@@ -393,6 +393,17 @@ class SkillRunStore:
         payload.setdefault("chain_id", chain_id)
         return payload
 
+    @classmethod
+    def project_chain_payload(cls, payload: dict[str, Any]) -> dict[str, Any]:
+        projected = dict(payload)
+        spec = projected.get("spec") or {}
+        steps = projected.get("steps") or {}
+        projected["step_count"] = len(spec.get("steps") or []) or len(steps)
+        resume_step_id = cls._chain_resume_step_id(projected)
+        projected["resume_step_id"] = resume_step_id
+        projected["can_resume"] = bool(resume_step_id)
+        return projected
+
     def list_chain_runs(
         self, workspace_root: Path, limit: int = 50
     ) -> list[dict[str, Any]]:
@@ -406,6 +417,7 @@ class SkillRunStore:
             payload = self.get_chain_run(workspace_root, chain_dir.name)
             if not payload:
                 continue
+            payload = self.project_chain_payload(payload)
             rows.append(
                 {
                     "chain_id": payload.get("chain_id") or chain_dir.name,
@@ -415,8 +427,10 @@ class SkillRunStore:
                     "created_at": payload.get("created_at") or "",
                     "updated_at": payload.get("updated_at") or "",
                     "finished_at": payload.get("finished_at") or "",
-                    "step_count": len(payload.get("steps") or {}),
+                    "step_count": payload.get("step_count") or len(payload.get("steps") or {}),
                     "error": payload.get("error") or "",
+                    "resume_step_id": payload.get("resume_step_id") or "",
+                    "can_resume": bool(payload.get("can_resume")),
                 }
             )
         rows.sort(key=lambda row: row.get("created_at", ""), reverse=True)
@@ -426,6 +440,15 @@ class SkillRunStore:
     def _chain_resume_step_id(payload: dict[str, Any]) -> str:
         if payload.get("status") in {"completed", "running"}:
             return ""
+        explicit = str(payload.get("resume_step_id") or "").strip()
+        if explicit:
+            return explicit
+        input_request = payload.get("input_request") or {}
+        requested = str(
+            input_request.get("resume_step_id") or input_request.get("step_id") or ""
+        ).strip()
+        if requested:
+            return requested
         steps = payload.get("steps") or {}
         spec_steps = (payload.get("spec") or {}).get("steps") or []
         ordered_ids = [
@@ -438,7 +461,7 @@ class SkillRunStore:
         )
         for step_id in ordered_ids:
             step = steps.get(step_id) or {}
-            if step.get("status") in {"failed", "skipped", "pending", "running"}:
+            if step.get("status") in {"failed", "partial", "skipped", "pending", "running"}:
                 return str(step_id)
         return ""
 
@@ -456,6 +479,7 @@ class SkillRunStore:
             payload = self.get_chain_run(workspace_root, chain_dir.name)
             if not payload:
                 continue
+            payload = self.project_chain_payload(payload)
             spec = payload.get("spec") or {}
             spec_steps = spec.get("steps") or []
             steps = payload.get("steps") or {}
@@ -466,7 +490,6 @@ class SkillRunStore:
                 for idx, step in enumerate(spec_steps)
                 if isinstance(step, dict) and step.get("id")
             }
-            resume_step_id = self._chain_resume_step_id(payload)
             base = {
                 "chain_id": payload.get("chain_id") or chain_dir.name,
                 "name": spec.get("name") or "skill-chain",
@@ -477,10 +500,20 @@ class SkillRunStore:
                 "updated_at": payload.get("updated_at") or "",
                 "finished_at": payload.get("finished_at") or "",
                 "error": payload.get("error") or "",
-                "step_count": len(spec_steps) or len(steps),
-                "resume_step_id": resume_step_id,
-                "can_resume": bool(resume_step_id),
+                "step_count": payload.get("step_count") or len(spec_steps) or len(steps),
+                "resume_step_id": payload.get("resume_step_id") or "",
+                "can_resume": bool(payload.get("can_resume")),
             }
+            promoted_keys = {
+                (
+                    str(ref.get("skill") or ""),
+                    str(ref.get("run_id") or ""),
+                    str(ref.get("filename") or ""),
+                )
+                for ref in payload.get("promoted_artifacts") or []
+                if isinstance(ref, dict)
+            }
+            has_explicit_promotion = bool(payload.get("promoted_artifacts") is not None)
             for step_id, step in steps.items():
                 if not isinstance(step, dict):
                     continue
@@ -500,12 +533,17 @@ class SkillRunStore:
                     if not filename or "/" in filename or "\\" in filename:
                         continue
                     key = (skill, run_id, filename)
+                    surface = "promoted"
+                    if has_explicit_promotion:
+                        surface = "promoted" if key in promoted_keys else "source"
                     index.setdefault(key, []).append(
                         {
                             **base,
                             "step_id": str(step.get("id") or step_id),
                             "step_status": step.get("status") or "",
                             "step_index": step_order.get(str(step_id), -1),
+                            "surface": surface,
+                            "run_kind": "chain",
                         }
                     )
         for refs in index.values():
@@ -895,13 +933,17 @@ class SkillRunStore:
         return {"restored": restored, "missing": missing, "conflicts": conflicts}
 
     def list_deliverables(
-        self, workspace_root: Path, limit: int = 500
+        self,
+        workspace_root: Path,
+        limit: int = 500,
+        include_source_chain_artifacts: bool = False,
     ) -> list[dict[str, Any]]:
         rows = SkillRunIndex(Path(workspace_root) / "skill_runs").list_deliverables(
             is_safe_run_id=self.is_safe_run_id,
             limit=limit,
         )
         chain_index = self._chain_artifact_index(workspace_root)
+        visible_rows: list[dict[str, Any]] = []
         for row in rows:
             key = (
                 str(row.get("skill") or ""),
@@ -910,9 +952,18 @@ class SkillRunStore:
             )
             chains = chain_index.get(key) or []
             if chains:
-                row["chains"] = chains
-                row["chain"] = chains[0]
-        return rows
+                visible_chains = [chain for chain in chains if chain.get("surface") == "promoted"]
+                if not visible_chains and not include_source_chain_artifacts:
+                    continue
+                row["chains"] = visible_chains or chains
+                row["chain"] = (visible_chains or chains)[0]
+                row["run_kind"] = "chain"
+                row["surface"] = row["chain"].get("surface") or "promoted"
+            else:
+                row["run_kind"] = "single"
+                row["surface"] = "promoted"
+            visible_rows.append(row)
+        return visible_rows
 
     def get_artifact_path(
         self,

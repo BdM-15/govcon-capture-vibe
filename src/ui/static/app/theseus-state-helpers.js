@@ -124,6 +124,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       current: null,
       rerunning: "",
       resuming: "",
+      resumeDrafts: {},
       search: "",
     },
     reasoning: {

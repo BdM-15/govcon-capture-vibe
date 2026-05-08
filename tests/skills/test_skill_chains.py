@@ -95,9 +95,19 @@ async def _chain_executor_runs_steps_and_persists_state(tmp_path: Path) -> None:
     assert result.steps["intel"].artifacts[0]["name"] == "competitive-intel.json"
     assert "obligation_data" in result.steps["intel"].artifacts[0]["products"]
     assert result.steps["ptw"].input_artifacts[0].filename == "competitive-intel.json"
+    assert Path(result.steps["ptw"].input_artifacts[0].path).as_posix().endswith(
+        "artifacts/competitive-intel.json"
+    )
     assert "obligation_data" in result.steps["ptw"].input_artifacts[0].products
     assert "upstream_steps" in calls[1][1]
     assert "competitive-intel.json" in calls[1][1]
+    expected_artifact_path = str(
+        Path(result.steps["intel"].run_dir) / "artifacts" / "competitive-intel.json"
+    )
+    handoff_json = calls[1][1].split("```json\n", 1)[1].rsplit("\n```", 1)[0]
+    handoff = json.loads(handoff_json)
+    assert handoff["input_artifacts"][0]["path"] == expected_artifact_path
+    assert "Use input_artifacts[].path when a tool needs an upstream file path" in calls[1][1]
     persisted = store.get_chain_run(tmp_path, result.chain_id)
     assert persisted is not None
     assert persisted["status"] == "completed"
@@ -319,6 +329,202 @@ async def _chain_executor_resume_preserves_completed_steps(tmp_path: Path) -> No
         "proposal-generator",
     ]
     assert resumed.steps["intel"].run_id == failed.steps["intel"].run_id
+
+
+def test_chain_executor_resume_includes_resume_notes_in_prompt(tmp_path: Path) -> None:
+    asyncio.run(_chain_executor_resume_includes_resume_notes_in_prompt(tmp_path))
+
+
+async def _chain_executor_resume_includes_resume_notes_in_prompt(tmp_path: Path) -> None:
+    store = SkillRunStore()
+    prompts: list[tuple[str, str]] = []
+    ptw_attempts = 0
+
+    async def invoke_skill(name: str, **kwargs: Any) -> SkillInvocationResult:
+        nonlocal ptw_attempts
+        prompt = kwargs["user_prompt"]
+        prompts.append((name, prompt))
+        if name == "price-to-win":
+            ptw_attempts += 1
+            if ptw_attempts == 1:
+                raise RuntimeError("first PTW attempt failed")
+        run_id, run_dir = store.create_run_dir(
+            workspace_root=kwargs["workspace_root"],
+            skill_name=name,
+            user_prompt=prompt,
+            started_at=datetime.now(timezone.utc),
+        )
+        return _fake_result(name, run_id, run_dir, prompt)
+
+    executor = SkillChainExecutor(invoke_skill=invoke_skill, run_store=store)
+    spec = ChainSpec(
+        name="resume-chain-with-notes",
+        steps=[
+            ChainStepSpec(id="intel", skill="competitive-intel"),
+            ChainStepSpec(id="ptw", skill="price-to-win", depends_on=["intel"]),
+        ],
+    )
+
+    failed = await executor.invoke(
+        spec,
+        workspace="test-workspace",
+        workspace_root=tmp_path,
+        llm=_noop_llm,
+        entity_payload={},
+    )
+    resumed = await executor.resume(
+        failed,
+        workspace_root=tmp_path,
+        llm=_noop_llm,
+        entity_payload={},
+        resume_notes="Incumbent PIID is FA1234-56-D-7890.",
+    )
+
+    ptw_prompts = [prompt for name, prompt in prompts if name == "price-to-win"]
+    assert len(ptw_prompts) == 2
+    assert "## User-Supplied Missing Input" in ptw_prompts[1]
+    assert "Incumbent PIID is FA1234-56-D-7890." in ptw_prompts[1]
+    assert resumed.resume_notes == "Incumbent PIID is FA1234-56-D-7890."
+
+
+def test_chain_executor_marks_partial_when_expected_output_missing(tmp_path: Path) -> None:
+    asyncio.run(_chain_executor_marks_partial_when_expected_output_missing(tmp_path))
+
+
+async def _chain_executor_marks_partial_when_expected_output_missing(tmp_path: Path) -> None:
+    store = SkillRunStore()
+
+    async def invoke_skill(name: str, **kwargs: Any) -> SkillInvocationResult:
+        run_id, run_dir = store.create_run_dir(
+            workspace_root=kwargs["workspace_root"],
+            skill_name=name,
+            user_prompt=kwargs["user_prompt"],
+            started_at=datetime.now(timezone.utc),
+        )
+        artifacts_dir = run_dir / "artifacts"
+        artifacts_dir.mkdir(exist_ok=True)
+        (artifacts_dir / "brief.docx").write_bytes(b"docx")
+        (artifacts_dir / "report.json").write_text("{}", encoding="utf-8")
+        (run_dir / "artifacts_manifest.json").write_text(
+            json.dumps(
+                {
+                    "report.json": {
+                        "render_status": "failed",
+                        "render_targets": ["price_to_win_workbook.xlsx"],
+                        "render_message": "xlsx render failed",
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        return SkillInvocationResult(
+            skill=name,
+            workspace="test-workspace",
+            response=(
+                "**GAP IDENTIFIED - Cannot fully satisfy quality gate.**\n\n"
+                "**Exact gaps (per quality gate):**\n"
+                "- Missing incumbent PIID\n"
+                "- No workload spreadsheet\n"
+            ),
+            entities_used=[],
+            warnings=[],
+            elapsed_ms=9,
+            prompt_tokens_estimate=0,
+            run_id=run_id,
+            run_dir=str(run_dir),
+            finish_reason="stop",
+        )
+
+    executor = SkillChainExecutor(invoke_skill=invoke_skill, run_store=store)
+    spec = ChainSpec(
+        name="render-chain",
+        context={"expected_outcome": "Excel workbook and brief"},
+        steps=[ChainStepSpec(id="render", skill="renderers")],
+    )
+
+    result = await executor.invoke(
+        spec,
+        workspace="test-workspace",
+        workspace_root=tmp_path,
+        llm=_noop_llm,
+        entity_payload={},
+    )
+
+    assert result.status == "partial"
+    assert result.steps["render"].status == "partial"
+    assert result.steps["render"].missing_inputs == [
+        "Missing incumbent PIID",
+        "No workload spreadsheet",
+    ]
+    assert result.missing_outputs == ["xlsx"]
+    assert [artifact.filename for artifact in result.promoted_artifacts] == ["brief.docx"]
+    assert result.input_request == {
+        "needed": True,
+        "step_id": "render",
+        "skill": "renderers",
+        "missing_inputs": ["Missing incumbent PIID", "No workload spreadsheet"],
+        "resume_step_id": "render",
+    }
+
+
+def test_chain_executor_allows_downstream_after_partial_upstream(tmp_path: Path) -> None:
+    asyncio.run(_chain_executor_allows_downstream_after_partial_upstream(tmp_path))
+
+
+async def _chain_executor_allows_downstream_after_partial_upstream(tmp_path: Path) -> None:
+    store = SkillRunStore()
+    calls: list[str] = []
+
+    async def invoke_skill(name: str, **kwargs: Any) -> SkillInvocationResult:
+        calls.append(name)
+        run_id, run_dir = store.create_run_dir(
+            workspace_root=kwargs["workspace_root"],
+            skill_name=name,
+            user_prompt=kwargs["user_prompt"],
+            started_at=datetime.now(timezone.utc),
+        )
+        (run_dir / "artifacts" / f"{name}.json").write_text("{}", encoding="utf-8")
+        response = "ok"
+        if name == "competitive-intel":
+            response = (
+                "**GAP IDENTIFIED - Cannot fully satisfy quality gate.**\n\n"
+                "**Exact gaps (per quality gate):**\n"
+                "- Missing PIID\n"
+            )
+        return SkillInvocationResult(
+            skill=name,
+            workspace="test-workspace",
+            response=response,
+            entities_used=[],
+            warnings=[],
+            elapsed_ms=5,
+            prompt_tokens_estimate=0,
+            run_id=run_id,
+            run_dir=str(run_dir),
+            finish_reason="stop",
+        )
+
+    executor = SkillChainExecutor(invoke_skill=invoke_skill, run_store=store)
+    spec = ChainSpec(
+        name="partial-upstream-chain",
+        steps=[
+            ChainStepSpec(id="intel", skill="competitive-intel"),
+            ChainStepSpec(id="ptw", skill="price-to-win", depends_on=["intel"]),
+        ],
+    )
+
+    result = await executor.invoke(
+        spec,
+        workspace="test-workspace",
+        workspace_root=tmp_path,
+        llm=_noop_llm,
+        entity_payload={},
+    )
+
+    assert calls == ["competitive-intel", "price-to-win"]
+    assert result.steps["intel"].status == "partial"
+    assert result.steps["ptw"].status == "completed"
+    assert result.status == "partial"
 
 
 def test_chain_spec_rejects_unknown_or_later_dependencies() -> None:

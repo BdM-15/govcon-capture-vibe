@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.server.skill_routes import register_skill_invoke_ui_routes
+from src.server.skill_routes import register_skill_invoke_ui_routes, register_skill_run_ui_routes
 from src.skills.chain_planner import ChainPlan, PlannedSkill
 from src.skills.chain_models import ChainSpec, ChainStepSpec
 from src.skills.settings import SkillSettingsStore
@@ -97,6 +97,19 @@ class _FakeManager:
         if self.chain_payload and chain_id == self.chain_payload["chain_id"]:
             return self.chain_payload
         return None
+
+    def project_chain_run(self, payload):
+        projected = dict(payload)
+        step_count = len((projected.get("spec") or {}).get("steps") or []) or len(
+            projected.get("steps") or {}
+        )
+        resume_step_id = str(
+            ((projected.get("input_request") or {}).get("resume_step_id") or "")
+        ).strip()
+        projected["step_count"] = step_count
+        projected["resume_step_id"] = resume_step_id
+        projected["can_resume"] = bool(resume_step_id)
+        return projected
 
 
 async def _llm(prompt: str) -> str:
@@ -378,6 +391,13 @@ def test_skill_chain_rerun_and_resume_routes(tmp_path) -> None:
         "updated_at": "2026-05-07T12:01:00+00:00",
         "finished_at": "2026-05-07T12:01:00+00:00",
         "error": "ptw failed",
+        "input_request": {
+            "needed": True,
+            "step_id": "ptw",
+            "skill": "price-to-win",
+            "missing_inputs": ["Missing incumbent PIID"],
+            "resume_step_id": "ptw",
+        },
         "spec": {
             "name": "intel-to-ptw",
             "prompt": "Build a chain.",
@@ -430,7 +450,12 @@ def test_skill_chain_rerun_and_resume_routes(tmp_path) -> None:
     )
     resume = client.post(
         "/api/ui/skill-chains/20260507_120000_intel-to-ptw/resume",
-        json={"from_step_id": "ptw", "retrieval_mode": "off", "retrieval_top_k": 9},
+        json={
+            "from_step_id": "ptw",
+            "user_addendum": "Incumbent PIID is FA1234-56-D-7890.",
+            "retrieval_mode": "off",
+            "retrieval_top_k": 9,
+        },
     )
 
     assert rerun.status_code == 200, rerun.text
@@ -443,6 +468,56 @@ def test_skill_chain_rerun_and_resume_routes(tmp_path) -> None:
     resumed_state, resume_kwargs = manager.resume_calls[-1]
     assert resumed_state.chain_id == "20260507_120000_intel-to-ptw"
     assert resume_kwargs["from_step_id"] == "ptw"
+    assert resume_kwargs["resume_notes"] == "Incumbent PIID is FA1234-56-D-7890."
+    assert resume_kwargs["entity_payload"]["user_supplied_context"] == {
+        "resume_notes": "Incumbent PIID is FA1234-56-D-7890.",
+        "missing_inputs": ["Missing incumbent PIID"],
+        "resume_step_id": "ptw",
+    }
+
+
+def test_skill_chain_detail_route_projects_resume_fields(tmp_path) -> None:
+    manager = _FakeManager("tools")
+    manager.chain_payload = {
+        "chain_id": "20260507_120000_intel-to-ptw",
+        "workspace": "ws-a",
+        "status": "failed",
+        "mode": "original",
+        "input_request": {
+            "needed": True,
+            "step_id": "ptw",
+            "skill": "price-to-win",
+            "missing_inputs": ["Missing incumbent PIID"],
+            "resume_step_id": "ptw",
+        },
+        "spec": {
+            "name": "intel-to-ptw",
+            "steps": [
+                {"id": "intel", "skill": "competitive-intel"},
+                {"id": "ptw", "skill": "price-to-win", "depends_on": ["intel"]},
+            ],
+        },
+        "steps": {
+            "intel": {"id": "intel", "skill": "competitive-intel", "status": "completed"},
+            "ptw": {"id": "ptw", "skill": "price-to-win", "status": "failed"},
+        },
+    }
+
+    app = FastAPI()
+    register_skill_run_ui_routes(
+        app,
+        workspace_dir=lambda: tmp_path,
+        manager_factory=lambda: manager,
+    )
+    client = TestClient(app)
+
+    response = client.get("/api/ui/skill-chains/20260507_120000_intel-to-ptw")
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["resume_step_id"] == "ptw"
+    assert body["can_resume"] is True
+    assert body["step_count"] == 2
 
 
 def test_skill_chain_plan_and_invoke_planned_routes(tmp_path) -> None:

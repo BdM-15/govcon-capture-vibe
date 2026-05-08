@@ -474,6 +474,7 @@ class SkillManager:
         retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]] = None,
         runtime_mode_override: Optional[str] = None,
         from_step_id: str = "",
+        resume_notes: str = "",
     ) -> ChainRunState:
         """Resume an existing chain, preserving completed steps by default."""
         executor = SkillChainExecutor(
@@ -490,6 +491,7 @@ class SkillManager:
             retrieve_fn=retrieve_fn,
             runtime_mode_override=runtime_mode_override,
             from_step_id=from_step_id,
+            resume_notes=resume_notes,
         )
 
     def list_chain_runs(
@@ -501,6 +503,9 @@ class SkillManager:
         self, workspace_root: Path, chain_id: str
     ) -> Optional[dict[str, Any]]:
         return self._run_store.get_chain_run(workspace_root, chain_id)
+
+    def project_chain_run(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._run_store.project_chain_payload(payload)
 
     def list_runs(
         self, workspace_root: Path, skill_name: Optional[str] = None, limit: int = 50

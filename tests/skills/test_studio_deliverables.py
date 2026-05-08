@@ -190,6 +190,198 @@ def test_list_deliverables_attaches_chain_trace(tmp_path: Path) -> None:
     assert rows[0]["chain"]["can_resume"] is False
 
 
+def test_project_chain_payload_exposes_resume_fields_for_detail_views(tmp_path: Path) -> None:
+    store = SkillRunStore()
+    chain_id = "20260507_121500_detail_projection"
+    chain_dir = tmp_path / "skill_chains" / chain_id
+    chain_dir.mkdir(parents=True)
+    (chain_dir / "chain.json").write_text(
+        json.dumps(
+            {
+                "chain_id": chain_id,
+                "workspace": "ws",
+                "status": "failed",
+                "mode": "original",
+                "input_request": {
+                    "needed": True,
+                    "step_id": "ptw",
+                    "skill": "price-to-win",
+                    "missing_inputs": ["Missing incumbent PIID"],
+                    "resume_step_id": "ptw",
+                },
+                "spec": {
+                    "name": "detail-projection",
+                    "steps": [
+                        {"id": "intel", "skill": "competitive-intel"},
+                        {"id": "ptw", "skill": "price-to-win", "depends_on": ["intel"]},
+                    ],
+                },
+                "steps": {
+                    "intel": {
+                        "id": "intel",
+                        "skill": "competitive-intel",
+                        "status": "completed",
+                    },
+                    "ptw": {
+                        "id": "ptw",
+                        "skill": "price-to-win",
+                        "status": "failed",
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = store.get_chain_run(tmp_path, chain_id)
+    assert payload is not None
+
+    projected = store.project_chain_payload(payload)
+
+    assert projected["resume_step_id"] == "ptw"
+    assert projected["can_resume"] is True
+    assert projected["step_count"] == 2
+
+
+def test_list_deliverables_marks_failed_chain_as_resumeable(tmp_path: Path) -> None:
+    mgr = SkillManager()
+    _seed_run(
+        tmp_path,
+        skill="renderers",
+        run_id="20260507_120000_render",
+        artifacts={"brief.docx": b"docx"},
+        created_at="2026-05-07T12:00:00",
+    )
+    chain_id = "20260507_121500_ui_resume_artifact"
+    chain_dir = tmp_path / "skill_chains" / chain_id
+    chain_dir.mkdir(parents=True)
+    (chain_dir / "chain.json").write_text(
+        json.dumps(
+            {
+                "chain_id": chain_id,
+                "workspace": "ws",
+                "status": "failed",
+                "mode": "original",
+                "spec": {
+                    "name": "ui-resume-artifact",
+                    "steps": [
+                        {"id": "renderers", "skill": "renderers"},
+                        {
+                            "id": "postcheck",
+                            "skill": "proposal-generator",
+                            "depends_on": ["renderers"],
+                        },
+                    ],
+                },
+                "steps": {
+                    "renderers": {
+                        "id": "renderers",
+                        "skill": "renderers",
+                        "run_id": "20260507_120000_render",
+                        "status": "completed",
+                        "artifacts": [{"name": "brief.docx"}],
+                    },
+                    "postcheck": {
+                        "id": "postcheck",
+                        "skill": "proposal-generator",
+                        "status": "failed",
+                        "error": "synthetic postcheck failure",
+                    },
+                },
+                "created_at": "2026-05-07T12:15:00",
+                "updated_at": "2026-05-07T12:20:00",
+                "finished_at": "2026-05-07T12:20:00",
+                "error": "synthetic postcheck failure",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = mgr.list_deliverables(tmp_path)
+
+    assert rows[0]["chain"]["chain_id"] == chain_id
+    assert rows[0]["chain"]["status"] == "failed"
+    assert rows[0]["chain"]["can_resume"] is True
+    assert rows[0]["chain"]["resume_step_id"] == "postcheck"
+
+
+def test_list_deliverables_hides_source_chain_artifacts_and_keeps_promoted_outputs(
+    tmp_path: Path,
+) -> None:
+    mgr = SkillManager()
+    _seed_run(
+        tmp_path,
+        skill="competitive-intel",
+        run_id="20260507_120000_intel",
+        artifacts={"competitive_intel_brief.docx": b"docx"},
+        created_at="2026-05-07T12:00:00",
+    )
+    _seed_run(
+        tmp_path,
+        skill="renderers",
+        run_id="20260507_121000_render",
+        artifacts={"final_brief.docx": b"docx"},
+        created_at="2026-05-07T12:10:00",
+    )
+    chain_id = "20260507_121500_promoted_outputs"
+    chain_dir = tmp_path / "skill_chains" / chain_id
+    chain_dir.mkdir(parents=True)
+    (chain_dir / "chain.json").write_text(
+        json.dumps(
+            {
+                "chain_id": chain_id,
+                "workspace": "ws",
+                "status": "partial",
+                "mode": "original",
+                "spec": {
+                    "name": "promoted-outputs",
+                    "steps": [
+                        {"id": "intel", "skill": "competitive-intel"},
+                        {
+                            "id": "render",
+                            "skill": "renderers",
+                            "depends_on": ["intel"],
+                        },
+                    ],
+                },
+                "promoted_artifacts": [
+                    {
+                        "step_id": "render",
+                        "skill": "renderers",
+                        "run_id": "20260507_121000_render",
+                        "filename": "final_brief.docx",
+                    }
+                ],
+                "steps": {
+                    "intel": {
+                        "id": "intel",
+                        "skill": "competitive-intel",
+                        "run_id": "20260507_120000_intel",
+                        "status": "partial",
+                        "artifacts": [{"name": "competitive_intel_brief.docx"}],
+                    },
+                    "render": {
+                        "id": "render",
+                        "skill": "renderers",
+                        "run_id": "20260507_121000_render",
+                        "status": "partial",
+                        "artifacts": [{"name": "final_brief.docx"}],
+                    },
+                },
+                "created_at": "2026-05-07T12:15:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = mgr.list_deliverables(tmp_path)
+
+    assert [row["filename"] for row in rows] == ["final_brief.docx"]
+    assert rows[0]["run_kind"] == "chain"
+    assert rows[0]["surface"] == "promoted"
+    assert rows[0]["chain"]["status"] == "partial"
+
+
 def test_list_deliverables_hides_source_artifacts(tmp_path: Path) -> None:
     mgr = SkillManager()
     _seed_run(

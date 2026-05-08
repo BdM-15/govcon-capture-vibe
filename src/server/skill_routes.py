@@ -154,6 +154,13 @@ def _skill_response_payload(
     }
 
 
+def _project_chain_payload(mgr: Any, payload: dict[str, Any]) -> dict[str, Any]:
+    projector = getattr(mgr, "project_chain_run", None)
+    if callable(projector):
+        return projector(payload)
+    return payload
+
+
 def register_skill_catalog_ui_routes(
     app: FastAPI,
     *,
@@ -427,6 +434,7 @@ def register_skill_invoke_ui_routes(
         """Body for chain rerun/resume routes."""
 
         from_step_id: str = Field("", max_length=64)
+        user_addendum: str = Field("", max_length=8000)
         max_entities_per_type: int = Field(
             default_factory=_default_max_entities_per_type,
             ge=1,
@@ -491,10 +499,11 @@ def register_skill_invoke_ui_routes(
             )
         return skills_by_name
 
-    def _chain_prompt(spec: ChainSpec) -> str:
-        return "\n\n".join(
-            part for part in [spec.prompt, *(step.prompt for step in spec.steps)] if part
-        )
+    def _chain_prompt(spec: ChainSpec, *, user_addendum: str = "") -> str:
+        parts = [spec.prompt, *(step.prompt for step in spec.steps)]
+        if user_addendum.strip():
+            parts.append("User-supplied missing input:\n" + user_addendum.strip())
+        return "\n\n".join(part for part in parts if part)
 
     def _chain_description(skills_by_name: dict[str, Any]) -> str:
         return "\n".join(
@@ -509,8 +518,9 @@ def register_skill_invoke_ui_routes(
         payload: Any,
     ) -> tuple[dict[str, Any], dict[str, Any], Callable[..., dict[str, Any]], Callable[..., Awaitable[dict[str, Any]]]]:
         skills_by_name = _require_chain_skills(mgr, spec)
+        user_addendum = str(getattr(payload, "user_addendum", "") or "").strip()
         retrieval = await _retrieve_relevant_entities_for_skill(
-            prompt=_chain_prompt(spec),
+            prompt=_chain_prompt(spec, user_addendum=user_addendum),
             skill_description=_chain_description(skills_by_name),
             mode=payload.retrieval_mode,
             top_k=payload.retrieval_top_k,
@@ -523,6 +533,8 @@ def register_skill_invoke_ui_routes(
             relevant_entity_names=retrieval["names"] or None,
         )
         context["retrieval_metadata"] = retrieval["metadata"]
+        if user_addendum:
+            context["user_supplied_context"] = {"resume_notes": user_addendum}
 
         def _tools_slice_workspace_entities(
             entity_types: Optional[list[str]],
@@ -715,7 +727,7 @@ def register_skill_invoke_ui_routes(
         return JSONResponse(
             {
                 "workspace": get_settings().workspace,
-                "chain": result.model_dump(),
+                "chain": _project_chain_payload(mgr, result.model_dump()),
                 "retrieval": retrieval,
             }
         )
@@ -781,7 +793,7 @@ def register_skill_invoke_ui_routes(
             {
                 "workspace": get_settings().workspace,
                 "plan": plan.model_dump(),
-                "chain": result.model_dump(),
+                "chain": _project_chain_payload(mgr, result.model_dump()),
                 "retrieval": retrieval,
             }
         )
@@ -818,7 +830,7 @@ def register_skill_invoke_ui_routes(
         return JSONResponse(
             {
                 "workspace": get_settings().workspace,
-                "chain": result.model_dump(),
+                "chain": _project_chain_payload(mgr, result.model_dump()),
                 "retrieval": retrieval,
             }
         )
@@ -841,6 +853,26 @@ def register_skill_invoke_ui_routes(
             state.spec,
             payload,
         )
+        user_addendum = payload.user_addendum.strip()
+        missing_inputs = list(
+            state.input_request.get("missing_inputs") or state.missing_inputs or []
+        )
+        resume_context: dict[str, Any] = {}
+        if user_addendum:
+            resume_context["resume_notes"] = user_addendum
+        if missing_inputs:
+            resume_context["missing_inputs"] = missing_inputs
+        resume_step_id = (
+            payload.from_step_id
+            or str(state.input_request.get("resume_step_id") or "").strip()
+        )
+        if resume_step_id:
+            resume_context["resume_step_id"] = resume_step_id
+        if resume_context:
+            context["user_supplied_context"] = {
+                **(context.get("user_supplied_context") or {}),
+                **resume_context,
+            }
         try:
             result = await mgr.resume_chain(
                 state,
@@ -850,13 +882,14 @@ def register_skill_invoke_ui_routes(
                 slice_fn=slice_fn,
                 retrieve_fn=retrieve_fn,
                 from_step_id=payload.from_step_id,
+                resume_notes=user_addendum,
             )
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
         return JSONResponse(
             {
                 "workspace": get_settings().workspace,
-                "chain": result.model_dump(),
+                "chain": _project_chain_payload(mgr, result.model_dump()),
                 "retrieval": retrieval,
             }
         )
@@ -866,12 +899,13 @@ def register_skill_run_ui_routes(
     app: FastAPI,
     *,
     workspace_dir: Callable[[], Path],
+    manager_factory: Callable[[], Any] = get_skill_manager,
 ) -> None:
     """Register skill run, artifact, chunk-preview, and Studio endpoints."""
 
     @app.get("/api/ui/skills/{name}/runs", tags=["theseus-ui"])
     async def list_skill_runs_route(name: str, limit: int = 50) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         runs = mgr.list_runs(workspace_dir(), skill_name=name, limit=limit)
         return JSONResponse(
             {
@@ -883,7 +917,7 @@ def register_skill_run_ui_routes(
 
     @app.get("/api/ui/skill-chains", tags=["theseus-ui"])
     async def list_skill_chains_route(limit: int = 50) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         return JSONResponse(
             {
                 "workspace": get_settings().workspace,
@@ -893,15 +927,15 @@ def register_skill_run_ui_routes(
 
     @app.get("/api/ui/skill-chains/{chain_id}", tags=["theseus-ui"])
     async def get_skill_chain_route(chain_id: str) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         chain = mgr.get_chain_run(workspace_dir(), chain_id)
         if chain is None:
             raise HTTPException(404, f"Unknown chain: {chain_id}")
-        return JSONResponse(chain)
+        return JSONResponse(_project_chain_payload(mgr, chain))
 
     @app.get("/api/ui/skills/{name}/runs/trash", tags=["theseus-ui"])
     async def list_skill_run_trash_route(name: str, limit: int = 50) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         runs = mgr.list_trashed_runs(workspace_dir(), skill_name=name, limit=limit)
         return JSONResponse(
             {
@@ -913,7 +947,7 @@ def register_skill_run_ui_routes(
 
     @app.get("/api/ui/skills/{name}/runs/{run_id}", tags=["theseus-ui"])
     async def get_skill_run_route(name: str, run_id: str) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         run = mgr.get_run(workspace_dir(), name, run_id)
         if run is None:
             raise HTTPException(404, f"Unknown run: {name}/{run_id}")
@@ -926,7 +960,7 @@ def register_skill_run_ui_routes(
     async def get_skill_run_reasoning_route(name: str, run_id: str) -> JSONResponse:
         from src.skills.reasoning import build_reasoning_view
 
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         run = mgr.get_run(workspace_dir(), name, run_id)
         if run is None:
             raise HTTPException(404, f"Unknown run: {name}/{run_id}")
@@ -949,7 +983,7 @@ def register_skill_run_ui_routes(
         tags=["theseus-ui"],
     )
     async def rerender_skill_run_artifacts_route(name: str, run_id: str) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         skill = mgr.get_skill(name)
         if skill is None:
             raise HTTPException(404, f"Unknown skill: {name}")
@@ -1038,7 +1072,7 @@ def register_skill_run_ui_routes(
 
     @app.delete("/api/ui/skills/{name}/runs/{run_id}", tags=["theseus-ui"])
     async def delete_skill_run_route(name: str, run_id: str) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         ok = mgr.purge_run(workspace_dir(), name, run_id)
         if not ok:
             raise HTTPException(404, f"Unknown or unsafe run id: {name}/{run_id}")
@@ -1046,7 +1080,7 @@ def register_skill_run_ui_routes(
 
     @app.delete("/api/ui/skills/{name}/runs/trash", tags=["theseus-ui"])
     async def empty_skill_run_trash_route(name: str) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         result = mgr.purge_trashed_runs(workspace_dir(), skill_name=name)
         return JSONResponse(
             {
@@ -1058,7 +1092,7 @@ def register_skill_run_ui_routes(
 
     @app.post("/api/ui/skills/{name}/runs/trash/restore", tags=["theseus-ui"])
     async def restore_skill_run_route(name: str, payload: dict[str, Any]) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         trash_ids = [
             str(item.get("trash_id") or "")
             for item in (payload.get("runs") or [])
@@ -1088,7 +1122,7 @@ def register_skill_run_ui_routes(
         run_id: str,
         filename: str,
     ) -> FileResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         path = mgr.get_artifact_path(workspace_dir(), name, run_id, filename)
         if path is None:
             raise HTTPException(404, f"Artifact not found: {name}/{run_id}/{filename}")
@@ -1100,7 +1134,7 @@ def register_skill_run_ui_routes(
 
     @app.get("/api/ui/studio", tags=["theseus-ui"])
     async def list_studio_deliverables_route(limit: int = 500) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         deliverables = await asyncio.to_thread(
             mgr.list_deliverables,
             workspace_dir(),
@@ -1116,7 +1150,7 @@ def register_skill_run_ui_routes(
 
     @app.get("/api/ui/studio/trash", tags=["theseus-ui"])
     async def list_studio_trash_route(limit: int = 200) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         artifacts = await asyncio.to_thread(
             mgr.list_trashed_artifacts,
             workspace_dir(),
@@ -1134,7 +1168,7 @@ def register_skill_run_ui_routes(
     async def zip_studio_artifacts_route(
         payload: StudioArtifactZipPayload = Body(...),
     ) -> Response:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         refs = [item.model_dump() for item in payload.artifacts]
 
         def _build_zip() -> tuple[bytes, list[dict[str, str]], list[dict[str, str]]]:
@@ -1193,7 +1227,7 @@ def register_skill_run_ui_routes(
     async def delete_studio_artifacts_route(
         payload: StudioArtifactDeletePayload = Body(...),
     ) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         result = await asyncio.to_thread(
             mgr.trash_artifacts,
             workspace_dir(),
@@ -1212,7 +1246,7 @@ def register_skill_run_ui_routes(
     async def restore_studio_artifacts_route(
         payload: StudioTrashRestorePayload = Body(...),
     ) -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         result = await asyncio.to_thread(
             mgr.restore_trashed_artifacts,
             workspace_dir(),
@@ -1231,7 +1265,7 @@ def register_skill_run_ui_routes(
 
     @app.delete("/api/ui/studio/trash", tags=["theseus-ui"])
     async def empty_studio_trash_route() -> JSONResponse:
-        mgr = get_skill_manager()
+        mgr = manager_factory()
         result = await asyncio.to_thread(
             mgr.purge_trashed_artifacts,
             workspace_dir(),
@@ -1274,7 +1308,11 @@ def register_skill_ui_routes(
         workspace_name=current_workspace,
         manager_factory=get_skill_manager,
     )
-    register_skill_run_ui_routes(app, workspace_dir=workspace_dir)
+    register_skill_run_ui_routes(
+        app,
+        workspace_dir=workspace_dir,
+        manager_factory=get_skill_manager,
+    )
 
 
 __all__ = [

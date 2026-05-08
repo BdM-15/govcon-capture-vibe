@@ -7,6 +7,7 @@ _ROOT = Path(__file__).parent.parent
 _INDEX_HTML = _ROOT / "src" / "ui" / "static" / "index.html"
 _UI_STATIC_ROOT = _ROOT / "src" / "ui" / "static"
 _PREVIEW_HELPERS = _ROOT / "src" / "ui" / "static" / "app" / "theseus-preview-helpers.js"
+_CHAIN_HELPERS = _ROOT / "src" / "ui" / "static" / "app" / "theseus-chain-helpers.js"
 _BANNED_MOJIBAKE = (
     "Î",
     "Â",
@@ -110,6 +111,7 @@ def test_studio_filter_bar_exposes_grouping_control() -> None:
     source = _INDEX_HTML.read_text(encoding="utf-8")
 
     assert 'x-model="studio.groupBy"' in source
+    assert '<option value="chain">Chain</option>' in source
     assert '<option value="skill">Skill</option>' in source
     assert '<option value="run">Run</option>' in source
     assert '<option value="date">Date</option>' in source
@@ -134,3 +136,59 @@ def test_skills_expose_run_trash_and_restore_action() -> None:
     assert "Run trash empty." in source
     assert '@click="toggleSkillRunTrash()"' in source
     assert '@click="restoreSkillRun(skills.current?.name, run.trash_id)"' in source
+
+
+def test_studio_chain_trace_exposes_resume_action_for_resumeable_chain() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+    helpers = _CHAIN_HELPERS.read_text(encoding="utf-8")
+
+    assert 'x-show="chainCanResume(chains.current)"' in source
+    assert '@click="resumeChain(chains.current.chain_id)"' in source
+    assert 'x-show="primaryChain(row.deliverable)?.can_resume"' in source
+    assert '@click="resumeStudioChain(row.deliverable)"' in source
+    assert "window.theseusChainCanResume" in helpers
+    assert "window.theseusResumeStudioChain" in helpers
+
+
+def test_chain_trace_exposes_missing_input_resume_panel() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+    helpers = _CHAIN_HELPERS.read_text(encoding="utf-8")
+
+    assert 'x-show="chainInputRequest(chains.current)"' in source
+    assert 'id="chain-input-request-panel-template"' in source
+    assert 'x-init="mountChainInputPanel($el)"' in source
+    assert 'x-model="chains.resumeDrafts[chains.current.chain_id]"' in source
+    assert ':placeholder="chainResumePlaceholder(chains.current)"' in source
+    assert "window.theseusChainInputRequest" in helpers
+    assert "window.theseusChainResumePlaceholder" in helpers
+    assert "window.theseusMountChainInputPanel" in helpers
+
+
+def test_chain_trace_missing_input_panel_reuses_chat_like_composer_language() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+    helpers = _CHAIN_HELPERS.read_text(encoding="utf-8")
+
+    first_panel_start = source.index('id="chain-input-request-panel-template"')
+    first_panel_end = source.rindex('</template>')
+    panel_slice = source[first_panel_start:first_panel_end]
+
+    assert "bubble-assistant" in panel_slice
+    assert "bubble-user" in panel_slice
+    assert "composer-bar" in panel_slice
+    assert "Reply to unblock this chain" in panel_slice
+    assert "send-horizontal" in panel_slice
+    assert "Reply in the Missing Input composer, then click Resume." in helpers
+    assert source.count("Reply to unblock this chain") == 1
+    assert source.count('x-init="mountChainInputPanel($el)"') == 2
+
+
+def test_chain_helpers_support_partial_status_and_chain_grouping() -> None:
+    preview_helpers = _PREVIEW_HELPERS.read_text(encoding="utf-8")
+    chain_helpers = _CHAIN_HELPERS.read_text(encoding="utf-8")
+
+    assert 'if (status === "partial")' in chain_helpers
+    assert 'if (typeof chain.can_resume === "boolean") return chain.can_resume;' in chain_helpers
+    assert '["failed", "partial", "skipped", "pending", "running"]' in chain_helpers
+    assert 'if (mode === "chain")' in preview_helpers
+    assert 'metaPrefix: "Chain · " + (chain.status || "unknown")' in preview_helpers
+    assert 'metaPrefix: "Single run · " + skill' in preview_helpers

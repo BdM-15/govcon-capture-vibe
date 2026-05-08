@@ -968,6 +968,23 @@ window.theseusStudioGroupDescriptor = function theseusStudioGroupDescriptor(
   deliverable,
   mode,
 ) {
+  if (mode === "chain") {
+    const chain = window.theseusPrimaryChain(deliverable);
+    if (chain?.chain_id) {
+      return {
+        key: "chain/" + chain.chain_id,
+        title: chain.name || chain.chain_id,
+        metaPrefix: "Chain · " + (chain.status || "unknown"),
+      };
+    }
+    const skill = deliverable.skill || "unknown-skill";
+    const runId = deliverable.run_id || "unknown-run";
+    return {
+      key: "single/" + skill + "/" + runId,
+      title: runId,
+      metaPrefix: "Single run · " + skill,
+    };
+  }
   if (mode === "skill") {
     const skill = deliverable.skill || "unknown-skill";
     return {

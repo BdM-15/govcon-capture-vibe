@@ -33,6 +33,9 @@ window.theseusOpenChain = async function theseusOpenChain(
       "/api/ui/skill-chains/" + encodeURIComponent(chainId),
     );
     app.chains.current = response;
+    if (typeof app.chains.resumeDrafts?.[chainId] !== "string") {
+      app.chains.resumeDrafts[chainId] = "";
+    }
     if (options.activate !== false) app.active = "chains";
   } catch (error) {
     app.toast("Chain load failed: " + (error?.message || error), "error");
@@ -57,10 +60,16 @@ window.theseusChainSteps = function theseusChainSteps(chain) {
 };
 
 window.theseusChainStatusClass = function theseusChainStatusClass(status) {
-  if (status === "completed") return "text-neon-lime border-neon-lime/40 bg-neon-lime/10";
-  if (status === "running") return "text-neon-cyan border-neon-cyan/40 bg-neon-cyan/10";
-  if (status === "failed") return "text-neon-red border-neon-red/40 bg-neon-red/10";
-  if (status === "skipped") return "text-neon-amber border-neon-amber/40 bg-neon-amber/10";
+  if (status === "completed")
+    return "text-neon-lime border-neon-lime/40 bg-neon-lime/10";
+  if (status === "partial")
+    return "text-neon-amber border-neon-amber/40 bg-neon-amber/10";
+  if (status === "running")
+    return "text-neon-cyan border-neon-cyan/40 bg-neon-cyan/10";
+  if (status === "failed")
+    return "text-neon-red border-neon-red/40 bg-neon-red/10";
+  if (status === "skipped")
+    return "text-neon-amber border-neon-amber/40 bg-neon-amber/10";
   return "text-slate-400 border-edge bg-ink-800";
 };
 
@@ -71,17 +80,59 @@ window.theseusChainArtifactCount = function theseusChainArtifactCount(chain) {
 };
 
 window.theseusChainResumeStepId = function theseusChainResumeStepId(chain) {
+  const projected = (chain?.resume_step_id || "").trim();
+  if (projected) return projected;
+  const request = chain?.input_request || null;
+  const requested = (request?.resume_step_id || request?.step_id || "").trim();
+  if (requested) return requested;
   const step = window
     .theseusChainSteps(chain)
-    .find((item) => ["failed", "skipped", "pending", "running"].includes(item.status));
+    .find((item) =>
+      ["failed", "partial", "skipped", "pending", "running"].includes(
+        item.status,
+      ),
+    );
   return step?.id || "";
 };
 
 window.theseusChainCanResume = function theseusChainCanResume(chain) {
-  if (!chain || chain.status === "running" || chain.status === "completed") return false;
-  if (chain.resume_step_id) return true;
-  if (chain.can_resume === false) return false;
+  if (!chain || chain.status === "running" || chain.status === "completed")
+    return false;
+  if (typeof chain.can_resume === "boolean") return chain.can_resume;
   return !!window.theseusChainResumeStepId(chain);
+};
+
+window.theseusChainInputRequest = function theseusChainInputRequest(chain) {
+  const request = chain?.input_request;
+  return request && request.needed ? request : null;
+};
+
+window.theseusChainResumePlaceholder =
+  function theseusChainResumePlaceholder(chain) {
+    const request = window.theseusChainInputRequest(chain);
+    const missing = (request?.missing_inputs || []).join("\n- ");
+    if (!missing) {
+      return "Add the missing facts you now have, then click Resume.";
+    }
+    return "Provide the missing facts to unblock this chain:\n- " + missing;
+  };
+
+window.theseusMountChainInputPanel = function theseusMountChainInputPanel(
+  app,
+  host,
+) {
+  if (!host || host.dataset.chainInputMounted === "true") return;
+  const template = document.getElementById("chain-input-request-panel-template");
+  if (!template?.content) return;
+  host.replaceChildren(template.content.cloneNode(true));
+  host.dataset.chainInputMounted = "true";
+  if (window.Alpine?.initTree) {
+    window.Alpine.initTree(host);
+  }
+  if (window.lucide?.createIcons) {
+    window.lucide.createIcons();
+  }
+  window.theseusAfterRender(app);
 };
 
 window.theseusPrimaryChain = function theseusPrimaryChain(deliverable) {
@@ -102,7 +153,9 @@ window.theseusOpenStudioChainTrace = async function theseusOpenStudioChainTrace(
   await window.theseusOpenChain(app, chain.chain_id, { activate: false });
 };
 
-window.theseusCloseStudioChainTrace = function theseusCloseStudioChainTrace(app) {
+window.theseusCloseStudioChainTrace = function theseusCloseStudioChainTrace(
+  app,
+) {
   app.studio.chainTraceOpen = false;
 };
 
@@ -123,10 +176,13 @@ window.theseusResumeStudioChain = async function theseusResumeStudioChain(
   const chain = window.theseusPrimaryChain(deliverable);
   if (!chain?.chain_id) return;
   app.studio.chainTraceOpen = true;
+  await window.theseusOpenChain(app, chain.chain_id, { activate: false });
   await window.theseusResumeChain(app, chain.chain_id);
 };
 
-const theseusStudioChainGoalPayload = function theseusStudioChainGoalPayload(app) {
+const theseusStudioChainGoalPayload = function theseusStudioChainGoalPayload(
+  app,
+) {
   return {
     prompt: app.studio.chainGoal || "",
     outcome: app.studio.chainOutcome || "",
@@ -135,7 +191,9 @@ const theseusStudioChainGoalPayload = function theseusStudioChainGoalPayload(app
   };
 };
 
-window.theseusPlanStudioChainGoal = async function theseusPlanStudioChainGoal(app) {
+window.theseusPlanStudioChainGoal = async function theseusPlanStudioChainGoal(
+  app,
+) {
   if (!app.studio.chainGoal?.trim() || app.studio.chainPlanning) return;
   app.studio.chainPlanning = true;
   app.studio.chainPlanError = null;
@@ -145,7 +203,10 @@ window.theseusPlanStudioChainGoal = async function theseusPlanStudioChainGoal(ap
       body: JSON.stringify(theseusStudioChainGoalPayload(app)),
     });
     app.studio.chainPlan = response.plan;
-    app.toast("Chain planned: " + (response.plan?.spec?.name || "skill-chain"), "ok");
+    app.toast(
+      "Chain planned: " + (response.plan?.spec?.name || "skill-chain"),
+      "ok",
+    );
   } catch (error) {
     app.studio.chainPlan = null;
     app.studio.chainPlanError = error?.message || String(error);
@@ -156,7 +217,9 @@ window.theseusPlanStudioChainGoal = async function theseusPlanStudioChainGoal(ap
   }
 };
 
-window.theseusRunStudioChainGoal = async function theseusRunStudioChainGoal(app) {
+window.theseusRunStudioChainGoal = async function theseusRunStudioChainGoal(
+  app,
+) {
   if (!app.studio.chainGoal?.trim() || app.studio.chainRunningGoal) return;
   app.studio.chainRunningGoal = true;
   app.studio.chainPlanError = null;
@@ -211,17 +274,29 @@ window.theseusResumeChain = async function theseusResumeChain(app, chainId) {
   if (!chainId || app.chains.resuming) return;
   app.chains.resuming = chainId;
   try {
-    let chain = app.chains.current?.chain_id === chainId ? app.chains.current : null;
+    let chain =
+      app.chains.current?.chain_id === chainId ? app.chains.current : null;
     if (!chain) {
-      chain = await app.api("/api/ui/skill-chains/" + encodeURIComponent(chainId));
+      chain = await app.api(
+        "/api/ui/skill-chains/" + encodeURIComponent(chainId),
+      );
       app.chains.current = chain;
     }
-    const fromStepId = chain.resume_step_id || window.theseusChainResumeStepId(chain);
+    const fromStepId =
+      chain.resume_step_id || window.theseusChainResumeStepId(chain);
+    const resumeNotes = (app.chains.resumeDrafts?.[chainId] || "").trim();
+    if (window.theseusChainInputRequest(chain) && !resumeNotes) {
+      app.toast("Reply in the Missing Input composer, then click Resume.", "info");
+      return;
+    }
     const response = await app.api(
       "/api/ui/skill-chains/" + encodeURIComponent(chainId) + "/resume",
       {
         method: "POST",
-        body: JSON.stringify({ from_step_id: fromStepId }),
+        body: JSON.stringify({
+          from_step_id: fromStepId,
+          user_addendum: resumeNotes,
+        }),
       },
     );
     app.chains.current = response.chain;
@@ -236,7 +311,10 @@ window.theseusResumeChain = async function theseusResumeChain(app, chainId) {
   }
 };
 
-window.theseusOpenChainStepRun = async function theseusOpenChainStepRun(app, step) {
+window.theseusOpenChainStepRun = async function theseusOpenChainStepRun(
+  app,
+  step,
+) {
   if (!step?.skill || !step?.run_id) return;
   app.studio.chainTraceOpen = false;
   app.active = "skills";

@@ -25,6 +25,7 @@ class ChainArtifactRef(BaseModel):
     skill: str = Field(..., min_length=1, max_length=128)
     run_id: str = Field(..., min_length=1, max_length=128)
     filename: str = Field(..., min_length=1, max_length=255)
+    path: str = ""
     display_name: str = ""
     mime: str = ""
     size: int = 0
@@ -144,13 +145,15 @@ class ChainStepRun(BaseModel):
     model_config = ConfigDict(extra="forbid")
     id: str
     skill: str
-    status: Literal["pending", "running", "completed", "failed", "skipped"] = "pending"
+    status: Literal["pending", "running", "completed", "partial", "failed", "skipped"] = "pending"
     run_id: str = ""
     run_dir: str = ""
     response_preview: str = ""
     warnings: list[str] = Field(default_factory=list)
     input_artifacts: list[ChainArtifactRef] = Field(default_factory=list)
     artifacts: list[dict[str, Any]] = Field(default_factory=list)
+    missing_inputs: list[str] = Field(default_factory=list)
+    missing_outputs: list[str] = Field(default_factory=list)
     started_at: str = ""
     finished_at: str = ""
     elapsed_ms: int = 0
@@ -163,11 +166,16 @@ class ChainRunState(BaseModel):
     model_config = ConfigDict(extra="forbid")
     chain_id: str
     workspace: str
-    status: Literal["pending", "running", "completed", "failed"] = "pending"
+    status: Literal["pending", "running", "completed", "partial", "failed"] = "pending"
     mode: Literal["original", "rerun", "resume"] = "original"
     source_chain_id: str = ""
     spec: ChainSpec
     steps: dict[str, ChainStepRun]
+    promoted_artifacts: list[ChainArtifactRef] = Field(default_factory=list)
+    missing_inputs: list[str] = Field(default_factory=list)
+    missing_outputs: list[str] = Field(default_factory=list)
+    input_request: dict[str, Any] = Field(default_factory=dict)
+    resume_notes: str = ""
     created_at: str = Field(default_factory=utc_now_iso)
     updated_at: str = Field(default_factory=utc_now_iso)
     finished_at: str = ""

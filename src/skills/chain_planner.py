@@ -50,6 +50,28 @@ _OUTPUT_TERMS = {
     "package",
 }
 
+_RENDERER_SKILLS = {"renderers", "huashu-design"}
+_RENDER_INTENT_TERMS = {"render", "convert", "export", "format"}
+_EXISTING_ARTIFACT_TERMS = {
+    "existing",
+    "source",
+    "artifact",
+    "artifacts",
+    "markdown",
+    "md",
+    "json",
+    "html",
+    "docx",
+    "xlsx",
+    "pptx",
+    "pdf",
+    "word",
+    "excel",
+    "workbook",
+    "deck",
+    "slides",
+}
+
 
 class PlannedSkill(BaseModel):
     """One selected or rejected planner candidate."""
@@ -227,10 +249,24 @@ class SkillChainPlanner:
         scores: dict[str, int],
         tokens: set[str],
     ) -> list[str]:
-        targets: list[str] = []
+        matched: list[str] = []
         for name in CONTRACT_REGISTRY.names():
             if name in available and scores.get(name, 0) >= 4:
-                _append_unique(targets, name)
+                _append_unique(matched, name)
+        render_targets = [name for name in matched if _is_renderer_skill(name)]
+        non_render_targets = [name for name in matched if not _is_renderer_skill(name)]
+        targets: list[str]
+        if render_targets and _is_explicit_render_request(tokens):
+            targets = render_targets
+        elif non_render_targets:
+            # Rendering is an append step, not an outcome planner target, when a
+            # content-producing skill already matches the request.
+            targets = non_render_targets
+        elif render_targets:
+            fallback = SkillChainPlanner._best_non_render_match(available, scores)
+            targets = [fallback] if fallback else render_targets
+        else:
+            targets = []
         if _needs_rendering(tokens):
             for name in ["proposal-generator", "price-to-win", "subcontractor-sow-builder"]:
                 if name in available and scores.get(name, 0) >= 4:
@@ -288,6 +324,19 @@ class SkillChainPlanner:
         eligible = [(name, score) for name, score in scores.items() if name in available]
         eligible.sort(key=lambda item: item[1], reverse=True)
         return eligible[0][0] if eligible and eligible[0][1] > 0 else ""
+
+    @staticmethod
+    def _best_non_render_match(
+        available: dict[str, SkillSummary],
+        scores: dict[str, int],
+    ) -> str:
+        eligible = [
+            (name, score)
+            for name, score in scores.items()
+            if name in available and not _is_renderer_skill(name) and score > 0
+        ]
+        eligible.sort(key=lambda item: (-item[1], CONTRACT_REGISTRY.phase_rank(item[0])))
+        return eligible[0][0] if eligible else ""
 
     @staticmethod
     def _prune_disconnected(selected: list[str]) -> list[str]:
@@ -348,6 +397,9 @@ class SkillChainPlanner:
                         "planner_role": _role_for(name),
                         "expected_outcome": outcome or prompt,
                         "quality_gate": _quality_gate(name, outcome or prompt),
+                        "retrieval_focus": _retrieval_focus(name),
+                        "retrieval_query": _retrieval_query(name, prompt, outcome or prompt),
+                        "ask_for_input_when_missing": True,
                     },
                 )
             )
@@ -358,6 +410,8 @@ class SkillChainPlanner:
             context={
                 "planner": "deterministic-skill-chain-planner",
                 "expected_outcome": outcome or prompt,
+                "retrieval_strategy": "step-scoped-hints",
+                "hitl_mode": "resume-after-missing-input",
                 "quality_gates": [
                     {"skill": name, "gate": _quality_gate(name, outcome or prompt)}
                     for name in selected
@@ -408,6 +462,14 @@ def _needs_rendering(tokens: set[str]) -> bool:
     return bool(tokens & _OUTPUT_TERMS)
 
 
+def _is_renderer_skill(skill: str) -> bool:
+    return skill in _RENDERER_SKILLS
+
+
+def _is_explicit_render_request(tokens: set[str]) -> bool:
+    return bool(tokens & _RENDER_INTENT_TERMS) and bool(tokens & _EXISTING_ARTIFACT_TERMS)
+
+
 def _default_upstream(candidate: str, target: str, tokens: set[str]) -> bool:
     return CONTRACT_REGISTRY.default_upstream(candidate, target, tokens)
 
@@ -441,6 +503,36 @@ def _role_for(skill: str) -> str:
 
 def _quality_gate(skill: str, expected_outcome: str) -> str:
     return CONTRACT_REGISTRY.quality_gate(skill, expected_outcome)
+
+
+def _retrieval_focus(skill: str) -> list[str]:
+    contract = CONTRACT_REGISTRY.get(skill)
+    if contract is None:
+        return []
+    focus: list[str] = []
+    seen: set[str] = set()
+    for bucket in (contract.accepts, contract.produces, contract.keywords):
+        for item in sorted(bucket):
+            if item not in seen:
+                seen.add(item)
+                focus.append(item)
+            if len(focus) >= 8:
+                return focus
+    return focus
+
+
+def _retrieval_query(skill: str, prompt: str, expected_outcome: str) -> str:
+    contract = CONTRACT_REGISTRY.get(skill)
+    role = _role_for(skill)
+    focus = ", ".join(_retrieval_focus(skill))
+    if contract is None:
+        return f"{prompt.strip()} Focus on {role}."
+    if focus:
+        return (
+            f"{prompt.strip()} Focus on {role}. Prioritize evidence related to: "
+            f"{focus}. Target outcome: {expected_outcome.strip()}."
+        )
+    return f"{prompt.strip()} Focus on {role}. Target outcome: {expected_outcome.strip()}."
 
 
 def _edge_extensions(
