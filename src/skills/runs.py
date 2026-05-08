@@ -29,6 +29,11 @@ from src.skills.chain_contracts import CONTRACT_REGISTRY
 _SAFE_RUN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")
 _SAFE_CHAIN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")
 _TRASH_SAFE_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[0-9]{6}_[a-z0-9._-]+$")
+_QUESTION_PREFIX = re.compile(r"^q(?:uestion)?\s*\d*\s*[:.)-]\s*(.+)$", re.IGNORECASE)
+
+
+def _normalize_interaction_line(text: str) -> str:
+    return re.sub(r"\s+", " ", str(text or "").strip().strip("*_` ")).strip()
 
 
 def _contract_products(skill_name: str) -> list[str]:
@@ -63,6 +68,30 @@ def _extract_missing_inputs(response: str) -> list[str]:
     if any(marker in str(response or "").lower() for marker in generic_markers):
         return ["See response for exact gaps."]
     return []
+
+
+def _extract_follow_up_question(response: str) -> str:
+    lines = str(response or "").splitlines()
+    for index, raw in enumerate(lines[:40]):
+        line = _normalize_interaction_line(raw)
+        if not line:
+            continue
+        question = ""
+        matched = _QUESTION_PREFIX.match(line)
+        if matched:
+            question = _normalize_interaction_line(matched.group(1))
+        elif line.endswith("?") and len(line) <= 280:
+            question = line
+        if not question or not question.endswith("?"):
+            continue
+        next_nonempty = ""
+        for follow in lines[index + 1 : index + 6]:
+            next_nonempty = _normalize_interaction_line(follow)
+            if next_nonempty:
+                break
+        if matched or next_nonempty.lower().startswith("recommended:"):
+            return question
+    return ""
 
 
 def _extract_missing_outputs(artifacts: list[dict[str, Any]]) -> list[str]:
@@ -121,9 +150,20 @@ def _build_run_input_request(payload: dict[str, Any]) -> dict[str, Any]:
     )
     if explicit:
         return explicit
-    missing_inputs = _extract_missing_inputs(str(payload.get("response") or ""))
+    response = str(payload.get("response") or "")
+    missing_inputs = _extract_missing_inputs(response)
     if not missing_inputs:
-        return {}
+        question = _extract_follow_up_question(response)
+        if not question:
+            return {}
+        return {
+            "needed": True,
+            "kind": "question",
+            "title": "Question",
+            "skill": str(payload.get("skill") or ""),
+            "prompt": question,
+            "missing_inputs": [question],
+        }
     return {
         "needed": True,
         "kind": "missing_input",

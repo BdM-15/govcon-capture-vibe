@@ -136,6 +136,54 @@ def test_project_run_payload_marks_interrupted_run_as_resumeable(tmp_path: Path)
     }
 
 
+def test_project_run_payload_marks_question_run_as_resumeable(tmp_path: Path) -> None:
+    store = SkillRunStore()
+    started = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+
+    run_id, _run_dir = store.persist_legacy_run(
+        workspace_root=tmp_path,
+        skill_name="grill-me-govcon",
+        workspace="demo-ws",
+        user_prompt="Grill me on AFCAP VI",
+        composed_prompt="full prompt",
+        response=(
+            "**Detected Mode: Bid Strategy**\n\n"
+            "**Q1: What's your estimated Pwin threshold for pursuing AFCAP VI, and what specific evidence sets that number?**\n"
+            "*Recommended: 40-50% minimum per standard Bid/No-Bid frameworks.*\n"
+        ),
+        entities_used=[],
+        warnings=[],
+        elapsed_ms=123,
+        started_at=started,
+    )
+
+    listed = store.list_runs(tmp_path, skill_name="grill-me-govcon")
+    assert listed[0]["run_id"] == run_id
+    assert listed[0]["status"] == "interrupted"
+    assert listed[0]["can_resume"] is True
+
+    detail = store.get_run(tmp_path, "grill-me-govcon", run_id)
+    assert detail is not None
+
+    projected = store.project_run_payload(detail)
+
+    assert projected["status"] == "interrupted"
+    assert projected["can_resume"] is True
+    assert projected["missing_inputs"] == [
+        "What's your estimated Pwin threshold for pursuing AFCAP VI, and what specific evidence sets that number?"
+    ]
+    assert projected["input_request"] == {
+        "needed": True,
+        "kind": "question",
+        "title": "Question",
+        "skill": "grill-me-govcon",
+        "prompt": "What's your estimated Pwin threshold for pursuing AFCAP VI, and what specific evidence sets that number?",
+        "missing_inputs": [
+            "What's your estimated Pwin threshold for pursuing AFCAP VI, and what specific evidence sets that number?"
+        ],
+    }
+
+
 def test_get_artifact_path_rejects_unsafe_inputs(tmp_path: Path) -> None:
     store = SkillRunStore()
     started = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
