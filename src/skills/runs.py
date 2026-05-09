@@ -665,6 +665,34 @@ class SkillRunStore:
                 for idx, step in enumerate(spec_steps)
                 if isinstance(step, dict) and step.get("id")
             }
+            grill_links_summary: list[dict[str, Any]] = []
+            for sid, sstep in steps.items():
+                if not isinstance(sstep, dict):
+                    continue
+                if str(sstep.get("skill") or "") != "grill-me":
+                    continue
+                slinks = sstep.get("links") or {}
+                if not isinstance(slinks, dict) or not slinks:
+                    continue
+                reason = str(slinks.get("reason") or "").strip()
+                if not reason:
+                    continue
+                grill_links_summary.append(
+                    {
+                        "step_id": str(sstep.get("id") or sid),
+                        "reason": reason,
+                        "entity_names": [
+                            n
+                            for n in (slinks.get("entity_names") or [])
+                            if isinstance(n, str)
+                        ][:6],
+                        "chunk_ids": [
+                            c
+                            for c in (slinks.get("chunk_ids") or [])
+                            if isinstance(c, str)
+                        ][:6],
+                    }
+                )
             base = {
                 "chain_id": payload.get("chain_id") or chain_dir.name,
                 "name": spec.get("name") or "skill-chain",
@@ -678,6 +706,8 @@ class SkillRunStore:
                 "step_count": payload.get("step_count") or len(spec_steps) or len(steps),
                 "resume_step_id": payload.get("resume_step_id") or "",
                 "can_resume": bool(payload.get("can_resume")),
+                "grill_links": grill_links_summary,
+                "grill_links_count": len(grill_links_summary),
             }
             promoted_keys = {
                 (

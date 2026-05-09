@@ -188,6 +188,76 @@ def test_list_deliverables_attaches_chain_trace(tmp_path: Path) -> None:
     assert rows[0]["chain"]["step_id"] == "ptw"
     assert rows[0]["chain"]["step_count"] == 2
     assert rows[0]["chain"]["can_resume"] is False
+    assert rows[0]["chain"]["grill_links_count"] == 0
+    assert rows[0]["chain"]["grill_links"] == []
+
+
+def test_list_deliverables_surfaces_grill_links_summary_on_chain(tmp_path: Path) -> None:
+    mgr = SkillManager()
+    _seed_run(
+        tmp_path,
+        skill="proposal-generator",
+        run_id="20260509_120000_capture",
+        artifacts={"capture.docx": b"docx"},
+        created_at="2026-05-09T12:00:00",
+    )
+    chain_id = "20260509_121500_capture_to_grill"
+    chain_dir = tmp_path / "skill_chains" / chain_id
+    chain_dir.mkdir(parents=True)
+    (chain_dir / "chain.json").write_text(
+        json.dumps(
+            {
+                "chain_id": chain_id,
+                "workspace": "ws",
+                "status": "completed",
+                "mode": "original",
+                "spec": {
+                    "name": "capture-to-grill",
+                    "steps": [
+                        {"id": "capture", "skill": "proposal-generator"},
+                        {"id": "grill", "skill": "grill-me"},
+                    ],
+                },
+                "steps": {
+                    "capture": {
+                        "id": "capture",
+                        "skill": "proposal-generator",
+                        "run_id": "20260509_120000_capture",
+                        "status": "completed",
+                        "artifacts": [{"name": "capture.docx"}],
+                    },
+                    "grill": {
+                        "id": "grill",
+                        "skill": "grill-me",
+                        "run_id": "20260509_120100_grill",
+                        "status": "completed",
+                        "links": {
+                            "reason": "Strong wiki/workspace-link signal matched.",
+                            "query": "Need connect workload spike to Appendix H.",
+                            "entity_names": ["Appendix H", "Staffing Model"],
+                            "chunk_ids": ["chunk-2"],
+                            "used": True,
+                        },
+                    },
+                },
+                "created_at": "2026-05-09T12:15:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = mgr.list_deliverables(tmp_path)
+
+    assert rows[0]["chain"]["grill_links_count"] == 1
+    summary = rows[0]["chain"]["grill_links"]
+    assert summary == [
+        {
+            "step_id": "grill",
+            "reason": "Strong wiki/workspace-link signal matched.",
+            "entity_names": ["Appendix H", "Staffing Model"],
+            "chunk_ids": ["chunk-2"],
+        }
+    ]
 
 
 def test_project_chain_payload_exposes_resume_fields_for_detail_views(tmp_path: Path) -> None:
