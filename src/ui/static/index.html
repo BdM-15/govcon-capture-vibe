@@ -556,16 +556,17 @@
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.8fr)] gap-4 mb-5">
-              <div class="card card-accent accent-cyan p-5">
+              <div class="card card-accent accent-cyan p-5" data-testid="ariadne-opportunity-cards">
                 <div class="flex items-center justify-between gap-3 mb-4">
                   <div>
                     <h2 class="font-semibold flex items-center gap-2">
                       <i data-lucide="briefcase" class="w-4 h-4 text-neon-cyan"></i>
-                      Opportunity Portfolio
+                      Opportunity Cards
                     </h2>
                     <div class="text-xs text-slate-500 mt-1">
                       Active workspace:
                       <span class="text-neon-cyan font-mono" x-text="stats.workspace || 'none'"></span>
+                      · PWin / gate / readiness arrive in 174.6.
                     </div>
                   </div>
                   <button class="btn btn-ghost text-xs border border-edge" @click="loadAriadne()" :disabled="ariadne.loading">
@@ -574,36 +575,67 @@
                   </button>
                 </div>
 
-                <div x-show="!ariadneWorkspaceRows().length" class="text-xs font-mono text-slate-600 py-8 text-center">
-                  No opportunity workspaces found.
+                <div x-show="!ariadneOpportunityCards().length" class="text-xs font-mono text-slate-600 py-8 text-center">
+                  No opportunity workspaces yet.
                 </div>
 
-                <div class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-                  <template x-for="row in ariadneWorkspaceRows()" :key="row.name">
-                    <div class="rounded-lg border bg-ink-900/60 p-3 transition" :class="row.is_active ? 'border-neon-cyan/60 shadow-glow' : 'border-edge hover:border-neon-cyan/35'">
-                      <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0 flex-1">
-                          <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-sm font-semibold text-slate-100 truncate" x-text="row.name"></span>
-                            <span x-show="row.is_active" class="pill bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30">active</span>
-                            <span class="pill border text-[10px]" :class="ariadneStageClass(row)" x-text="ariadneStage(row)"></span>
-                          </div>
-                          <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mt-3 text-[11px] font-mono">
-                            <div><span class="text-slate-600">docs</span> <span class="text-slate-300" x-text="row.documents || 0"></span></div>
-                            <div><span class="text-slate-600">entities</span> <span class="text-slate-300" x-text="row.entities || 0"></span></div>
-                            <div><span class="text-slate-600">kg</span> <span class="text-slate-300" x-text="row.neo4j_nodes || 0"></span></div>
-                            <div><span class="text-slate-600">inputs</span> <span class="text-slate-300" x-text="row.inputs_files || 0"></span></div>
-                            <div><span class="text-slate-600">storage</span> <span class="text-slate-300" x-text="row.storage_mb == null ? 'n/a' : row.storage_mb + ' MB'"></span></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[480px] overflow-y-auto pr-1">
+                  <template x-for="card in ariadneOpportunityCards()" :key="card.name">
+                    <div class="rounded-lg border bg-ink-900/60 p-3 transition flex flex-col gap-2.5"
+                         :class="card.is_active ? 'border-neon-cyan/60 shadow-glow' : 'border-edge hover:border-neon-cyan/35'">
+                      <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                          <div class="text-sm font-semibold text-slate-100 truncate" x-text="card.name"></div>
+                          <div class="text-[10px] font-mono text-slate-600 mt-0.5">
+                            agency: <span class="text-slate-500">— (174.6)</span>
                           </div>
                         </div>
-                        <div class="flex flex-col gap-1.5 shrink-0">
-                          <button class="studio-action" title="Activate workspace" @click="activateAriadneWorkspace(row.name)">
-                            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
-                          </button>
-                          <button class="studio-action" title="Open workspace intelligence" @click="row.is_active ? active='intel' : activateAriadneWorkspace(row.name)">
-                            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
-                          </button>
+                        <span class="pill border text-[10px] shrink-0" :class="card.stage_class" x-text="card.stage"></span>
+                      </div>
+
+                      <div class="grid grid-cols-3 gap-2 text-[11px] font-mono">
+                        <div>
+                          <div class="text-slate-600">PWin</div>
+                          <div class="text-slate-500">— <span class="text-[9px]">soon</span></div>
                         </div>
+                        <div>
+                          <div class="text-slate-600">gate</div>
+                          <div class="text-slate-500">— <span class="text-[9px]">soon</span></div>
+                        </div>
+                        <div>
+                          <div class="text-slate-600">intel</div>
+                          <div :class="card.intel_age_days === null ? 'text-slate-500' : (card.intel_age_days > 14 ? 'text-neon-magenta' : 'text-slate-300')"
+                               x-text="card.intel_age_days === null ? 'none' : card.intel_age_days + 'd ago'"></div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div class="text-[10px] uppercase tracking-[0.14em] font-mono text-slate-600 mb-1">readiness · 7-axis (174.6)</div>
+                        <div class="grid grid-cols-7 gap-1">
+                          <template x-for="bar in card.readiness" :key="bar.dim">
+                            <div class="h-1.5 rounded-sm bg-ink-800 border border-edge" :title="bar.dim"></div>
+                          </template>
+                        </div>
+                      </div>
+
+                      <div x-show="card.top_blocker" class="rounded border border-neon-amber/30 bg-neon-amber/5 px-2 py-1.5 text-[11px] text-neon-amber">
+                        <span class="font-mono text-[9px] uppercase tracking-[0.14em] mr-1" x-text="card.top_blocker?.kind"></span>
+                        <span x-text="card.top_blocker?.detail"></span>
+                      </div>
+                      <div x-show="!card.top_blocker" class="text-[11px] text-slate-600 font-mono">No blockers detected.</div>
+
+                      <div class="flex gap-1.5 mt-auto">
+                        <button class="studio-action flex-1 justify-center" title="Activate workspace" @click="activateAriadneWorkspace(card.name)">
+                          <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+                          <span class="text-[10px] ml-1">Open</span>
+                        </button>
+                        <button x-show="card.next_action"
+                                class="studio-action flex-1 justify-center bg-neon-cyan/10 border-neon-cyan/40 text-neon-cyan"
+                                :title="card.next_action?.detail"
+                                @click="activateAriadneWorkspace(card.name)">
+                          <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                          <span class="text-[10px] ml-1" x-text="card.next_action?.cta"></span>
+                        </button>
                       </div>
                     </div>
                   </template>
@@ -752,6 +784,44 @@
                     </ul>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Stage Board (174.4b slice 3): Shipley 6-column pursuit board -->
+            <div class="card card-accent accent-magenta p-5 mb-5" data-testid="ariadne-stage-board">
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 class="font-semibold flex items-center gap-2">
+                    <i data-lucide="kanban" class="w-4 h-4 text-neon-magenta"></i>
+                    Stage Board
+                  </h2>
+                  <div class="text-xs text-slate-500 mt-1">
+                    Identify → Qualify → Capture → Proposal → Submitted → Award.
+                    Heuristic placement until 174.6 adds <span class="font-mono text-slate-400">pursuit.stage</span>.
+                  </div>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+                <template x-for="col in ariadneStageBoard()" :key="col.id">
+                  <div class="rounded-lg border border-edge bg-ink-900/40 p-2.5 min-h-[140px] flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                      <span class="text-[11px] uppercase tracking-[0.16em] font-mono" :class="'text-neon-' + col.accent" x-text="col.label"></span>
+                      <span class="pill border border-edge text-[9px] text-slate-500" x-text="col.cards.length"></span>
+                    </div>
+                    <div x-show="!col.cards.length" class="text-[10px] font-mono text-slate-700 text-center py-3">
+                      empty
+                    </div>
+                    <div class="space-y-1.5">
+                      <template x-for="card in col.cards" :key="card.name">
+                        <button class="w-full text-left rounded border border-edge bg-ink-900/60 px-2 py-1.5 hover:border-neon-cyan/40 transition"
+                                @click="activateAriadneWorkspace(card.name)">
+                          <div class="text-[11px] font-semibold text-slate-200 truncate" x-text="card.name"></div>
+                          <div class="text-[9px] font-mono text-slate-600" x-text="card.counts.documents + ' docs · ' + card.counts.entities + ' ents'"></div>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </template>
               </div>
             </div>
 

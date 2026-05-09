@@ -299,6 +299,92 @@ window.theseusAriadneActionQueue = function theseusAriadneActionQueue(app, limit
   return actions.slice(0, limit);
 };
 
+// Opportunity Card (174.4b slice 3): per-pursuit summary card.
+// Today: name + heuristic phase + derivable blocker + intel age.
+// 174.6: agency, PWin + confidence + trend, gate_due, 7 readiness bars,
+// proposal_due — all read from `pursuits/<slug>/00_pursuit.yaml`.
+const ARIADNE_READINESS_DIMS = [
+  "customer",
+  "compete",
+  "solution",
+  "team",
+  "price",
+  "compliance",
+  "proposal",
+];
+
+window.theseusAriadneOpportunityCards = function theseusAriadneOpportunityCards(app) {
+  const rows = window.theseusAriadneWorkspaceRows(app);
+  const queue = window.theseusAriadneActionQueue(app, 99);
+  const intel = theseusAriadneBucket(app, "intel");
+
+  return rows.map((row) => {
+    const blocker = queue.find((action) => action.workspace === row.name);
+    const intelForRow = intel.filter((entry) => {
+      const tags = (entry.frontmatter?.tags || []).map((tag) => String(tag).toLowerCase());
+      const path = String(entry.path || "").toLowerCase();
+      return tags.includes(row.name.toLowerCase()) || path.includes(row.name.toLowerCase());
+    });
+    const lastIntelTs = intelForRow.reduce(
+      (max, entry) => Math.max(max, entry.modified_at || 0),
+      0,
+    );
+    const intelAgeDays = lastIntelTs
+      ? Math.floor((theseusAriadneNowSec() - lastIntelTs) / ARIADNE_DAY_SECONDS)
+      : null;
+
+    return {
+      name: row.name,
+      is_active: row.is_active,
+      stage: window.theseusAriadneStage(row),
+      stage_class: window.theseusAriadneStageClass(row),
+      agency: null, // 174.6
+      pwin: null, // 174.6
+      pwin_trend: null, // 174.6
+      gate_due: null, // 174.6
+      proposal_due: null, // 174.6
+      top_blocker: blocker
+        ? { kind: blocker.kind, detail: blocker.detail, cta: blocker.cta }
+        : null,
+      intel_age_days: intelAgeDays,
+      readiness: ARIADNE_READINESS_DIMS.map((dim) => ({ dim, score: null })),
+      next_action: blocker || null,
+      counts: {
+        documents: row.documents || 0,
+        entities: row.entities || 0,
+        inputs: row.inputs_files || 0,
+      },
+    };
+  });
+};
+
+// Stage Board (174.4b slice 3): six-column Shipley-aligned board.
+// Today: heuristic stage placement off ingest/extraction state.
+// 174.6: real placement from pursuit.stage in 00_pursuit.yaml.
+const ARIADNE_STAGES = [
+  { id: "identify", label: "Identify", accent: "amber" },
+  { id: "qualify", label: "Qualify", accent: "amber" },
+  { id: "capture", label: "Capture", accent: "cyan" },
+  { id: "proposal", label: "Proposal", accent: "magenta" },
+  { id: "submitted", label: "Submitted", accent: "lime" },
+  { id: "award", label: "Award", accent: "lime" },
+];
+
+window.theseusAriadneStageBoard = function theseusAriadneStageBoard(app) {
+  const cards = window.theseusAriadneOpportunityCards(app);
+  const placement = (card) => {
+    if (card.stage === "intake") return "identify";
+    if (card.stage === "staged") return "qualify";
+    if (card.stage === "processing") return "capture";
+    if (card.stage === "knowledge-ready") return "capture";
+    return "identify";
+  };
+  return ARIADNE_STAGES.map((stage) => ({
+    ...stage,
+    cards: cards.filter((card) => placement(card) === stage.id),
+  }));
+};
+
 window.theseusAriadnePromoteOptions = function theseusAriadnePromoteOptions(app) {
   return window.theseusAriadneWorkspaceRows(app).map((row) => row.name);
 };

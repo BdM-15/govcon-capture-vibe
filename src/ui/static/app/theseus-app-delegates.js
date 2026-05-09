@@ -40,6 +40,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusAriadneActionQueue(this, limit);
     },
 
+    ariadneOpportunityCards() {
+      return window.theseusAriadneOpportunityCards(this);
+    },
+
+    ariadneStageBoard() {
+      return window.theseusAriadneStageBoard(this);
+    },
+
     ariadnePromoteOptions() {
       return window.theseusAriadnePromoteOptions(this);
     },
