@@ -1,6 +1,6 @@
 ---
 name: improve-codebase-architecture
-description: "**Developer tool — for Theseus contributors only. Not a govcon platform skill; does not query the KG or RFP workspace.**\nSurfaces architectural friction in the Theseus codebase and proposes deepening opportunities — refactors that turn shallow pass-through modules into deep, high-leverage ones. USE WHEN the user asks to \"improve the architecture,\" \"find refactoring opportunities,\" \"identify shallow modules,\" \"make this easier to test,\" \"consolidate tightly-coupled files,\" or asks what to clean up or how to improve the codebase structure. Also triggers on \"this is too hard to navigate,\" \"too many small files,\" \"where should I start refactoring,\" \"this is getting messy,\" or any variant of code quality, coupling, or design within the Theseus repo itself. Reads graphify-out/GRAPH_REPORT.md for a live dependency map, uses domain vocabulary from CONTEXT.md, and records rejected candidates as ADRs so the same ground is never re-litigated. DO NOT USE FOR govcon analysis, RFP review, proposal drafting, or any workspace-query task."
+description: "**Developer tool — for Theseus contributors only. Not a govcon platform skill; does not query the KG or RFP workspace.**\nSurfaces architectural friction in the Theseus codebase and proposes deepening opportunities — refactors that turn shallow pass-through modules into deep, high-leverage ones. USE WHEN the user asks to \"improve the architecture,\" \"find refactoring opportunities,\" \"identify shallow modules,\" \"make this easier to test,\" \"consolidate tightly-coupled files,\" or asks what to clean up or how to improve the codebase structure. Also triggers on \"this is too hard to navigate,\" \"too many small files,\" \"where should I start refactoring,\" \"this is getting messy,\" or any variant of code quality, coupling, or design within the Theseus repo itself. Uses domain vocabulary from CONTEXT.md, and records rejected candidates as ADRs so the same ground is never re-litigated. DO NOT USE FOR govcon analysis, RFP review, proposal drafting, or any workspace-query task."
 license: Apache-2.0
 metadata:
   version: 1.0.0
@@ -44,9 +44,7 @@ This skill is _informed_ by the project's domain model. The domain language give
 
 ### 1. Explore
 
-Read the project's domain glossary (`CONTEXT.md` at repo root if it exists) and any ADRs in `docs/adr/` relevant to the area you're touching first.
-
-Then start with the graphify dependency map — read `graphify-out/GRAPH_REPORT.md` to get the module community structure and coupling clusters. Use it as your structural starting point, then explore organically with `read_file`, `grep_search`, and `semantic_search`. Don't follow rigid heuristics — note where you experience friction:
+Read the project's domain glossary (`CONTEXT.md` at repo root if it exists) and any ADRs in `docs/adr/` relevant to the area you're touching first. Explore organically with `read_file`, `grep_search`, and `semantic_search`. Don't follow rigid heuristics — note where you experience friction:
 
 - Where does understanding one concept require bouncing between many small modules?
 - Where are modules **shallow** — interface nearly as complex as the implementation?
@@ -55,8 +53,6 @@ Then start with the graphify dependency map — read `graphify-out/GRAPH_REPORT.
 - Which parts of the codebase are untested, or hard to test through their current interface?
 
 Apply the **deletion test** to anything you suspect is shallow: would deleting it concentrate complexity, or just move it? A "yes, concentrates" is the signal you want.
-
-> **Graphify freshness**: if `graphify-out/` is stale or missing, ask the user to run `/graphify .` in Copilot Chat to regenerate before continuing.
 
 ### 2. Present candidates
 
