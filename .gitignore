@@ -1,251 +1,182 @@
-﻿# ============================================================================
-# Python
-# ============================================================================
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
-# PyInstaller
-*.manifest
-*.spec
-
-# Unit test / coverage
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-
-# ============================================================================
-# Virtual Environments
-# ============================================================================
-.env
-.env.local
-.env.*.local
-.venv/
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-pythonenv*/
-
-# ============================================================================
-# IDEs and Editors
-# ============================================================================
-# VSCode
-.vscode/
-*.code-workspace
-
-# Cursor (agent scratch/analysis files)
-.cursor/
-
-# PyCharm / IntelliJ
-.idea/
-*.iml
-*.ipr
-*.iws
-
-# Sublime Text
-*.sublime-project
-*.sublime-workspace
-
-# Vim
-*.swp
-*.swo
-*~
-.vim/
-.netrwhist
-
-# Emacs
-*~
-\#*\#
-.\#*
-
-# ============================================================================
-# Operating Systems
-# ============================================================================
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-._*
-
-# Windows
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
-Desktop.ini
-$RECYCLE.BIN/
-
-# Linux
-.directory
-.Trash-*
-
-# ============================================================================
-# Project-Specific: RAG Storage and Processing
-# ============================================================================
-# Knowledge graph storage (regenerated from RFPs)
-rag_storage/
-rag_storage_*/
-
-# Log files (not used by current code, regenerated if needed)
-logs/*.log
-logs/*.log.*
-
-# Temporary processing files
-*.tmp
-*.temp
-*.bak
-*.backup
-*.swp
-*.cache
-deps-backup-*/
-
-# ============================================================================
-# Project-Specific: Input Documents
-# ============================================================================
-# RFP source documents are staged per-workspace under inputs/<workspace>/
-# by both the WebUI upload endpoints and the /scan-rfp filesystem flow.
-# They may contain sensitive/proprietary data — never commit.
-inputs/*/**
 !inputs/.gitkeep
-
-# Keep empty folders for downstream tooling
 !logs/.gitkeep
 !rag_storage/.gitkeep
-
 # ============================================================================
-# Documentation and Examples
-# ============================================================================
-# Archived documentation (preserved in git)
-# docs/archive/* intentionally tracked
-
-# Jupyter Notebooks
-.ipynb_checkpoints/
-*.ipynb_checkpoints
-
-# ============================================================================
-# External Analysis (Navy MBOS baseline, etc.)
-# ============================================================================
-# User may save analysis results externally
-external_analysis/
-navy_mbos_baseline/
-rfp_analysis_*/
-
-# ============================================================================
-# API Keys and Secrets
-# ============================================================================
-# Environment files (CRITICAL - never commit)
-.env
-.env*
-.env.local
-.env.*.local
-.env.production
-.env.development
-.env.test
-
 # API key files
-*.key
-*.pem
-*.p12
-*.pfx
-secrets/
-credentials/
-
-# ============================================================================
+# API Keys and Secrets
+# Archived documentation (preserved in git)
 # Build and Distribution
-# ============================================================================
+# by both the WebUI upload endpoints and the /scan-rfp filesystem flow.
+# C extensions
+# Compiled Python
+# Cursor (agent scratch/analysis files)
+# Database files
+# Dep snapshots (Phase 3a backups)
+# docs/archive/* intentionally tracked
+# Documentation and Examples
+# E2E harness run logs (developer-machine only)
+# Emacs
+# Environment files (CRITICAL - never commit)
+# External Analysis (Navy MBOS baseline, etc.)
+# Graphify generated graph/wiki output
+# IDEs and Editors
+# Jupyter Notebooks
+# Keep empty folders for downstream tooling
+# Knowledge graph storage (regenerated from RFPs)
+# Large files that shouldn't be tracked
+# Linux
+# Log files (not used by current code, regenerated if needed)
+# macOS
+# Memory dumps
+# Miscellaneous
+# Node (huashu-design renderer toolchain)
+# Operating Systems
+# Project-Specific: Input Documents
+# Project-Specific: RAG Storage and Processing
+# PyCharm / IntelliJ
+# PyInstaller
+# Python
+# RFP source documents are staged per-workspace under inputs/<workspace>/
+# Skill snapshots (skill-creator pre-edit backups)
+# Stray UI test response artifacts (loose at repo root)
+# Sublime Text
+# Temporary processing files
+# Theseus local artifacts
+# They may contain sensitive/proprietary data � never commit.
+# Unit test / coverage
+# User may save analysis results externally
 # UV lock file (tracked, but may be regenerated)
 # uv.lock is tracked for reproducibility
-
-# Compiled Python
-*.pyc
-*.pyo
-*.pyd
-
-# C extensions
-*.so
-*.dll
-*.dylib
-
-# ============================================================================
-# Miscellaneous
-# ============================================================================
-# Large files that shouldn't be tracked
-*.zip
-*.tar.gz
-*.rar
+# Vim
+# Virtual Environments
+# VSCode
+# Windows
+$RECYCLE.BIN/
+*$py.class
 *.7z
-*.iso
-
-# Database files
+*.backup
+*.bak
+*.cache
+*.code-workspace
+*.cover
 *.db
-*.sqlite
-*.sqlite3
-
-# Memory dumps
+*.dll
 *.dmp
 *.dump
-
-# ============================================================================
-# Theseus local artifacts
-# ============================================================================
-docs/Clean_Prompt_Library.xlsx
-tools/_prompt_xlsx_dump.json
-
-# Graphify generated graph/wiki output
-graphify-out/
-
-
-# ============================================================================
-# Node (huashu-design renderer toolchain)
-# ============================================================================
-node_modules/
-package-lock.json
+*.dylib
+*.egg
+*.egg-info/
+*.iml
+*.ipr
+*.ipynb_checkpoints
+*.iso
+*.iws
+*.key
+*.manifest
+*.p12
+*.pem
+*.pfx
+*.py,cover
+*.py[cod]
+*.pyc
+*.pyd
+*.pyo
+*.rar
+*.so
+*.spec
+*.sqlite
+*.sqlite3
+*.sublime-project
+*.sublime-workspace
+*.swo
+*.swp
+*.tar.gz
+*.temp
+*.tmp
+*.zip
+*~
+.\#*
+._*
+.AppleDouble
+.cache
+.coverage
+.coverage.*
+.cursor/
+.directory
+.DS_Store
+.eggs/
+.env
+.env*
+.env.*.local
+.env.development
+.env.local
+.env.production
+.env.test
 .github/skills/huashu-design/node_modules/
-
-# Dep snapshots (Phase 3a backups)
-tools/_dep_snapshots/
-
-# Skill snapshots (skill-creator pre-edit backups)
-tools/_skill_snapshots/
-
-
-# Stray UI test response artifacts (loose at repo root)
+.hypothesis/
+.idea/
+.installed.cfg
+.ipynb_checkpoints/
+.LSOverride
+.netrwhist
+.nox/
+.pytest_cache/
+.Python
+.tox/
+.Trash-*
+.venv/
+.vim/
+.vscode/
 /response.json
-/skill_response.json
 /skill_invocation_response.json
-
-
-# E2E harness run logs (developer-machine only)
-tools/_e2e_runs/
+/skill_response.json
+\#*\#
+__pycache__/
+build/
+coverage.xml
+credentials/
+deps-backup-*/
+Desktop.ini
+develop-eggs/
+dist/
+docs/Clean_Prompt_Library.xlsx
+downloads/
+eggs/
+ehthumbs.db
+ehthumbs_vista.db
+env.bak/
+env/
+external_analysis/
+graphify-out/
+htmlcov/
+inputs/*/**
+lib/
+lib64/
+logs/*.log
+logs/*.log.*
+MANIFEST
+navy_mbos_baseline/
+node_modules/
+nosetests.xml
+package-lock.json
+parts/
+pip-wheel-metadata/
+pythonenv*/
+rag_storage/
+rag_storage_*/
+rfp_analysis_*/
+sdist/
+secrets/
+share/python-wheels/
+Thumbs.db
+Thumbs.db:encryptable
+tools/_dep_snapshots/
 tools/_e2e_run_*.log
+tools/_e2e_runs/
+tools/_prompt_xlsx_dump.json
+tools/_skill_snapshots/
+var/
+venv.bak/
+venv/
+wheels/

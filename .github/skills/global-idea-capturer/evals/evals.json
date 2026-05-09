@@ -1,0 +1,23 @@
+{
+  "skill_name": "global-idea-capturer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Capture this for Theseus: AFCAP6 incumbent likely fielding lower wrap rate than us; need to verify via USAspending obligation trend before pricing.",
+      "expected_output": "Markdown note written under global/inbox/<YYYY-MM-DD>-<slug>.md with Obsidian frontmatter (date, source: capture, tags incl. afcap6 + pricing, status: inbox), body preserves user's text, optional [[wikilinks]] to existing workspace name 'afcap6_drfp_171' if active. No KG mutation. Returns the file path.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Brain dump: 3 ideas for the LLM Wiki structure -- (1) one page per agency we bid into, (2) one page per recurring discriminator, (3) one page per win/loss postmortem theme.",
+      "expected_output": "Single markdown note under global/inbox/ capturing all three ideas as a bulleted list, frontmatter tags include 'llm-wiki' + 'meta', no premature splitting into 3 separate notes (raw inbox is the right tier).",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I just realized the FAR 9.505 OCI sweeper logic should also flag prior-contract relationships through the workload-analyzer's site list. Capture and tag for the active workspace.",
+      "expected_output": "Markdown note in global/inbox/ with frontmatter linking active workspace via 'workspace' field, tags include 'oci-sweeper' + 'workload-analyzer', body includes [[oci-sweeper]] [[workload-analyzer]] wikilinks. Skill must NOT promote to workspace KG -- promotion is an explicit separate user action (174.5 phase-promoter).",
+      "files": []
+    }
+  ]
+}
