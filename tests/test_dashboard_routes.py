@@ -60,6 +60,18 @@ def test_workspace_alias_serves_workbench(tmp_path: Path) -> None:
     assert "workbench" in resp.text
 
 
+def test_dashboard_served_at_ui_path(tmp_path: Path) -> None:
+    """`/ui` and `/ui/` (legacy workbench URL) now serve the Ariadne dashboard."""
+    app = FastAPI()
+    register_dashboard_routes(app, static_dir=_write_static(tmp_path))
+    client = TestClient(app)
+
+    for path in ("/ui", "/ui/"):
+        resp = client.get(path)
+        assert resp.status_code == 200, path
+        assert "ariadne-dashboard" in resp.text, path
+
+
 def test_dashboard_routes_skipped_when_html_missing(tmp_path: Path) -> None:
     app = FastAPI()
     static = tmp_path / "static"
@@ -81,4 +93,6 @@ def test_register_ui_mounts_dashboard() -> None:
 
     paths = {route.path for route in app.routes}
     assert "/" in paths
+    assert "/ui" in paths
+    assert "/ui/" in paths
     assert "/workspace/{name}" in paths

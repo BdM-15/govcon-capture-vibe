@@ -294,7 +294,12 @@ def register_ui(
         restart_func=lambda: _self_restart(),
     )
 
-    # ---- Static SPA at /ui ------------------------------------------------
+    # ---- Static SPA assets at /ui (Ariadne dashboard overrides /ui and /ui/) -
+    # Register dashboard routes FIRST so explicit `/ui` and `/ui/` GET handlers
+    # win over the StaticFiles mount that follows. The mount continues to serve
+    # child assets (styles, js, images) under /ui/<path>.
+    register_dashboard_routes(app, static_dir=_STATIC_DIR)
+
     app.mount(
         "/ui",
         TheseusStaticFiles(directory=str(_STATIC_DIR), html=True),
@@ -308,7 +313,5 @@ def register_ui(
         data_func=data_func,
         llm_func=llm_func,
     )
-
-    register_dashboard_routes(app, static_dir=_STATIC_DIR)
 
     logger.info("✅ Project Theseus UI mounted at /ui (static: %s)", _STATIC_DIR)

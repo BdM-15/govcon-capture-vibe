@@ -47,13 +47,28 @@ def register_dashboard_routes(app: FastAPI, *, static_dir: Path) -> None:
         return
 
     _drop_route(app, "/")
+    _drop_route(app, "/ui")
+    _drop_route(app, "/ui/")
 
     @app.get("/", include_in_schema=False)
     async def _ariadne_root() -> FileResponse:
+        return FileResponse(str(dashboard_html))
+
+    # `/ui` and `/ui/` were the legacy Capture Workbench mount; they now serve
+    # the Ariadne dashboard so existing bookmarks land on the new command center.
+    # The static mount at `/ui` still serves child assets (styles, js, images).
+    @app.get("/ui", include_in_schema=False)
+    async def _ariadne_ui() -> FileResponse:
+        return FileResponse(str(dashboard_html))
+
+    @app.get("/ui/", include_in_schema=False)
+    async def _ariadne_ui_slash() -> FileResponse:
         return FileResponse(str(dashboard_html))
 
     @app.get("/workspace/{name}", include_in_schema=False)
     async def _workspace_view(name: str) -> FileResponse:  # noqa: ARG001 — name surfaced by URL
         return FileResponse(str(workbench_html))
 
-    logger.info("✅ Ariadne dashboard mounted at / (workbench at /workspace/{name})")
+    logger.info(
+        "✅ Ariadne dashboard mounted at / and /ui (workbench at /workspace/{name})"
+    )
