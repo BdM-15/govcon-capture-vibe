@@ -260,6 +260,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusStudioHasChain(deliverable);
     },
 
+    grillRationaleTooltip(source) {
+      return window.theseusGrillRationaleTooltip(source);
+    },
+
     async openStudioChainTrace(deliverable) {
       return window.theseusOpenStudioChainTrace(this, deliverable);
     },

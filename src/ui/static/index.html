@@ -4762,6 +4762,18 @@
                                 x-text="studio.groupBy === 'chain' && studioHasChain(row.group.items[0]) ? 'Open chain' : 'Open run'"
                               ></span>
                             </button>
+                            <button
+                              x-show="studio.groupBy === 'chain' && studioHasChain(row.group.items[0]) && primaryChain(row.group.items[0])?.grill_links_count"
+                              type="button"
+                              class="reasoning-chip border-neon-amber/40 text-neon-amber hover:text-neon-cyan"
+                              :title="grillRationaleTooltip(row.group.items[0])"
+                              @click.stop="openStudioChainTrace(row.group.items[0])"
+                            >
+                              <i data-lucide="brain-circuit" class="w-3 h-3"></i>
+                              <span
+                                x-text="'grill rationale: ' + primaryChain(row.group.items[0]).grill_links_count"
+                              ></span>
+                            </button>
                           </div>
                         </td>
                       </template>
@@ -4811,10 +4823,13 @@
                               type="button"
                               x-show="primaryChain(row.deliverable)?.grill_links_count"
                               class="reasoning-chip border-neon-amber/40 text-neon-amber hover:text-neon-cyan"
-                              :title="(primaryChain(row.deliverable)?.grill_links || []).map(l => l.reason).join(' | ')"
+                              :title="grillRationaleTooltip(row.deliverable)"
                               @click.stop="openStudioChainTrace(row.deliverable)"
                             >
-                              <i data-lucide="brain-circuit" class="w-3 h-3"></i>
+                              <i
+                                data-lucide="brain-circuit"
+                                class="w-3 h-3"
+                              ></i>
                               <span
                                 x-text="'grill rationale: ' + primaryChain(row.deliverable).grill_links_count"
                               ></span>
@@ -4887,6 +4902,15 @@
                             @click="rerunStudioChain(row.deliverable)"
                           >
                             <i data-lucide="repeat-2" class="w-3.5 h-3.5"></i>
+                          </button>
+                          <button
+                            type="button"
+                            x-show="primaryChain(row.deliverable)?.grill_links_count"
+                            class="studio-action text-neon-amber"
+                            :title="'Grill rationale (' + primaryChain(row.deliverable).grill_links_count + ')\n' + grillRationaleTooltip(row.deliverable)"
+                            @click="openStudioChainTrace(row.deliverable)"
+                          >
+                            <i data-lucide="brain-circuit" class="w-3.5 h-3.5"></i>
                           </button>
                           <a
                             :href="studioDownloadHref(row.deliverable)"

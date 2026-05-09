@@ -146,6 +146,27 @@ window.theseusStudioHasChain = function theseusStudioHasChain(deliverable) {
   return !!window.theseusPrimaryChain(deliverable);
 };
 
+window.theseusGrillRationaleTooltip = function theseusGrillRationaleTooltip(
+  source,
+) {
+  const chain =
+    source && source.grill_links !== undefined
+      ? source
+      : window.theseusPrimaryChain(source);
+  const links = (chain && chain.grill_links) || [];
+  if (!links.length) return "";
+  return links
+    .map((link) => {
+      const parts = [String(link.reason || "").trim() || "(no reason)"];
+      const ents = (link.entity_names || []).filter(Boolean);
+      if (ents.length) parts.push("entities: " + ents.join(", "));
+      const chunks = (link.chunk_ids || []).filter(Boolean);
+      if (chunks.length) parts.push("chunks: " + chunks.join(", "));
+      return parts.join(" | ");
+    })
+    .join("\n");
+};
+
 window.theseusOpenStudioChainTrace = async function theseusOpenStudioChainTrace(
   app,
   deliverable,
