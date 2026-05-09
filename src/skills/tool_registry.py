@@ -380,4 +380,32 @@ def build_tool_specs(*, skill_name: str | None = None) -> list[ToolSpec]:
             ]
         )
 
+    if skill_name == "global-idea-capturer":
+        specs.append(
+            ToolSpec(
+                name="write_global_note",
+                description=(
+                    "Persist markdown directly into repo-local global/. Restricted to "
+                    "inbox/, notes/, llm-wiki/, or intel/ buckets. Use this to save the "
+                    "captured note at its real inbox path."
+                ),
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Target path under global/, e.g. 'inbox/2026-05-09-note.md'.",
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Markdown body to persist.",
+                        },
+                    },
+                    "required": ["path", "content"],
+                    "additionalProperties": False,
+                },
+                handler=tool_write_global_note,
+            )
+        )
+
     return specs

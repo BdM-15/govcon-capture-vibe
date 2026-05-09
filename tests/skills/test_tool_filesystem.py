@@ -153,6 +153,13 @@ def test_phase_promoter_tool_specs_include_global_write_tools() -> None:
     assert "write_global_note" not in [spec.name for spec in build_tool_specs(skill_name="price-to-win")]
 
 
+def test_global_idea_capturer_tool_specs_include_direct_global_write() -> None:
+    names = [spec.name for spec in build_tool_specs(skill_name="global-idea-capturer")]
+
+    assert "write_global_note" in names
+    assert "promote_global_note" not in names
+
+
 def test_tool_write_and_read_global_note_round_trip(tmp_path: Path) -> None:
     ctx = _repo_ctx(tmp_path)
     content = "---\nstatus: evergreen\ntags: [meta]\n---\n\nKnowledge note\n"

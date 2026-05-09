@@ -1,12 +1,13 @@
 ---
 name: global-idea-capturer
-description: Captures fleeting govcon thoughts, cross-opportunity insights, brain dumps, and "things I should remember" into the Theseus global inbox as Obsidian-flavored Markdown — the default capture surface for the Ariadne's Thread dashboard. USE WHEN the user says "capture this", "save this for Theseus", "brain dump", "I just realized", "remember this", "for the LLM wiki", "cross-opportunity note", or any variant of recording a thought that is NOT scoped to a single active RFP workspace. Writes to `global/inbox/<YYYY-MM-DD>-<slug>.md` with frontmatter, never mutates a workspace KG, and leaves promotion to a workspace as an explicit separate step (handled by `phase-promoter` in 174.5). DO NOT USE FOR drafting proposal prose (use `proposal-generator`), structured idea exploration without a save target (use the vendored `idea-capturer`), or anything that requires KG writes.
+description: Captures fleeting govcon thoughts, cross-opportunity insights, brain dumps, and "things I should remember" into the Theseus global inbox as Obsidian-flavored Markdown — the default capture surface for the Ariadne's Thread dashboard. USE WHEN the user says "capture this", "save this for Theseus", "brain dump", "I just realized", "remember this", "for the LLM wiki", "cross-opportunity note", or any variant of recording a thought that is NOT scoped to a single active RFP workspace. Writes directly to `global/inbox/<YYYY-MM-DD>-<slug>.md` with frontmatter, never mutates a workspace KG, and leaves promotion to a workspace as an explicit separate step (handled by `phase-promoter` in 174.5). DO NOT USE FOR drafting proposal prose (use `proposal-generator`), structured idea exploration without a save target (use the vendored `idea-capturer`), or anything that requires KG writes.
 metadata:
   developer_only: false
   personas_primary: capture_manager
   personas_secondary: [proposal_manager]
   shipley_phases: []
   capability: meta
+  runtime: tools
   derives_from: idea-capturer
   global_store_target: global/inbox/
 ---
@@ -25,7 +26,7 @@ Default capture surface for Ariadne's Thread. Friction-free writes to `global/in
 3. **Generate the slug.** Derive a 3–6-word kebab-case slug from the first sentence or the dominant noun phrase. Examples: `afcap6-incumbent-wrap-rate`, `llm-wiki-structure-ideas`, `oci-sweeper-prior-contracts`.
 4. **Generate frontmatter** following the contract in [references/frontmatter.md](references/frontmatter.md). Required fields: `date`, `source`, `status`, `tags`. Optional: `workspace`, `wikilinks`, `priority`.
 5. **Compose the note body.** User's text first, verbatim. Then a `## Context` section if the conversation made the trigger obvious (e.g., "captured during pricing review of AFCAP6"). Then `## Wikilinks` listing any `[[skill-name]]` or `[[workspace-name]]` references the user mentioned or you inferred. Do NOT add commentary, "good idea!" framing, or recommendations.
-6. **Write the file.** Path: `global/inbox/<YYYY-MM-DD>-<slug>.md`. Use the `write_file` tool. **Known limitation (until 174.3 lands):** the runtime sandbox confines `write_file` to `<run_dir>/artifacts/`. Until `GlobalStore` + `write_global` tool ship, write to `<run_dir>/artifacts/global-inbox/<YYYY-MM-DD>-<slug>.md` and report both the intended target path and the staged path in the response. The `phase-promoter` chain or the user can move staged files into `global/inbox/` after 174.3.
+6. **Write the file.** Path: `global/inbox/<YYYY-MM-DD>-<slug>.md`. Use `write_global_note` so the note lands at the real inbox path.
 7. **Report.** Single line: `Captured → <path>`. No celebration. No follow-up questions unless the user's text was ambiguous in a way that affects the slug or tags.
 
 ## Anti-patterns (do not do)
@@ -53,7 +54,7 @@ User input:
 
 > Capture this for Theseus: AFCAP6 incumbent likely fielding lower wrap rate than us; need to verify via USAspending obligation trend before pricing.
 
-File written to `<run_dir>/artifacts/global-inbox/2026-05-08-afcap6-incumbent-wrap-rate.md`:
+File written to `global/inbox/2026-05-08-afcap6-incumbent-wrap-rate.md`:
 
 ```markdown
 ---
@@ -80,6 +81,5 @@ Captured during AFCAP6 pricing review. Active workspace: `afcap6_drfp_171`.
 Response:
 
 ```
-Captured → <run_dir>/artifacts/global-inbox/2026-05-08-afcap6-incumbent-wrap-rate.md
-(target after 174.3: global/inbox/2026-05-08-afcap6-incumbent-wrap-rate.md)
+Captured → global/inbox/2026-05-08-afcap6-incumbent-wrap-rate.md
 ```

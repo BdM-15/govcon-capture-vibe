@@ -283,3 +283,60 @@ def test_phase_promoter_tools_mode_smoke_writes_global_and_workspace_targets(tmp
     assert global_note.is_file()
     assert workspace_note.is_file()
     assert workspace_note.read_text(encoding="utf-8") == global_note.read_text(encoding="utf-8")
+
+
+def test_global_idea_capturer_tools_mode_smoke_writes_real_inbox_note(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    catalog = SkillCatalog(
+        skills_dir=repo_root / ".github" / "skills",
+        ledger_path=tmp_path / "skills.json",
+    )
+    skill = catalog.get_skill("global-idea-capturer")
+    assert skill is not None
+
+    workspace_root = tmp_path / "rag_storage" / "demo"
+    workspace_root.mkdir(parents=True)
+    store = SkillRunStore()
+
+    async def fake_tool_loop(**kwargs):
+        ctx = kwargs["ctx"]
+        content = (
+            "---\n"
+            "date: 2026-05-09\n"
+            "source: capture\n"
+            "status: inbox\n"
+            "tags: [meta, pricing]\n"
+            "workspace: demo\n"
+            "---\n\n"
+            "Capture this thought verbatim\n"
+        )
+        await tool_write_global_note(ctx, "inbox/2026-05-09-demo-capture.md", content)
+        return ToolLoopResult(
+            response="Captured -> global/inbox/2026-05-09-demo-capture.md",
+            transcript=[],
+            turns=1,
+            tool_calls=1,
+            finish_reason="stop",
+            usage_total={"total_tokens": 0},
+            warnings=[],
+        )
+
+    result = asyncio.run(
+        run_tools_skill(
+            skill=skill,
+            workspace="demo",
+            user_prompt="Capture this thought.",
+            workspace_root=workspace_root,
+            slice_fn=None,
+            retrieve_fn=None,
+            run_store=store,
+            mcp_registry=object(),
+            touch_invocation=lambda _name: None,
+            run_tool_loop_fn=fake_tool_loop,
+        )
+    )
+
+    inbox_note = tmp_path / "global" / "inbox" / "2026-05-09-demo-capture.md"
+    assert result.skill == "global-idea-capturer"
+    assert inbox_note.is_file()
+    assert "status: inbox" in inbox_note.read_text(encoding="utf-8")

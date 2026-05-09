@@ -195,7 +195,10 @@ class SkillChainPlanner:
         if name not in _EXCLUDED_BY_DEFAULT:
             return True
         name_tokens = _tokens(name)
-        return bool(name_tokens & tokens)
+        if name_tokens & tokens:
+            return True
+        contract = CONTRACT_REGISTRY.get(name)
+        return bool(contract and set(contract.keywords) & tokens)
 
     @staticmethod
     def _score(summary: SkillSummary, tokens: set[str]) -> int:

@@ -188,7 +188,7 @@ _DEFAULT_CONTRACTS = [
         accepts=set(),
         produces={"inbox_note"},
         artifact_extensions=("md",),
-        downstream_skills={"phase-promoter"},
+        downstream_skills={"phase-promoter", "grill-me"},
         phase_rank=5,
         role="capture raw cross-opportunity notes into the global inbox",
         quality_gate="Output must preserve user wording, valid frontmatter, justified tags, and the intended inbox path.",
@@ -197,7 +197,7 @@ _DEFAULT_CONTRACTS = [
         skill="phase-promoter",
         keywords={
             "promote", "promotion", "promoter", "evergreen", "graduate",
-            "processed", "process", "wiki", "workspace", "archive",
+            "processed", "process", "archive",
             "curate", "curation", "durable", "split", "synth",
         },
         accepts={"inbox_note", "processed_note", "evergreen_note"},
@@ -207,6 +207,20 @@ _DEFAULT_CONTRACTS = [
         phase_rank=12,
         role="promote raw captures into processed, evergreen, wiki, and workspace-ready notes",
         quality_gate="Output must preserve provenance, justify each target tier, name intended target paths, and state exact gaps before promotion.",
+    ),
+    SkillChainContract(
+        skill="grill-me",
+        keywords={
+            "connect", "connection", "connections", "link", "links",
+            "wikilink", "wikilinks", "stress", "question", "questions",
+        },
+        accepts={"inbox_note", "processed_note", "evergreen_note", "wiki_seed"},
+        produces={"connection_questions"},
+        artifact_extensions=("md",),
+        downstream_skills=set(),
+        phase_rank=8,
+        role="stress-test captured ideas to surface stronger links and missing branches",
+        quality_gate="Output must ask the next sharp question, explain why the connection matters, and avoid pretending unresolved links are settled.",
     ),
     SkillChainContract(
         skill="competitive-intel",

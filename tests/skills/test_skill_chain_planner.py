@@ -20,6 +20,11 @@ _SKILLS = [
         "capability": "promote",
     },
     {
+        "name": "grill-me",
+        "description": "Stress-test an idea or design one question at a time.",
+        "capability": "meta",
+    },
+    {
         "name": "competitive-intel",
         "description": "Research incumbents, competitors, awards, and obligations.",
         "capability": "research",
@@ -173,6 +178,40 @@ def test_planner_routes_existing_note_promotion_directly_to_phase_promoter() -> 
     assert [step.skill for step in plan.spec.steps] == ["phase-promoter"]
 
 
+def test_planner_infers_capture_to_grill_me_for_wiki_connection_signal() -> None:
+    planner = SkillChainPlanner(_SKILLS)
+
+    plan = planner.plan(
+        prompt="Capture this note and help me find stronger workspace connections and wikilinks.",
+        outcome="Questions that deepen wiki links",
+        include_rendering=False,
+    )
+
+    assert [step.skill for step in plan.spec.steps] == [
+        "global-idea-capturer",
+        "grill-me",
+    ]
+    assert plan.spec.steps[1].depends_on == ["global-idea-capturer"]
+    grill_products = {
+        product
+        for requirement in plan.spec.steps[1].artifact_requirements
+        for product in requirement.products
+    }
+    assert "inbox_note" in grill_products
+
+
+def test_planner_does_not_overtrigger_grill_me_for_plain_wiki_capture() -> None:
+    planner = SkillChainPlanner(_SKILLS)
+
+    plan = planner.plan(
+        prompt="Capture this idea for the global wiki.",
+        outcome="Inbox note",
+        include_rendering=False,
+    )
+
+    assert [step.skill for step in plan.spec.steps] == ["global-idea-capturer"]
+
+
 def test_planner_rejects_no_matching_skill() -> None:
     planner = SkillChainPlanner([])
 
@@ -204,6 +243,15 @@ def test_contract_registry_includes_capture_to_promotion_edge() -> None:
     assert "phase-promoter" in capture.downstream_skills
     assert "inbox_note" in promoter.accepts
     assert CONTRACT_REGISTRY.upstream_skills("phase-promoter") == ("global-idea-capturer",)
+
+
+def test_contract_registry_includes_capture_to_grill_edge() -> None:
+    capture = CONTRACT_REGISTRY.require("global-idea-capturer")
+    grill = CONTRACT_REGISTRY.require("grill-me")
+
+    assert "inbox_note" in grill.accepts
+    assert grill.produces == frozenset({"connection_questions"})
+    assert CONTRACT_REGISTRY.upstream_skills("grill-me") == ("global-idea-capturer",)
 
 
 def test_contract_model_rejects_unknown_top_level_fields() -> None:
