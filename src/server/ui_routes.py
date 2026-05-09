@@ -69,6 +69,7 @@ from src.server.admin_routes import (
     ui_chat_history_pairs,
 )
 from src.server.document_routes import register_processing_log_routes
+from src.server.global_routes import register_global_routes
 from src.server.prompt_library import register_prompt_library_routes
 from src.server.skill_routes import register_skill_ui_routes
 from src.server.workspace_routes import (
@@ -194,6 +195,11 @@ def _register_feature_routes(
 
     register_processing_log_routes(app)
     register_prompt_library_routes(app)
+    register_global_routes(
+        app,
+        workspace_root=context.working_dir,
+        today=lambda: context.now().split("T", 1)[0],
+    )
 
     register_chat_routes(
         app,
