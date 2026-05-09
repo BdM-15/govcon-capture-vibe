@@ -20,10 +20,23 @@ _SAFE_SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 
 
 class SkillCatalog:
-    """Owns discovered skills plus install ledger state."""
+    """Owns discovered skills plus install ledger state.
 
-    def __init__(self, skills_dir: Path, ledger_path: Path) -> None:
+    Skills are discovered from the *primary* ``skills_dir`` (install target,
+    typically ``.github/skills/``) AND from any read-only ``extra_dirs``
+    (typically ``theseus-skills/vendor/``). The primary root wins on name
+    collision so vendored skills can never silently shadow first-party ones;
+    a loud warning is emitted when a collision is suppressed.
+    """
+
+    def __init__(
+        self,
+        skills_dir: Path,
+        ledger_path: Path,
+        extra_dirs: Optional[list[Path]] = None,
+    ) -> None:
         self.skills_dir = skills_dir
+        self.extra_dirs = list(extra_dirs or [])
         self.ledger_path = ledger_path
         self._skills: dict[str, Skill] = {}
         self._ledger: dict[str, dict[str, Any]] = {}
@@ -32,26 +45,40 @@ class SkillCatalog:
     def discover(self) -> dict[str, Skill]:
         self._load_ledger()
         registered: dict[str, Skill] = {}
-        if not self.skills_dir.exists():
-            logger.info("Skills directory missing: %s", self.skills_dir)
-            self._skills = registered
-            return registered
+        # Primary root first so it wins on collision.
+        roots: list[tuple[Path, str]] = [(self.skills_dir, "primary")]
+        roots.extend((d, "vendor") for d in self.extra_dirs)
 
-        for child in sorted(self.skills_dir.iterdir()):
-            if not child.is_dir():
+        for root, label in roots:
+            if not root.exists():
+                logger.info("Skills directory missing (%s): %s", label, root)
                 continue
-            skill_md = child / "SKILL.md"
-            if not skill_md.exists():
-                continue
-            try:
-                skill = self._load_skill(child, skill_md)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Failed to load skill at %s: %s", child, exc)
-                continue
-            registered[skill.name] = skill
+            for child in sorted(root.iterdir()):
+                if not child.is_dir():
+                    continue
+                skill_md = child / "SKILL.md"
+                if not skill_md.exists():
+                    continue
+                try:
+                    skill = self._load_skill(child, skill_md)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("Failed to load skill at %s: %s", child, exc)
+                    continue
+                if skill.name in registered:
+                    existing = registered[skill.name].path
+                    logger.warning(
+                        "Skill name collision: %r already loaded from %s; "
+                        "ignoring %s root copy at %s",
+                        skill.name, existing, label, child,
+                    )
+                    continue
+                registered[skill.name] = skill
 
         self._skills = registered
-        logger.info("Discovered %d agent skills under %s", len(registered), self.skills_dir)
+        logger.info(
+            "Discovered %d agent skills (primary=%s, extra=%s)",
+            len(registered), self.skills_dir, [str(d) for d in self.extra_dirs],
+        )
         return registered
 
     def list_skills(self, include_developer: bool = False) -> list[dict[str, Any]]:

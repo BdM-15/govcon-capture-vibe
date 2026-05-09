@@ -76,6 +76,10 @@ _STUDIO_EXTRA_MIME = STUDIO_EXTRA_MIME
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SKILLS_DIR = _REPO_ROOT / ".github" / "skills"
+# Read-only vendor root for force-multiplier external skills (epic 174).
+# Discovered alongside _SKILLS_DIR; primary root wins on name collision.
+# See theseus-skills/vendor/MANIFEST.yaml for upstream provenance.
+_VENDOR_SKILLS_DIR = _REPO_ROOT / "theseus-skills" / "vendor"
 _PLATFORM_DIR = _REPO_ROOT / "rag_storage" / "_platform"
 _INSTALL_LEDGER = _PLATFORM_DIR / "skills.json"
 
@@ -304,10 +308,23 @@ class SkillManager:
         skills_dir: Path = _SKILLS_DIR,
         ledger_path: Path = _INSTALL_LEDGER,
         mcps_root: Optional[Path] = None,
+        extra_skills_dirs: Optional[list[Path]] = None,
     ) -> None:
         self.skills_dir = skills_dir
         self.ledger_path = ledger_path
-        self._catalog = SkillCatalog(skills_dir=skills_dir, ledger_path=ledger_path)
+        # Default extras: vendor root, but only if the caller didn't override
+        # AND they're using the default primary root. Tests that point
+        # ``skills_dir`` at a tmp path get an empty extras list to stay isolated.
+        if extra_skills_dirs is None:
+            extra_skills_dirs = (
+                [_VENDOR_SKILLS_DIR] if skills_dir == _SKILLS_DIR else []
+            )
+        self.extra_skills_dirs = list(extra_skills_dirs)
+        self._catalog = SkillCatalog(
+            skills_dir=skills_dir,
+            ledger_path=ledger_path,
+            extra_dirs=self.extra_skills_dirs,
+        )
         self._run_store = SkillRunStore()
         # Phase 4a: MCP client subsystem. Lazy-imported so legacy-mode
         # deployments without any MCPs installed pay zero cost.

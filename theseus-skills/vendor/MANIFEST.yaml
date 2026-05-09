@@ -9,32 +9,40 @@
 
 vendored_skills:
   - name: obsidian-markdown
-    status: planned          # planned | vendored | needs-update
+    status: vendored
     upstream:
       repo: https://github.com/kepano/obsidian-skills
       path: skills/obsidian-markdown
-      commit: TBD            # pin exact SHA when vendored
-      license: TBD           # confirm license from repo before vendoring
-    vendored_at: null
-    theseus_adaptations:
-      - "Path remap: skill scripts target global/ and rag_storage/<ws>/evergreen/."
-      - "Frontmatter schema aligned to Theseus note model."
+      commit: ac9398734fe719565809f7a6048b05c36b1ca38f
+      license: MIT
+    vendored_at: 2026-05-08
+    raw_url_template: |
+      https://raw.githubusercontent.com/kepano/obsidian-skills/{commit}/skills/obsidian-markdown/{path}
+    files:
+      - SKILL.md
+      - references/CALLOUTS.md
+      - references/EMBEDS.md
+      - references/PROPERTIES.md
+      - LICENSE
+    theseus_adaptations: []   # verbatim — adaptations tracked in UPSTREAM.md adaptation log
     rationale: |
       Powers Obsidian-flavored MD authoring/rendering across global/ and workspace
-      evergreen layers. Vendoring (not git submodule) keeps single-dev workflow simple.
+      evergreen layers. Vendored verbatim; planned adaptations applied in follow-up
+      commits so diffs against upstream stay auditable. See UPSTREAM.md.
 
   - name: idea-capturer
-    status: planned
+    status: vendored
     upstream:
-      repo: https://github.com/eddiebe147/claude-settings
-      path: skills/idea-capturer
-      commit: TBD
-      license: TBD
-    vendored_at: null
-    theseus_adaptations:
-      - "Default capture dir → global/inbox/."
-      - "Optional local-LLM polish step via src/skills/llm_chat.py."
-      - "Promote-to-workspace handoff calls /api/global/promote."
+      url: https://skills.sh/eddiebe147/claude-settings/idea-capturer
+      author: Eddie Be (@eddiebe147)
+      commit: null            # skills.sh provides no SHA; track by retrieval date
+      license: unstated       # treated as permissive pending author confirmation
+    vendored_at: 2026-05-08
+    files:
+      - SKILL.md
+    theseus_adaptations: []   # vendored copy stays verbatim by design
     rationale: |
-      Source pattern for global-idea-capturer (which lives at .github/skills/
-      global-idea-capturer/ as a Theseus-platform-tier skill, not vendor).
+      Source pattern for the Theseus-platform-tier global-idea-capturer skill
+      (which will live at .github/skills/global-idea-capturer/ after 174.2).
+      The vendored copy is reference-only; all adaptations live in the derivative.
+      See UPSTREAM.md for licensing caveat.
