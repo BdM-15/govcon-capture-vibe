@@ -24,6 +24,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusAriadneMetrics(this);
     },
 
+    ariadneMorningBrief() {
+      return window.theseusAriadneMorningBrief(this);
+    },
+
     ariadneWorkspaceRows() {
       return window.theseusAriadneWorkspaceRows(this);
     },

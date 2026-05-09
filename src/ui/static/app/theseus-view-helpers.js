@@ -1,7 +1,7 @@
 const THESEUS_VIEW_META = {
   dashboard: {
     title: "Ariadne's Thread",
-    subtitle: "global capture command center",
+    subtitle: "5 questions every morning",
   },
   documents: {
     title: "Documents",

@@ -460,15 +460,15 @@
             <div class="flex items-start justify-between gap-5 mb-6 flex-wrap">
               <div class="max-w-4xl">
                 <div class="text-[11px] uppercase tracking-[0.22em] font-mono text-neon-cyan mb-2">
-                  Global Capture Command
+                  Capture Command Center
                 </div>
                 <h1 class="text-4xl font-bold tracking-tight">
                   <span class="h1-gradient">Ariadne's Thread</span>
                 </h1>
                 <p class="text-base text-slate-400 mt-2 max-w-3xl">
-                  Portfolio control across opportunities, workspace knowledge,
-                  capture signals, competitive intel, proposal products, and
-                  decision queues.
+                  Air traffic control for capture — answers the 5 questions
+                  every morning: what changed, what needs action, what is
+                  blocked, what is shifting, what to promote.
                 </p>
               </div>
               <div class="flex gap-2.5 flex-wrap justify-end">
@@ -493,12 +493,16 @@
               x-text="ariadne.error"
             ></div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+            <!-- Command-center KPI strip (174.4b) — 5 morning questions -->
+            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-5" data-testid="ariadne-kpi-strip">
               <template x-for="m in ariadneMetrics()" :key="m.label">
-                <div class="card card-accent p-5" :class="'accent-' + m.accent">
+                <div class="card card-accent p-5" :class="['accent-' + m.accent, m.placeholder ? 'opacity-70' : '']">
                   <div class="flex items-start justify-between gap-3">
                     <div>
-                      <div class="text-[11px] uppercase tracking-[0.18em] font-mono text-slate-500" x-text="m.label"></div>
+                      <div class="text-[11px] uppercase tracking-[0.18em] font-mono text-slate-500 flex items-center gap-1.5">
+                        <span x-text="m.label"></span>
+                        <span x-show="m.placeholder" class="pill border border-edge text-[9px] text-slate-600">soon</span>
+                      </div>
                       <div class="mt-2 text-4xl font-semibold neon-text tabular-nums" :class="m.color" x-text="m.value"></div>
                       <div class="mt-1 text-xs text-slate-500" x-text="m.hint"></div>
                     </div>
@@ -508,6 +512,47 @@
                   </div>
                 </div>
               </template>
+            </div>
+
+            <!-- Morning Brief (174.4b) — answers the 5 questions in narrative form -->
+            <div class="card card-accent accent-cyan p-5 mb-5" data-testid="ariadne-morning-brief">
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 class="font-semibold flex items-center gap-2">
+                    <i data-lucide="sunrise" class="w-4 h-4 text-neon-cyan"></i>
+                    Morning Brief
+                  </h2>
+                  <div class="text-xs text-slate-500 mt-1">
+                    What you would scan with coffee — five lines, then act.
+                  </div>
+                </div>
+                <button class="btn btn-ghost text-xs border border-edge" @click="loadAriadne()" :disabled="ariadne.loading">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5" :class="ariadne.loading ? 'animate-spin' : ''"></i>
+                  Refresh
+                </button>
+              </div>
+              <ul class="space-y-2.5">
+                <template x-for="(item, idx) in ariadneMorningBrief()" :key="idx">
+                  <li class="flex items-start gap-3 rounded-lg border border-edge bg-ink-900/60 px-3 py-2.5"
+                      :class="item.placeholder ? 'opacity-70' : ''">
+                    <span class="icon-tile shrink-0" :class="'text-neon-' + item.accent">
+                      <i :data-lucide="item.icon" class="w-4 h-4"></i>
+                    </span>
+                    <div class="min-w-0 flex-1">
+                      <div class="text-[11px] uppercase tracking-[0.16em] font-mono text-slate-500 flex items-center gap-1.5">
+                        <span x-text="item.label"></span>
+                        <span x-show="item.placeholder" class="pill border border-edge text-[9px] text-slate-600">soon</span>
+                      </div>
+                      <div class="text-sm text-slate-200 mt-1" x-text="item.detail"></div>
+                    </div>
+                    <button x-show="item.action"
+                            class="pill bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan px-2 py-1 text-[10px] shrink-0"
+                            @click="activateAriadneWorkspace(item.action.workspace)">
+                      <span x-text="item.action.label"></span>
+                    </button>
+                  </li>
+                </template>
+              </ul>
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.8fr)] gap-4 mb-5">

@@ -85,3 +85,7 @@ def test_register_ui_mounts_dashboard() -> None:
     assert resp.status_code == 200
     assert "Ariadne's Thread" in resp.text
     assert "data-testid=\"ariadne-dashboard\"" in resp.text
+    # 174.4b: command-center IA — KPI strip + Morning Brief panel are mandatory.
+    assert "data-testid=\"ariadne-kpi-strip\"" in resp.text
+    assert "data-testid=\"ariadne-morning-brief\"" in resp.text
+    assert "Capture Command Center" in resp.text
