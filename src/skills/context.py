@@ -14,6 +14,11 @@ from typing import Any, Awaitable, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
+_RETRIEVED_ENTITY_DETAIL_LIMIT = 8
+_RETRIEVED_CHUNK_DETAIL_LIMIT = 4
+_RETRIEVED_SUMMARY_LIMIT = 180
+_RETRIEVED_SNIPPET_LIMIT = 260
+
 QueryDataFunc = Callable[
     [str, str, list[dict], dict],
     Awaitable[dict],
@@ -217,9 +222,10 @@ async def retrieve_relevant_entities_for_skill(
 ) -> dict[str, Any]:
     """Run structured retrieval and return entity and chunk identifiers.
 
-    The return shape is ``{names, chunk_ids, metadata}``, where ``names`` is a
-    lowercased entity-name whitelist and ``chunk_ids`` are retrieval-ranked
-    chunks available to future callers that want to augment the briefing book.
+    The return shape is ``{names, chunk_ids, entities, chunks, metadata}``,
+    where ``names`` is a lowercased entity-name whitelist, ``chunk_ids`` are
+    retrieval-ranked chunks, and ``entities`` / ``chunks`` carry bounded
+    summaries callers can surface directly in prompts or UI.
     """
     meta: dict[str, Any] = {
         "mode": mode,
@@ -231,16 +237,16 @@ async def retrieve_relevant_entities_for_skill(
     }
     if mode == "off":
         meta["reason"] = "retrieval disabled (mode=off)"
-        return {"names": set(), "chunk_ids": set(), "metadata": meta}
+        return {"names": set(), "chunk_ids": set(), "entities": [], "chunks": [], "metadata": meta}
     if data_func is None:
         meta["reason"] = "server has no data_func; falling back to bulk slice"
-        return {"names": set(), "chunk_ids": set(), "metadata": meta}
+        return {"names": set(), "chunk_ids": set(), "entities": [], "chunks": [], "metadata": meta}
 
     user_prompt = (prompt or "").strip()
     hint = (skill_description or "").strip()
     if not user_prompt and not hint:
         meta["reason"] = "empty prompt + skill description; bulk slice"
-        return {"names": set(), "chunk_ids": set(), "metadata": meta}
+        return {"names": set(), "chunk_ids": set(), "entities": [], "chunks": [], "metadata": meta}
 
     retrieval_query = f"{user_prompt}\n\n[Skill context: {hint}]" if hint else user_prompt
     overrides = {
@@ -253,34 +259,97 @@ async def retrieve_relevant_entities_for_skill(
     except Exception as exc:  # noqa: BLE001
         logger.warning("Skill retrieval failed (mode=%s): %s", mode, exc)
         meta["reason"] = f"retrieval error: {exc}"
-        return {"names": set(), "chunk_ids": set(), "metadata": meta}
+        return {"names": set(), "chunk_ids": set(), "entities": [], "chunks": [], "metadata": meta}
 
     payload = data.get("data") if isinstance(data, dict) else None
     if not isinstance(payload, dict):
         meta["reason"] = "retrieval returned no data block"
-        return {"names": set(), "chunk_ids": set(), "metadata": meta}
+        return {"names": set(), "chunk_ids": set(), "entities": [], "chunks": [], "metadata": meta}
 
-    names: set[str] = set()
-    for entity in payload.get("entities") or []:
-        if not isinstance(entity, dict):
-            continue
-        name = entity.get("entity_name") or entity.get("entity_id") or entity.get("name")
-        if name:
-            names.add(str(name).strip().lower())
-    if len(names) > top_k:
-        names = set(list(names)[:top_k])
-
-    chunk_ids: set[str] = set()
-    for chunk in payload.get("chunks") or []:
-        if not isinstance(chunk, dict):
-            continue
-        chunk_id = chunk.get("chunk_id") or chunk.get("__id__")
-        if chunk_id:
-            chunk_ids.add(str(chunk_id))
+    names, entities = _normalize_retrieved_entities(payload.get("entities") or [], top_k)
+    chunk_ids, chunks = _normalize_retrieved_chunks(payload.get("chunks") or [], top_k)
 
     meta["matched_entities"] = len(names)
     meta["matched_chunks"] = len(chunk_ids)
-    meta["used"] = bool(names)
-    if not names:
+    meta["used"] = bool(names or chunk_ids)
+    if not names and not chunk_ids:
         meta["reason"] = "retrieval returned 0 entities; falling back to bulk slice"
-    return {"names": names, "chunk_ids": chunk_ids, "metadata": meta}
+    return {
+        "names": names,
+        "chunk_ids": chunk_ids,
+        "entities": entities,
+        "chunks": chunks,
+        "metadata": meta,
+    }
+
+
+def _normalize_retrieved_entities(raw_entities: list[Any], top_k: int) -> tuple[set[str], list[dict[str, str]]]:
+    names: set[str] = set()
+    entities: list[dict[str, str]] = []
+    limit = max(1, min(int(top_k or 1), _RETRIEVED_ENTITY_DETAIL_LIMIT))
+    for entity in raw_entities:
+        if not isinstance(entity, dict):
+            continue
+        name = entity.get("entity_name") or entity.get("entity_id") or entity.get("name")
+        if not name:
+            continue
+        cleaned_name = str(name).strip()
+        if not cleaned_name:
+            continue
+        lowered = cleaned_name.lower()
+        if lowered in names:
+            continue
+        names.add(lowered)
+        detail: dict[str, str] = {"name": cleaned_name}
+        entity_type = str(entity.get("entity_type") or entity.get("type") or "").strip()
+        summary = _trim_retrieved_text(
+            entity.get("description") or entity.get("summary") or entity.get("content") or "",
+            _RETRIEVED_SUMMARY_LIMIT,
+        )
+        if entity_type:
+            detail["entity_type"] = entity_type
+        if summary:
+            detail["summary"] = summary
+        entities.append(detail)
+        if len(entities) >= limit:
+            break
+    return names, entities
+
+
+def _normalize_retrieved_chunks(raw_chunks: list[Any], top_k: int) -> tuple[set[str], list[dict[str, str]]]:
+    chunk_ids: set[str] = set()
+    chunks: list[dict[str, str]] = []
+    limit = max(1, min(int(top_k or 1), _RETRIEVED_CHUNK_DETAIL_LIMIT))
+    for chunk in raw_chunks:
+        if not isinstance(chunk, dict):
+            continue
+        chunk_id = chunk.get("chunk_id") or chunk.get("__id__")
+        if not chunk_id:
+            continue
+        cleaned_id = str(chunk_id).strip()
+        if not cleaned_id or cleaned_id in chunk_ids:
+            continue
+        chunk_ids.add(cleaned_id)
+        detail: dict[str, str] = {"chunk_id": cleaned_id}
+        file_path = str(chunk.get("file_path") or chunk.get("source") or "").strip()
+        snippet = _trim_retrieved_text(
+            chunk.get("content") or chunk.get("text") or chunk.get("snippet") or "",
+            _RETRIEVED_SNIPPET_LIMIT,
+        )
+        if file_path:
+            detail["file_path"] = file_path
+        if snippet:
+            detail["content"] = snippet
+        chunks.append(detail)
+        if len(chunks) >= limit:
+            break
+    return chunk_ids, chunks
+
+
+def _trim_retrieved_text(value: Any, limit: int) -> str:
+    text = " ".join(str(value or "").split())
+    if not text:
+        return ""
+    if len(text) <= limit:
+        return text
+    return text[:limit].rstrip() + "..."

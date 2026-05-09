@@ -194,6 +194,25 @@ async def _chain_executor_passes_note_preview_and_connection_guidance_into_grill
         return {
             "names": {"Appendix H", "Staffing Model"},
             "chunk_ids": {"chunk-7", "chunk-2"},
+            "entities": [
+                {
+                    "name": "Appendix H",
+                    "entity_type": "attachment",
+                    "summary": "Workload appendix with staffing assumptions and surge bands.",
+                },
+                {
+                    "name": "Staffing Model",
+                    "entity_type": "artifact",
+                    "summary": "Current LOE baseline for volume spikes.",
+                },
+            ],
+            "chunks": [
+                {
+                    "chunk_id": "chunk-2",
+                    "file_path": "appendix-h.pdf",
+                    "content": "Appendix H workload table shows surge staffing in Q2 and Q3.",
+                }
+            ],
             "metadata": {"used": True},
         }
 
@@ -253,9 +272,9 @@ async def _chain_executor_passes_note_preview_and_connection_guidance_into_grill
     grill_prompt = calls[1][1]
     assert "Use captured-note content to surface missing wiki/workspace links" in grill_prompt
     assert "## Workspace Connection Candidates" in grill_prompt
-    assert "Appendix H" in grill_prompt
-    assert "Staffing Model" in grill_prompt
-    assert "chunk-2" in grill_prompt
+    assert "Appendix H [attachment]: Workload appendix with staffing assumptions and surge bands." in grill_prompt
+    assert "Staffing Model [artifact]: Current LOE baseline for volume spikes." in grill_prompt
+    assert "chunk-2 (appendix-h.pdf): Appendix H workload table shows surge staffing in Q2 and Q3." in grill_prompt
     assert "Need connect workload spike to Appendix H staffing model." in grill_prompt
     assert "captured-note.md" in grill_prompt
     assert retrieval_calls == [

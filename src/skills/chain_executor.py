@@ -49,6 +49,8 @@ class SkillChainExecutor:
         "workspace",
     }
     _NOTE_PRODUCTS: set[str] = {"inbox_note", "processed_note", "evergreen_note", "wiki_seed"}
+    _WORKSPACE_ENTITY_DETAIL_MAX = 4
+    _WORKSPACE_CHUNK_DETAIL_MAX = 2
 
     _OUTCOME_FORMAT_HINTS: dict[str, tuple[str, ...]] = {
         "docx": ("docx", "word", "brief", "document", "draft", "report"),
@@ -821,15 +823,72 @@ class SkillChainExecutor:
             for chunk_id in (payload.get("chunk_ids") or set())
             if str(chunk_id).strip()
         )
-        if not names and not chunk_ids:
+        entities = cls._connection_entities(payload.get("entities") or [])
+        chunks = cls._connection_chunks(payload.get("chunks") or [])
+        if not names and not chunk_ids and not entities and not chunks:
             return ""
         lines = ["\n\n## Workspace Connection Candidates"]
-        if names:
+        if entities:
+            lines.append("Matched entities:")
+            for entity in entities:
+                label = entity["name"]
+                if entity.get("entity_type"):
+                    label += f" [{entity['entity_type']}]"
+                if entity.get("summary"):
+                    label += f": {entity['summary']}"
+                lines.append(f"- {label}")
+        elif names:
             lines.append("Matched entity names: " + ", ".join(names[:8]))
-        if chunk_ids:
+        if chunks:
+            lines.append("Matched source snippets:")
+            for chunk in chunks:
+                label = chunk["chunk_id"]
+                if chunk.get("file_path"):
+                    label += f" ({chunk['file_path']})"
+                snippet = chunk.get("content") or ""
+                lines.append(f"- {label}: {snippet}")
+        elif chunk_ids:
             lines.append("Matched chunk ids: " + ", ".join(chunk_ids[:6]))
         lines.append("Use these as candidate wikilinks or branch targets. Verify against note text before asserting a connection.")
         return "\n".join(lines)
+
+    @classmethod
+    def _connection_entities(cls, raw_entities: list[Any]) -> list[dict[str, str]]:
+        entities: list[dict[str, str]] = []
+        for raw in raw_entities[: cls._WORKSPACE_ENTITY_DETAIL_MAX]:
+            if not isinstance(raw, dict):
+                continue
+            name = str(raw.get("name") or raw.get("entity_name") or "").strip()
+            if not name:
+                continue
+            item = {"name": name}
+            entity_type = str(raw.get("entity_type") or raw.get("type") or "").strip()
+            summary = str(raw.get("summary") or raw.get("description") or "").strip()
+            if entity_type:
+                item["entity_type"] = entity_type
+            if summary:
+                item["summary"] = summary
+            entities.append(item)
+        return entities
+
+    @classmethod
+    def _connection_chunks(cls, raw_chunks: list[Any]) -> list[dict[str, str]]:
+        chunks: list[dict[str, str]] = []
+        for raw in raw_chunks[: cls._WORKSPACE_CHUNK_DETAIL_MAX]:
+            if not isinstance(raw, dict):
+                continue
+            chunk_id = str(raw.get("chunk_id") or raw.get("__id__") or "").strip()
+            if not chunk_id:
+                continue
+            item = {"chunk_id": chunk_id}
+            file_path = str(raw.get("file_path") or raw.get("source") or "").strip()
+            content = str(raw.get("content") or raw.get("snippet") or raw.get("text") or "").strip()
+            if file_path:
+                item["file_path"] = file_path
+            if content:
+                item["content"] = content
+            chunks.append(item)
+        return chunks
 
     @classmethod
     def _should_add_connection_context(

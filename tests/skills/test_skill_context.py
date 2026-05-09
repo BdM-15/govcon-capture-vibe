@@ -134,13 +134,13 @@ def test_retrieve_relevant_entities_for_skill_returns_whitelist_and_metadata() -
         return {
             "data": {
                 "entities": [
-                    {"entity_name": "Req A"},
-                    {"entity_id": "Eval B"},
+                    {"entity_name": "Req A", "entity_type": "requirement", "description": "Primary SHALL requirement."},
+                    {"entity_id": "Eval B", "type": "evaluation_factor", "summary": "Assesses staffing plan quality."},
                     {"name": "Instruction C"},
                 ],
                 "chunks": [
-                    {"chunk_id": "chunk-a"},
-                    {"__id__": "chunk-b"},
+                    {"chunk_id": "chunk-a", "file_path": "rfp.pdf", "content": "Staffing approach must address surge support."},
+                    {"__id__": "chunk-b", "file_path": "appendix-h.pdf", "content": "Appendix H provides workload projections."},
                 ],
             }
         }
@@ -165,6 +165,15 @@ def test_retrieve_relevant_entities_for_skill_returns_whitelist_and_metadata() -
     ]
     assert result["names"] == {"req a", "eval b", "instruction c"}
     assert result["chunk_ids"] == {"chunk-a", "chunk-b"}
+    assert result["entities"] == [
+        {"name": "Req A", "entity_type": "requirement", "summary": "Primary SHALL requirement."},
+        {"name": "Eval B", "entity_type": "evaluation_factor", "summary": "Assesses staffing plan quality."},
+        {"name": "Instruction C"},
+    ]
+    assert result["chunks"] == [
+        {"chunk_id": "chunk-a", "file_path": "rfp.pdf", "content": "Staffing approach must address surge support."},
+        {"chunk_id": "chunk-b", "file_path": "appendix-h.pdf", "content": "Appendix H provides workload projections."},
+    ]
     assert result["metadata"] == {
         "mode": "mix",
         "top_k": 10,
@@ -191,4 +200,6 @@ def test_retrieve_relevant_entities_for_skill_off_mode_skips_data_func() -> None
 
     assert result["names"] == set()
     assert result["chunk_ids"] == set()
+    assert result["entities"] == []
+    assert result["chunks"] == []
     assert result["metadata"]["reason"] == "retrieval disabled (mode=off)"
