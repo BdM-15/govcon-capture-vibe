@@ -9,12 +9,15 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
+from src.core.global_store import GlobalStore
 from src.skills.run_metadata import (
     read_artifact_manifest,
     sanitize_artifact_display_name,
     write_artifact_manifest,
 )
 from src.skills.tool_types import ToolContext, ToolError, ToolResult
+
+_GLOBAL_BUCKETS = frozenset({"inbox", "notes", "llm-wiki", "intel"})
 
 
 def safe_join(base: Path, rel: str) -> Path:
@@ -31,6 +34,47 @@ def safe_join(base: Path, rel: str) -> Path:
     except ValueError as exc:
         raise ToolError(f"path {rel!r} escapes sandbox {base_resolved}") from exc
     return candidate
+
+
+def _normalize_global_path(path: str) -> str:
+    if not path or not isinstance(path, str):
+        raise ToolError("path must be a non-empty string")
+    cleaned = path.replace("\\", "/").strip().lstrip("/")
+    if cleaned.lower().startswith("global/"):
+        cleaned = cleaned[7:]
+    rel = Path(cleaned)
+    if rel.is_absolute() or any(part in {"..", "."} for part in rel.parts):
+        raise ToolError(f"invalid global note path: {path!r}")
+    if not rel.parts or rel.parts[0] not in _GLOBAL_BUCKETS:
+        raise ToolError(
+            "global note path must start with inbox/, notes/, llm-wiki/, or intel/"
+        )
+    if rel.suffix.lower() != ".md":
+        raise ToolError("global note path must end with .md")
+    return rel.as_posix()
+
+
+def _repo_root_from_ctx(ctx: ToolContext) -> Path:
+    workspace_dir = ctx.workspace_dir.resolve()
+    if workspace_dir.name == ctx.workspace_name and workspace_dir.parent.name == "rag_storage":
+        return workspace_dir.parent.parent
+    if workspace_dir.name == "rag_storage":
+        return workspace_dir.parent
+    if (workspace_dir / "global").is_dir() or (workspace_dir / "rag_storage").is_dir():
+        return workspace_dir
+    return Path(__file__).resolve().parents[2]
+
+
+def _workspace_root_from_ctx(ctx: ToolContext) -> Path:
+    workspace_dir = ctx.workspace_dir.resolve()
+    if workspace_dir.name == ctx.workspace_name:
+        return workspace_dir.parent
+    if workspace_dir.name == "rag_storage":
+        return workspace_dir
+    candidate = workspace_dir / "rag_storage"
+    if candidate.is_dir():
+        return candidate.resolve()
+    return candidate.resolve()
 
 
 async def tool_read_file(ctx: ToolContext, path: str) -> ToolResult:
@@ -227,3 +271,73 @@ async def tool_write_file(
     if display_name:
         payload["display_name"] = display_name
     return ToolResult(payload=payload)
+
+
+async def tool_read_global_note(ctx: ToolContext, path: str) -> ToolResult:
+    relative = _normalize_global_path(path)
+    store = GlobalStore(root=_repo_root_from_ctx(ctx) / "global")
+    try:
+        text = store.read(relative)
+    except FileNotFoundError as exc:
+        raise ToolError(f"global note not found: {relative}") from exc
+    entries = store.list(relative)
+    note = entries[0] if entries else None
+    payload = {
+        "path": relative,
+        "content": text,
+    }
+    if note is not None:
+        payload.update(
+            {
+                "bucket": note.get("bucket"),
+                "frontmatter": note.get("frontmatter") or {},
+                "preview": note.get("preview") or "",
+                "modified_at": note.get("modified_at"),
+            }
+        )
+    return ToolResult(payload=payload)
+
+
+async def tool_write_global_note(ctx: ToolContext, path: str, content: str) -> ToolResult:
+    if not isinstance(content, str):
+        raise ToolError("content must be a string")
+    if len(content.encode("utf-8")) > ctx.max_write_bytes:
+        raise ToolError(
+            f"content exceeds max_write_bytes ({ctx.max_write_bytes}); split into smaller notes"
+        )
+    relative = _normalize_global_path(path)
+    store = GlobalStore(root=_repo_root_from_ctx(ctx) / "global")
+    try:
+        target = store.write(relative, content)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+    return ToolResult(
+        payload={
+            "path": relative,
+            "absolute_path": str(target),
+            "bytes_written": len(content.encode("utf-8")),
+        }
+    )
+
+
+async def tool_promote_global_note(
+    ctx: ToolContext,
+    path: str,
+    workspace: Optional[str] = None,
+) -> ToolResult:
+    relative = _normalize_global_path(path)
+    target_workspace = (workspace or ctx.workspace_name or "").strip()
+    if not target_workspace:
+        raise ToolError("workspace is required")
+    store = GlobalStore(root=_repo_root_from_ctx(ctx) / "global")
+    try:
+        result = store.promote(
+            relative,
+            workspace=target_workspace,
+            workspace_root=_workspace_root_from_ctx(ctx),
+        )
+    except FileNotFoundError as exc:
+        raise ToolError(f"global note not found: {relative}") from exc
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+    return ToolResult(payload=result)

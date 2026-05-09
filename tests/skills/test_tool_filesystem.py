@@ -4,8 +4,18 @@ from pathlib import Path
 
 import pytest
 
+from src.skills.tool_registry import build_tool_specs
 from src.skills.tool_skill_chain import tool_invoke_skill
-from src.skills.tools import ToolContext, ToolError, tool_read_file, tool_run_script, tool_write_file
+from src.skills.tools import (
+    ToolContext,
+    ToolError,
+    tool_promote_global_note,
+    tool_read_file,
+    tool_read_global_note,
+    tool_run_script,
+    tool_write_file,
+    tool_write_global_note,
+)
 
 
 def _run(coro):
@@ -22,6 +32,23 @@ def _ctx(tmp_path: Path) -> ToolContext:
         skill_dir=skill_dir,
         run_dir=run_dir,
         workspace_dir=tmp_path,
+        workspace_name="demo",
+    )
+
+
+def _repo_ctx(tmp_path: Path) -> ToolContext:
+    repo_root = tmp_path / "repo"
+    workspace_dir = repo_root / "rag_storage" / "demo"
+    skill_dir = tmp_path / "skill"
+    run_dir = tmp_path / "run"
+    workspace_dir.mkdir(parents=True)
+    skill_dir.mkdir()
+    run_dir.mkdir()
+    return ToolContext(
+        skill_name="phase-promoter",
+        skill_dir=skill_dir,
+        run_dir=run_dir,
+        workspace_dir=workspace_dir,
         workspace_name="demo",
     )
 
@@ -115,3 +142,44 @@ def test_tool_invoke_skill_rejects_recursive_self_call(tmp_path: Path) -> None:
 
     with pytest.raises(ToolError, match="current skill"):
         _run(tool_invoke_skill(ctx, "test", "do work"))
+
+
+def test_phase_promoter_tool_specs_include_global_write_tools() -> None:
+    names = [spec.name for spec in build_tool_specs(skill_name="phase-promoter")]
+
+    assert "read_global_note" in names
+    assert "write_global_note" in names
+    assert "promote_global_note" in names
+    assert "write_global_note" not in [spec.name for spec in build_tool_specs(skill_name="price-to-win")]
+
+
+def test_tool_write_and_read_global_note_round_trip(tmp_path: Path) -> None:
+    ctx = _repo_ctx(tmp_path)
+    content = "---\nstatus: evergreen\ntags: [meta]\n---\n\nKnowledge note\n"
+
+    write_result = _run(tool_write_global_note(ctx, "notes/topic.md", content))
+    read_result = _run(tool_read_global_note(ctx, "global/notes/topic.md"))
+
+    target = tmp_path / "repo" / "global" / "notes" / "topic.md"
+    assert write_result.payload["path"] == "notes/topic.md"
+    assert write_result.payload["absolute_path"] == str(target)
+    assert target.read_text(encoding="utf-8") == content
+    assert read_result.payload["path"] == "notes/topic.md"
+    assert read_result.payload["content"] == content
+    assert read_result.payload["frontmatter"]["status"] == "evergreen"
+
+
+def test_tool_promote_global_note_copies_into_workspace_sources(tmp_path: Path) -> None:
+    ctx = _repo_ctx(tmp_path)
+    content = "---\nstatus: evergreen\ntags: [meta]\n---\n\nPromote me\n"
+    _run(tool_write_global_note(ctx, "notes/promote-me.md", content))
+
+    result = _run(tool_promote_global_note(ctx, "notes/promote-me.md"))
+
+    target = tmp_path / "repo" / "rag_storage" / "demo" / "sources" / "promote-me.md"
+    assert result.payload == {
+        "source": "notes/promote-me.md",
+        "workspace": "demo",
+        "target": str(target),
+    }
+    assert target.read_text(encoding="utf-8") == content

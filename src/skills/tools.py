@@ -10,6 +10,11 @@ to the model:
   skill's ``scripts/`` folder under a sandboxed subprocess
 * ``write_file(path, content, label=None)`` — persist an artifact to the run's
   ``artifacts/`` folder, optionally with a human-readable Studio label
+* ``read_global_note(path)`` — read a markdown note under repo-local ``global/``
+* ``write_global_note(path, content)`` — write markdown directly into allowed
+  ``global/`` buckets
+* ``promote_global_note(path, workspace=None)`` — copy a global note into
+  ``rag_storage/<workspace>/sources/``
 * ``kg_query(cypher)`` — run a read-only Cypher query against the active
   workspace's Neo4j graph (no-op if Neo4j is not the active backend)
 * ``kg_entities(types, limit, max_chunks_per_entity, max_relationships_per_entity)``
@@ -29,7 +34,14 @@ import json
 from typing import Any, Optional
 
 from src.skills.settings import skill_tools_runtime_limits
-from src.skills.tool_filesystem import tool_read_file, tool_run_script, tool_write_file
+from src.skills.tool_filesystem import (
+  tool_promote_global_note,
+  tool_read_file,
+  tool_read_global_note,
+  tool_run_script,
+  tool_write_file,
+  tool_write_global_note,
+)
 from src.skills.tool_kg import tool_kg_chunks, tool_kg_entities, tool_kg_query
 from src.skills.tool_mcp import build_mcp_tool_specs
 from src.skills.tool_registry import ToolSpec, build_tool_specs

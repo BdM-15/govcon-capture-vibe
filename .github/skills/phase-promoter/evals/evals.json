@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "Promote global/inbox/2026-05-09-afcap6-wrap-rate.md into an evergreen note and a workspace-ready source for afcap6_drfp_171.",
-      "expected_output": "Reads the source note or uses an upstream handoff, writes staged Obsidian-flavored markdown under artifacts/phase-promoter/, preserves provenance via derives_from, and reports intended targets under global/notes/ and rag_storage/afcap6_drfp_171/sources/.",
+      "expected_output": "Reads the source note or uses an upstream handoff, writes an Obsidian-flavored note directly under global/notes/, preserves provenance via derives_from, and copies the promoted note into rag_storage/afcap6_drfp_171/sources/.",
       "files": []
     },
     {
@@ -16,7 +16,7 @@
     {
       "id": 3,
       "prompt": "Turn these pricing-pattern captures into an LLM Wiki seed, but stop and list exact gaps if the evidence is too thin.",
-      "expected_output": "Either emits a staged llm-wiki markdown seed with explicit provenance or halts with an Exact gaps section that explains what is missing before safe promotion.",
+      "expected_output": "Either writes a real global/llm-wiki markdown seed with explicit provenance or halts with an Exact gaps section that explains what is missing before safe promotion.",
       "files": []
     }
   ]

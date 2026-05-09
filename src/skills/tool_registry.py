@@ -6,7 +6,14 @@ from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
 from src.skills.tool_competitive_intel import tool_collect_competitive_obligation_intel
-from src.skills.tool_filesystem import tool_read_file, tool_run_script, tool_write_file
+from src.skills.tool_filesystem import (
+    tool_promote_global_note,
+    tool_read_file,
+    tool_read_global_note,
+    tool_run_script,
+    tool_write_file,
+    tool_write_global_note,
+)
 from src.skills.tool_kg import tool_kg_chunks, tool_kg_entities, tool_kg_query
 from src.skills.tool_skill_chain import tool_invoke_skill
 from src.skills.tool_types import ToolResult
@@ -298,6 +305,79 @@ def build_tool_specs(*, skill_name: str | None = None) -> list[ToolSpec]:
                 },
                 handler=tool_collect_competitive_obligation_intel,
             )
+        )
+
+    if skill_name == "phase-promoter":
+        specs.extend(
+            [
+                ToolSpec(
+                    name="read_global_note",
+                    description=(
+                        "Read a markdown note under repo-local global/. Accepts paths like "
+                        "'inbox/2026-05-09-note.md' or 'global/notes/topic.md'. Returns raw "
+                        "content plus parsed frontmatter metadata."
+                    ),
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "path": {
+                                "type": "string",
+                                "description": "Path under global/, e.g. 'inbox/2026-05-09-note.md'.",
+                            },
+                        },
+                        "required": ["path"],
+                        "additionalProperties": False,
+                    },
+                    handler=tool_read_global_note,
+                ),
+                ToolSpec(
+                    name="write_global_note",
+                    description=(
+                        "Persist markdown directly into repo-local global/. Restricted to "
+                        "inbox/, notes/, llm-wiki/, or intel/ buckets. Use for real promotion, "
+                        "not temporary artifacts."
+                    ),
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "path": {
+                                "type": "string",
+                                "description": "Target path under global/, e.g. 'notes/topic.md'.",
+                            },
+                            "content": {
+                                "type": "string",
+                                "description": "Markdown body to persist.",
+                            },
+                        },
+                        "required": ["path", "content"],
+                        "additionalProperties": False,
+                    },
+                    handler=tool_write_global_note,
+                ),
+                ToolSpec(
+                    name="promote_global_note",
+                    description=(
+                        "Copy an existing global note into rag_storage/<workspace>/sources/. "
+                        "Use after writing or selecting a note that should feed a workspace ingest path."
+                    ),
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "path": {
+                                "type": "string",
+                                "description": "Existing note path under global/, e.g. 'notes/topic.md'.",
+                            },
+                            "workspace": {
+                                "type": "string",
+                                "description": "Optional workspace name. Defaults to active workspace.",
+                            },
+                        },
+                        "required": ["path"],
+                        "additionalProperties": False,
+                    },
+                    handler=tool_promote_global_note,
+                ),
+            ]
         )
 
     return specs

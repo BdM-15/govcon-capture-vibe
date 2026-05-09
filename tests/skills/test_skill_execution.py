@@ -2,9 +2,12 @@ import asyncio
 from pathlib import Path
 
 from src.skills.manager import SkillExecutor
+from src.skills.runtime_support import ToolLoopResult
 from src.skills.runs import SkillRunStore
 from src.skills.skill_catalog import SkillCatalog
 from src.skills.skill_models import Skill, SkillFrontmatter, SkillInvocationResult
+from src.skills.skill_tools_runner import run_tools_skill
+from src.skills.tool_filesystem import tool_promote_global_note, tool_write_global_note
 
 
 def _skill(tmp_path: Path, *, runtime: str) -> Skill:
@@ -220,3 +223,63 @@ def test_skill_executor_raises_for_unknown_skill(tmp_path: Path) -> None:
         assert "Unknown skill" in str(exc)
     else:
         raise AssertionError("expected KeyError for missing skill")
+
+
+def test_phase_promoter_tools_mode_smoke_writes_global_and_workspace_targets(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    catalog = SkillCatalog(
+        skills_dir=repo_root / ".github" / "skills",
+        ledger_path=tmp_path / "skills.json",
+    )
+    skill = catalog.get_skill("phase-promoter")
+    assert skill is not None
+
+    workspace_root = tmp_path / "rag_storage" / "demo"
+    workspace_root.mkdir(parents=True)
+    store = SkillRunStore()
+
+    async def fake_tool_loop(**kwargs):
+        ctx = kwargs["ctx"]
+        content = (
+            "---\n"
+            "date: 2026-05-09\n"
+            "source: synth\n"
+            "status: evergreen\n"
+            "tags: [meta]\n"
+            "derives_from: inbox/2026-05-09-demo.md\n"
+            "---\n\n"
+            "Durable note\n"
+        )
+        await tool_write_global_note(ctx, "notes/2026-05-09-demo-evergreen.md", content)
+        await tool_promote_global_note(ctx, "notes/2026-05-09-demo-evergreen.md")
+        return ToolLoopResult(
+            response="wrote real targets",
+            transcript=[],
+            turns=1,
+            tool_calls=2,
+            finish_reason="stop",
+            usage_total={"total_tokens": 0},
+            warnings=[],
+        )
+
+    result = asyncio.run(
+        run_tools_skill(
+            skill=skill,
+            workspace="demo",
+            user_prompt="Promote this note.",
+            workspace_root=workspace_root,
+            slice_fn=None,
+            retrieve_fn=None,
+            run_store=store,
+            mcp_registry=object(),
+            touch_invocation=lambda _name: None,
+            run_tool_loop_fn=fake_tool_loop,
+        )
+    )
+
+    global_note = tmp_path / "global" / "notes" / "2026-05-09-demo-evergreen.md"
+    workspace_note = tmp_path / "rag_storage" / "demo" / "sources" / "2026-05-09-demo-evergreen.md"
+    assert result.skill == "phase-promoter"
+    assert global_note.is_file()
+    assert workspace_note.is_file()
+    assert workspace_note.read_text(encoding="utf-8") == global_note.read_text(encoding="utf-8")
