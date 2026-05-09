@@ -1,0 +1,32 @@
+# Promotion Model
+
+`phase-promoter` maps raw Ariadne captures onto the current repo layout.
+
+## Tier Mapping
+
+| Tier | Intended repo location | Required frontmatter state | Use when |
+| --- | --- | --- | --- |
+| Source / inbox | `global/inbox/<date>-<slug>.md` | `status: inbox` | Raw capture, brain dump, fleeting idea |
+| Processed | `global/notes/<date>-<slug>.md` | `status: processed`, `source: synth`, `derives_from: <source>` | Clearer structure helps, but the note is still provisional |
+| Evergreen | `global/notes/<date>-<slug>.md` | `status: evergreen`, `source: synth`, `derives_from: <source>` | Durable, reusable, cross-session knowledge |
+| LLM Wiki seed | `global/llm-wiki/<topic>.md` | Usually `status: evergreen`, `source: synth`, `derives_from: <source>` | Topic-dense, cross-opportunity material that should become a single-source-of-truth page |
+| Workspace source | `rag_storage/<workspace>/sources/<filename>.md` | Preserve the synthesized or source note exactly | The note should feed a specific workspace's LightRAG ingest path |
+
+## Frontmatter Rules
+
+- Preserve `workspace` when it still applies.
+- Preserve or narrow `tags`; do not add speculative tags.
+- Carry forward `wikilinks` when they still help retrieval.
+- Add `derives_from: <relative-source-path>` on every synthesized note.
+- Switch `source:` to `synth` for any note the skill rewrites or splits.
+
+## Staging Rule
+
+The current skill runtime cannot safely mutate repo-global markdown directly. Write staged artifacts under `<run_dir>/artifacts/phase-promoter/` and then report the intended target paths explicitly.
+
+## Decision Heuristics
+
+- Prefer `processed` over `evergreen` when the note depends on pending verification, a single customer conversation, or stale intel.
+- Prefer `evergreen` over `llm-wiki` when the idea is durable but still narrow.
+- Emit an `llm-wiki` seed only when a reader would plausibly want one dense page for the topic.
+- Emit a `workspace_source` copy only when a concrete workspace is named or the user explicitly chooses one.

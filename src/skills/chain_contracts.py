@@ -180,6 +180,35 @@ class SkillContractRegistry:
 
 _DEFAULT_CONTRACTS = [
     SkillChainContract(
+        skill="global-idea-capturer",
+        keywords={
+            "capture", "save", "brain", "dump", "remember",
+            "realized", "thought",
+        },
+        accepts=set(),
+        produces={"inbox_note"},
+        artifact_extensions=("md",),
+        downstream_skills={"phase-promoter"},
+        phase_rank=5,
+        role="capture raw cross-opportunity notes into the global inbox",
+        quality_gate="Output must preserve user wording, valid frontmatter, justified tags, and the intended inbox path.",
+    ),
+    SkillChainContract(
+        skill="phase-promoter",
+        keywords={
+            "promote", "promotion", "promoter", "evergreen", "graduate",
+            "processed", "process", "wiki", "workspace", "archive",
+            "curate", "curation", "durable", "split", "synth",
+        },
+        accepts={"inbox_note", "processed_note", "evergreen_note"},
+        produces={"processed_note", "evergreen_note", "wiki_seed", "workspace_source"},
+        artifact_extensions=("md", "json"),
+        downstream_skills=set(),
+        phase_rank=12,
+        role="promote raw captures into processed, evergreen, wiki, and workspace-ready notes",
+        quality_gate="Output must preserve provenance, justify each target tier, name intended target paths, and state exact gaps before promotion.",
+    ),
+    SkillChainContract(
         skill="competitive-intel",
         keywords={
             "competitor", "competitive", "incumbent", "award", "awards",

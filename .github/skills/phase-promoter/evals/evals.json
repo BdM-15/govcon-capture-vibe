@@ -1,0 +1,23 @@
+{
+  "skill_name": "phase-promoter",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Promote global/inbox/2026-05-09-afcap6-wrap-rate.md into an evergreen note and a workspace-ready source for afcap6_drfp_171.",
+      "expected_output": "Reads the source note or uses an upstream handoff, writes staged Obsidian-flavored markdown under artifacts/phase-promoter/, preserves provenance via derives_from, and reports intended targets under global/notes/ and rag_storage/afcap6_drfp_171/sources/.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Split this inbox brain dump into processed notes and only graduate the durable part: global/inbox/2026-05-09-llm-wiki-ideas.md.",
+      "expected_output": "Produces one or more processed notes when the source clearly contains distinct ideas, keeps each child note tied back to the same derives_from path, and avoids unsupported evergreen promotion.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Turn these pricing-pattern captures into an LLM Wiki seed, but stop and list exact gaps if the evidence is too thin.",
+      "expected_output": "Either emits a staged llm-wiki markdown seed with explicit provenance or halts with an Exact gaps section that explains what is missing before safe promotion.",
+      "files": []
+    }
+  ]
+}

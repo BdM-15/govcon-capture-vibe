@@ -10,6 +10,16 @@ from src.skills.chain_planner import SkillChainPlanner
 
 _SKILLS = [
     {
+        "name": "global-idea-capturer",
+        "description": "Capture raw global notes and brain dumps into the Ariadne inbox.",
+        "capability": "capture",
+    },
+    {
+        "name": "phase-promoter",
+        "description": "Promote inbox notes into processed, evergreen, wiki, and workspace-ready artifacts.",
+        "capability": "promote",
+    },
+    {
         "name": "competitive-intel",
         "description": "Research incumbents, competitors, awards, and obligations.",
         "capability": "research",
@@ -128,6 +138,41 @@ def test_planner_embeds_step_scoped_retrieval_hints() -> None:
     assert "pricing_stack" in ptw_step.context["retrieval_focus"]
 
 
+def test_planner_builds_capture_to_phase_promoter_chain() -> None:
+    planner = SkillChainPlanner(_SKILLS)
+
+    plan = planner.plan(
+        prompt="Capture this customer-hot-button note and promote the durable parts into an evergreen note plus workspace source.",
+        outcome="Evergreen note and workspace-ready source",
+        include_rendering=False,
+    )
+
+    assert [step.skill for step in plan.spec.steps] == [
+        "global-idea-capturer",
+        "phase-promoter",
+    ]
+    assert plan.spec.steps[1].depends_on == ["global-idea-capturer"]
+    promoter_products = {
+        product
+        for requirement in plan.spec.steps[1].artifact_requirements
+        for product in requirement.products
+    }
+    assert "inbox_note" in promoter_products
+    assert "phase-promoter" in plan.rationale
+
+
+def test_planner_routes_existing_note_promotion_directly_to_phase_promoter() -> None:
+    planner = SkillChainPlanner(_SKILLS)
+
+    plan = planner.plan(
+        prompt="Promote this saved note into evergreen knowledge and a workspace-ready source.",
+        outcome="Evergreen note",
+        include_rendering=False,
+    )
+
+    assert [step.skill for step in plan.spec.steps] == ["phase-promoter"]
+
+
 def test_planner_rejects_no_matching_skill() -> None:
     planner = SkillChainPlanner([])
 
@@ -149,6 +194,16 @@ def test_contract_registry_defines_handoff_edges_and_artifacts() -> None:
         "price-to-win",
         {"ptw"},
     )
+
+
+def test_contract_registry_includes_capture_to_promotion_edge() -> None:
+    capture = CONTRACT_REGISTRY.require("global-idea-capturer")
+    promoter = CONTRACT_REGISTRY.require("phase-promoter")
+
+    assert capture.produces == frozenset({"inbox_note"})
+    assert "phase-promoter" in capture.downstream_skills
+    assert "inbox_note" in promoter.accepts
+    assert CONTRACT_REGISTRY.upstream_skills("phase-promoter") == ("global-idea-capturer",)
 
 
 def test_contract_model_rejects_unknown_top_level_fields() -> None:

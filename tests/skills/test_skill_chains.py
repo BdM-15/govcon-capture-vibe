@@ -113,6 +113,69 @@ async def _chain_executor_runs_steps_and_persists_state(tmp_path: Path) -> None:
     assert persisted["status"] == "completed"
 
 
+def test_chain_executor_passes_capture_artifact_into_phase_promoter(tmp_path: Path) -> None:
+    asyncio.run(_chain_executor_passes_capture_artifact_into_phase_promoter(tmp_path))
+
+
+async def _chain_executor_passes_capture_artifact_into_phase_promoter(tmp_path: Path) -> None:
+    store = SkillRunStore()
+    calls: list[tuple[str, str]] = []
+
+    async def invoke_skill(name: str, **kwargs: Any) -> SkillInvocationResult:
+        prompt = kwargs["user_prompt"]
+        calls.append((name, prompt))
+        run_id, run_dir = store.create_run_dir(
+            workspace_root=kwargs["workspace_root"],
+            skill_name=name,
+            user_prompt=prompt,
+            started_at=datetime.now(timezone.utc),
+        )
+        artifacts_dir = run_dir / "artifacts"
+        artifacts_dir.mkdir(exist_ok=True)
+        artifact_name = "captured-note.md" if name == "global-idea-capturer" else "evergreen-note.md"
+        (artifacts_dir / artifact_name).write_text(f"artifact for {name}", encoding="utf-8")
+        return _fake_result(name, run_id, run_dir, prompt)
+
+    executor = SkillChainExecutor(invoke_skill=invoke_skill, run_store=store)
+    spec = ChainSpec(
+        name="capture-to-promotion",
+        steps=[
+            ChainStepSpec(id="capture", skill="global-idea-capturer", prompt="Capture the note."),
+            ChainStepSpec(
+                id="promote",
+                skill="phase-promoter",
+                prompt="Promote the durable parts.",
+                depends_on=["capture"],
+                artifact_requirements=[
+                    ChainArtifactRequirement(
+                        id="capture-note",
+                        from_steps=["capture"],
+                        products=["inbox_note"],
+                        extensions=["md"],
+                    )
+                ],
+            ),
+        ],
+    )
+
+    result = await executor.invoke(
+        spec,
+        workspace="test-workspace",
+        workspace_root=tmp_path,
+        llm=_noop_llm,
+        entity_payload={},
+    )
+
+    assert result.status == "completed"
+    assert [call[0] for call in calls] == ["global-idea-capturer", "phase-promoter"]
+    assert [artifact.filename for artifact in result.steps["promote"].input_artifacts] == [
+        "captured-note.md"
+    ]
+    assert result.steps["promote"].input_artifacts[0].products == ["inbox_note"]
+    assert "captured-note.md" in calls[1][1]
+    assert "Use input_artifacts[].path when a tool needs an upstream file path" in calls[1][1]
+
+
 def test_chain_executor_stops_after_failed_step(tmp_path: Path) -> None:
     asyncio.run(_chain_executor_stops_after_failed_step(tmp_path))
 
