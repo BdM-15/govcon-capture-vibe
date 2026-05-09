@@ -1,15 +1,15 @@
 window.createTheseusAppDelegates = function createTheseusAppDelegates() {
   return {
     navTitle() {
-      return window.theseusNavTitle(this.active);
+      return window.theseusNavTitle(this);
     },
 
     navIcon() {
-      return window.theseusNavIcon(this.navGroups, this.active);
+      return window.theseusNavIcon(this.navGroups, this);
     },
 
     navSubtitle() {
-      return window.theseusNavSubtitle(this.active, this.stats);
+      return window.theseusNavSubtitle(this);
     },
 
     greeting() {

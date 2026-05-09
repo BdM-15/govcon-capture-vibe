@@ -5,6 +5,16 @@ const theseusSyncActivePanels = function theseusSyncActivePanels(app) {
   else app.closeProcLog();
 };
 
+const theseusHandleAriadneViewChange = function theseusHandleAriadneViewChange(
+  app,
+) {
+  if (app.active !== "dashboard") return;
+  if (app.ariadne?.view !== "agent-ops") return;
+  if (!app.skills.loaded && !app.skills.loading) app.loadSkills();
+  if (!app.chains.loaded && !app.chains.loading) app.loadChains();
+  if (!app.studio.loaded && !app.studio.loading) app.loadStudio();
+};
+
 const theseusHandleActiveChange = function theseusHandleActiveChange(app) {
   window.theseusRefreshIcons();
   if (app.active === "graph" && !app.graph.stats.nodes && !app.graph.loading) {
@@ -24,9 +34,14 @@ const theseusHandleActiveChange = function theseusHandleActiveChange(app) {
   if (app.active === "settings" && !app.dangerZone.loaded) {
     app.loadWorkspaceInventory();
   }
-  if (app.active === "dashboard" && !app.ariadne.loaded && !app.ariadne.loading) {
+  if (
+    app.active === "dashboard" &&
+    !app.ariadne.loaded &&
+    !app.ariadne.loading
+  ) {
     app.loadAriadne();
   }
+  theseusHandleAriadneViewChange(app);
   theseusSyncActivePanels(app);
   if (app.active === "skills" && !app.skills.loaded) app.loadSkills();
   if (app.active === "chains" && !app.chains.loaded) app.loadChains();
@@ -43,7 +58,12 @@ window.theseusInit = async function theseusInit(app) {
   app.$watch("active", () =>
     app.$nextTick(() => theseusHandleActiveChange(app)),
   );
-  app.$watch("ariadne.view", () => window.theseusAfterRender(app));
+  app.$watch("ariadne.view", () =>
+    app.$nextTick(() => {
+      window.theseusAfterRender(app);
+      theseusHandleAriadneViewChange(app);
+    }),
+  );
 
   theseusWatchAfterRender(app, [
     "documents",

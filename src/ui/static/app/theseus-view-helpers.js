@@ -48,6 +48,23 @@ const theseusViewMetaFor = function theseusViewMetaFor(active) {
   return THESEUS_VIEW_META[active] || null;
 };
 
+const theseusResolveActiveView = function theseusResolveActiveView(appOrActive) {
+  if (typeof appOrActive === "string") return appOrActive;
+  return appOrActive?.active || "";
+};
+
+const theseusDashboardShellMeta = function theseusDashboardShellMeta(app) {
+  if (!app || app.active !== "dashboard") return null;
+  if (typeof window.theseusAriadneViewMeta !== "function") return null;
+  const view = window.theseusAriadneViewMeta(app);
+  if (!view) return null;
+  return {
+    title: view.id === "today" ? "Ariadne's Thread" : `Ariadne · ${view.label}`,
+    subtitle: view.detail || THESEUS_VIEW_META.dashboard.subtitle,
+    icon: view.icon || "layout-dashboard",
+  };
+};
+
 const THESEUS_METRIC_META = [
   {
     label: "Documents",
@@ -87,16 +104,26 @@ const THESEUS_METRIC_META = [
   },
 ];
 
-window.theseusNavTitle = function theseusNavTitle(active) {
+window.theseusNavTitle = function theseusNavTitle(appOrActive) {
+  const dashboardMeta = theseusDashboardShellMeta(appOrActive);
+  if (dashboardMeta) return dashboardMeta.title;
+  const active = theseusResolveActiveView(appOrActive);
   return theseusViewMetaFor(active)?.title || "";
 };
 
-window.theseusNavIcon = function theseusNavIcon(navGroups, active) {
+window.theseusNavIcon = function theseusNavIcon(navGroups, appOrActive) {
+  const dashboardMeta = theseusDashboardShellMeta(appOrActive);
+  if (dashboardMeta) return dashboardMeta.icon;
+  const active = theseusResolveActiveView(appOrActive);
   const flat = navGroups.flatMap((group) => group.items);
   return flat.find((item) => item.id === active)?.icon || "circle";
 };
 
-window.theseusNavSubtitle = function theseusNavSubtitle(active, stats) {
+window.theseusNavSubtitle = function theseusNavSubtitle(appOrActive, statsArg) {
+  const dashboardMeta = theseusDashboardShellMeta(appOrActive);
+  if (dashboardMeta) return dashboardMeta.subtitle;
+  const active = theseusResolveActiveView(appOrActive);
+  const stats = typeof appOrActive === "string" ? statsArg : appOrActive?.stats;
   const subtitle = theseusViewMetaFor(active)?.subtitle;
   return typeof subtitle === "function" ? subtitle(stats) : subtitle || "";
 };
