@@ -610,7 +610,7 @@
                 </div>
               </div>
 
-              <div class="card card-accent accent-magenta p-5">
+              <div class="card card-accent accent-magenta p-5" data-testid="ariadne-capture-desk">
                 <div class="flex items-center gap-2 mb-4">
                   <i data-lucide="satellite" class="w-4 h-4 text-neon-magenta"></i>
                   <h2 class="font-semibold">Capture Desk</h2>
@@ -654,37 +654,61 @@
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 mb-5">
-              <div class="card card-accent accent-amber p-5">
+              <div class="card card-accent accent-amber p-5" data-testid="ariadne-action-queue">
                 <div class="flex items-center justify-between gap-3 mb-4">
                   <h2 class="font-semibold flex items-center gap-2">
-                    <i data-lucide="inbox" class="w-4 h-4 text-neon-amber"></i>
-                    Management Queue
+                    <i data-lucide="list-checks" class="w-4 h-4 text-neon-amber"></i>
+                    Action Queue
                   </h2>
-                  <span class="text-[11px] font-mono text-slate-500" x-text="ariadneQueueItems('inbox', 999).length + ' inbox'"></span>
+                  <span class="text-[11px] font-mono text-slate-500" x-text="ariadneActionQueue(999).length + ' open'"></span>
                 </div>
-                <div x-show="!ariadneQueueItems('inbox').length" class="text-xs font-mono text-slate-600 py-6 text-center">
-                  Queue clear.
+                <div x-show="!ariadneActionQueue(999).length" class="text-xs font-mono text-slate-600 py-6 text-center">
+                  All clear — no pending actions across vault or workspaces.
                 </div>
                 <div class="space-y-2">
-                  <template x-for="item in ariadneQueueItems('inbox', 5)" :key="item.path">
+                  <template x-for="item in ariadneActionQueue(8)" :key="item.key">
                     <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
                       <div class="flex items-start gap-3">
+                        <span class="icon-tile shrink-0" :class="'text-neon-' + item.accent">
+                          <i :data-lucide="item.icon" class="w-4 h-4"></i>
+                        </span>
                         <div class="min-w-0 flex-1">
-                          <div class="text-sm font-semibold text-slate-100 truncate" x-text="item.frontmatter?.title || item.path"></div>
-                          <div class="text-[10px] font-mono text-slate-600 truncate" x-text="item.path"></div>
-                          <div class="markdown-preview mt-2" x-html="renderMd(item.preview)"></div>
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <span class="pill border text-[10px]"
+                                  :class="'bg-neon-' + item.accent + '/10 text-neon-' + item.accent + ' border-neon-' + item.accent + '/30'"
+                                  x-text="item.kind"></span>
+                            <span class="text-sm font-semibold text-slate-100 truncate" x-text="item.title"></span>
+                          </div>
+                          <div class="text-xs text-slate-500 mt-1" x-text="item.detail"></div>
+                          <div x-show="item.kind === 'triage'" class="mt-2 flex gap-2 flex-wrap">
+                            <select x-model="ariadne.promoteTarget[item.path]" class="bg-ink-900 border border-edge rounded px-2 py-1.5 text-[10px] text-slate-300 font-mono">
+                              <option value="">workspace...</option>
+                              <template x-for="name in ariadnePromoteOptions()" :key="name">
+                                <option :value="name" x-text="name"></option>
+                              </template>
+                            </select>
+                            <button class="pill bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan px-2 py-1 text-[10px]"
+                                    @click="promoteAriadneNote(item.path)"
+                                    :disabled="!ariadne.promoteTarget[item.path]">
+                              <span x-text="item.cta"></span>
+                            </button>
+                          </div>
                         </div>
-                        <div class="flex flex-col gap-1.5 min-w-[160px]">
-                          <select x-model="ariadne.promoteTarget[item.path]" class="bg-ink-900 border border-edge rounded px-2 py-1.5 text-[10px] text-slate-300 font-mono">
-                            <option value="">workspace...</option>
-                            <template x-for="name in ariadnePromoteOptions()" :key="name">
-                              <option :value="name" x-text="name"></option>
-                            </template>
-                          </select>
-                          <button class="pill bg-neon-magenta/10 border border-neon-magenta/40 text-neon-magenta px-2 py-1 text-[10px] justify-center" @click="promoteAriadneNote(item.path)" :disabled="!ariadne.promoteTarget[item.path]">
-                            Promote
-                          </button>
-                        </div>
+                        <button x-show="item.kind === 'ingest'"
+                                class="pill bg-neon-amber/10 border border-neon-amber/40 text-neon-amber px-2 py-1 text-[10px] shrink-0"
+                                @click="activateAriadneWorkspace(item.workspace); active='documents'">
+                          <span x-text="item.cta"></span>
+                        </button>
+                        <button x-show="item.kind === 'extract'"
+                                class="pill bg-neon-amber/10 border border-neon-amber/40 text-neon-amber px-2 py-1 text-[10px] shrink-0"
+                                @click="activateAriadneWorkspace(item.workspace)">
+                          <span x-text="item.cta"></span>
+                        </button>
+                        <button x-show="item.kind === 'refresh'"
+                                class="pill bg-neon-magenta/10 border border-neon-magenta/40 text-neon-magenta px-2 py-1 text-[10px] shrink-0"
+                                @click="ariadne.capture.bucket='intel'; document.querySelector('[data-testid=ariadne-capture-desk] textarea')?.focus()">
+                          <span x-text="item.cta"></span>
+                        </button>
                       </div>
                     </div>
                   </template>

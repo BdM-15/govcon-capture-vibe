@@ -225,6 +225,80 @@ window.theseusAriadneQueueItems = function theseusAriadneQueueItems(
   return theseusAriadneBucket(app, bucket).slice(0, limit);
 };
 
+// Action Queue (174.4b slice 2): unified to-do list across vault + workspaces.
+// Each row = one capture-manager action with a single primary CTA.
+// Categories: triage (inbox notes), ingest (unprocessed inputs),
+// extract (docs without entities), refresh (stale intel).
+// 174.6 will add: decision (bid/no-bid), gate (gate review due),
+// risk (risk register entries past mitigation date).
+window.theseusAriadneActionQueue = function theseusAriadneActionQueue(app, limit = 12) {
+  const actions = [];
+  const inbox = theseusAriadneBucket(app, "inbox");
+  inbox.forEach((entry) => {
+    actions.push({
+      key: `triage:${entry.path}`,
+      kind: "triage",
+      icon: "inbox",
+      accent: "cyan",
+      title: entry.frontmatter?.title || entry.path,
+      detail: `Promote raw note from inbox · ${entry.path}`,
+      cta: "Promote",
+      path: entry.path,
+      sort: entry.modified_at || 0,
+    });
+  });
+
+  const rows = window.theseusAriadneWorkspaceRows(app);
+  rows.forEach((row) => {
+    if ((row.inputs_files || 0) > 0 && (row.documents || 0) === 0) {
+      actions.push({
+        key: `ingest:${row.name}`,
+        kind: "ingest",
+        icon: "upload-cloud",
+        accent: "amber",
+        title: row.name,
+        detail: `${row.inputs_files} input file${row.inputs_files === 1 ? "" : "s"} unprocessed — kick off ingest.`,
+        cta: "Open ingest",
+        workspace: row.name,
+        sort: 1e12,
+      });
+    } else if ((row.documents || 0) > 0 && (row.entities || 0) === 0) {
+      actions.push({
+        key: `extract:${row.name}`,
+        kind: "extract",
+        icon: "git-fork",
+        accent: "amber",
+        title: row.name,
+        detail: `${row.documents} doc${row.documents === 1 ? "" : "s"} ingested but no entities yet — re-run extraction.`,
+        cta: "Open workspace",
+        workspace: row.name,
+        sort: 9e11,
+      });
+    }
+  });
+
+  const intel = theseusAriadneBucket(app, "intel");
+  const lastIntel = intel.reduce((max, entry) => Math.max(max, entry.modified_at || 0), 0);
+  const intelAgeDays = lastIntel
+    ? Math.floor((theseusAriadneNowSec() - lastIntel) / ARIADNE_DAY_SECONDS)
+    : null;
+  if (intelAgeDays !== null && intelAgeDays > ARIADNE_STALE_INTEL_DAYS) {
+    actions.push({
+      key: "refresh:intel",
+      kind: "refresh",
+      icon: "clock-alert",
+      accent: "magenta",
+      title: "Cross-opp intel stale",
+      detail: `Last intel entry ${intelAgeDays}d ago — capture customer/competitor read.`,
+      cta: "Capture intel",
+      sort: 8e11,
+    });
+  }
+
+  actions.sort((a, b) => (b.sort || 0) - (a.sort || 0));
+  return actions.slice(0, limit);
+};
+
 window.theseusAriadnePromoteOptions = function theseusAriadnePromoteOptions(app) {
   return window.theseusAriadneWorkspaceRows(app).map((row) => row.name);
 };

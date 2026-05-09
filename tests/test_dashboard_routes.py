@@ -88,4 +88,5 @@ def test_register_ui_mounts_dashboard() -> None:
     # 174.4b: command-center IA — KPI strip + Morning Brief panel are mandatory.
     assert "data-testid=\"ariadne-kpi-strip\"" in resp.text
     assert "data-testid=\"ariadne-morning-brief\"" in resp.text
+    assert "data-testid=\"ariadne-action-queue\"" in resp.text
     assert "Capture Command Center" in resp.text

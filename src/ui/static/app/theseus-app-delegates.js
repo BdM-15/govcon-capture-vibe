@@ -36,6 +36,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusAriadneQueueItems(this, bucket, limit);
     },
 
+    ariadneActionQueue(limit = 12) {
+      return window.theseusAriadneActionQueue(this, limit);
+    },
+
     ariadnePromoteOptions() {
       return window.theseusAriadnePromoteOptions(this);
     },
