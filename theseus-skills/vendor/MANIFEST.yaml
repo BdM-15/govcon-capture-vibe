@@ -1,0 +1,40 @@
+# Vendored skill manifest — pin upstream source per skill so re-vendoring is deterministic.
+#
+# Each entry: upstream URL, pinned commit SHA, license SPDX id, vendored-at date,
+# and any Theseus-specific adaptations applied. Update SHA + adaptations whenever
+# you re-vendor.
+#
+# Loaded by: src/skills/skill_catalog.py (informational; not parsed at runtime yet).
+# Required by: docs/epics/174-ariadnes-thread.md acceptance criteria.
+
+vendored_skills:
+  - name: obsidian-markdown
+    status: planned          # planned | vendored | needs-update
+    upstream:
+      repo: https://github.com/kepano/obsidian-skills
+      path: skills/obsidian-markdown
+      commit: TBD            # pin exact SHA when vendored
+      license: TBD           # confirm license from repo before vendoring
+    vendored_at: null
+    theseus_adaptations:
+      - "Path remap: skill scripts target global/ and rag_storage/<ws>/evergreen/."
+      - "Frontmatter schema aligned to Theseus note model."
+    rationale: |
+      Powers Obsidian-flavored MD authoring/rendering across global/ and workspace
+      evergreen layers. Vendoring (not git submodule) keeps single-dev workflow simple.
+
+  - name: idea-capturer
+    status: planned
+    upstream:
+      repo: https://github.com/eddiebe147/claude-settings
+      path: skills/idea-capturer
+      commit: TBD
+      license: TBD
+    vendored_at: null
+    theseus_adaptations:
+      - "Default capture dir → global/inbox/."
+      - "Optional local-LLM polish step via src/skills/llm_chat.py."
+      - "Promote-to-workspace handoff calls /api/global/promote."
+    rationale: |
+      Source pattern for global-idea-capturer (which lives at .github/skills/
+      global-idea-capturer/ as a Theseus-platform-tier skill, not vendor).
