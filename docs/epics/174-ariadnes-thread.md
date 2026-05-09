@@ -27,17 +27,20 @@ The current Capture Workbench (single-workspace UI) stays — it becomes the dee
 - [ ] `global-idea-capturer` skill exists, defaults to `global/inbox/`, supports local-LLM polish, and exposes a "promote to workspace" handoff.
 - [ ] `global/{inbox,notes,llm-wiki,intel}/` directory layout exists; `GlobalStore` service in `src/core/`; `/api/global/*` routes registered.
 - [ ] Ariadne's Thread dashboard is the new top-level UI (`/`); current Workbench is reachable at `/workspace/<name>`.
-- [ ] Dashboard panels: global inbox, opportunity pipeline (lightweight status across all workspaces), LLM wiki tree, cross-opportunity intel feed, quick-capture box.
-- [ ] `phase-promoter` skill chain handles `sources → processed → evergreen → active` promotion using v1.12 chain features (HITL, semantic labels, handoffs).
-- [ ] Cross-opportunity synthesis chain compacts `global/notes/` into `global/llm-wiki/<topic>.md` (Karpathy-style LLM Wiki).
+- [ ] Command-center IA is live: Morning Brief, Action Queue, Opportunity Cards, Stage Board; inventory metrics demoted to System view.
+- [ ] `phase-promoter` skill chain handles source → processed → evergreen promotion using v1.12 chain features (HITL, semantic labels, handoffs) and supports LLM Wiki / intel synthesis flow.
+- [ ] Canonical `pursuits/<slug>/00_pursuit.yaml` + Shipley folder scaffold exist per workspace and feed dashboard cards/stage board.
+- [ ] 174.7 ships seven vault-driven views: Today, Pipeline, Decision Queue, Intel Desk, Opp 360, Knowledge, Agent Ops.
+- [ ] 174.8 delivers vault <-> `rag_storage` / LightRAG round-trip, including explicit refresh/delete-by-doc flow.
+- [ ] 174.9 adds Shipley/FAR seeds, color-team templates, and cross-opportunity pattern feed.
 - [ ] All new Markdown is Obsidian-flavored (yaml frontmatter, `[[wikilinks]]`, callouts).
-- [ ] `tests/` cover: skill discovery from two roots, GlobalStore CRUD, dashboard route, `global-idea-capturer` end-to-end, `phase-promoter` chain.
-- [ ] Repo memory updated; `docs/copilot-instructions.md` "Active integration branches" updated; `branch-integration-policy.md` updated.
+- [ ] Repo memory updated; `.github/copilot-instructions.md` "Active integration branches" updated; `branch-integration-policy.md` updated.
 - [ ] Tag `v1.13.0`; merge to `main` with regular merge commit.
 
 ## Phased Plan
 
 ### 174.0 — Epic scaffold (this commit)
+
 - Create branch `174-ariadnes-thread-epic`.
 - Create `docs/epics/174-ariadnes-thread.md` (this file).
 - Create `global/{inbox,notes,llm-wiki,intel}/.gitkeep` skeleton.
@@ -45,6 +48,7 @@ The current Capture Workbench (single-workspace UI) stays — it becomes the dee
 - **Out of scope here:** any code changes; any vendored content; any UI changes.
 
 ### 174.1 — Vendor pipeline (single-root)
+
 - Sub-branch `174.1-vendor-pipeline`.
 - Vendor `obsidian-markdown` (kepano) into `.github/skills/obsidian-markdown/` with `UPSTREAM.md` (commit SHA + MIT attribution + adaptation log) + verbatim `LICENSE`.
 - Vendor `idea-capturer` (eddiebe147 / skills.sh) into `.github/skills/idea-capturer/` with `UPSTREAM.md` (license caveat documented).
@@ -53,6 +57,7 @@ The current Capture Workbench (single-workspace UI) stays — it becomes the dee
 - **Acceptance:** `manager.list_skills()` returns vendored skills; existing skill tests still pass.
 
 ### 174.2 — `global-idea-capturer` skill
+
 - Sub-branch `174.2-global-idea-capturer`.
 - New skill at `.github/skills/global-idea-capturer/` (Theseus platform tier, not vendor — adapts the vendored idea-capturer specifically for Theseus global flow).
 - Tools: `filesystem.write_global(path, content)`, `llm.polish(text)` (uses `llm_chat.py`), `workspace.promote(note_id, target_workspace)`.
@@ -61,12 +66,14 @@ The current Capture Workbench (single-workspace UI) stays — it becomes the dee
 - **MUST load `skill-creator` per project mandate.**
 
 ### 174.3 — Global storage backend
+
 - Sub-branch `174.3-global-store`.
 - `src/core/global_store.py`: thin facade — `read(path)`, `write(path, content)`, `list(prefix)`, `search(query)` over `global/`.
 - `src/server/global_routes.py`: `/api/global/inbox`, `/api/global/notes`, `/api/global/llm-wiki`, `/api/global/intel`, `/api/global/capture`, `/api/global/promote`.
 - Tests: `tests/test_global_store.py`, `tests/test_global_routes.py`.
 
 ### 174.4 — Ariadne's Thread dashboard UI
+
 - Sub-branch `174.4-ariadne-dashboard`.
 - New `src/ui/static/dashboard.html` (Alpine component `ariadne()`).
 - Move current `index.html` mount to `/workspace/<name>`; new `/` serves dashboard.
@@ -80,20 +87,49 @@ The current Capture Workbench (single-workspace UI) stays — it becomes the dee
 - Style budget: stay within existing `theseus.css` token system. No new CSS framework.
 - Tests: `tests/test_dashboard_routes.py`, smoke test for Alpine state.
 
-### 174.5 — `phase-promoter` chain
+### 174.4b — Command-center IA rewrite
+
+- Replace generic dashboard panels with Morning Brief, Action Queue, Opportunity Cards, and Stage Board.
+- Back these views with `00_pursuit.yaml`-driven metadata rather than placeholder inventory summaries.
+- Demote raw inventory metrics to System view so Ariadne stays operator-facing.
+- Acceptance: dashboard reads like command center, not admin console.
+
+### 174.5 — `phase-promoter` chain + wiki/intel synthesis
+
 - Sub-branch `174.5-phase-promoter`.
 - New skill at `.github/skills/phase-promoter/` with chain contract in `src/skills/chain_contracts.py`.
 - Workflow: select source files in `sources/` → analyze with LLM → synthesize into `processed/` → human-in-the-loop confirm → write to `evergreen/` → re-ingest selectively into LightRAG → optionally export to `global/llm-wiki/`.
 - Reuses v1.12 HITL + semantic labels.
+- Includes Karpathy-style LLM Wiki / intel synthesis pattern and local Qwen 7-9B note-polish path.
 - Tests: chain executor integration test + planner test.
 
 ### 174.6 — Pursuit schema + dashboard cards
+
 - Sub-branch `174.6-pursuit-dashboard`.
 - Add a canonical `pursuits/<slug>/00_pursuit.yaml` per workspace with editable pursuit metadata: agency, Shipley stage, upcoming gate, proposal due date, weighted PWin drivers, and 7-axis readiness bars.
 - Seed a Shipley folder template alongside that file so every workspace has a standard pursuit structure without manual setup.
 - Populate Ariadne opportunity cards and the stage board from this pursuit metadata instead of placeholders.
 
-### 174.7 — Integration & release
+### 174.7 — Vault-driven views
+
+- Ship seven core Ariadne views as Alpine routes: Today, Pipeline, Decision Queue, Intel Desk, Opp 360, Knowledge, Agent Ops.
+- Keep Ariadne global-first; workspace routes remain deep-dive mode.
+- Reuse existing dashboard data paths where possible instead of building parallel stores.
+
+### 174.8 — Ontology overlay + LightRAG round-trip
+
+- Add `ontology_promoter` flow bridging vault artifacts and workspace `rag_storage`.
+- Make promotion to workspace KG explicit and reversible.
+- Support LightRAG refresh path using delete-by-doc / re-ingest mechanics instead of ad hoc storage surgery.
+
+### 174.9 — Seeds + cross-opportunity patterns
+
+- Seed Shipley/FAR starter content and color-team templates.
+- Add cross-opportunity pattern feed for reusable capture, intel, and proposal signals.
+- Focus on population layer: make Ariadne useful on day one, not only after long manual curation.
+
+### 174.10 — Integration & release
+
 - Run full test suite from `.venv`.
 - Bump version to `v1.13.0`.
 - Update `README.md` with new dashboard screenshot.
@@ -106,18 +142,23 @@ The current Capture Workbench (single-workspace UI) stays — it becomes the dee
 ## Architecture Decisions
 
 ### AD-1: Single skill root
+
 All skills — first-party, dual-purpose, and vendored — live under `.github/skills/<name>/`. Provenance for vendored copies is recorded in per-skill `UPSTREAM.md` and indexed in `theseus-skills/README.md`. Single-dev repo doesn't justify the extra surface area of a second discovery root. (Original plan called for `theseus-skills/vendor/` as a separate root; reverted in 174.1.)
 
 ### AD-2: Global layer is Markdown-on-disk
+
 Not a LightRAG instance. Cheaper, matches Obsidian mental model, no embedding cost on capture. Promotion to a workspace = explicit re-ingest into that workspace's LightRAG. Search across global = lightweight (ripgrep + frontmatter index).
 
 ### AD-3: Dashboard is incremental, not rewrite
+
 Adds new top-level Alpine component + route. Existing `index.html` Workbench becomes `/workspace/<name>`. No framework change. No build step.
 
 ### AD-4: Per-skill UPSTREAM.md, not git submodule
+
 Each vendored skill carries its own `UPSTREAM.md` with upstream URL + commit SHA + license + adaptation log + re-vendor procedure. Re-vendor is a deliberate documented command. Submodules introduce CI friction we don't need for a single-dev repo.
 
 ### AD-5: `phase-promoter` is a skill chain, not new infrastructure
+
 Reuses v1.12 chain executor (HITL, semantic labels, handoffs). Validates that the chain infrastructure is general enough — if it isn't, that's a v1.12 bug to fix, not a reason to fork.
 
 ## Out of Scope (Explicit)
@@ -130,6 +171,6 @@ Reuses v1.12 chain executor (HITL, semantic labels, handoffs). Validates that th
 
 ## Tracking
 
-Each phase = one sub-branch. Sub-branches FF into `174-ariadnes-thread-epic`. Epic merges to `main` only at 174.7 with full test green + user approval.
+Each phase = one sub-branch. Sub-branches FF into `174-ariadnes-thread-epic`. Epic merges to `main` only after 174.9 / release work with full test green + user approval.
 
 Per project mandate: every skill creation/modification in 174.2, 174.5, 174.6 **must load `skill-creator`** and follow its workflow (snapshot → evals → baseline → draft → iterate). No shortcuts.

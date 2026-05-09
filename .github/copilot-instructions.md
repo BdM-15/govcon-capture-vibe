@@ -350,7 +350,7 @@ ALL development happens on feature branches. `main` is updated only via fast-for
 
 **Active integration branches:**
 
-- No active integration epic currently.
+- `174-ariadnes-thread-epic` is active. Sub-branches `174.1-...` through `174.9-...` fast-forward into the epic branch, not `main`. Epic targets `v1.13.0` and merges to `main` with a regular merge commit only after release validation.
 - Most recent completed architecture epic `169-architecture-locality-epic` landed on `main` as `v1.8.0`. Prior architecture epics: `168-codebase-architecture-deepening-epic` landed as `v1.7.0`; `164-codebase-architecture-cleanup-epic`, `165-architecture-cleanup-round-2-epic`; skills execution architecture epic `166` landed as `v1.6.0`.
 
 **Standard fast-forward sequence** (after the user says "merge it" / "ship it" / "continue"):
