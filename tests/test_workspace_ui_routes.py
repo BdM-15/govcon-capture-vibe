@@ -24,6 +24,9 @@ def _client(
     ensure_active_workspace=None,
 ) -> TestClient:
     app = FastAPI()
+    ensure_cb = ensure_active_workspace or (
+        lambda name: (tmp_path / name).mkdir(parents=True, exist_ok=True)
+    )
     register_workspace_ui_routes(
         app,
         workspace_name=lambda: active,
@@ -33,7 +36,7 @@ def _client(
         schedule_restart=lambda delay: restart_calls.append(delay) if restart_calls is not None else None,
         **({"inventory_func": inventory_func} if inventory_func else {}),
         **({"delete_workspace_func": delete_workspace_func} if delete_workspace_func else {}),
-        **({"ensure_active_workspace": ensure_active_workspace} if ensure_active_workspace else {}),
+        ensure_active_workspace=ensure_cb,
     )
     return TestClient(app)
 
@@ -77,7 +80,18 @@ def test_workspace_list_and_switch_routes_use_injected_callbacks(tmp_path) -> No
     (tmp_path / "existing").mkdir()
     set_calls: list[tuple[str, str]] = []
     restart_calls: list[float] = []
-    client = _client(tmp_path, set_calls=set_calls, restart_calls=restart_calls)
+    ensured: list[str] = []
+
+    def ensure_workspace(name: str) -> None:
+        ensured.append(name)
+        (tmp_path / name).mkdir(parents=True, exist_ok=True)
+
+    client = _client(
+        tmp_path,
+        set_calls=set_calls,
+        restart_calls=restart_calls,
+        ensure_active_workspace=ensure_workspace,
+    )
 
     list_response = client.get("/api/ui/workspaces")
     assert list_response.status_code == 200, list_response.text
@@ -93,6 +107,7 @@ def test_workspace_list_and_switch_routes_use_injected_callbacks(tmp_path) -> No
     assert (tmp_path / "new_ws").is_dir()
     assert set_calls == [("WORKSPACE", "new_ws")]
     assert restart_calls == [0.75]
+    assert ensured == ["new_ws"]
 
 
 def test_workspace_switch_rejects_invalid_or_missing_workspace(tmp_path) -> None:

@@ -641,7 +641,10 @@
                         class="text-neon-cyan font-mono"
                         x-text="stats.workspace || 'none'"
                       ></span>
-                      · PWin / gate / readiness arrive in 174.6.
+                      · sourced from
+                      <span class="font-mono text-slate-400"
+                        >pursuits/*/00_pursuit.yaml</span
+                      >.
                     </div>
                   </div>
                   <button
@@ -686,7 +689,10 @@
                             class="text-[10px] font-mono text-slate-600 mt-0.5"
                           >
                             agency:
-                            <span class="text-slate-500">— (174.6)</span>
+                            <span
+                              class="text-slate-400"
+                              x-text="card.agency || 'TBD'"
+                            ></span>
                           </div>
                         </div>
                         <span
@@ -697,164 +703,187 @@
                       </div>
 
                       <div class="grid grid-cols-3 gap-2 text-[11px] font-mono">
-                        <div>
+                        <div class="grid grid-cols-4 gap-2 text-[11px] font-mono">
                           <div class="text-slate-600">PWin</div>
                           <div class="text-slate-500">
-                            — <span class="text-[9px]">soon</span>
-                          </div>
-                        </div>
-                        <div>
-                          <div class="text-slate-600">gate</div>
-                          <div class="text-slate-500">
-                            — <span class="text-[9px]">soon</span>
-                          </div>
-                        </div>
-                        <div>
-                          <div class="text-slate-600">intel</div>
-                          <div
-                            :class="card.intel_age_days === null ? 'text-slate-500' : (card.intel_age_days > 14 ? 'text-neon-magenta' : 'text-slate-300')"
-                            x-text="card.intel_age_days === null ? 'none' : card.intel_age_days + 'd ago'"
-                          ></div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div
-                          class="text-[10px] uppercase tracking-[0.14em] font-mono text-slate-600 mb-1"
-                        >
-                          readiness · 7-axis (174.6)
-                        </div>
-                        <div class="grid grid-cols-7 gap-1">
-                          <template
-                            x-for="bar in card.readiness"
-                            :key="bar.dim"
-                          >
                             <div
-                              class="h-1.5 rounded-sm bg-ink-800 border border-edge"
-                              :title="bar.dim"
+                              class="text-slate-200"
+                              :title="card.pwin?.title || ''"
+                              x-text="card.pwin?.label || '-'"
                             ></div>
-                          </template>
+                            <div
+                              class="text-[9px] text-slate-500 truncate"
+                              x-text="card.pwin?.detail || 'unset'"
+                            ></div>
+                          </div>
+                          <div>
+                            <div class="text-slate-600">gate</div>
+                            <div
+                              class="text-slate-200"
+                              :title="card.gate_due?.title || ''"
+                              x-text="card.gate_due?.label || '-'"
+                            ></div>
+                            <div
+                              class="text-[9px] text-slate-500 truncate"
+                              x-text="card.gate_due?.name || 'unset'"
+                            ></div>
+                          </div>
+                          <div>
+                            <div class="text-slate-600">proposal</div>
+                            <div
+                              class="text-slate-200"
+                              :title="card.proposal_due?.title || ''"
+                              x-text="card.proposal_due?.label || '-'"
+                            ></div>
+                            <div class="text-[9px] text-slate-500">due</div>
+                          </div>
+                          <div>
+                            <div class="text-slate-600">intel</div>
+                            <div
+                              :class="card.intel_age_days === null ? 'text-slate-500' : (card.intel_age_days > 14 ? 'text-neon-magenta' : 'text-slate-300')"
+                              x-text="card.intel_age_days === null ? 'none' : card.intel_age_days + 'd ago'"
+                            ></div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div
+                            class="text-[10px] uppercase tracking-[0.14em] font-mono text-slate-600 mb-1"
+                          >
+                            readiness · 7-axis
+                          </div>
+                          <div class="grid grid-cols-7 gap-1">
+                            <template
+                              x-for="bar in card.readiness"
+                              :key="bar.dim"
+                            >
+                              <div
+                                class="h-1.5 rounded-sm border"
+                                :class="bar.class_name"
+                                :title="bar.title"
+                              ></div>
+                            </template>
+                          </div>
+                        </div>
+
+                        <div
+                          x-show="card.top_blocker"
+                          class="rounded border border-neon-amber/30 bg-neon-amber/5 px-2 py-1.5 text-[11px] text-neon-amber"
+                        >
+                          <span
+                            class="font-mono text-[9px] uppercase tracking-[0.14em] mr-1"
+                            x-text="card.top_blocker?.kind"
+                          ></span>
+                          <span x-text="card.top_blocker?.detail"></span>
+                        </div>
+                        <div
+                          x-show="!card.top_blocker"
+                          class="text-[11px] text-slate-600 font-mono"
+                        >
+                          No blockers detected.
+                        </div>
+
+                        <div class="flex gap-1.5 mt-auto">
+                          <button
+                            class="studio-action flex-1 justify-center"
+                            title="Activate workspace"
+                            @click="activateAriadneWorkspace(card.name)"
+                          >
+                            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+                            <span class="text-[10px] ml-1">Open</span>
+                          </button>
+                          <button
+                            x-show="card.next_action"
+                            class="studio-action flex-1 justify-center bg-neon-cyan/10 border-neon-cyan/40 text-neon-cyan"
+                            :title="card.next_action?.detail"
+                            @click="activateAriadneWorkspace(card.name)"
+                          >
+                            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                            <span
+                              class="text-[10px] ml-1"
+                              x-text="card.next_action?.cta"
+                            ></span>
+                          </button>
                         </div>
                       </div>
-
-                      <div
-                        x-show="card.top_blocker"
-                        class="rounded border border-neon-amber/30 bg-neon-amber/5 px-2 py-1.5 text-[11px] text-neon-amber"
-                      >
-                        <span
-                          class="font-mono text-[9px] uppercase tracking-[0.14em] mr-1"
-                          x-text="card.top_blocker?.kind"
-                        ></span>
-                        <span x-text="card.top_blocker?.detail"></span>
-                      </div>
-                      <div
-                        x-show="!card.top_blocker"
-                        class="text-[11px] text-slate-600 font-mono"
-                      >
-                        No blockers detected.
-                      </div>
-
-                      <div class="flex gap-1.5 mt-auto">
-                        <button
-                          class="studio-action flex-1 justify-center"
-                          title="Activate workspace"
-                          @click="activateAriadneWorkspace(card.name)"
-                        >
-                          <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
-                          <span class="text-[10px] ml-1">Open</span>
-                        </button>
-                        <button
-                          x-show="card.next_action"
-                          class="studio-action flex-1 justify-center bg-neon-cyan/10 border-neon-cyan/40 text-neon-cyan"
-                          :title="card.next_action?.detail"
-                          @click="activateAriadneWorkspace(card.name)"
-                        >
-                          <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-                          <span
-                            class="text-[10px] ml-1"
-                            x-text="card.next_action?.cta"
-                          ></span>
-                        </button>
-                      </div>
-                    </div>
-                  </template>
-                </div>
-              </div>
-
-              <div
-                class="card card-accent accent-magenta p-5"
-                data-testid="ariadne-capture-desk"
-              >
-                <div class="flex items-center gap-2 mb-4">
-                  <i
-                    data-lucide="satellite"
-                    class="w-4 h-4 text-neon-magenta"
-                  ></i>
-                  <h2 class="font-semibold">Capture Desk</h2>
-                </div>
-                <div class="space-y-3">
-                  <textarea
-                    x-model="ariadne.capture.body"
-                    rows="5"
-                    placeholder="Signal, risk, customer note, competitor move, lesson, call follow-up..."
-                    class="w-full bg-ink-900 border border-edge focus:border-neon-magenta/60 outline-none rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 font-mono resize-none"
-                  ></textarea>
-                  <div class="grid grid-cols-2 gap-2">
-                    <select
-                      x-model="ariadne.capture.bucket"
-                      class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono"
-                    >
-                      <option value="inbox">inbox</option>
-                      <option value="notes">notes</option>
-                      <option value="intel">intel</option>
-                      <option value="llm-wiki">llm-wiki</option>
-                    </select>
-                    <select
-                      x-model="ariadne.capture.priority"
-                      class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono"
-                    >
-                      <option value="normal">normal</option>
-                      <option value="high">high</option>
-                      <option value="urgent">urgent</option>
-                    </select>
-                  </div>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <input
-                      x-model="ariadne.capture.slug"
-                      placeholder="slug"
-                      class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 placeholder-slate-600 font-mono"
-                    />
-                    <input
-                      x-model="ariadne.capture.tags"
-                      placeholder="tags"
-                      class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 placeholder-slate-600 font-mono"
-                    />
-                  </div>
-                  <select
-                    x-model="ariadne.capture.workspace"
-                    class="w-full bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono"
-                  >
-                    <option value="">global only</option>
-                    <template
-                      x-for="name in ariadnePromoteOptions()"
-                      :key="name"
-                    >
-                      <option :value="name" x-text="name"></option>
                     </template>
-                  </select>
-                  <button
-                    class="w-full btn-hero-magenta inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold"
-                    @click="submitAriadneCapture()"
-                    :disabled="!ariadne.capture.body.trim() || ariadne.capture.busy"
-                  >
-                    <i data-lucide="send" class="w-4 h-4"></i>
-                    <span
-                      x-text="ariadne.capture.busy ? 'Capturing...' : 'Capture Signal'"
-                    ></span>
-                  </button>
+                  </div>
+                </div>
+
+                <div
+                  class="card card-accent accent-magenta p-5"
+                  data-testid="ariadne-capture-desk"
+                >
+                  <div class="flex items-center gap-2 mb-4">
+                    <i
+                      data-lucide="satellite"
+                      class="w-4 h-4 text-neon-magenta"
+                    ></i>
+                    <h2 class="font-semibold">Capture Desk</h2>
+                  </div>
+                  <div class="space-y-3">
+                    <textarea
+                      x-model="ariadne.capture.body"
+                      rows="5"
+                      placeholder="Signal, risk, customer note, competitor move, lesson, call follow-up..."
+                      class="w-full bg-ink-900 border border-edge focus:border-neon-magenta/60 outline-none rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 font-mono resize-none"
+                    ></textarea>
+                    <div class="grid grid-cols-2 gap-2">
+                      <select
+                        x-model="ariadne.capture.bucket"
+                        class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono"
+                      >
+                        <option value="inbox">inbox</option>
+                        <option value="notes">notes</option>
+                        <option value="intel">intel</option>
+                        <option value="llm-wiki">llm-wiki</option>
+                      </select>
+                      <select
+                        x-model="ariadne.capture.priority"
+                        class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono"
+                      >
+                        <option value="normal">normal</option>
+                        <option value="high">high</option>
+                        <option value="urgent">urgent</option>
+                      </select>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <input
+                        x-model="ariadne.capture.slug"
+                        placeholder="slug"
+                        class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 placeholder-slate-600 font-mono"
+                      />
+                      <input
+                        x-model="ariadne.capture.tags"
+                        placeholder="tags"
+                        class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 placeholder-slate-600 font-mono"
+                      />
+                    </div>
+                    <select
+                      x-model="ariadne.capture.workspace"
+                      class="w-full bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono"
+                    >
+                      <option value="">global only</option>
+                      <template
+                        x-for="name in ariadnePromoteOptions()"
+                        :key="name"
+                      >
+                        <option :value="name" x-text="name"></option>
+                      </template>
+                    </select>
+                    <button
+                      class="w-full btn-hero-magenta inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold"
+                      @click="submitAriadneCapture()"
+                      :disabled="!ariadne.capture.body.trim() || ariadne.capture.busy"
+                    >
+                      <i data-lucide="send" class="w-4 h-4"></i>
+                      <span
+                        x-text="ariadne.capture.busy ? 'Capturing...' : 'Capture Signal'"
+                      ></span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
             <div
               class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 mb-5"
@@ -1065,7 +1094,7 @@
                   </h2>
                   <div class="text-xs text-slate-500 mt-1">
                     Identify → Qualify → Capture → Proposal → Submitted → Award.
-                    Heuristic placement until 174.6 adds
+                    Placement follows
                     <span class="font-mono text-slate-400">pursuit.stage</span>.
                   </div>
                 </div>
@@ -4769,7 +4798,10 @@
                               :title="grillRationaleTooltip(row.group.items[0])"
                               @click.stop="openStudioChainTrace(row.group.items[0])"
                             >
-                              <i data-lucide="brain-circuit" class="w-3 h-3"></i>
+                              <i
+                                data-lucide="brain-circuit"
+                                class="w-3 h-3"
+                              ></i>
                               <span
                                 x-text="'grill rationale: ' + primaryChain(row.group.items[0]).grill_links_count"
                               ></span>
@@ -4910,7 +4942,10 @@
                             :title="'Grill rationale (' + primaryChain(row.deliverable).grill_links_count + ')\n' + grillRationaleTooltip(row.deliverable)"
                             @click="openStudioChainTrace(row.deliverable)"
                           >
-                            <i data-lucide="brain-circuit" class="w-3.5 h-3.5"></i>
+                            <i
+                              data-lucide="brain-circuit"
+                              class="w-3.5 h-3.5"
+                            ></i>
                           </button>
                           <a
                             :href="studioDownloadHref(row.deliverable)"

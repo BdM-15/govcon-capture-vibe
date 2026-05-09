@@ -87,10 +87,11 @@ The current Capture Workbench (single-workspace UI) stays — it becomes the dee
 - Reuses v1.12 HITL + semantic labels.
 - Tests: chain executor integration test + planner test.
 
-### 174.6 — LLM Wiki compaction chain
-- Sub-branch `174.6-llm-wiki-compaction`.
-- New skill `llm-wiki-compactor` (or extend `phase-promoter`) — periodic synthesis of `global/notes/` into topical `global/llm-wiki/<topic>.md` files.
-- Karpathy-style: each wiki page is dense, current, single-source-of-truth on a topic; old notes archived not deleted.
+### 174.6 — Pursuit schema + dashboard cards
+- Sub-branch `174.6-pursuit-dashboard`.
+- Add a canonical `pursuits/<slug>/00_pursuit.yaml` per workspace with editable pursuit metadata: agency, Shipley stage, upcoming gate, proposal due date, weighted PWin drivers, and 7-axis readiness bars.
+- Seed a Shipley folder template alongside that file so every workspace has a standard pursuit structure without manual setup.
+- Populate Ariadne opportunity cards and the stage board from this pursuit metadata instead of placeholders.
 
 ### 174.7 — Integration & release
 - Run full test suite from `.venv`.

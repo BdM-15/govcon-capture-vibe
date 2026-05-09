@@ -9,13 +9,14 @@ import os
 import re
 import shutil
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+import yaml
 
 from src.core import reset_settings
 from src.core.neo4j_config import get_neo4j_connection_config
@@ -32,6 +33,24 @@ _NON_WORKSPACE_LABELS = {"UNKNOWN", "table", "image", "equation", "list", "figur
 _INPUTS_RESERVED = {"uploaded", "__enqueued__"}
 HEX_SUFFIX = re.compile(r"_[0-9a-f]{8}$", re.IGNORECASE)
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_PURSUIT_STAGES = ("identify", "qualify", "capture", "proposal", "submitted", "award")
+_PURSUIT_STAGE_SET = frozenset(_PURSUIT_STAGES)
+_READINESS_DIMS = (
+    "customer",
+    "compete",
+    "solution",
+    "team",
+    "price",
+    "compliance",
+    "proposal",
+)
+_DEFAULT_SHIPLEY_FOLDERS = tuple(f"{index:02d}-{name}" for index, name in enumerate(_PURSUIT_STAGES, start=1))
+_DEFAULT_PWIN_DRIVERS = (
+    ("customer", "Customer relationship", 30),
+    ("solution", "Solution fit", 30),
+    ("competition", "Competitive position", 25),
+    ("price", "Price realism", 15),
+)
 
 
 class WorkspaceSwitch(BaseModel):
@@ -56,6 +75,263 @@ class WipeAllScope(BaseModel):
     rag_storage: bool = Field(default=False)
     inputs: bool = Field(default=False)
     confirm: str = Field(..., description="Must equal 'DELETE ALL'.")
+
+
+class PursuitGate(BaseModel):
+    """Upcoming gate tracked in 00_pursuit.yaml."""
+
+    name: str = Field(default="qualification", min_length=1, max_length=64)
+    due: date | None = None
+
+
+class PursuitPwin(BaseModel):
+    """PWin summary tracked in 00_pursuit.yaml."""
+
+    value: int | None = Field(default=None, ge=0, le=100)
+    confidence: str = Field(default="low", min_length=1, max_length=16)
+    trend: str = Field(default="flat", min_length=1, max_length=16)
+
+
+class PursuitDriver(BaseModel):
+    """One weighted PWin driver."""
+
+    key: str = Field(..., min_length=1, max_length=32)
+    label: str = Field(..., min_length=1, max_length=80)
+    weight: int = Field(..., ge=0, le=100)
+    score: int = Field(default=0, ge=0, le=5)
+    rationale: str | None = Field(default=None, max_length=400)
+    next_action: str | None = Field(default=None, max_length=200)
+
+
+class PursuitReadiness(BaseModel):
+    """Seven-axis readiness bars for Ariadne opportunity cards."""
+
+    customer: int = Field(default=0, ge=0, le=5)
+    compete: int = Field(default=0, ge=0, le=5)
+    solution: int = Field(default=0, ge=0, le=5)
+    team: int = Field(default=0, ge=0, le=5)
+    price: int = Field(default=0, ge=0, le=5)
+    compliance: int = Field(default=0, ge=0, le=5)
+    proposal: int = Field(default=0, ge=0, le=5)
+
+
+class PursuitRecord(BaseModel):
+    """Editable schema for pursuits/<slug>/00_pursuit.yaml."""
+
+    workspace: str | None = Field(default=None, min_length=1, max_length=64)
+    slug: str | None = Field(default=None, min_length=1, max_length=80)
+    title: str = Field(default="Untitled pursuit", min_length=1, max_length=120)
+    agency: str | None = Field(default=None, max_length=120)
+    stage: str = Field(default="identify", min_length=1, max_length=32)
+    gate: PursuitGate = Field(default_factory=PursuitGate)
+    proposal_due: date | None = None
+    pwin: PursuitPwin = Field(default_factory=PursuitPwin)
+    pwin_drivers: list[PursuitDriver] = Field(default_factory=list, max_length=8)
+    readiness: PursuitReadiness = Field(default_factory=PursuitReadiness)
+    shipley_folders: list[str] = Field(default_factory=list, max_length=12)
+
+
+def _slugify_workspace_name(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")
+    return slug or "pursuit"
+
+
+def _workspace_title(name: str) -> str:
+    cleaned = re.sub(r"[_-]+", " ", name or "").strip()
+    return cleaned or "Untitled pursuit"
+
+
+def _normalize_stage(value: str | None) -> str:
+    cleaned = (value or "identify").strip().lower().replace("_", "-")
+    return cleaned if cleaned in _PURSUIT_STAGE_SET else "identify"
+
+
+def _normalize_confidence(value: str | None) -> str:
+    cleaned = (value or "low").strip().lower()
+    return cleaned if cleaned in {"low", "medium", "high"} else "low"
+
+
+def _normalize_trend(value: str | None) -> str:
+    cleaned = (value or "flat").strip().lower()
+    return cleaned if cleaned in {"down", "flat", "up"} else "flat"
+
+
+def _default_pwin_drivers(*, score: int = 2) -> list[dict[str, Any]]:
+    return [
+        {
+            "key": key,
+            "label": label,
+            "weight": weight,
+            "score": score,
+            "rationale": None,
+            "next_action": None,
+        }
+        for key, label, weight in _DEFAULT_PWIN_DRIVERS
+    ]
+
+
+def _compute_weighted_pwin(drivers: list[PursuitDriver]) -> int | None:
+    if not drivers:
+        return None
+    total_weight = sum(driver.weight for driver in drivers)
+    if total_weight <= 0:
+        return None
+    weighted = sum((driver.score / 5.0) * driver.weight for driver in drivers)
+    return round((weighted / total_weight) * 100)
+
+
+def _shipley_folders_from_payload(payload: dict[str, Any] | None) -> list[str]:
+    raw = payload.get("shipley_folders") if isinstance(payload, dict) else None
+    if isinstance(raw, list):
+        folders = [str(item).strip() for item in raw if str(item).strip()]
+        if folders:
+            return folders
+    return list(_DEFAULT_SHIPLEY_FOLDERS)
+
+
+def _render_pursuit_template(workspace_name: str) -> str:
+    slug = _slugify_workspace_name(workspace_name)
+    title = _workspace_title(workspace_name)
+    lines = [
+        f"workspace: {workspace_name}",
+        f"slug: {slug}",
+        f"title: {title}",
+        "agency: TBD",
+        "stage: identify",
+        "gate:",
+        "  name: qualification",
+        "  due:",
+        "proposal_due:",
+        "pwin:",
+        "  value:",
+        "  confidence: low",
+        "  trend: flat",
+        "pwin_drivers:",
+    ]
+    for driver in _default_pwin_drivers():
+        lines.extend(
+            [
+                f"  - key: {driver['key']}",
+                f"    label: {driver['label']}",
+                f"    weight: {driver['weight']}",
+                f"    score: {driver['score']}",
+                "    rationale:",
+                "    next_action:",
+            ]
+        )
+    lines.extend(["readiness:"])
+    for dim in _READINESS_DIMS:
+        lines.append(f"  {dim}: 2")
+    lines.extend(["shipley_folders:"])
+    for folder in _DEFAULT_SHIPLEY_FOLDERS:
+        lines.append(f"  - {folder}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _pursuit_file_candidates(workspace_root: Path) -> list[Path]:
+    candidates: list[Path] = []
+    direct = workspace_root / "00_pursuit.yaml"
+    if direct.is_file():
+        candidates.append(direct)
+    pursuits_root = workspace_root / "pursuits"
+    if pursuits_root.is_dir():
+        candidates.extend(sorted(path for path in pursuits_root.glob("*/00_pursuit.yaml") if path.is_file()))
+    return candidates
+
+
+def _ensure_pursuit_scaffold(workspace_name: str, workspace_root: Path) -> Path:
+    workspace_root.mkdir(parents=True, exist_ok=True)
+    existing = _pursuit_file_candidates(workspace_root)
+    if existing:
+        target = existing[0]
+        try:
+            raw = yaml.safe_load(target.read_text(encoding="utf-8")) or {}
+        except Exception:  # noqa: BLE001
+            raw = {}
+    else:
+        slug = _slugify_workspace_name(workspace_name)
+        target = workspace_root / "pursuits" / slug / "00_pursuit.yaml"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(_render_pursuit_template(workspace_name), encoding="utf-8")
+        raw = {}
+
+    for folder in _shipley_folders_from_payload(raw):
+        (target.parent / folder).mkdir(parents=True, exist_ok=True)
+    return target
+
+
+def _coerce_pursuit_payload(raw: dict[str, Any], workspace_name: str) -> dict[str, Any]:
+    payload = dict(raw)
+    nested = payload.pop("pursuit", None)
+    if isinstance(nested, dict):
+        payload = {**nested, **payload}
+    payload.setdefault("workspace", workspace_name)
+    payload.setdefault("slug", _slugify_workspace_name(workspace_name))
+    payload.setdefault("title", _workspace_title(workspace_name))
+    return payload
+
+
+def _load_pursuit_summary(workspace_name: str, workspace_root: Path, *, seed_missing: bool = False) -> dict[str, Any] | None:
+    if not workspace_root.is_dir():
+        return None
+
+    target: Path | None
+    if seed_missing:
+        target = _ensure_pursuit_scaffold(workspace_name, workspace_root)
+    else:
+        candidates = _pursuit_file_candidates(workspace_root)
+        target = candidates[0] if candidates else None
+    if target is None or not target.is_file():
+        return None
+
+    try:
+        raw = yaml.safe_load(target.read_text(encoding="utf-8")) or {}
+        if not isinstance(raw, dict):
+            raise ValueError("00_pursuit.yaml must deserialize to a mapping")
+        model = PursuitRecord.model_validate(_coerce_pursuit_payload(raw, workspace_name))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Pursuit metadata load failed for %s: %s", target, exc)
+        return None
+
+    pwin_value = model.pwin.value
+    if pwin_value is None:
+        pwin_value = _compute_weighted_pwin(model.pwin_drivers)
+
+    return {
+        "workspace": workspace_name,
+        "slug": model.slug or _slugify_workspace_name(workspace_name),
+        "title": model.title,
+        "agency": model.agency,
+        "stage": _normalize_stage(model.stage),
+        "source_path": target.relative_to(workspace_root).as_posix(),
+        "gate": {
+            "name": model.gate.name,
+            "due": model.gate.due.isoformat() if model.gate.due else None,
+        },
+        "proposal_due": model.proposal_due.isoformat() if model.proposal_due else None,
+        "pwin": {
+            "value": pwin_value,
+            "confidence": _normalize_confidence(model.pwin.confidence),
+            "trend": _normalize_trend(model.pwin.trend),
+        },
+        "pwin_drivers": [
+            {
+                "key": driver.key,
+                "label": driver.label,
+                "weight": driver.weight,
+                "score": driver.score,
+                "rationale": driver.rationale,
+                "next_action": driver.next_action,
+            }
+            for driver in model.pwin_drivers
+        ],
+        "readiness": {
+            dim: getattr(model.readiness, dim)
+            for dim in _READINESS_DIMS
+        },
+        "shipley_folders": _shipley_folders_from_payload(raw),
+    }
 
 
 def safe_count_json_keys(path: Path) -> int:
@@ -147,7 +423,7 @@ def _storage_workspaces(rag_root: Path) -> dict[str, float]:
     if not rag_root.exists():
         return result
     for entry in rag_root.iterdir():
-        if entry.is_dir() and not HEX_SUFFIX.search(entry.name):
+        if entry.is_dir() and not entry.name.startswith((".", "_")) and not HEX_SUFFIX.search(entry.name):
             result[entry.name] = _folder_size_mb(entry)
     return result
 
@@ -333,6 +609,7 @@ class WorkspaceMaintenance:
         rows: list[dict[str, Any]] = []
         for name in all_names:
             inputs = inputs_ws.get(name)
+            workspace_root = rag_root / name
             rows.append(
                 {
                     "name": name,
@@ -341,6 +618,7 @@ class WorkspaceMaintenance:
                     "storage_mb": storage_ws.get(name),
                     "inputs_files": inputs[0] if inputs else 0,
                     "inputs_mb": inputs[1] if inputs else 0.0,
+                    "pursuit": _load_pursuit_summary(name, workspace_root, seed_missing=True),
                 }
             )
         return {
@@ -399,7 +677,8 @@ class WorkspaceMaintenance:
 
     def ensure_active_storage_workspace(self, active_workspace: str) -> None:
         """Ensure active rag_storage workspace exists."""
-        (_rag_storage_root() / active_workspace).mkdir(parents=True, exist_ok=True)
+        workspace_root = _rag_storage_root() / active_workspace
+        _ensure_pursuit_scaffold(active_workspace, workspace_root)
 
 
 DEFAULT_WORKSPACE_MAINTENANCE = WorkspaceMaintenance()
@@ -1082,6 +1361,10 @@ def register_workspace_ui_routes(
             raise HTTPException(404, f"Workspace '{name}' does not exist")
         working_dir().mkdir(parents=True, exist_ok=True)
         (working_dir() / name).mkdir(parents=True, exist_ok=True)
+        try:
+            ensure_active_workspace(name)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(500, f"Failed creating workspace scaffold: {exc}") from exc
         try:
             set_env_var_func("WORKSPACE", name)
         except Exception as exc:  # noqa: BLE001
