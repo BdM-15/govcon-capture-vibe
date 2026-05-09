@@ -2,9 +2,9 @@
 name: idea-capturer
 description: Structured system for capturing fleeting thoughts, developing raw ideas into actionable concepts, and organizing creative thinking. Use when the user wants to capture an idea, do a brain dump, brainstorm, develop a concept, synthesize insights, review captured ideas, or organize their idea collection. Triggers on phrases like "capture idea", "save this idea", "brain dump", "brainstorm [topic]", "develop idea", "review my ideas", or "find ideas about [topic]".
 metadata:
-  developer_only: true
+  developer_only: false
   personas_primary: none
-  personas_secondary: []
+  personas_secondary: [capture_manager, proposal_manager]
   shipley_phases: []
   capability: meta
   upstream: eddiebe147 via skills.sh (license unstated) — see UPSTREAM.md

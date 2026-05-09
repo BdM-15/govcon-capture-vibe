@@ -2,9 +2,9 @@
 name: obsidian-markdown
 description: Create and edit Obsidian Flavored Markdown with wikilinks, embeds, callouts, properties, and other Obsidian-specific syntax. Use when working with .md files in Obsidian, or when the user mentions wikilinks, callouts, frontmatter, tags, embeds, or Obsidian notes.
 metadata:
-  developer_only: true
+  developer_only: false
   personas_primary: none
-  personas_secondary: []
+  personas_secondary: [proposal_writer, capture_manager]
   shipley_phases: []
   capability: render
   upstream: kepano/obsidian-skills @ ac9398734f (MIT) — see UPSTREAM.md

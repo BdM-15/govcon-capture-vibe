@@ -38,6 +38,8 @@ Skills shown in the Theseus govcon UI. Query the active workspace KG and use gov
 | grill-me-capture      | `.github/skills/grill-me-capture/`                           | `src/skills/manager.py` (auto) |
 | grill-me-proposal     | `.github/skills/grill-me-proposal/`                          | `src/skills/manager.py` (auto) |
 | grill-me-ptw          | `.github/skills/grill-me-ptw/`                               | `src/skills/manager.py` (auto) |
+| obsidian-markdown     | `.github/skills/obsidian-markdown/` (vendored — see UPSTREAM.md) | Dual-purpose — powers MD authoring in workspace evergreen layer + dev note-taking |
+| idea-capturer         | `.github/skills/idea-capturer/` (vendored — see UPSTREAM.md)     | Dual-purpose — capture/brainstorm for both govcon ideation and dev research |
 
 ## Index — Developer-only skills
 
@@ -51,8 +53,8 @@ Not shown in the Theseus UI (`metadata.developer_only: true`). Invokable from Co
 | to-prd                        | `.github/skills/to-prd/` (vendored — see UPSTREAM.md)                        | Converts conversation context to PRD; files to GitHub Issues |
 | to-issues                     | `.github/skills/to-issues/` (vendored — see UPSTREAM.md)                     | Breaks plan into vertical-slice GitHub issues                |
 | tdd                           | `.github/skills/tdd/` (vendored — see UPSTREAM.md)                           | Red-green-refactor TDD loop with 5 reference files           |
-| obsidian-markdown             | `.github/skills/obsidian-markdown/` (vendored — see UPSTREAM.md)             | kepano/obsidian-skills @ ac9398734f (MIT). Powers MD authoring across `global/` and workspace evergreen layers (wired in 174.4). |
-| idea-capturer                 | `.github/skills/idea-capturer/` (vendored — see UPSTREAM.md)                 | skills.sh source pattern for global-idea-capturer derivative (epic 174) |
+| obsidian-markdown             | `.github/skills/obsidian-markdown/` (vendored — see UPSTREAM.md)             | Also a platform skill (see above). Listed here because devs invoke it for repo notes / docs authoring too. |
+| idea-capturer                 | `.github/skills/idea-capturer/` (vendored — see UPSTREAM.md)                 | Also a platform skill (see above). Listed here because devs use it for non-govcon ideation; basis for `global-idea-capturer` derivative (174.2). |
 
 ## Adding a Theseus-only Test Fixture
 
