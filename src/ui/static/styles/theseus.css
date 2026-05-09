@@ -3367,3 +3367,33 @@ details.acc .summary-actions {
   overflow-y: auto;
   line-height: 1.4;
 }
+
+/* ===== Ariadne dashboard inbox/intel preview clamp ===== */
+.markdown-preview {
+  max-height: 4.5rem;
+  overflow: hidden;
+  position: relative;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: rgb(203, 213, 225);
+}
+.markdown-preview p { margin: 0 0 0.25rem 0; }
+.markdown-preview p:last-child { margin-bottom: 0; }
+.markdown-preview h1, .markdown-preview h2, .markdown-preview h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+  color: rgb(241, 245, 249);
+}
+.markdown-preview ul, .markdown-preview ol {
+  padding-left: 1rem;
+  margin: 0 0 0.25rem 0;
+}
+.markdown-preview code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.7rem;
+  background: rgba(20, 26, 43, 0.7);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.markdown-preview a { color: var(--neon-cyan, #00f0ff); text-decoration: underline; }

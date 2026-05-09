@@ -119,13 +119,13 @@
         ></textarea>
         <div class="flex items-center gap-3 mt-3">
           <input
-            x-model="capture.title"
-            placeholder="title (optional)"
+            x-model="capture.slug"
+            placeholder="slug (optional)"
             class="flex-1 bg-ink-850 border border-edge rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-neon-cyan font-mono"
           />
           <input
             x-model="capture.tags"
-            placeholder="tags: comma,separated"
+            placeholder="tags: comma,separated (default: capture)"
             class="flex-1 bg-ink-850 border border-edge rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-neon-cyan font-mono"
           />
           <button
@@ -222,12 +222,35 @@
                     x-text="item.path"
                   ></div>
                   <div
-                    class="text-xs text-slate-300 mt-1.5 line-clamp-2"
-                    x-text="item.preview"
+                    class="text-xs text-slate-300 mt-1.5 markdown-preview"
+                    x-html="renderMd(item.preview)"
                   ></div>
                 </div>
-                <div class="text-[10px] text-slate-500 font-mono whitespace-nowrap">
-                  <span x-text="item.frontmatter?.date || ''"></span>
+                <div class="flex flex-col items-end gap-1.5 whitespace-nowrap">
+                  <span
+                    class="text-[10px] text-slate-500 font-mono"
+                    x-text="item.frontmatter?.date || ''"
+                  ></span>
+                  <div class="flex items-center gap-1">
+                    <select
+                      x-model="promoteTarget[item.path]"
+                      class="bg-ink-900 border border-edge rounded px-1.5 py-0.5 text-[10px] text-slate-300 font-mono focus:outline-none focus:border-neon-cyan"
+                      :disabled="!pipeline.length"
+                    >
+                      <option value="">workspace&hellip;</option>
+                      <template x-for="ws in pipeline" :key="ws.name">
+                        <option :value="ws.name" x-text="ws.name"></option>
+                      </template>
+                    </select>
+                    <button
+                      @click="promote(item.path)"
+                      :disabled="!promoteTarget[item.path]"
+                      class="text-[10px] px-2 py-0.5 rounded bg-neon-magenta/15 border border-neon-magenta text-neon-magenta font-semibold hover:bg-neon-magenta/25 disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Move into workspace inbox"
+                    >
+                      promote
+                    </button>
+                  </div>
                 </div>
               </div>
             </li>
@@ -296,8 +319,8 @@
                   x-text="item.frontmatter?.title || item.path"
                 ></div>
                 <div
-                  class="text-xs text-slate-400 mt-0.5 line-clamp-2"
-                  x-text="item.preview"
+                  class="text-xs text-slate-400 mt-0.5 markdown-preview"
+                  x-html="renderMd(item.preview)"
                 ></div>
               </li>
             </template>
@@ -310,7 +333,7 @@
       function ariadne() {
         return {
           capture: {
-            title: "",
+            slug: "",
             body: "",
             tags: "",
             busy: false,
@@ -321,6 +344,17 @@
           inbox: [],
           wiki: [],
           intel: [],
+          promoteTarget: {},
+
+          renderMd(text) {
+            if (!text) return "";
+            try {
+              const html = window.marked?.parse(text) ?? text;
+              return window.DOMPurify?.sanitize(html) ?? html;
+            } catch (_) {
+              return text;
+            }
+          },
 
           async init() {
             await Promise.all([
@@ -339,9 +373,7 @@
               const data = await r.json();
               const list = Array.isArray(data) ? data : data.workspaces || [];
               this.pipeline = list
-                .map((ws) =>
-                  typeof ws === "string" ? { name: ws } : ws,
-                )
+                .map((ws) => (typeof ws === "string" ? { name: ws } : ws))
                 .filter((ws) => ws && ws.name);
             } catch (e) {
               /* offline: leave empty */
@@ -353,7 +385,7 @@
               const r = await fetch(`/api/global/${bucket}?limit=20`);
               if (!r.ok) return;
               const data = await r.json();
-              const items = data.items || [];
+              const items = data.entries || [];
               if (bucket === "inbox") this.inbox = items;
               else if (bucket === "llm-wiki") this.wiki = items;
               else if (bucket === "intel") this.intel = items;
@@ -374,14 +406,15 @@
                 .split(",")
                 .map((t) => t.trim())
                 .filter(Boolean);
+              const payload = {
+                content: body,
+                tags: tags.length ? tags : ["capture"],
+              };
+              if (this.capture.slug.trim()) payload.slug = this.capture.slug.trim();
               const r = await fetch("/api/global/capture", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  title: this.capture.title || null,
-                  body,
-                  tags,
-                }),
+                body: JSON.stringify(payload),
               });
               if (!r.ok) {
                 const detail = await r.text();
@@ -389,7 +422,7 @@
               }
               const out = await r.json();
               this.capture.body = "";
-              this.capture.title = "";
+              this.capture.slug = "";
               this.capture.tags = "";
               this.capture.message = `Saved -> ${out.path || "global/inbox"}`;
               await this.loadBucket("inbox");
@@ -398,6 +431,29 @@
               this.capture.message = `Failed: ${e.message || e}`;
             } finally {
               this.capture.busy = false;
+            }
+          },
+
+          async promote(path) {
+            const workspace = this.promoteTarget[path];
+            if (!workspace) return;
+            try {
+              const r = await fetch("/api/global/promote", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ path, workspace }),
+              });
+              if (!r.ok) {
+                const detail = await r.text();
+                throw new Error(detail || `HTTP ${r.status}`);
+              }
+              this.capture.message = `Promoted ${path} -> ${workspace}`;
+              this.capture.error = false;
+              delete this.promoteTarget[path];
+              await this.loadBucket("inbox");
+            } catch (e) {
+              this.capture.error = true;
+              this.capture.message = `Promote failed: ${e.message || e}`;
             }
           },
         };
