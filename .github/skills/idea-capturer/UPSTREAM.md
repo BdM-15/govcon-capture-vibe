@@ -1,6 +1,6 @@
 # Upstream provenance — `idea-capturer`
 
-This skill is **vendored** from an external upstream. The original is hosted on `skills.sh` (Claude-skill marketplace), not GitHub, and ships as a downloadable `SKILL.md` with no separate license file. Treat this entry as the lower-confidence vendor record of the two in `theseus-skills/vendor/`.
+This skill is **vendored** from an external upstream. The original is hosted on `skills.sh` (Claude-skill marketplace), not GitHub, and ships as a downloadable `SKILL.md` with no separate license file. Treat this entry as the lower-confidence vendor record under `.github/skills/`.
 
 ## Source
 
@@ -20,7 +20,7 @@ This skill is **vendored** from an external upstream. The original is hosted on 
 
 The user explicitly approved vendoring this skill in the epic-174 kickoff. The skill is the **source pattern** for the Theseus-platform-tier `global-idea-capturer` (which lives at `.github/skills/global-idea-capturer/` once 174.2 lands) — the vendored copy serves primarily as a reference for that derivative. If license clarification later forbids redistribution we will:
 
-1. Remove `theseus-skills/vendor/idea-capturer/SKILL.md`.
+1. Remove `.github/skills/idea-capturer/SKILL.md`.
 2. Update `MANIFEST.yaml` to `status: unvendored` and document why.
 3. Keep the derivative `.github/skills/global-idea-capturer/` (which is a Theseus-original work informed by — but not copied from — the upstream pattern).
 
@@ -29,6 +29,7 @@ The user explicitly approved vendoring this skill in the epic-174 kickoff. The s
 | Date | Change | Rationale |
 |------|--------|-----------|
 | 2026-05-08 | Initial vendor — verbatim copy. | Phase 174.1 baseline. Derivative `global-idea-capturer` lands in 174.2; that's where adaptations live, not here. |
+| 2026-05-08 | Added Theseus `metadata:` block to SKILL.md frontmatter (`developer_only: true`, `personas_primary: none`, `personas_secondary: []`, `shipley_phases: []`, `capability: meta`, `upstream:` pointer). | Required by `tests/skills/test_skill_taxonomy.py`. Spec-compliant — agentskills.io permits arbitrary `metadata:` keys. |
 
 ### Planned adaptations (not applied to the vendored copy)
 

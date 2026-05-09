@@ -22,8 +22,7 @@ The current Capture Workbench (single-workspace UI) stays — it becomes the dee
 ## Acceptance Criteria
 
 - [ ] Epic branch `174-ariadnes-thread-epic` exists and is the integration target for sub-branches.
-- [ ] `theseus-skills/vendor/` exists with `MANIFEST.yaml` pinning upstream URL + commit + license per vendored skill.
-- [ ] `SkillCatalog` discovers skills from **both** `.github/skills/` and `theseus-skills/vendor/` (single-root assumption removed).
+- [ ] Vendored skills (`obsidian-markdown`, `idea-capturer`) live under `.github/skills/<name>/` with per-skill `UPSTREAM.md` (commit SHA, license, adaptation log). `theseus-skills/README.md` mapping table is the single index.
 - [ ] `obsidian-markdown` (kepano) and `idea-capturer` (eddiebe147) are vendored, license-attributed, and Theseus-adapted (paths, tool registry, govcon prompts).
 - [ ] `global-idea-capturer` skill exists, defaults to `global/inbox/`, supports local-LLM polish, and exposes a "promote to workspace" handoff.
 - [ ] `global/{inbox,notes,llm-wiki,intel}/` directory layout exists; `GlobalStore` service in `src/core/`; `/api/global/*` routes registered.
@@ -42,17 +41,15 @@ The current Capture Workbench (single-workspace UI) stays — it becomes the dee
 - Create branch `174-ariadnes-thread-epic`.
 - Create `docs/epics/174-ariadnes-thread.md` (this file).
 - Create `global/{inbox,notes,llm-wiki,intel}/.gitkeep` skeleton.
-- Create `theseus-skills/vendor/MANIFEST.yaml` with placeholder entries.
 - Update repo memory: `/memories/repo/branch-integration-policy.md` + new `ariadnes-thread-epic.md`.
 - **Out of scope here:** any code changes; any vendored content; any UI changes.
 
-### 174.1 — Vendor pipeline + dual skill roots
+### 174.1 — Vendor pipeline (single-root)
 - Sub-branch `174.1-vendor-pipeline`.
-- Modify `src/skills/skill_catalog.py`: replace `_SKILLS_DIR` with `_SKILL_ROOTS = [...]`; iterate both in `discover()`. Conflict policy: `.github/skills/` wins over `theseus-skills/vendor/` if both define same name (loud warning).
-- Add `tests/test_skill_dual_roots.py`.
-- Vendor `obsidian-markdown` (kepano) into `theseus-skills/vendor/obsidian-markdown/`. Include `UPSTREAM.md` with commit SHA + Apache-2.0 (or actual) attribution + Theseus adaptation notes.
-- Vendor `idea-capturer` (eddiebe147 / claude-settings) into `theseus-skills/vendor/idea-capturer/`. Same UPSTREAM.md treatment.
-- Update `MANIFEST.yaml` with real SHAs and licenses.
+- Vendor `obsidian-markdown` (kepano) into `.github/skills/obsidian-markdown/` with `UPSTREAM.md` (commit SHA + MIT attribution + adaptation log) + verbatim `LICENSE`.
+- Vendor `idea-capturer` (eddiebe147 / skills.sh) into `.github/skills/idea-capturer/` with `UPSTREAM.md` (license caveat documented).
+- Update `theseus-skills/README.md` mapping table to list both new vendored skills.
+- **Decision (post-kickoff):** original plan called for a separate `theseus-skills/vendor/` root + dual-root discovery in `SkillCatalog`. Reverted — single-dev repo, no need for the extra surface area. Provenance lives in per-skill `UPSTREAM.md` + the README mapping (same pattern as existing vendored skills like `caveman`, `tdd`, `huashu-design`).
 - **Acceptance:** `manager.list_skills()` returns vendored skills; existing skill tests still pass.
 
 ### 174.2 — `global-idea-capturer` skill
@@ -107,8 +104,8 @@ The current Capture Workbench (single-workspace UI) stays — it becomes the dee
 
 ## Architecture Decisions
 
-### AD-1: Two skill roots
-`SkillCatalog` walks both `.github/skills/` (Theseus-authored + classic vendored) and `theseus-skills/vendor/` (force-multiplier external skills). Avoids copy/symlink. Conflict resolution: `.github/skills/` wins, loud warning logged. ~10 LOC change.
+### AD-1: Single skill root
+All skills — first-party, dual-purpose, and vendored — live under `.github/skills/<name>/`. Provenance for vendored copies is recorded in per-skill `UPSTREAM.md` and indexed in `theseus-skills/README.md`. Single-dev repo doesn't justify the extra surface area of a second discovery root. (Original plan called for `theseus-skills/vendor/` as a separate root; reverted in 174.1.)
 
 ### AD-2: Global layer is Markdown-on-disk
 Not a LightRAG instance. Cheaper, matches Obsidian mental model, no embedding cost on capture. Promotion to a workspace = explicit re-ingest into that workspace's LightRAG. Search across global = lightweight (ripgrep + frontmatter index).
@@ -116,8 +113,8 @@ Not a LightRAG instance. Cheaper, matches Obsidian mental model, no embedding co
 ### AD-3: Dashboard is incremental, not rewrite
 Adds new top-level Alpine component + route. Existing `index.html` Workbench becomes `/workspace/<name>`. No framework change. No build step.
 
-### AD-4: Vendor manifest, not git submodule
-`theseus-skills/vendor/MANIFEST.yaml` pins upstream URL + commit SHA + license + adaptation notes. Re-vendor is a deliberate documented command. Submodules introduce CI friction we don't need for a single-dev repo.
+### AD-4: Per-skill UPSTREAM.md, not git submodule
+Each vendored skill carries its own `UPSTREAM.md` with upstream URL + commit SHA + license + adaptation log + re-vendor procedure. Re-vendor is a deliberate documented command. Submodules introduce CI friction we don't need for a single-dev repo.
 
 ### AD-5: `phase-promoter` is a skill chain, not new infrastructure
 Reuses v1.12 chain executor (HITL, semantic labels, handoffs). Validates that the chain infrastructure is general enough — if it isn't, that's a v1.12 bug to fix, not a reason to fork.

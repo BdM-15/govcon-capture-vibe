@@ -28,6 +28,7 @@ These match the upstream blob SHAs at the pinned commit. No bytes have been modi
 | Date | Change | Rationale |
 |------|--------|-----------|
 | 2026-05-08 | Initial vendor — verbatim copy. | Phase 174.1 baseline. Adaptations land in follow-up commits so the diff is auditable. |
+| 2026-05-08 | Added Theseus `metadata:` block to SKILL.md frontmatter (`developer_only: true`, `personas_primary: none`, `personas_secondary: []`, `shipley_phases: []`, `capability: render`, `upstream:` pointer). | Required by `tests/skills/test_skill_taxonomy.py`. Spec-compliant — agentskills.io permits arbitrary `metadata:` keys. |
 
 ### Planned adaptations (not yet applied)
 
@@ -42,7 +43,7 @@ When applied, each adaptation gets a row in the table above.
 ## Re-vendoring procedure
 
 1. Pick a new upstream commit; record the SHA below in a new "Pinned commit" row.
-2. `cd theseus-skills/vendor/obsidian-markdown`
+2. `cd .github/skills/obsidian-markdown`
 3. Re-run the four `Invoke-WebRequest` calls used in the initial vendor (see `MANIFEST.yaml` for exact URLs constructed from the pinned SHA).
 4. Re-apply each adaptation in the table above (or note that an adaptation was upstreamed and removed).
 5. Re-run any evals introduced under `evals/` (none yet — added when this skill is wired into the runtime).
