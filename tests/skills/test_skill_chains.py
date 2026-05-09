@@ -176,6 +176,76 @@ async def _chain_executor_passes_capture_artifact_into_phase_promoter(tmp_path: 
     assert "Use input_artifacts[].path when a tool needs an upstream file path" in calls[1][1]
 
 
+def test_chain_executor_passes_note_preview_and_connection_guidance_into_grill_me(
+    tmp_path: Path,
+) -> None:
+    asyncio.run(_chain_executor_passes_note_preview_and_connection_guidance_into_grill_me(tmp_path))
+
+
+async def _chain_executor_passes_note_preview_and_connection_guidance_into_grill_me(
+    tmp_path: Path,
+) -> None:
+    store = SkillRunStore()
+    calls: list[tuple[str, str]] = []
+
+    async def invoke_skill(name: str, **kwargs: Any) -> SkillInvocationResult:
+        prompt = kwargs["user_prompt"]
+        calls.append((name, prompt))
+        run_id, run_dir = store.create_run_dir(
+            workspace_root=kwargs["workspace_root"],
+            skill_name=name,
+            user_prompt=prompt,
+            started_at=datetime.now(timezone.utc),
+        )
+        artifacts_dir = run_dir / "artifacts"
+        artifacts_dir.mkdir(exist_ok=True)
+        if name == "global-idea-capturer":
+            (artifacts_dir / "captured-note.md").write_text(
+                "# Brain dump\n\nNeed connect workload spike to Appendix H staffing model.",
+                encoding="utf-8",
+            )
+        return _fake_result(name, run_id, run_dir, prompt)
+
+    executor = SkillChainExecutor(invoke_skill=invoke_skill, run_store=store)
+    spec = ChainSpec(
+        name="capture-to-grill",
+        prompt="Capture this note and find stronger workspace connections and wikilinks.",
+        context={"expected_outcome": "Questions that deepen wiki links"},
+        steps=[
+            ChainStepSpec(id="capture", skill="global-idea-capturer", prompt="Capture the note."),
+            ChainStepSpec(
+                id="grill",
+                skill="grill-me",
+                prompt="Stress-test connections.",
+                depends_on=["capture"],
+                artifact_requirements=[
+                    ChainArtifactRequirement(
+                        id="capture-note",
+                        from_steps=["capture"],
+                        products=["inbox_note"],
+                        extensions=["md"],
+                    )
+                ],
+            ),
+        ],
+    )
+
+    result = await executor.invoke(
+        spec,
+        workspace="test-workspace",
+        workspace_root=tmp_path,
+        llm=_noop_llm,
+        entity_payload={},
+    )
+
+    assert result.status == "completed"
+    assert [call[0] for call in calls] == ["global-idea-capturer", "grill-me"]
+    grill_prompt = calls[1][1]
+    assert "Use captured-note content to surface missing wiki/workspace links" in grill_prompt
+    assert "Need connect workload spike to Appendix H staffing model." in grill_prompt
+    assert "captured-note.md" in grill_prompt
+
+
 def test_chain_executor_stops_after_failed_step(tmp_path: Path) -> None:
     asyncio.run(_chain_executor_stops_after_failed_step(tmp_path))
 

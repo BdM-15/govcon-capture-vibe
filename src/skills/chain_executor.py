@@ -31,6 +31,22 @@ InvokeSkillCallable = Callable[..., Awaitable[SkillInvocationResult]]
 class SkillChainExecutor:
     """Execute a validated chain spec with existing skill invocation primitives."""
 
+    _TEXT_PREVIEW_EXTENSIONS: set[str] = {"md", "txt", "json", "yaml", "yml", "csv"}
+    _PREVIEW_MAX_CHARS = 1600
+    _PREVIEW_MAX_ARTIFACTS = 2
+    _CONNECTION_TERMS: set[str] = {
+        "connect",
+        "connection",
+        "connections",
+        "link",
+        "links",
+        "wikilink",
+        "wikilinks",
+        "wiki",
+        "workspace",
+    }
+    _NOTE_PRODUCTS: set[str] = {"inbox_note", "processed_note", "evergreen_note", "wiki_seed"}
+
     _OUTCOME_FORMAT_HINTS: dict[str, tuple[str, ...]] = {
         "docx": ("docx", "word", "brief", "document", "draft", "report"),
         "xlsx": ("xlsx", "excel", "workbook", "spreadsheet"),
@@ -649,6 +665,7 @@ class SkillChainExecutor:
 
     @staticmethod
     def _compose_step_prompt(chain: ChainRunState, step: ChainStepSpec) -> str:
+        input_artifacts = chain.steps[step.id].input_artifacts
         upstream = {
             step_id: run.model_dump()
             for step_id, run in chain.steps.items()
@@ -666,10 +683,12 @@ class SkillChainExecutor:
             ],
             "input_artifacts": [
                 artifact.model_dump()
-                for artifact in chain.steps[step.id].input_artifacts
+                for artifact in input_artifacts
             ],
             "upstream_steps": upstream,
         }
+        artifact_preview_block = SkillChainExecutor._artifact_preview_block(input_artifacts)
+        connection_guidance = SkillChainExecutor._connection_guidance(chain, step, input_artifacts)
         return (
             (step.prompt or chain.spec.prompt or "Run this chain step.").strip()
             + "\nUse input_artifacts[].path when a tool needs an upstream file path; do not reconstruct paths from run_dir."
@@ -684,11 +703,72 @@ class SkillChainExecutor:
                 if chain.resume_notes.strip()
                 else ""
             )
+            + connection_guidance
+            + artifact_preview_block
             + "\nIf critical evidence is missing, emit an explicit missing-input list the user can supply and still produce the best partial artifact."
             + "\n\n## Theseus Chain Handoff\n"
             + "```json\n"
             + json.dumps(handoff, ensure_ascii=False, indent=2, default=str)
             + "\n```"
+        )
+
+    @classmethod
+    def _artifact_preview_block(cls, input_artifacts: list[ChainArtifactRef]) -> str:
+        previews: list[str] = []
+        for artifact in input_artifacts[: cls._PREVIEW_MAX_ARTIFACTS]:
+            preview = cls._read_artifact_preview(artifact)
+            if not preview:
+                continue
+            products = ", ".join(artifact.products) if artifact.products else "artifact"
+            previews.append(
+                "\n\n## Upstream Artifact Preview\n"
+                + f"Artifact: {artifact.filename} ({products})\n"
+                + "```text\n"
+                + preview
+                + "\n```"
+            )
+        return "".join(previews)
+
+    @classmethod
+    def _read_artifact_preview(cls, artifact: ChainArtifactRef) -> str:
+        ext = cls._artifact_extension(artifact.filename)
+        if ext not in cls._TEXT_PREVIEW_EXTENSIONS or not artifact.path:
+            return ""
+        path = Path(artifact.path)
+        if not path.is_file():
+            return ""
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return ""
+        text = text.strip()
+        if not text:
+            return ""
+        if len(text) <= cls._PREVIEW_MAX_CHARS:
+            return text
+        return text[: cls._PREVIEW_MAX_CHARS].rstrip() + "\n...[truncated]"
+
+    @classmethod
+    def _connection_guidance(
+        cls,
+        chain: ChainRunState,
+        step: ChainStepSpec,
+        input_artifacts: list[ChainArtifactRef],
+    ) -> str:
+        if step.skill != "grill-me":
+            return ""
+        if not any(cls._NOTE_PRODUCTS.intersection(artifact.products) for artifact in input_artifacts):
+            return ""
+        goal_tokens = set(
+            (chain.spec.prompt + " " + str(chain.spec.context.get("expected_outcome") or "")).lower().split()
+        )
+        if not goal_tokens.intersection(cls._CONNECTION_TERMS):
+            return ""
+        return (
+            "\nUse captured-note content to surface missing wiki/workspace links."
+            " Ask one sharp question at a time."
+            " Prioritize unresolved entities, candidate wikilinks, missing branches,"
+            " and whether note should stay global or move into workspace context."
         )
 
 
