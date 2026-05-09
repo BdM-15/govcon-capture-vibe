@@ -43,6 +43,7 @@ window.theseusInit = async function theseusInit(app) {
   app.$watch("active", () =>
     app.$nextTick(() => theseusHandleActiveChange(app)),
   );
+  app.$watch("ariadne.view", () => window.theseusAfterRender(app));
 
   theseusWatchAfterRender(app, [
     "documents",
@@ -64,10 +65,12 @@ window.theseusInit = async function theseusInit(app) {
     "studioPreview.sheetIdx",
     "chains.current",
     "chains.items",
+    "ariadne.view",
     "ariadne.workspaces",
     "ariadne.inventory",
     "ariadne.buckets.inbox",
     "ariadne.buckets.notes",
+    "ariadne.buckets.llm-wiki",
     "ariadne.buckets.intel",
   ]);
 
@@ -93,6 +96,10 @@ window.theseusInit = async function theseusInit(app) {
   );
 
   app._loadStudioPinned();
+
+  if (window.theseusAriadneInitRouting) {
+    window.theseusAriadneInitRouting(app);
+  }
 
   await app.refreshAll();
   window.theseusRefreshIcons();

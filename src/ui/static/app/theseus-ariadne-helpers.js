@@ -1,11 +1,133 @@
 const ARIADNE_BUCKETS = ["inbox", "notes", "llm-wiki", "intel"];
+const ARIADNE_ROUTE_PREFIX = "#ariadne/";
+const ARIADNE_VIEWS = [
+  {
+    id: "today",
+    label: "Today",
+    icon: "sunrise",
+    accent: "cyan",
+    detail: "Morning brief, fast capture, open actions.",
+  },
+  {
+    id: "pipeline",
+    label: "Pipeline",
+    icon: "briefcase",
+    accent: "lime",
+    detail: "Stage board and pursuit portfolio health.",
+  },
+  {
+    id: "decision-queue",
+    label: "Decision Queue",
+    icon: "gavel",
+    accent: "magenta",
+    detail: "Near-term gates, missing PWin, blocked pursuits.",
+  },
+  {
+    id: "intel-desk",
+    label: "Intel Desk",
+    icon: "satellite",
+    accent: "magenta",
+    detail: "Cross-opp intel capture and freshness view.",
+  },
+  {
+    id: "opp-360",
+    label: "Opp 360",
+    icon: "orbit",
+    accent: "cyan",
+    detail: "Per-opportunity summaries with next-action context.",
+  },
+  {
+    id: "knowledge",
+    label: "Knowledge",
+    icon: "book-open-text",
+    accent: "lime",
+    detail: "Inbox, notes, wiki pages, promotion backlog.",
+  },
+  {
+    id: "agent-ops",
+    label: "Agent Ops",
+    icon: "bot",
+    accent: "amber",
+    detail: "Skills, chains, studio, ingest command lanes.",
+  },
+];
+const ARIADNE_VIEW_IDS = new Set(ARIADNE_VIEWS.map((view) => view.id));
 
 const theseusSafeArray = function theseusSafeArray(value) {
   return Array.isArray(value) ? value : [];
 };
 
+const theseusNormalizeAriadneView = function theseusNormalizeAriadneView(value) {
+  const key = String(value || "")
+    .trim()
+    .toLowerCase();
+  return ARIADNE_VIEW_IDS.has(key) ? key : "today";
+};
+
+const theseusAriadneHashForView = function theseusAriadneHashForView(view) {
+  return `${ARIADNE_ROUTE_PREFIX}${theseusNormalizeAriadneView(view)}`;
+};
+
+const theseusReadAriadneHashView = function theseusReadAriadneHashView() {
+  if (typeof window === "undefined") return null;
+  const hash = String(window.location.hash || "");
+  if (!hash.startsWith(ARIADNE_ROUTE_PREFIX)) return null;
+  return theseusNormalizeAriadneView(hash.slice(ARIADNE_ROUTE_PREFIX.length));
+};
+
 const theseusAriadneBucket = function theseusAriadneBucket(app, bucket) {
   return theseusSafeArray(app.ariadne?.buckets?.[bucket]);
+};
+
+window.theseusAriadneViews = function theseusAriadneViews() {
+  return ARIADNE_VIEWS;
+};
+
+window.theseusAriadneView = function theseusAriadneView(app) {
+  return theseusNormalizeAriadneView(
+    app?.ariadne?.view || theseusReadAriadneHashView() || "today",
+  );
+};
+
+window.theseusAriadneViewMeta = function theseusAriadneViewMeta(app) {
+  const current = window.theseusAriadneView(app);
+  return ARIADNE_VIEWS.find((view) => view.id === current) || ARIADNE_VIEWS[0];
+};
+
+window.theseusAriadneIsView = function theseusAriadneIsView(app, view) {
+  return window.theseusAriadneView(app) === theseusNormalizeAriadneView(view);
+};
+
+window.theseusSetAriadneView = function theseusSetAriadneView(
+  app,
+  view,
+  syncHash = true,
+) {
+  const next = theseusNormalizeAriadneView(view);
+  if (app.ariadne) app.ariadne.view = next;
+  if (app.active !== "dashboard") app.active = "dashboard";
+  if (syncHash && typeof window !== "undefined") {
+    const hash = theseusAriadneHashForView(next);
+    if (window.location.hash !== hash) {
+      window.location.hash = hash;
+    }
+  }
+  window.theseusAfterRender(app);
+};
+
+window.theseusAriadneInitRouting = function theseusAriadneInitRouting(app) {
+  const hashView = theseusReadAriadneHashView();
+  if (hashView && app.ariadne) app.ariadne.view = hashView;
+  if (app._ariadneHashBound || typeof window === "undefined") return;
+  app._ariadneHashBound = true;
+  app._ariadneHashHandler = () => {
+    const next = theseusReadAriadneHashView();
+    if (!next) return;
+    if (app.active !== "dashboard") app.active = "dashboard";
+    if (app.ariadne?.view !== next) app.ariadne.view = next;
+    else window.theseusAfterRender(app);
+  };
+  window.addEventListener("hashchange", app._ariadneHashHandler);
 };
 
 const ARIADNE_PURSUIT_STAGES = new Set([
@@ -417,6 +539,56 @@ window.theseusAriadneActionQueue = function theseusAriadneActionQueue(
   return actions.slice(0, limit);
 };
 
+window.theseusAriadneDecisionQueue = function theseusAriadneDecisionQueue(
+  app,
+  limit = 12,
+) {
+  const cards = window.theseusAriadneOpportunityCards(app);
+  const items = cards
+    .map((card) => {
+      const gateDays = theseusAriadneDaysUntil(card.gate_due?.date);
+      const reasons = [];
+      if (gateDays !== null && gateDays <= 14) {
+        reasons.push(
+          `${card.gate_due?.name || "gate"} ${theseusAriadneDueLabel(card.gate_due?.date)}`,
+        );
+      }
+      if (!Number.isFinite(card.pwin?.value)) reasons.push("PWin unset");
+      if (card.top_blocker?.detail) reasons.push(card.top_blocker.detail);
+      const lowReadiness = card.readiness
+        .filter((bar) => bar.score !== null && bar.score <= 2)
+        .map((bar) => bar.dim)
+        .slice(0, 2);
+      if (lowReadiness.length) {
+        reasons.push(`low readiness: ${lowReadiness.join(", ")}`);
+      }
+      return {
+        key: `decision:${card.name}`,
+        workspace: card.name,
+        stage: card.stage,
+        stage_class: card.stage_class,
+        gate_label: card.gate_due?.label || "-",
+        pwin_label: card.pwin?.label || "-",
+        reasons,
+        priority:
+          gateDays !== null && gateDays <= 7
+            ? 4
+            : gateDays !== null && gateDays <= 14
+              ? 3
+              : card.top_blocker
+                ? 2
+                : 1,
+      };
+    })
+    .filter((item) => item.reasons.length);
+
+  items.sort((left, right) => {
+    if (left.priority !== right.priority) return right.priority - left.priority;
+    return left.workspace.localeCompare(right.workspace);
+  });
+  return items.slice(0, limit);
+};
+
 // Opportunity Card (174.4b slice 3): per-pursuit summary card.
 // Today: name + heuristic phase + derivable blocker + intel age.
 // 174.6: agency, PWin + confidence + trend, gate_due, 7 readiness bars,
@@ -549,6 +721,31 @@ window.theseusAriadneStageBoard = function theseusAriadneStageBoard(app) {
     ...stage,
     cards: cards.filter((card) => placement(card) === stage.id),
   }));
+};
+
+window.theseusAriadneKnowledgeFeed = function theseusAriadneKnowledgeFeed(
+  app,
+  limit = 12,
+) {
+  const entries = [
+    ...theseusAriadneBucket(app, "notes").map((entry) => ({
+      ...entry,
+      kind: "notes",
+      accent: "cyan",
+    })),
+    ...theseusAriadneBucket(app, "llm-wiki").map((entry) => ({
+      ...entry,
+      kind: "llm-wiki",
+      accent: "lime",
+    })),
+    ...theseusAriadneBucket(app, "inbox").map((entry) => ({
+      ...entry,
+      kind: "inbox",
+      accent: "amber",
+    })),
+  ];
+  entries.sort((left, right) => (right.modified_at || 0) - (left.modified_at || 0));
+  return entries.slice(0, limit);
 };
 
 window.theseusAriadnePromoteOptions = function theseusAriadnePromoteOptions(

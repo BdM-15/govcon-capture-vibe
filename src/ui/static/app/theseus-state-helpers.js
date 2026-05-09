@@ -98,6 +98,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       loading: false,
       loaded: false,
       error: null,
+      view: "today",
       workspaces: [],
       inventory: [],
       buckets: {

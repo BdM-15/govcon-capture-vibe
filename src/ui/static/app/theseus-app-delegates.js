@@ -24,6 +24,26 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusAriadneMetrics(this);
     },
 
+    ariadneViews() {
+      return window.theseusAriadneViews();
+    },
+
+    ariadneView() {
+      return window.theseusAriadneView(this);
+    },
+
+    ariadneViewMeta() {
+      return window.theseusAriadneViewMeta(this);
+    },
+
+    ariadneIsView(view) {
+      return window.theseusAriadneIsView(this, view);
+    },
+
+    setAriadneView(view) {
+      return window.theseusSetAriadneView(this, view);
+    },
+
     ariadneMorningBrief() {
       return window.theseusAriadneMorningBrief(this);
     },
@@ -40,8 +60,16 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusAriadneActionQueue(this, limit);
     },
 
+    ariadneDecisionQueue(limit = 12) {
+      return window.theseusAriadneDecisionQueue(this, limit);
+    },
+
     ariadneOpportunityCards() {
       return window.theseusAriadneOpportunityCards(this);
+    },
+
+    ariadneKnowledgeFeed(limit = 12) {
+      return window.theseusAriadneKnowledgeFeed(this, limit);
     },
 
     ariadneStageBoard() {

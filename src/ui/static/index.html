@@ -472,9 +472,7 @@
                   <span class="h1-gradient">Ariadne's Thread</span>
                 </h1>
                 <p class="text-base text-slate-400 mt-2 max-w-3xl">
-                  Air traffic control for capture — answers the 5 questions
-                  every morning: what changed, what needs action, what is
-                  blocked, what is shifting, what to promote.
+                  <span x-text="ariadneViewMeta().detail"></span>
                 </p>
               </div>
               <div class="flex gap-2.5 flex-wrap justify-end">
@@ -507,6 +505,41 @@
               class="card border-neon-red/40 bg-neon-red/5 p-3 text-xs font-mono text-neon-red mb-4"
               x-text="ariadne.error"
             ></div>
+
+            <div
+              class="card border border-edge bg-ink-900/50 p-3 mb-5"
+              data-testid="ariadne-view-nav"
+            >
+              <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                <div>
+                  <div class="text-[11px] uppercase tracking-[0.18em] font-mono text-slate-500">
+                    Vault-driven views
+                  </div>
+                  <div class="text-xs text-slate-500 mt-1">
+                    Hash-backed Alpine routes for portfolio operations.
+                  </div>
+                </div>
+                <div class="text-[11px] font-mono text-neon-cyan">
+                  route:
+                  <span x-text="'#ariadne/' + ariadneView()"></span>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-2">
+                <template x-for="view in ariadneViews()" :key="view.id">
+                  <button
+                    class="rounded-lg border px-3 py-3 text-left transition"
+                    :class="ariadneIsView(view.id) ? 'border-neon-cyan/50 bg-neon-cyan/10 shadow-glow' : 'border-edge bg-ink-900/40 hover:border-neon-cyan/35'"
+                    @click="setAriadneView(view.id)"
+                  >
+                    <div class="flex items-center gap-2 text-sm font-semibold text-slate-100">
+                      <i :data-lucide="view.icon" class="w-4 h-4" :class="'text-neon-' + view.accent"></i>
+                      <span x-text="view.label"></span>
+                    </div>
+                    <div class="mt-1 text-[11px] text-slate-500" x-text="view.detail"></div>
+                  </button>
+                </template>
+              </div>
+            </div>
 
             <!-- Command-center KPI strip (174.4b) — 5 morning questions -->
             <div
@@ -550,11 +583,14 @@
 
             <div
               class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)] gap-4 mb-5"
+              x-show="ariadneIsView('today') || ariadneIsView('intel-desk')"
+              data-testid="ariadne-view-today"
             >
               <!-- Morning Brief (174.4b) — answers the 5 questions in narrative form -->
               <div
                 class="card card-accent accent-cyan p-5"
                 data-testid="ariadne-morning-brief"
+                x-show="ariadneIsView('today')"
               >
                 <div class="flex items-center justify-between gap-3 mb-4">
                   <div>
@@ -714,6 +750,7 @@
             <div
               class="card card-accent accent-cyan p-5 mb-5"
               data-testid="ariadne-opportunity-cards"
+              x-show="ariadneIsView('pipeline') || ariadneIsView('opp-360')"
             >
               <div class="flex items-center justify-between gap-3 mb-4">
                 <div>
@@ -898,10 +935,12 @@
 
             <div
               class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 mb-5"
+              x-show="ariadneIsView('today') || ariadneIsView('intel-desk') || ariadneIsView('knowledge')"
             >
               <div
                 class="card card-accent accent-amber p-5"
                 data-testid="ariadne-action-queue"
+                x-show="ariadneIsView('today')"
               >
                 <div class="flex items-center justify-between gap-3 mb-4">
                   <h2 class="font-semibold flex items-center gap-2">
@@ -1093,6 +1132,7 @@
             <div
               class="card card-accent accent-magenta p-5 mb-5"
               data-testid="ariadne-stage-board"
+              x-show="ariadneIsView('pipeline') || ariadneIsView('decision-queue')"
             >
               <div class="flex items-center justify-between gap-3 mb-4">
                 <div>
@@ -1154,7 +1194,7 @@
               </div>
             </div>
 
-            <div class="card card-accent accent-cyan p-5">
+            <div class="card card-accent accent-cyan p-5" x-show="ariadneIsView('today') || ariadneIsView('agent-ops')">
               <div class="flex items-center justify-between gap-3 mb-4">
                 <h2 class="font-semibold flex items-center gap-2">
                   <i data-lucide="route" class="w-4 h-4 text-neon-cyan"></i>
@@ -1223,6 +1263,229 @@
                   ></span>
                   <span class="text-sm font-medium text-slate-100">Studio</span>
                 </button>
+              </div>
+            </div>
+
+            <div
+              class="card card-accent accent-magenta p-5 mb-5"
+              x-show="ariadneIsView('decision-queue')"
+              data-testid="ariadne-view-decision-queue"
+            >
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 class="font-semibold flex items-center gap-2">
+                    <i data-lucide="gavel" class="w-4 h-4 text-neon-magenta"></i>
+                    Decision Queue
+                  </h2>
+                  <div class="text-xs text-slate-500 mt-1">
+                    Pursuits needing bid, gate, or readiness decisions in next 14 days.
+                  </div>
+                </div>
+                <span class="text-[11px] font-mono text-slate-500" x-text="ariadneDecisionQueue(999).length + ' queued'"></span>
+              </div>
+              <div x-show="!ariadneDecisionQueue(999).length" class="text-xs font-mono text-slate-600 py-6 text-center">
+                No decision pressure detected.
+              </div>
+              <div class="space-y-3">
+                <template x-for="item in ariadneDecisionQueue(10)" :key="item.key">
+                  <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class="text-sm font-semibold text-slate-100" x-text="item.workspace"></span>
+                          <span class="pill border text-[10px]" :class="item.stage_class" x-text="item.stage"></span>
+                        </div>
+                        <div class="mt-1 text-xs font-mono text-slate-500">
+                          gate <span class="text-slate-300" x-text="item.gate_label"></span>
+                          · pwin <span class="text-slate-300" x-text="item.pwin_label"></span>
+                        </div>
+                        <ul class="mt-2 space-y-1 text-sm text-slate-200">
+                          <template x-for="reason in item.reasons" :key="reason">
+                            <li class="flex items-start gap-2">
+                              <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-neon-magenta mt-0.5 shrink-0"></i>
+                              <span x-text="reason"></span>
+                            </li>
+                          </template>
+                        </ul>
+                      </div>
+                      <button
+                        class="pill bg-neon-magenta/10 border border-neon-magenta/40 text-neon-magenta px-2 py-1 text-[10px] shrink-0"
+                        @click="activateAriadneWorkspace(item.workspace)"
+                      >
+                        Open
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <div
+              class="card card-accent accent-cyan p-5 mb-5"
+              x-show="ariadneIsView('opp-360')"
+              data-testid="ariadne-view-opp-360"
+            >
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 class="font-semibold flex items-center gap-2">
+                    <i data-lucide="orbit" class="w-4 h-4 text-neon-cyan"></i>
+                    Opp 360
+                  </h2>
+                  <div class="text-xs text-slate-500 mt-1">
+                    Portfolio snapshot by pursuit, blockers, due dates, and content volume.
+                  </div>
+                </div>
+              </div>
+              <div class="space-y-3">
+                <template x-for="card in ariadneOpportunityCards()" :key="card.name + '-360'">
+                  <div class="rounded-lg border border-edge bg-ink-900/60 p-4">
+                    <div class="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class="text-lg font-semibold text-slate-100" x-text="card.name"></span>
+                          <span class="pill border text-[10px]" :class="card.stage_class" x-text="card.stage"></span>
+                        </div>
+                        <div class="text-xs font-mono text-slate-500 mt-1">
+                          agency <span class="text-slate-300" x-text="card.agency || 'TBD'"></span>
+                          · gate <span class="text-slate-300" x-text="card.gate_due?.label || '-'"></span>
+                          · proposal <span class="text-slate-300" x-text="card.proposal_due?.label || '-'"></span>
+                          · pwin <span class="text-slate-300" x-text="card.pwin?.label || '-'"></span>
+                        </div>
+                      </div>
+                      <button
+                        class="studio-action justify-center"
+                        @click="activateAriadneWorkspace(card.name)"
+                      >
+                        <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+                        <span class="text-[10px] ml-1">Open</span>
+                      </button>
+                    </div>
+                    <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mt-3 text-[11px] font-mono">
+                      <div>
+                        <div class="text-slate-600">docs</div>
+                        <div class="text-slate-200 text-lg" x-text="card.counts.documents"></div>
+                      </div>
+                      <div>
+                        <div class="text-slate-600">entities</div>
+                        <div class="text-slate-200 text-lg" x-text="card.counts.entities"></div>
+                      </div>
+                      <div>
+                        <div class="text-slate-600">inputs</div>
+                        <div class="text-slate-200 text-lg" x-text="card.counts.inputs"></div>
+                      </div>
+                      <div>
+                        <div class="text-slate-600">intel age</div>
+                        <div class="text-slate-200 text-lg" x-text="card.intel_age_days === null ? 'none' : card.intel_age_days + 'd'"></div>
+                      </div>
+                    </div>
+                    <div class="mt-3 text-sm text-slate-400" x-text="card.top_blocker?.detail || 'No blocker recorded.'"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <div
+              class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-4 mb-5"
+              x-show="ariadneIsView('knowledge')"
+              data-testid="ariadne-view-knowledge"
+            >
+              <div class="card card-accent accent-lime p-5">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h2 class="font-semibold flex items-center gap-2">
+                      <i data-lucide="book-open-text" class="w-4 h-4 text-neon-lime"></i>
+                      Knowledge Feed
+                    </h2>
+                    <div class="text-xs text-slate-500 mt-1">
+                      Recent notes, wiki pages, and inbox items across global vault.
+                    </div>
+                  </div>
+                </div>
+                <div class="space-y-3">
+                  <template x-for="item in ariadneKnowledgeFeed(12)" :key="item.kind + ':' + item.path">
+                    <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="pill border text-[10px]" :class="'bg-neon-' + item.accent + '/10 text-neon-' + item.accent + ' border-neon-' + item.accent + '/30'" x-text="item.kind"></span>
+                        <span class="text-sm font-semibold text-slate-100 truncate" x-text="item.frontmatter?.title || item.path"></span>
+                      </div>
+                      <div class="text-[10px] font-mono text-slate-600 truncate mt-1" x-text="item.path"></div>
+                      <div class="markdown-preview mt-2 text-sm" x-html="renderMd(item.preview || '')"></div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              <div class="card card-accent accent-amber p-5">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                  <h2 class="font-semibold flex items-center gap-2">
+                    <i data-lucide="inbox" class="w-4 h-4 text-neon-amber"></i>
+                    Promotion Backlog
+                  </h2>
+                  <span class="text-[11px] font-mono text-slate-500" x-text="ariadneQueueItems('inbox', 999).length + ' inbox'"></span>
+                </div>
+                <div x-show="!ariadneQueueItems('inbox', 999).length" class="text-xs font-mono text-slate-600 py-6 text-center">
+                  Inbox clear.
+                </div>
+                <div class="space-y-3">
+                  <template x-for="item in ariadneQueueItems('inbox', 8)" :key="item.path + '-knowledge'">
+                    <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
+                      <div class="text-sm font-semibold text-slate-100 truncate" x-text="item.frontmatter?.title || item.path"></div>
+                      <div class="text-[10px] font-mono text-slate-600 truncate mt-1" x-text="item.path"></div>
+                      <div class="mt-2 flex gap-2 flex-wrap">
+                        <select
+                          x-model="ariadne.promoteTarget[item.path]"
+                          class="bg-ink-900 border border-edge rounded px-2 py-1.5 text-[10px] text-slate-300 font-mono"
+                        >
+                          <option value="">workspace...</option>
+                          <template x-for="name in ariadnePromoteOptions()" :key="name + '-knowledge'">
+                            <option :value="name" x-text="name"></option>
+                          </template>
+                        </select>
+                        <button
+                          class="pill bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan px-2 py-1 text-[10px]"
+                          @click="promoteAriadneNote(item.path)"
+                        >
+                          Promote
+                        </button>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="card card-accent accent-amber p-5 mb-5"
+              x-show="ariadneIsView('agent-ops')"
+              data-testid="ariadne-view-agent-ops"
+            >
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 class="font-semibold flex items-center gap-2">
+                    <i data-lucide="bot" class="w-4 h-4 text-neon-amber"></i>
+                    Agent Ops
+                  </h2>
+                  <div class="text-xs text-slate-500 mt-1">
+                    Operator shortcuts into ingest, intel, graph, skills, chains, and studio.
+                  </div>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4 text-[11px] font-mono">
+                <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
+                  <div class="text-slate-600">workspaces</div>
+                  <div class="text-2xl text-slate-100" x-text="ariadneWorkspaceRows().length"></div>
+                </div>
+                <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
+                  <div class="text-slate-600">open actions</div>
+                  <div class="text-2xl text-slate-100" x-text="ariadneActionQueue(999).length"></div>
+                </div>
+                <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
+                  <div class="text-slate-600">chains loaded</div>
+                  <div class="text-2xl text-slate-100" x-text="chains.items.length"></div>
+                </div>
+                <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
+                  <div class="text-slate-600">studio items</div>
+                  <div class="text-2xl text-slate-100" x-text="studio.deliverables.length"></div>
+                </div>
               </div>
             </div>
           </section>
