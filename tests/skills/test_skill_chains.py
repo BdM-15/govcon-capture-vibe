@@ -269,6 +269,32 @@ async def _chain_executor_passes_note_preview_and_connection_guidance_into_grill
 
     assert result.status == "completed"
     assert [call[0] for call in calls] == ["global-idea-capturer", "grill-me"]
+    assert result.steps["grill"].links == {
+        "reason": "Strong wiki/workspace-link signal matched for captured note refinement.",
+        "query": retrieval_calls[0][0],
+        "entity_names": ["Appendix H", "Staffing Model"],
+        "chunk_ids": ["chunk-2", "chunk-7"],
+        "entities": [
+            {
+                "name": "Appendix H",
+                "entity_type": "attachment",
+                "summary": "Workload appendix with staffing assumptions and surge bands.",
+            },
+            {
+                "name": "Staffing Model",
+                "entity_type": "artifact",
+                "summary": "Current LOE baseline for volume spikes.",
+            },
+        ],
+        "chunks": [
+            {
+                "chunk_id": "chunk-2",
+                "file_path": "appendix-h.pdf",
+                "content": "Appendix H workload table shows surge staffing in Q2 and Q3.",
+            }
+        ],
+        "used": True,
+    }
     grill_prompt = calls[1][1]
     assert "Use captured-note content to surface missing wiki/workspace links" in grill_prompt
     assert "## Workspace Connection Candidates" in grill_prompt

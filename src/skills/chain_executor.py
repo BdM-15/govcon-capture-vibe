@@ -263,16 +263,17 @@ class SkillChainExecutor:
             chain.updated_at = step_run.started_at
             self._run_store.write_chain_run(chain_dir, chain.model_dump())
 
-            workspace_connection_block = await self._workspace_connection_block(
+            workspace_links = await self._workspace_connection_links(
                 chain,
                 step,
                 input_artifacts=step_run.input_artifacts,
                 retrieve_fn=retrieve_fn,
             )
+            step_run.links = workspace_links
             step_prompt = self._compose_step_prompt(
                 chain,
                 step,
-                workspace_connection_block=workspace_connection_block,
+                workspace_connection_block=self._workspace_connection_block(workspace_links),
             )
 
             try:
@@ -795,19 +796,30 @@ class SkillChainExecutor:
         )
 
     @classmethod
-    async def _workspace_connection_block(
+    async def _workspace_connection_links(
         cls,
         chain: ChainRunState,
         step: ChainStepSpec,
         *,
         input_artifacts: list[ChainArtifactRef],
         retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]],
-    ) -> str:
-        if not retrieve_fn or not cls._should_add_connection_context(chain, step, input_artifacts):
-            return ""
+    ) -> dict[str, Any]:
+        if not cls._should_add_connection_context(chain, step, input_artifacts):
+            return {}
         query = cls._connection_query(chain, step, input_artifacts)
         if not query:
-            return ""
+            return {}
+        reason = "Strong wiki/workspace-link signal matched for captured note refinement."
+        if not retrieve_fn:
+            return {
+                "reason": reason,
+                "query": query,
+                "entity_names": [],
+                "chunk_ids": [],
+                "entities": [],
+                "chunks": [],
+                "used": False,
+            }
         try:
             payload = await retrieve_fn(
                 query,
@@ -816,7 +828,15 @@ class SkillChainExecutor:
                 8,
             )
         except Exception:
-            return ""
+            return {
+                "reason": reason,
+                "query": query,
+                "entity_names": [],
+                "chunk_ids": [],
+                "entities": [],
+                "chunks": [],
+                "used": False,
+            }
         names = sorted(str(name).strip() for name in (payload.get("names") or set()) if str(name).strip())
         chunk_ids = sorted(
             str(chunk_id).strip()
@@ -825,6 +845,33 @@ class SkillChainExecutor:
         )
         entities = cls._connection_entities(payload.get("entities") or [])
         chunks = cls._connection_chunks(payload.get("chunks") or [])
+        metadata = payload.get("metadata") or {}
+        return {
+            "reason": reason,
+            "query": query,
+            "entity_names": names[:8],
+            "chunk_ids": chunk_ids[:6],
+            "entities": entities,
+            "chunks": chunks,
+            "used": bool(metadata.get("used") or names or chunk_ids or entities or chunks),
+        }
+
+    @classmethod
+    def _workspace_connection_block(cls, links: dict[str, Any]) -> str:
+        if not isinstance(links, dict) or not links:
+            return ""
+        names = [
+            str(name).strip()
+            for name in (links.get("entity_names") or [])
+            if str(name).strip()
+        ]
+        chunk_ids = [
+            str(chunk_id).strip()
+            for chunk_id in (links.get("chunk_ids") or [])
+            if str(chunk_id).strip()
+        ]
+        entities = cls._connection_entities(links.get("entities") or [])
+        chunks = cls._connection_chunks(links.get("chunks") or [])
         if not names and not chunk_ids and not entities and not chunks:
             return ""
         lines = ["\n\n## Workspace Connection Candidates"]

@@ -150,6 +150,7 @@ class ChainStepRun(BaseModel):
     run_dir: str = ""
     response_preview: str = ""
     warnings: list[str] = Field(default_factory=list)
+    links: dict[str, Any] = Field(default_factory=dict)
     input_artifacts: list[ChainArtifactRef] = Field(default_factory=list)
     artifacts: list[dict[str, Any]] = Field(default_factory=list)
     missing_inputs: list[str] = Field(default_factory=list)
