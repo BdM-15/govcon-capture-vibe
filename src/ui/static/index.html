@@ -548,103 +548,22 @@
               </template>
             </div>
 
-            <!-- Morning Brief (174.4b) — answers the 5 questions in narrative form -->
             <div
-              class="card card-accent accent-cyan p-5 mb-5"
-              data-testid="ariadne-morning-brief"
+              class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)] gap-4 mb-5"
             >
-              <div class="flex items-center justify-between gap-3 mb-4">
-                <div>
-                  <h2 class="font-semibold flex items-center gap-2">
-                    <i data-lucide="sunrise" class="w-4 h-4 text-neon-cyan"></i>
-                    Morning Brief
-                  </h2>
-                  <div class="text-xs text-slate-500 mt-1">
-                    What you would scan with coffee — five lines, then act.
-                  </div>
-                </div>
-                <button
-                  class="btn btn-ghost text-xs border border-edge"
-                  @click="loadAriadne()"
-                  :disabled="ariadne.loading"
-                >
-                  <i
-                    data-lucide="refresh-cw"
-                    class="w-3.5 h-3.5"
-                    :class="ariadne.loading ? 'animate-spin' : ''"
-                  ></i>
-                  Refresh
-                </button>
-              </div>
-              <ul class="space-y-2.5">
-                <template
-                  x-for="(item, idx) in ariadneMorningBrief()"
-                  :key="idx"
-                >
-                  <li
-                    class="flex items-start gap-3 rounded-lg border border-edge bg-ink-900/60 px-3 py-2.5"
-                    :class="item.placeholder ? 'opacity-70' : ''"
-                  >
-                    <span
-                      class="icon-tile shrink-0"
-                      :class="'text-neon-' + item.accent"
-                    >
-                      <i :data-lucide="item.icon" class="w-4 h-4"></i>
-                    </span>
-                    <div class="min-w-0 flex-1">
-                      <div
-                        class="text-[11px] uppercase tracking-[0.16em] font-mono text-slate-500 flex items-center gap-1.5"
-                      >
-                        <span x-text="item.label"></span>
-                        <span
-                          x-show="item.placeholder"
-                          class="pill border border-edge text-[9px] text-slate-600"
-                          >soon</span
-                        >
-                      </div>
-                      <div
-                        class="text-sm text-slate-200 mt-1"
-                        x-text="item.detail"
-                      ></div>
-                    </div>
-                    <button
-                      x-show="item.action"
-                      class="pill bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan px-2 py-1 text-[10px] shrink-0"
-                      @click="activateAriadneWorkspace(item.action.workspace)"
-                    >
-                      <span x-text="item.action.label"></span>
-                    </button>
-                  </li>
-                </template>
-              </ul>
-            </div>
-
-            <div
-              class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.8fr)] gap-4 mb-5"
-            >
+              <!-- Morning Brief (174.4b) — answers the 5 questions in narrative form -->
               <div
                 class="card card-accent accent-cyan p-5"
-                data-testid="ariadne-opportunity-cards"
+                data-testid="ariadne-morning-brief"
               >
                 <div class="flex items-center justify-between gap-3 mb-4">
                   <div>
                     <h2 class="font-semibold flex items-center gap-2">
-                      <i
-                        data-lucide="briefcase"
-                        class="w-4 h-4 text-neon-cyan"
-                      ></i>
-                      Opportunity Cards
+                      <i data-lucide="sunrise" class="w-4 h-4 text-neon-cyan"></i>
+                      Morning Brief
                     </h2>
                     <div class="text-xs text-slate-500 mt-1">
-                      Active workspace:
-                      <span
-                        class="text-neon-cyan font-mono"
-                        x-text="stats.workspace || 'none'"
-                      ></span>
-                      · sourced from
-                      <span class="font-mono text-slate-400"
-                        >pursuits/*/00_pursuit.yaml</span
-                      >.
+                      What you would scan with coffee — five lines, then act.
                     </div>
                   </div>
                   <button
@@ -660,230 +579,322 @@
                     Refresh
                   </button>
                 </div>
-
-                <div
-                  x-show="!ariadneOpportunityCards().length"
-                  class="text-xs font-mono text-slate-600 py-8 text-center"
-                >
-                  No opportunity workspaces yet.
-                </div>
-
-                <div
-                  class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[480px] overflow-y-auto pr-1"
-                >
+                <ul class="space-y-2.5">
                   <template
-                    x-for="card in ariadneOpportunityCards()"
-                    :key="card.name"
+                    x-for="(item, idx) in ariadneMorningBrief()"
+                    :key="idx"
                   >
-                    <div
-                      class="rounded-lg border bg-ink-900/60 p-3 transition flex flex-col gap-2.5"
-                      :class="card.is_active ? 'border-neon-cyan/60 shadow-glow' : 'border-edge hover:border-neon-cyan/35'"
+                    <li
+                      class="flex items-start gap-3 rounded-lg border border-edge bg-ink-900/60 px-3 py-2.5"
+                      :class="item.placeholder ? 'opacity-70' : ''"
                     >
-                      <div class="flex items-start justify-between gap-2">
-                        <div class="min-w-0">
-                          <div
-                            class="text-sm font-semibold text-slate-100 truncate"
-                            x-text="card.name"
-                          ></div>
-                          <div
-                            class="text-[10px] font-mono text-slate-600 mt-0.5"
-                          >
-                            agency:
-                            <span
-                              class="text-slate-400"
-                              x-text="card.agency || 'TBD'"
-                            ></span>
-                          </div>
-                        </div>
-                        <span
-                          class="pill border text-[10px] shrink-0"
-                          :class="card.stage_class"
-                          x-text="card.stage"
-                        ></span>
-                      </div>
-
-                      <div class="grid grid-cols-3 gap-2 text-[11px] font-mono">
-                        <div class="grid grid-cols-4 gap-2 text-[11px] font-mono">
-                          <div class="text-slate-600">PWin</div>
-                          <div class="text-slate-500">
-                            <div
-                              class="text-slate-200"
-                              :title="card.pwin?.title || ''"
-                              x-text="card.pwin?.label || '-'"
-                            ></div>
-                            <div
-                              class="text-[9px] text-slate-500 truncate"
-                              x-text="card.pwin?.detail || 'unset'"
-                            ></div>
-                          </div>
-                          <div>
-                            <div class="text-slate-600">gate</div>
-                            <div
-                              class="text-slate-200"
-                              :title="card.gate_due?.title || ''"
-                              x-text="card.gate_due?.label || '-'"
-                            ></div>
-                            <div
-                              class="text-[9px] text-slate-500 truncate"
-                              x-text="card.gate_due?.name || 'unset'"
-                            ></div>
-                          </div>
-                          <div>
-                            <div class="text-slate-600">proposal</div>
-                            <div
-                              class="text-slate-200"
-                              :title="card.proposal_due?.title || ''"
-                              x-text="card.proposal_due?.label || '-'"
-                            ></div>
-                            <div class="text-[9px] text-slate-500">due</div>
-                          </div>
-                          <div>
-                            <div class="text-slate-600">intel</div>
-                            <div
-                              :class="card.intel_age_days === null ? 'text-slate-500' : (card.intel_age_days > 14 ? 'text-neon-magenta' : 'text-slate-300')"
-                              x-text="card.intel_age_days === null ? 'none' : card.intel_age_days + 'd ago'"
-                            ></div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <div
-                            class="text-[10px] uppercase tracking-[0.14em] font-mono text-slate-600 mb-1"
-                          >
-                            readiness · 7-axis
-                          </div>
-                          <div class="grid grid-cols-7 gap-1">
-                            <template
-                              x-for="bar in card.readiness"
-                              :key="bar.dim"
-                            >
-                              <div
-                                class="h-1.5 rounded-sm border"
-                                :class="bar.class_name"
-                                :title="bar.title"
-                              ></div>
-                            </template>
-                          </div>
-                        </div>
-
+                      <span
+                        class="icon-tile shrink-0"
+                        :class="'text-neon-' + item.accent"
+                      >
+                        <i :data-lucide="item.icon" class="w-4 h-4"></i>
+                      </span>
+                      <div class="min-w-0 flex-1">
                         <div
-                          x-show="card.top_blocker"
-                          class="rounded border border-neon-amber/30 bg-neon-amber/5 px-2 py-1.5 text-[11px] text-neon-amber"
+                          class="text-[11px] uppercase tracking-[0.16em] font-mono text-slate-500 flex items-center gap-1.5"
                         >
+                          <span x-text="item.label"></span>
                           <span
-                            class="font-mono text-[9px] uppercase tracking-[0.14em] mr-1"
-                            x-text="card.top_blocker?.kind"
-                          ></span>
-                          <span x-text="card.top_blocker?.detail"></span>
+                            x-show="item.placeholder"
+                            class="pill border border-edge text-[9px] text-slate-600"
+                            >soon</span
+                          >
                         </div>
                         <div
-                          x-show="!card.top_blocker"
-                          class="text-[11px] text-slate-600 font-mono"
-                        >
-                          No blockers detected.
-                        </div>
-
-                        <div class="flex gap-1.5 mt-auto">
-                          <button
-                            class="studio-action flex-1 justify-center"
-                            title="Activate workspace"
-                            @click="activateAriadneWorkspace(card.name)"
-                          >
-                            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
-                            <span class="text-[10px] ml-1">Open</span>
-                          </button>
-                          <button
-                            x-show="card.next_action"
-                            class="studio-action flex-1 justify-center bg-neon-cyan/10 border-neon-cyan/40 text-neon-cyan"
-                            :title="card.next_action?.detail"
-                            @click="activateAriadneWorkspace(card.name)"
-                          >
-                            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-                            <span
-                              class="text-[10px] ml-1"
-                              x-text="card.next_action?.cta"
-                            ></span>
-                          </button>
-                        </div>
+                          class="text-sm text-slate-200 mt-1"
+                          x-text="item.detail"
+                        ></div>
                       </div>
-                    </template>
+                      <button
+                        x-show="item.action"
+                        class="pill bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan px-2 py-1 text-[10px] shrink-0"
+                        @click="activateAriadneWorkspace(item.action.workspace)"
+                      >
+                        <span x-text="item.action.label"></span>
+                      </button>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+
+              <div
+                class="card card-accent accent-magenta p-5 h-fit"
+                data-testid="ariadne-capture-desk"
+              >
+                <div class="flex items-start justify-between gap-3 mb-4">
+                  <div>
+                    <h2 class="font-semibold flex items-center gap-2">
+                      <i
+                        data-lucide="satellite"
+                        class="w-4 h-4 text-neon-magenta"
+                      ></i>
+                      Capture Desk
+                    </h2>
+                    <div class="text-xs text-slate-500 mt-1">
+                      Fast capture first. Override routing only when needed.
+                    </div>
                   </div>
                 </div>
-
-                <div
-                  class="card card-accent accent-magenta p-5"
-                  data-testid="ariadne-capture-desk"
-                >
-                  <div class="flex items-center gap-2 mb-4">
-                    <i
-                      data-lucide="satellite"
-                      class="w-4 h-4 text-neon-magenta"
-                    ></i>
-                    <h2 class="font-semibold">Capture Desk</h2>
-                  </div>
-                  <div class="space-y-3">
-                    <textarea
-                      x-model="ariadne.capture.body"
-                      rows="5"
-                      placeholder="Signal, risk, customer note, competitor move, lesson, call follow-up..."
-                      class="w-full bg-ink-900 border border-edge focus:border-neon-magenta/60 outline-none rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 font-mono resize-none"
-                    ></textarea>
-                    <div class="grid grid-cols-2 gap-2">
-                      <select
-                        x-model="ariadne.capture.bucket"
-                        class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono"
-                      >
-                        <option value="inbox">inbox</option>
-                        <option value="notes">notes</option>
-                        <option value="intel">intel</option>
-                        <option value="llm-wiki">llm-wiki</option>
-                      </select>
-                      <select
-                        x-model="ariadne.capture.priority"
-                        class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono"
-                      >
-                        <option value="normal">normal</option>
-                        <option value="high">high</option>
-                        <option value="urgent">urgent</option>
-                      </select>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      <input
-                        x-model="ariadne.capture.slug"
-                        placeholder="slug"
-                        class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 placeholder-slate-600 font-mono"
-                      />
-                      <input
-                        x-model="ariadne.capture.tags"
-                        placeholder="tags"
-                        class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 placeholder-slate-600 font-mono"
-                      />
-                    </div>
-                    <select
-                      x-model="ariadne.capture.workspace"
-                      class="w-full bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono"
+                <div class="space-y-3">
+                  <textarea
+                    x-model="ariadne.capture.body"
+                    rows="8"
+                    placeholder="Signal, intel, customer note, competitor move, lesson, call follow-up..."
+                    class="w-full bg-ink-900 border border-edge focus:border-neon-magenta/60 outline-none rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 font-mono resize-none"
+                  ></textarea>
+                  <select
+                    x-model="ariadne.capture.workspace"
+                    class="w-full bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono"
+                  >
+                    <option value="">global only</option>
+                    <template
+                      x-for="name in ariadnePromoteOptions()"
+                      :key="name"
                     >
-                      <option value="">global only</option>
-                      <template
-                        x-for="name in ariadnePromoteOptions()"
-                        :key="name"
-                      >
-                        <option :value="name" x-text="name"></option>
-                      </template>
-                    </select>
-                    <button
-                      class="w-full btn-hero-magenta inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold"
-                      @click="submitAriadneCapture()"
-                      :disabled="!ariadne.capture.body.trim() || ariadne.capture.busy"
-                    >
-                      <i data-lucide="send" class="w-4 h-4"></i>
-                      <span
-                        x-text="ariadne.capture.busy ? 'Capturing...' : 'Capture Signal'"
-                      ></span>
-                    </button>
-                  </div>
+                      <option :value="name" x-text="name"></option>
+                    </template>
+                  </select>
+                  <details class="rounded-lg border border-edge bg-ink-900/40 px-3 py-2">
+                    <summary class="cursor-pointer text-[11px] uppercase tracking-[0.16em] font-mono text-slate-500 select-none">
+                      Advanced routing overrides
+                    </summary>
+                    <div class="space-y-2 pt-3">
+                      <div class="grid grid-cols-2 gap-2">
+                        <select
+                          x-model="ariadne.capture.bucket"
+                          class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono"
+                        >
+                          <option value="inbox">inbox</option>
+                          <option value="notes">notes</option>
+                          <option value="intel">intel</option>
+                          <option value="llm-wiki">llm-wiki</option>
+                        </select>
+                        <select
+                          x-model="ariadne.capture.priority"
+                          class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono"
+                        >
+                          <option value="normal">normal</option>
+                          <option value="high">high</option>
+                          <option value="urgent">urgent</option>
+                        </select>
+                      </div>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <input
+                          x-model="ariadne.capture.slug"
+                          placeholder="slug"
+                          class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 placeholder-slate-600 font-mono"
+                        />
+                        <input
+                          x-model="ariadne.capture.tags"
+                          placeholder="tags"
+                          class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 placeholder-slate-600 font-mono"
+                        />
+                      </div>
+                    </div>
+                  </details>
+                  <button
+                    class="w-full btn-hero-magenta inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold"
+                    @click="submitAriadneCapture()"
+                    :disabled="!ariadne.capture.body.trim() || ariadne.capture.busy"
+                  >
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span
+                      x-text="ariadne.capture.busy ? 'Capturing...' : 'Capture Signal'"
+                    ></span>
+                  </button>
                 </div>
               </div>
+            </div>
+
+            <div
+              class="card card-accent accent-cyan p-5 mb-5"
+              data-testid="ariadne-opportunity-cards"
+            >
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 class="font-semibold flex items-center gap-2">
+                    <i
+                      data-lucide="briefcase"
+                      class="w-4 h-4 text-neon-cyan"
+                    ></i>
+                    Opportunity Cards
+                  </h2>
+                  <div class="text-xs text-slate-500 mt-1">
+                    Active workspace:
+                    <span
+                      class="text-neon-cyan font-mono"
+                      x-text="stats.workspace || 'none'"
+                    ></span>
+                    · sourced from
+                    <span class="font-mono text-slate-400"
+                      >pursuits/*/00_pursuit.yaml</span
+                    >.
+                  </div>
+                </div>
+                <button
+                  class="btn btn-ghost text-xs border border-edge"
+                  @click="loadAriadne()"
+                  :disabled="ariadne.loading"
+                >
+                  <i
+                    data-lucide="refresh-cw"
+                    class="w-3.5 h-3.5"
+                    :class="ariadne.loading ? 'animate-spin' : ''"
+                  ></i>
+                  Refresh
+                </button>
+              </div>
+
+              <div
+                x-show="!ariadneOpportunityCards().length"
+                class="text-xs font-mono text-slate-600 py-8 text-center"
+              >
+                No opportunity workspaces yet.
+              </div>
+
+              <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <template
+                  x-for="card in ariadneOpportunityCards()"
+                  :key="card.name"
+                >
+                  <div
+                    class="rounded-lg border bg-ink-900/60 p-4 transition flex flex-col gap-3"
+                    :class="card.is_active ? 'border-neon-cyan/60 shadow-glow' : 'border-edge hover:border-neon-cyan/35'"
+                  >
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <div
+                          class="text-xl font-semibold text-slate-100 truncate"
+                          x-text="card.name"
+                        ></div>
+                        <div class="text-xs font-mono text-slate-600 mt-1">
+                          agency:
+                          <span
+                            class="text-slate-400"
+                            x-text="card.agency || 'TBD'"
+                          ></span>
+                        </div>
+                      </div>
+                      <span
+                        class="pill border text-[10px] shrink-0"
+                        :class="card.stage_class"
+                        x-text="card.stage"
+                      ></span>
+                    </div>
+
+                    <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 text-[11px] font-mono">
+                      <div class="min-w-0">
+                        <div class="text-slate-600">PWin</div>
+                        <div
+                          class="text-slate-200 text-lg leading-tight"
+                          :title="card.pwin?.title || ''"
+                          x-text="card.pwin?.label || '-'"
+                        ></div>
+                        <div
+                          class="text-[9px] text-slate-500 truncate"
+                          x-text="card.pwin?.detail || 'unset'"
+                        ></div>
+                      </div>
+                      <div class="min-w-0">
+                        <div class="text-slate-600">gate</div>
+                        <div
+                          class="text-slate-200 text-lg leading-tight"
+                          :title="card.gate_due?.title || ''"
+                          x-text="card.gate_due?.label || '-'"
+                        ></div>
+                        <div
+                          class="text-[9px] text-slate-500 truncate"
+                          x-text="card.gate_due?.name || 'unset'"
+                        ></div>
+                      </div>
+                      <div class="min-w-0">
+                        <div class="text-slate-600">proposal</div>
+                        <div
+                          class="text-slate-200 text-lg leading-tight"
+                          :title="card.proposal_due?.title || ''"
+                          x-text="card.proposal_due?.label || '-'"
+                        ></div>
+                        <div class="text-[9px] text-slate-500">due</div>
+                      </div>
+                      <div class="min-w-0">
+                        <div class="text-slate-600">intel</div>
+                        <div
+                          class="text-slate-200 text-lg leading-tight"
+                          :class="card.intel_age_days === null ? 'text-slate-500' : (card.intel_age_days > 14 ? 'text-neon-magenta' : 'text-slate-300')"
+                          x-text="card.intel_age_days === null ? 'none' : card.intel_age_days + 'd ago'"
+                        ></div>
+                        <div class="text-[9px] text-slate-500">freshness</div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div
+                        class="text-[10px] uppercase tracking-[0.14em] font-mono text-slate-600 mb-1.5"
+                      >
+                        readiness · 7-axis
+                      </div>
+                      <div class="grid grid-cols-7 gap-1.5">
+                        <template
+                          x-for="bar in card.readiness"
+                          :key="bar.dim"
+                        >
+                          <div
+                            class="h-2 rounded-sm border"
+                            :class="bar.class_name"
+                            :title="bar.title"
+                          ></div>
+                        </template>
+                      </div>
+                    </div>
+
+                    <div
+                      x-show="card.top_blocker"
+                      class="rounded border border-neon-amber/30 bg-neon-amber/5 px-3 py-2 text-[12px] text-neon-amber"
+                    >
+                      <span
+                        class="font-mono text-[9px] uppercase tracking-[0.14em] mr-1"
+                        x-text="card.top_blocker?.kind"
+                      ></span>
+                      <span x-text="card.top_blocker?.detail"></span>
+                    </div>
+                    <div
+                      x-show="!card.top_blocker"
+                      class="text-[12px] text-slate-500 font-mono"
+                    >
+                      No blockers detected.
+                    </div>
+
+                    <div class="flex gap-2 mt-auto">
+                      <button
+                        class="studio-action flex-1 justify-center"
+                        title="Activate workspace"
+                        @click="activateAriadneWorkspace(card.name)"
+                      >
+                        <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+                        <span class="text-[10px] ml-1">Open</span>
+                      </button>
+                      <button
+                        x-show="card.next_action"
+                        class="studio-action flex-1 justify-center bg-neon-cyan/10 border-neon-cyan/40 text-neon-cyan"
+                        :title="card.next_action?.detail"
+                        @click="activateAriadneWorkspace(card.name)"
+                      >
+                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                        <span
+                          class="text-[10px] ml-1"
+                          x-text="card.next_action?.cta"
+                        ></span>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
 
             <div
               class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 mb-5"

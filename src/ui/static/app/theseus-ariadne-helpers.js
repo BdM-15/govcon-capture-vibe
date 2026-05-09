@@ -135,8 +135,8 @@ window.theseusAriadneStageClass = function theseusAriadneStageClass(row) {
   return "bg-ink-800 text-slate-400 border-edge";
 };
 
-// 174.4b: Command-center KPIs answer the 5 morning questions.
-// Real data where derivable today; placeholders flag schema arriving in 174.6.
+// 174.4b+: Command-center KPIs answer the 5 morning questions.
+// Pursuit schema now feeds gate-driven dashboard signals where available.
 const ARIADNE_DAY_SECONDS = 86400;
 const ARIADNE_STALE_INTEL_DAYS = 14;
 
@@ -156,6 +156,12 @@ window.theseusAriadneMetrics = function theseusAriadneMetrics(app) {
   const rows = window.theseusAriadneWorkspaceRows(app);
   const inbox = theseusAriadneBucket(app, "inbox");
   const intel = theseusAriadneBucket(app, "intel");
+  const decisionsDue = rows.filter((row) => {
+    const days = theseusAriadneDaysUntil(row.pursuit?.gate?.due);
+    const pwin = Number(row.pursuit?.pwin?.value);
+    const missingPwin = !Number.isFinite(pwin);
+    return (days !== null && days <= 7) || missingPwin;
+  });
   const upcomingGates = rows.filter((row) => {
     const days = theseusAriadneDaysUntil(row.pursuit?.gate?.due);
     return days !== null && days <= 7;
@@ -185,12 +191,14 @@ window.theseusAriadneMetrics = function theseusAriadneMetrics(app) {
     },
     {
       label: "decisions due",
-      value: 0,
-      hint: "schema arrives 174.6",
+      value: decisionsDue.length,
+      hint: decisionsDue.length
+        ? "near gate or missing PWin"
+        : "no immediate decision flags",
       icon: "gavel",
       accent: "magenta",
       color: "text-neon-magenta",
-      placeholder: true,
+      placeholder: false,
     },
     {
       label: "stale intel",
