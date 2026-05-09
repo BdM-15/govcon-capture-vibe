@@ -68,6 +68,7 @@ from src.server.admin_routes import (
     register_mcp_ui_routes,
     ui_chat_history_pairs,
 )
+from src.server.dashboard_routes import register_dashboard_routes
 from src.server.document_routes import register_processing_log_routes
 from src.server.global_routes import register_global_routes
 from src.server.prompt_library import register_prompt_library_routes
@@ -307,5 +308,7 @@ def register_ui(
         data_func=data_func,
         llm_func=llm_func,
     )
+
+    register_dashboard_routes(app, static_dir=_STATIC_DIR)
 
     logger.info("✅ Project Theseus UI mounted at /ui (static: %s)", _STATIC_DIR)
