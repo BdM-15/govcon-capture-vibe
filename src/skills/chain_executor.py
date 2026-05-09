@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional, TypedDict
 
@@ -30,6 +31,8 @@ InvokeSkillCallable = Callable[..., Awaitable[SkillInvocationResult]]
 
 class SkillChainExecutor:
     """Execute a validated chain spec with existing skill invocation primitives."""
+
+    _QUERY_TOKEN_RE = re.compile(r"[a-z0-9_-]+")
 
     _TEXT_PREVIEW_EXTENSIONS: set[str] = {"md", "txt", "json", "yaml", "yml", "csv"}
     _PREVIEW_MAX_CHARS = 1600
@@ -258,11 +261,23 @@ class SkillChainExecutor:
             chain.updated_at = step_run.started_at
             self._run_store.write_chain_run(chain_dir, chain.model_dump())
 
+            workspace_connection_block = await self._workspace_connection_block(
+                chain,
+                step,
+                input_artifacts=step_run.input_artifacts,
+                retrieve_fn=retrieve_fn,
+            )
+            step_prompt = self._compose_step_prompt(
+                chain,
+                step,
+                workspace_connection_block=workspace_connection_block,
+            )
+
             try:
                 result = await self._invoke_skill(
                     step.skill,
                     workspace=workspace,
-                    user_prompt=self._compose_step_prompt(chain, step),
+                    user_prompt=step_prompt,
                     entity_payload=entity_payload,
                     llm=llm,
                     max_payload_chars=max_payload_chars,
@@ -664,7 +679,12 @@ class SkillChainExecutor:
         return missing
 
     @staticmethod
-    def _compose_step_prompt(chain: ChainRunState, step: ChainStepSpec) -> str:
+    def _compose_step_prompt(
+        chain: ChainRunState,
+        step: ChainStepSpec,
+        *,
+        workspace_connection_block: str = "",
+    ) -> str:
         input_artifacts = chain.steps[step.id].input_artifacts
         upstream = {
             step_id: run.model_dump()
@@ -704,6 +724,7 @@ class SkillChainExecutor:
                 else ""
             )
             + connection_guidance
+            + workspace_connection_block
             + artifact_preview_block
             + "\nIf critical evidence is missing, emit an explicit missing-input list the user can supply and still produce the best partial artifact."
             + "\n\n## Theseus Chain Handoff\n"
@@ -770,6 +791,76 @@ class SkillChainExecutor:
             " Prioritize unresolved entities, candidate wikilinks, missing branches,"
             " and whether note should stay global or move into workspace context."
         )
+
+    @classmethod
+    async def _workspace_connection_block(
+        cls,
+        chain: ChainRunState,
+        step: ChainStepSpec,
+        *,
+        input_artifacts: list[ChainArtifactRef],
+        retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]],
+    ) -> str:
+        if not retrieve_fn or not cls._should_add_connection_context(chain, step, input_artifacts):
+            return ""
+        query = cls._connection_query(chain, step, input_artifacts)
+        if not query:
+            return ""
+        try:
+            payload = await retrieve_fn(
+                query,
+                "Find candidate workspace/wiki links for this captured note.",
+                "hybrid",
+                8,
+            )
+        except Exception:
+            return ""
+        names = sorted(str(name).strip() for name in (payload.get("names") or set()) if str(name).strip())
+        chunk_ids = sorted(
+            str(chunk_id).strip()
+            for chunk_id in (payload.get("chunk_ids") or set())
+            if str(chunk_id).strip()
+        )
+        if not names and not chunk_ids:
+            return ""
+        lines = ["\n\n## Workspace Connection Candidates"]
+        if names:
+            lines.append("Matched entity names: " + ", ".join(names[:8]))
+        if chunk_ids:
+            lines.append("Matched chunk ids: " + ", ".join(chunk_ids[:6]))
+        lines.append("Use these as candidate wikilinks or branch targets. Verify against note text before asserting a connection.")
+        return "\n".join(lines)
+
+    @classmethod
+    def _should_add_connection_context(
+        cls,
+        chain: ChainRunState,
+        step: ChainStepSpec,
+        input_artifacts: list[ChainArtifactRef],
+    ) -> bool:
+        if step.skill != "grill-me":
+            return False
+        if not any(cls._NOTE_PRODUCTS.intersection(artifact.products) for artifact in input_artifacts):
+            return False
+        text = " ".join(
+            [chain.spec.prompt, str(chain.spec.context.get("expected_outcome") or ""), step.prompt]
+        )
+        goal_tokens = set(cls._QUERY_TOKEN_RE.findall(text.lower()))
+        return bool(goal_tokens.intersection(cls._CONNECTION_TERMS))
+
+    @classmethod
+    def _connection_query(
+        cls,
+        chain: ChainRunState,
+        step: ChainStepSpec,
+        input_artifacts: list[ChainArtifactRef],
+    ) -> str:
+        parts = [chain.spec.prompt.strip(), step.prompt.strip()]
+        for artifact in input_artifacts[: cls._PREVIEW_MAX_ARTIFACTS]:
+            preview = cls._read_artifact_preview(artifact)
+            if preview:
+                parts.append(preview)
+        return "\n\n".join(part for part in parts if part).strip()
 
 
 __all__ = ["SkillChainExecutor"]

@@ -200,6 +200,28 @@ def test_planner_infers_capture_to_grill_me_for_wiki_connection_signal() -> None
     assert "inbox_note" in grill_products
 
 
+def test_planner_routes_promotion_then_grill_for_refinement_signal() -> None:
+    planner = SkillChainPlanner(_SKILLS)
+
+    plan = planner.plan(
+        prompt="Promote this saved note into evergreen knowledge, then stress-test missing workspace links.",
+        outcome="Evergreen note plus sharper wiki-link questions",
+        include_rendering=False,
+    )
+
+    assert [step.skill for step in plan.spec.steps] == [
+        "phase-promoter",
+        "grill-me",
+    ]
+    assert plan.spec.steps[1].depends_on == ["phase-promoter"]
+    grill_products = {
+        product
+        for requirement in plan.spec.steps[1].artifact_requirements
+        for product in requirement.products
+    }
+    assert {"processed_note", "evergreen_note", "wiki_seed"}.intersection(grill_products)
+
+
 def test_planner_does_not_overtrigger_grill_me_for_plain_wiki_capture() -> None:
     planner = SkillChainPlanner(_SKILLS)
 
@@ -251,7 +273,10 @@ def test_contract_registry_includes_capture_to_grill_edge() -> None:
 
     assert "inbox_note" in grill.accepts
     assert grill.produces == frozenset({"connection_questions"})
-    assert CONTRACT_REGISTRY.upstream_skills("grill-me") == ("global-idea-capturer",)
+    assert CONTRACT_REGISTRY.upstream_skills("grill-me") == (
+        "global-idea-capturer",
+        "phase-promoter",
+    )
 
 
 def test_contract_model_rejects_unknown_top_level_fields() -> None:

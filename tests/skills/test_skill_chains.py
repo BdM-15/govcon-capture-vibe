@@ -187,6 +187,15 @@ async def _chain_executor_passes_note_preview_and_connection_guidance_into_grill
 ) -> None:
     store = SkillRunStore()
     calls: list[tuple[str, str]] = []
+    retrieval_calls: list[tuple[str, str, str, int]] = []
+
+    async def fake_retrieve(query: str, skill_description: str, mode: str, top_k: int) -> dict[str, Any]:
+        retrieval_calls.append((query, skill_description, mode, top_k))
+        return {
+            "names": {"Appendix H", "Staffing Model"},
+            "chunk_ids": {"chunk-7", "chunk-2"},
+            "metadata": {"used": True},
+        }
 
     async def invoke_skill(name: str, **kwargs: Any) -> SkillInvocationResult:
         prompt = kwargs["user_prompt"]
@@ -236,14 +245,28 @@ async def _chain_executor_passes_note_preview_and_connection_guidance_into_grill
         workspace_root=tmp_path,
         llm=_noop_llm,
         entity_payload={},
+        retrieve_fn=fake_retrieve,
     )
 
     assert result.status == "completed"
     assert [call[0] for call in calls] == ["global-idea-capturer", "grill-me"]
     grill_prompt = calls[1][1]
     assert "Use captured-note content to surface missing wiki/workspace links" in grill_prompt
+    assert "## Workspace Connection Candidates" in grill_prompt
+    assert "Appendix H" in grill_prompt
+    assert "Staffing Model" in grill_prompt
+    assert "chunk-2" in grill_prompt
     assert "Need connect workload spike to Appendix H staffing model." in grill_prompt
     assert "captured-note.md" in grill_prompt
+    assert retrieval_calls == [
+        (
+            retrieval_calls[0][0],
+            "Find candidate workspace/wiki links for this captured note.",
+            "hybrid",
+            8,
+        )
+    ]
+    assert "Need connect workload spike to Appendix H staffing model." in retrieval_calls[0][0]
 
 
 def test_chain_executor_stops_after_failed_step(tmp_path: Path) -> None:
