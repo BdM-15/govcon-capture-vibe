@@ -26,34 +26,35 @@ When adding a new skill, pick the tier first and set `metadata.developer_only` a
 
 Skills shown in the Theseus govcon UI. Query the active workspace KG and use govcon personas.
 
-| Skill              | Source of truth                                              | Theseus runtime adapter        |
-| ------------------ | ------------------------------------------------------------ | ------------------------------ |
-| huashu-design         | `.github/skills/huashu-design/` (vendored — see UPSTREAM.md) | `src/skills/manager.py` (auto) |
-| govcon-ontology       | `.github/skills/govcon-ontology/`                            | `src/skills/manager.py` (auto) |
-| proposal-generator    | `.github/skills/proposal-generator/`                         | `src/skills/manager.py` (auto) |
-| compliance-auditor    | `.github/skills/compliance-auditor/`                         | `src/skills/manager.py` (auto) |
-| competitive-intel     | `.github/skills/competitive-intel/`                          | `src/skills/manager.py` (auto) |
-| grill-me-govcon       | `.github/skills/grill-me-govcon/`                            | `src/skills/manager.py` (auto) |
-| grill-me-bid-strategy | `.github/skills/grill-me-bid-strategy/`                      | `src/skills/manager.py` (auto) |
-| grill-me-capture      | `.github/skills/grill-me-capture/`                           | `src/skills/manager.py` (auto) |
-| grill-me-proposal     | `.github/skills/grill-me-proposal/`                          | `src/skills/manager.py` (auto) |
-| grill-me-ptw          | `.github/skills/grill-me-ptw/`                               | `src/skills/manager.py` (auto) |
+| Skill                 | Source of truth                                                  | Theseus runtime adapter                                                           |
+| --------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| huashu-design         | `.github/skills/huashu-design/` (vendored — see UPSTREAM.md)     | `src/skills/manager.py` (auto)                                                    |
+| govcon-ontology       | `.github/skills/govcon-ontology/`                                | `src/skills/manager.py` (auto)                                                    |
+| proposal-generator    | `.github/skills/proposal-generator/`                             | `src/skills/manager.py` (auto)                                                    |
+| compliance-auditor    | `.github/skills/compliance-auditor/`                             | `src/skills/manager.py` (auto)                                                    |
+| competitive-intel     | `.github/skills/competitive-intel/`                              | `src/skills/manager.py` (auto)                                                    |
+| grill-me-govcon       | `.github/skills/grill-me-govcon/`                                | `src/skills/manager.py` (auto)                                                    |
+| grill-me-bid-strategy | `.github/skills/grill-me-bid-strategy/`                          | `src/skills/manager.py` (auto)                                                    |
+| grill-me-capture      | `.github/skills/grill-me-capture/`                               | `src/skills/manager.py` (auto)                                                    |
+| grill-me-proposal     | `.github/skills/grill-me-proposal/`                              | `src/skills/manager.py` (auto)                                                    |
+| grill-me-ptw          | `.github/skills/grill-me-ptw/`                                   | `src/skills/manager.py` (auto)                                                    |
+| global-idea-capturer  | `.github/skills/global-idea-capturer/`                           | Global-first capture to `global/inbox/`; workspace promotion deferred to `phase-promoter` |
 | obsidian-markdown     | `.github/skills/obsidian-markdown/` (vendored — see UPSTREAM.md) | Dual-purpose — powers MD authoring in workspace evergreen layer + dev note-taking |
-| idea-capturer         | `.github/skills/idea-capturer/` (vendored — see UPSTREAM.md)     | Dual-purpose — capture/brainstorm for both govcon ideation and dev research |
+| idea-capturer         | `.github/skills/idea-capturer/` (vendored — see UPSTREAM.md)     | Dual-purpose — capture/brainstorm for both govcon ideation and dev research       |
 
 ## Index — Developer-only skills
 
 Not shown in the Theseus UI (`metadata.developer_only: true`). Invokable from Copilot Chat only. Do not query the KG or govcon workspace.
 
-| Skill                         | Source of truth                                                              | Notes                                                 |
-| ----------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------- |
-| improve-codebase-architecture | `.github/skills/improve-codebase-architecture/` (vendored — see UPSTREAM.md) | Uses `graphify-out/GRAPH_REPORT.md` as dependency map |
-| caveman                       | `.github/skills/caveman/` (vendored — see UPSTREAM.md)                       | Ultra-compressed communication mode; no KG access     |
-| grill-me                      | `.github/skills/grill-me/` (vendored — see UPSTREAM.md)                      | Generic plan stress-tester; govcon variants in platform tier above  |
-| to-prd                        | `.github/skills/to-prd/` (vendored — see UPSTREAM.md)                        | Converts conversation context to PRD; files to GitHub Issues |
-| to-issues                     | `.github/skills/to-issues/` (vendored — see UPSTREAM.md)                     | Breaks plan into vertical-slice GitHub issues                |
-| tdd                           | `.github/skills/tdd/` (vendored — see UPSTREAM.md)                           | Red-green-refactor TDD loop with 5 reference files           |
-| obsidian-markdown             | `.github/skills/obsidian-markdown/` (vendored — see UPSTREAM.md)             | Also a platform skill (see above). Listed here because devs invoke it for repo notes / docs authoring too. |
+| Skill                         | Source of truth                                                              | Notes                                                                                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| improve-codebase-architecture | `.github/skills/improve-codebase-architecture/` (vendored — see UPSTREAM.md) | Uses `graphify-out/GRAPH_REPORT.md` as dependency map                                                                                            |
+| caveman                       | `.github/skills/caveman/` (vendored — see UPSTREAM.md)                       | Ultra-compressed communication mode; no KG access                                                                                                |
+| grill-me                      | `.github/skills/grill-me/` (vendored — see UPSTREAM.md)                      | Generic plan stress-tester; govcon variants in platform tier above                                                                               |
+| to-prd                        | `.github/skills/to-prd/` (vendored — see UPSTREAM.md)                        | Converts conversation context to PRD; files to GitHub Issues                                                                                     |
+| to-issues                     | `.github/skills/to-issues/` (vendored — see UPSTREAM.md)                     | Breaks plan into vertical-slice GitHub issues                                                                                                    |
+| tdd                           | `.github/skills/tdd/` (vendored — see UPSTREAM.md)                           | Red-green-refactor TDD loop with 5 reference files                                                                                               |
+| obsidian-markdown             | `.github/skills/obsidian-markdown/` (vendored — see UPSTREAM.md)             | Also a platform skill (see above). Listed here because devs invoke it for repo notes / docs authoring too.                                       |
 | idea-capturer                 | `.github/skills/idea-capturer/` (vendored — see UPSTREAM.md)                 | Also a platform skill (see above). Listed here because devs use it for non-govcon ideation; basis for `global-idea-capturer` derivative (174.2). |
 
 ## Adding a Theseus-only Test Fixture

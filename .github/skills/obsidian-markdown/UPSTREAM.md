@@ -4,14 +4,14 @@ This skill is **vendored** from an external upstream. Do not hand-edit without r
 
 ## Source
 
-| Field | Value |
-|---|---|
-| Upstream repo | https://github.com/kepano/obsidian-skills |
-| Upstream path | `skills/obsidian-markdown/` |
-| Pinned commit | `ac9398734fe719565809f7a6048b05c36b1ca38f` |
-| Vendored at  | 2026-05-08 |
-| License      | MIT (Copyright (c) 2026 Steph Ango / @kepano) — see [LICENSE](LICENSE) |
-| Vendored by  | epic 174 (`174.1-vendor-pipeline` will be the formal merge) |
+| Field         | Value                                                                  |
+| ------------- | ---------------------------------------------------------------------- |
+| Upstream repo | https://github.com/kepano/obsidian-skills                              |
+| Upstream path | `skills/obsidian-markdown/`                                            |
+| Pinned commit | `ac9398734fe719565809f7a6048b05c36b1ca38f`                             |
+| Vendored at   | 2026-05-08                                                             |
+| License       | MIT (Copyright (c) 2026 Steph Ango / @kepano) — see [LICENSE](LICENSE) |
+| Vendored by   | epic 174 (`174.1-vendor-pipeline`, merged)                             |
 
 ## Files vendored verbatim
 
@@ -25,10 +25,11 @@ These match the upstream blob SHAs at the pinned commit. No bytes have been modi
 
 ## Theseus adaptation log
 
-| Date | Change | Rationale |
-|------|--------|-----------|
-| 2026-05-08 | Initial vendor — verbatim copy. | Phase 174.1 baseline. Adaptations land in follow-up commits so the diff is auditable. |
+| Date       | Change                                                                                                                                                                                                 | Rationale                                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-08 | Initial vendor — verbatim copy.                                                                                                                                                                        | Phase 174.1 baseline. Adaptations land in follow-up commits so the diff is auditable.                                  |
 | 2026-05-08 | Added Theseus `metadata:` block to SKILL.md frontmatter (`developer_only: true`, `personas_primary: none`, `personas_secondary: []`, `shipley_phases: []`, `capability: render`, `upstream:` pointer). | Required by `tests/skills/test_skill_taxonomy.py`. Spec-compliant — agentskills.io permits arbitrary `metadata:` keys. |
+| 2026-05-08 | Promoted skill to dual-purpose tier (`developer_only: false`, `personas_secondary: [proposal_writer, capture_manager]`).                                                                             | User direction: vendored `obsidian-markdown` should appear as both Theseus platform skill and developer utility.      |
 
 ### Planned adaptations (not yet applied)
 
@@ -44,7 +45,7 @@ When applied, each adaptation gets a row in the table above.
 
 1. Pick a new upstream commit; record the SHA below in a new "Pinned commit" row.
 2. `cd .github/skills/obsidian-markdown`
-3. Re-run the four `Invoke-WebRequest` calls used in the initial vendor (see `MANIFEST.yaml` for exact URLs constructed from the pinned SHA).
+3. Re-run the four `Invoke-WebRequest` calls used in the initial vendor (record the exact URLs here when the pinned SHA changes).
 4. Re-apply each adaptation in the table above (or note that an adaptation was upstreamed and removed).
 5. Re-run any evals introduced under `evals/` (none yet — added when this skill is wired into the runtime).
-6. Update `MANIFEST.yaml` `commit:` and `vendored_at:`.
+6. Update the Source table above (`Pinned commit`, `Vendored at`) and add an adaptation-log row if behavior changed.

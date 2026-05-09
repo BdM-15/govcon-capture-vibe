@@ -14,14 +14,14 @@ This is a **Theseus-tier derivative** of the vendored [`idea-capturer`](../idea-
 
 ## Diff vs vendored `idea-capturer`
 
-| Concern              | Vendored `idea-capturer`                          | This derivative                                  |
-|----------------------|---------------------------------------------------|--------------------------------------------------|
-| Save target          | Unspecified                                       | `global/inbox/<YYYY-MM-DD>-<slug>.md`            |
-| Frontmatter contract | Free-form                                         | Strict — see `references/frontmatter.md`         |
-| Workflows            | 5 (capture, develop, organize, brainstorm, synth) | 1 (capture) — develop/synth handled by `phase-promoter` |
+| Concern              | Vendored `idea-capturer`                          | This derivative                                                       |
+| -------------------- | ------------------------------------------------- | --------------------------------------------------------------------- |
+| Save target          | Unspecified                                       | `global/inbox/<YYYY-MM-DD>-<slug>.md`                                 |
+| Frontmatter contract | Free-form                                         | Strict — see `references/frontmatter.md`                              |
+| Workflows            | 5 (capture, develop, organize, brainstorm, synth) | 1 (capture) — develop/synth handled by `phase-promoter`               |
 | Tag vocabulary       | Free-form                                         | Closed families (skill names, opportunity codes, domains, tier hints) |
-| Workspace awareness  | None                                              | Records active workspace in frontmatter          |
-| Promotion            | Implicit ("permanent notes")                      | Explicit handoff to `phase-promoter` (174.5)     |
+| Workspace awareness  | None                                              | Records active workspace in frontmatter                               |
+| Promotion            | Implicit ("permanent notes")                      | Explicit handoff to `phase-promoter` (174.5)                          |
 
 ## When the vendored skill triggers instead
 

@@ -21,6 +21,7 @@ The system distinguishes between quick captures (fleeting thoughts), developed n
 ## Core Workflows
 
 ### Workflow 1: Quick Capture
+
 Immediate idea recording with minimal friction:
 
 - **Dump**: Get the idea out of your head fast
@@ -30,6 +31,7 @@ Immediate idea recording with minimal friction:
 - **Future Action**: Develop now, schedule later, or just archive?
 
 ### Workflow 2: Idea Development
+
 Transform raw thought into developed concept:
 
 - **Expand**: Flesh out the basic idea
@@ -40,6 +42,7 @@ Transform raw thought into developed concept:
 - **Next Steps**: What's the very next action?
 
 ### Workflow 3: Idea Organization
+
 Structure your idea collection:
 
 - **Review**: Scan recent captures
@@ -50,6 +53,7 @@ Structure your idea collection:
 - **Surface**: What keeps coming up?
 
 ### Workflow 4: Brainstorming Session
+
 Generate many ideas around a theme:
 
 - **Problem/Prompt**: What are we ideating about?
@@ -60,6 +64,7 @@ Generate many ideas around a theme:
 - **Action Planning**: What to do with winners
 
 ### Workflow 5: Idea Synthesis
+
 Connect ideas into original thinking:
 
 - **Pattern Recognition**: What themes emerge?
@@ -73,26 +78,31 @@ Connect ideas into original thinking:
 ### The Idea Capture Hierarchy
 
 **Tier 1: Fleeting Notes** - Quick captures, raw thoughts, passing inspirations
+
 - Purpose: Don't forget
 - Lifespan: Hours to days
 - Process: Must be reviewed and either developed or discarded
 
 **Tier 2: Literature Notes** - Insights from reading, conversations, observations
+
 - Purpose: Remember what you learned
 - Lifespan: Permanent (if valuable)
 - Process: Summarize in your own words, tag for retrieval
 
 **Tier 3: Permanent Notes** - Developed ideas, original thinking, synthesized insights
+
 - Purpose: Build knowledge
 - Lifespan: Permanent
 - Process: Connect to related notes, refine over time
 
 **Tier 4: Project Notes** - Ideas organized around specific initiatives
+
 - Purpose: Take action
 - Lifespan: Duration of project
 - Process: Active development until completed or abandoned
 
 ### The SCAMPER Ideation Method
+
 For developing and improving ideas:
 
 - **Substitute**: What can be swapped out?
@@ -118,37 +128,42 @@ Refined idea: "Build a minimalist productivity tool for solopreneurs that does o
 ## Idea Types & Approaches
 
 ### Project Ideas
+
 - What would I build/create?
 - Requires: Action planning, feasibility check, resource assessment
 
 ### Questions
+
 - What do I wonder about?
 - Requires: Research direction, exploration framework
 
 ### Insights
+
 - What have I realized?
 - Requires: Connection to existing knowledge, application opportunities
 
 ### Observations
+
 - What did I notice?
 - Requires: Pattern recognition, meaning-making
 
 ### Creative Sparks
+
 - What inspired me?
 - Requires: Capture before forgetting, exploration when time permits
 
 ## Quick Reference
 
-| Action | Command/Trigger |
-|--------|-----------------|
+| Action        | Command/Trigger                    |
+| ------------- | ---------------------------------- |
 | Quick capture | "capture idea" or "save this idea" |
-| Idea dump | "idea dump" or "brain dump" |
-| Develop idea | "develop idea about [topic]" |
-| Brainstorm | "brainstorm [topic]" |
-| Connect ideas | "show me ideas about [topic]" |
-| Review ideas | "review my ideas" |
-| Tag ideas | "tag idea as [category]" |
-| Search ideas | "find ideas about [keyword]" |
+| Idea dump     | "idea dump" or "brain dump"        |
+| Develop idea  | "develop idea about [topic]"       |
+| Brainstorm    | "brainstorm [topic]"               |
+| Connect ideas | "show me ideas about [topic]"      |
+| Review ideas  | "review my ideas"                  |
+| Tag ideas     | "tag idea as [category]"           |
+| Search ideas  | "find ideas about [keyword]"       |
 
 ## Idea Templates
 
@@ -361,12 +376,14 @@ TAGS: [Keywords]
 ## Capture Methods
 
 ### Physical Capture
+
 - **Notebook**: Always accessible, no batteries
 - **Index cards**: One idea per card, easily rearranged
 - **Voice memos**: Hands-free capture while moving
 - **Photos**: Capture whiteboards, sketches, inspiration
 
 ### Digital Capture
+
 - **Note app**: Obsidian, Notion, Apple Notes, etc.
 - **Voice-to-text**: Fast dictation
 - **Browser extension**: Clip web content
@@ -381,6 +398,7 @@ If yes → Capture now, judge later
 ## Idea Development Questions
 
 ### For Any Idea
+
 - What problem does this solve?
 - Why doesn't this exist already?
 - What would make this 10x better?
@@ -391,6 +409,7 @@ If yes → Capture now, judge later
 - What do I need to learn first?
 
 ### For Creative Ideas
+
 - What inspired this?
 - What's the core insight?
 - How could I express this?
@@ -399,6 +418,7 @@ If yes → Capture now, judge later
 - What's the emotional core?
 
 ### For Business Ideas
+
 - Who has this problem?
 - Would they pay to solve it?
 - How would they discover this?
@@ -407,6 +427,7 @@ If yes → Capture now, judge later
 - What metrics would define success?
 
 ### For Learning Questions
+
 - What do I already know?
 - Where should I start?
 - Who are the experts?
@@ -426,22 +447,27 @@ This skill works well with:
 ## Common Idea Capture Mistakes
 
 ### Capture Without Context
+
 - ❌ "That thing Sarah mentioned"
 - ✓ "Sarah's approach to async standups - record video updates instead of meetings"
 
 ### Elaborate Capture Systems That Don't Get Used
+
 - ❌ Complex tagging taxonomy, perfect formatting
 - ✓ Simple, fast capture method you'll actually use
 
 ### Capturing But Never Reviewing
+
 - ❌ 1000 notes, never looked at again
 - ✓ Weekly review process to develop or discard
 
 ### Judging Ideas During Capture
+
 - ❌ "This is probably stupid..."
 - ✓ Capture everything, judge later in review
 
 ### No Connections
+
 - ❌ Isolated notes
 - ✓ Linked ideas create compound insights
 
@@ -470,6 +496,7 @@ TYPE: This seems like a [ ] Project idea
 WHY THIS MATTERS: People read but forget most of what they read. This could help retention and application of book knowledge.
 
 SIMILAR THINGS:
+
 - Readwise (highlight review)
 - Anki (spaced repetition)
 - Blinkist (book summaries)
@@ -477,6 +504,7 @@ SIMILAR THINGS:
 WHAT MAKES IT DIFFERENT: Combines highlight capture WITH spaced repetition review system.
 
 NEXT ACTIONS - Which resonates?
+
 - Develop now: Let's flesh this out into a full project idea
 - Research first: Look at existing solutions, validate the problem
 - Let it marinate: Save it, come back in a week

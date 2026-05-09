@@ -50,6 +50,7 @@ Two to four tags is right. One tag is too few; six is too many.
 ## Example
 
 User input:
+
 > Capture this for Theseus: AFCAP6 incumbent likely fielding lower wrap rate than us; need to verify via USAspending obligation trend before pricing.
 
 File written to `<run_dir>/artifacts/global-inbox/2026-05-08-afcap6-incumbent-wrap-rate.md`:
@@ -67,14 +68,17 @@ wikilinks: [[competitive-intel]] [[price-to-win]]
 AFCAP6 incumbent likely fielding lower wrap rate than us; need to verify via USAspending obligation trend before pricing.
 
 ## Context
+
 Captured during AFCAP6 pricing review. Active workspace: `afcap6_drfp_171`.
 
 ## Wikilinks
+
 - [[competitive-intel]] — to pull obligation history
 - [[price-to-win]] — to back into incumbent wrap rate
 ```
 
 Response:
+
 ```
 Captured → <run_dir>/artifacts/global-inbox/2026-05-08-afcap6-incumbent-wrap-rate.md
 (target after 174.3: global/inbox/2026-05-08-afcap6-incumbent-wrap-rate.md)
