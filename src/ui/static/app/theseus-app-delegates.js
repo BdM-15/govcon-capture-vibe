@@ -20,6 +20,50 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusMetrics(this.stats);
     },
 
+    ariadneMetrics() {
+      return window.theseusAriadneMetrics(this);
+    },
+
+    ariadneWorkspaceRows() {
+      return window.theseusAriadneWorkspaceRows(this);
+    },
+
+    ariadneQueueItems(bucket = "inbox", limit = 4) {
+      return window.theseusAriadneQueueItems(this, bucket, limit);
+    },
+
+    ariadnePromoteOptions() {
+      return window.theseusAriadnePromoteOptions(this);
+    },
+
+    ariadneStage(row) {
+      return window.theseusAriadneStage(row);
+    },
+
+    ariadneStageClass(row) {
+      return window.theseusAriadneStageClass(row);
+    },
+
+    async loadAriadne() {
+      return window.theseusLoadAriadne(this);
+    },
+
+    async submitAriadneCapture() {
+      return window.theseusSubmitAriadneCapture(this);
+    },
+
+    async promoteAriadneNote(path) {
+      return window.theseusPromoteAriadneNote(this, path);
+    },
+
+    async activateAriadneWorkspace(name) {
+      return window.theseusActivateAriadneWorkspace(this, name);
+    },
+
+    async ariadneAsk(prompt) {
+      return window.theseusAriadneAsk(this, prompt);
+    },
+
     async init() {
       return window.theseusInit(this);
     },

@@ -14,12 +14,8 @@ from src.server.ui_routes import register_ui
 def _write_static(tmp_path: Path) -> Path:
     static = tmp_path / "static"
     static.mkdir()
-    (static / "dashboard.html").write_text(
-        "<html><body data-testid='ariadne-dashboard'>ariadne</body></html>",
-        encoding="utf-8",
-    )
     (static / "index.html").write_text(
-        "<html><body data-testid='workbench'>workbench</body></html>",
+        "<html><body data-testid='theseus-app'>Ariadne's Thread</body></html>",
         encoding="utf-8",
     )
     return static
@@ -32,7 +28,8 @@ def test_dashboard_served_at_root(tmp_path: Path) -> None:
 
     resp = client.get("/")
     assert resp.status_code == 200
-    assert "ariadne-dashboard" in resp.text
+    assert "theseus-app" in resp.text
+    assert "Ariadne's Thread" in resp.text
 
 
 def test_dashboard_overrides_existing_root_route(tmp_path: Path) -> None:
@@ -47,7 +44,7 @@ def test_dashboard_overrides_existing_root_route(tmp_path: Path) -> None:
 
     resp = client.get("/", follow_redirects=False)
     assert resp.status_code == 200
-    assert "ariadne-dashboard" in resp.text
+    assert "theseus-app" in resp.text
 
 
 def test_workspace_alias_serves_workbench(tmp_path: Path) -> None:
@@ -57,19 +54,7 @@ def test_workspace_alias_serves_workbench(tmp_path: Path) -> None:
 
     resp = client.get("/workspace/afcap6_drfp")
     assert resp.status_code == 200
-    assert "workbench" in resp.text
-
-
-def test_dashboard_served_at_ui_path(tmp_path: Path) -> None:
-    """`/ui` and `/ui/` (legacy workbench URL) now serve the Ariadne dashboard."""
-    app = FastAPI()
-    register_dashboard_routes(app, static_dir=_write_static(tmp_path))
-    client = TestClient(app)
-
-    for path in ("/ui", "/ui/"):
-        resp = client.get(path)
-        assert resp.status_code == 200, path
-        assert "ariadne-dashboard" in resp.text, path
+    assert "theseus-app" in resp.text
 
 
 def test_dashboard_routes_skipped_when_html_missing(tmp_path: Path) -> None:
@@ -90,9 +75,13 @@ async def _stub_query(_text: str, _mode: str, _history: list[dict], _stream: boo
 def test_register_ui_mounts_dashboard() -> None:
     app = FastAPI()
     register_ui(app, query_func=_stub_query)
+    client = TestClient(app)
 
     paths = {route.path for route in app.routes}
     assert "/" in paths
-    assert "/ui" in paths
-    assert "/ui/" in paths
     assert "/workspace/{name}" in paths
+
+    resp = client.get("/ui/")
+    assert resp.status_code == 200
+    assert "Ariadne's Thread" in resp.text
+    assert "data-testid=\"ariadne-dashboard\"" in resp.text

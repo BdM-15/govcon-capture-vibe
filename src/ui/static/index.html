@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Project Theseus — Capture Workbench</title>
+    <title>Project Theseus — Ariadne's Thread</title>
     <link rel="icon" type="image/svg+xml" href="/ui/favicon.svg" />
 
     <!-- Zero-build CDN stack -->
@@ -209,7 +209,7 @@
           <div
             class="text-[10px] uppercase font-mono text-slate-500 tracking-[0.2em]"
           >
-            Capture Workbench
+            Command Center
           </div>
         </div>
         <span
@@ -456,138 +456,51 @@
           :class="active === 'chat' ? 'p-0' : 'p-6 panel-canvas'"
         >
           <!-- ============== DASHBOARD ============== -->
-          <section x-show="active === 'dashboard'" x-cloak>
-            <!-- Hero -->
-            <div class="flex items-end justify-between mb-7 flex-wrap gap-4">
-              <div>
+          <section x-show="active === 'dashboard'" x-cloak data-testid="ariadne-dashboard">
+            <div class="flex items-start justify-between gap-5 mb-6 flex-wrap">
+              <div class="max-w-4xl">
+                <div class="text-[11px] uppercase tracking-[0.22em] font-mono text-neon-cyan mb-2">
+                  Global Capture Command
+                </div>
                 <h1 class="text-4xl font-bold tracking-tight">
-                  <span x-text="greeting()"></span
-                  ><span class="neon-text">.</span>
+                  <span class="h1-gradient">Ariadne's Thread</span>
                 </h1>
-                <p class="text-base text-slate-400 mt-1">
-                  Workspace
-                  <span
-                    class="text-neon-cyan font-mono"
-                    x-text="stats.workspace || '—'"
-                  ></span>
-                  holds
-                  <span
-                    class="text-neon-magenta font-mono"
-                    x-text="stats.entities ?? 0"
-                  ></span>
-                  entities across
-                  <span
-                    class="text-neon-lime font-mono"
-                    x-text="stats.documents ?? 0"
-                  ></span>
-                  documents.
-                  <span x-show="(stats.relationships ?? 0) > 0"
-                    >Ready when you are.</span
-                  >
-                  <span
-                    x-show="!(stats.relationships ?? 0)"
-                    class="text-neon-amber"
-                    >Create a workspace and upload docs to begin.</span
-                  >
+                <p class="text-base text-slate-400 mt-2 max-w-3xl">
+                  Portfolio control across opportunities, workspace knowledge,
+                  capture signals, competitive intel, proposal products, and
+                  decision queues.
                 </p>
               </div>
-              <div class="flex gap-2.5 flex-wrap">
-                <button
-                  class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-ink-950 bg-gradient-to-r from-neon-cyan to-[#00b8d9] hover:from-[#33f3ff] hover:to-neon-cyan transition shadow-[0_0_20px_rgba(0,240,255,0.35)] hover:shadow-[0_0_28px_rgba(0,240,255,0.55)]"
-                  @click="openWorkspaceModal()"
-                  title="Each RFP lives in its own workspace — create one before uploading documents"
-                >
+              <div class="flex gap-2.5 flex-wrap justify-end">
+                <button class="btn-hero-cyan inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold text-ink-950" @click="openWorkspaceModal()">
                   <i data-lucide="folder-plus" class="w-4 h-4"></i>
-                  <span>New Workspace</span>
+                  <span>New Opportunity</span>
                 </button>
-                <button
-                  class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-neon-lime bg-neon-lime/10 border border-neon-lime/40 hover:bg-neon-lime/20 hover:shadow-[0_0_22px_rgba(0,255,156,0.4)] transition"
-                  @click="active='documents'"
-                  title="Add documents to the active workspace"
-                >
+                <button class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-neon-lime bg-neon-lime/10 border border-neon-lime/40 hover:bg-neon-lime/20 transition" @click="active='documents'">
                   <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-                  <span>Upload Docs</span>
+                  <span>Ingest Docs</span>
                 </button>
-                <button
-                  class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-neon-magenta bg-neon-magenta/10 border border-neon-magenta/40 hover:bg-neon-magenta/20 hover:shadow-[0_0_22px_rgba(255,43,214,0.4)] transition"
-                  @click="newChat()"
-                >
-                  <i data-lucide="message-square-plus" class="w-4 h-4"></i>
-                  <span>New Chat</span>
+                <button class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-neon-magenta bg-neon-magenta/10 border border-neon-magenta/40 hover:bg-neon-magenta/20 transition" @click="ariadneAsk('Give me a capture manager portfolio brief across all active Theseus workspaces. Focus on opportunity status, missing intel, compliance risk, proposal-product status, and next decisions.')">
+                  <i data-lucide="messages-square" class="w-4 h-4"></i>
+                  <span>Portfolio Brief</span>
                 </button>
               </div>
             </div>
 
-            <!-- Empty-workspace onboarding -->
             <div
-              x-show="(stats.documents ?? 0) === 0"
-              x-cloak
-              class="card card-accent accent-amber p-6 mb-5"
-            >
-              <div class="flex items-start gap-4">
-                <div
-                  class="w-10 h-10 rounded-lg bg-neon-amber/10 border border-neon-amber/30 flex items-center justify-center text-neon-amber shrink-0"
-                >
-                  <i data-lucide="rocket" class="w-5 h-5"></i>
-                </div>
-                <div class="flex-1">
-                  <h2 class="text-lg font-semibold">
-                    This workspace is empty.
-                  </h2>
-                  <p class="text-sm text-slate-400 mt-1">
-                    Drop an RFP into the
-                    <code class="text-neon-cyan"
-                      >inputs/<span x-text="stats.workspace"></span>/</code
-                    >
-                    folder, or upload directly. Then choose Scan or wait for the
-                    watcher.
-                  </p>
-                  <div class="mt-3 flex flex-wrap gap-2">
-                    <button class="btn btn-primary" @click="active='documents'">
-                      <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload
-                      RFP
-                    </button>
-                    <button
-                      class="btn btn-ghost border border-edge"
-                      @click="scanRfp()"
-                    >
-                      <i data-lucide="folder-search" class="w-4 h-4"></i> Scan
-                      inputs folder
-                    </button>
-                    <button
-                      class="btn btn-ghost border border-edge"
-                      @click="openWorkspaceModal()"
-                    >
-                      <i data-lucide="layers" class="w-4 h-4"></i> Switch
-                      workspace
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+              x-show="ariadne.error"
+              class="card border-neon-red/40 bg-neon-red/5 p-3 text-xs font-mono text-neon-red mb-4"
+              x-text="ariadne.error"
+            ></div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <template x-for="m in metrics()" :key="m.label">
-                <div
-                  class="card card-accent card-hover p-5 cursor-pointer"
-                  :class="'accent-' + m.accent"
-                  @click="m.go && (active = m.go)"
-                >
-                  <div class="flex items-start justify-between">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+              <template x-for="m in ariadneMetrics()" :key="m.label">
+                <div class="card card-accent p-5" :class="'accent-' + m.accent">
+                  <div class="flex items-start justify-between gap-3">
                     <div>
-                      <div
-                        class="text-[11px] uppercase tracking-[0.18em] font-mono text-slate-500"
-                        x-text="m.label"
-                      ></div>
-                      <div
-                        class="mt-2 text-4xl font-semibold neon-text tabular-nums"
-                        :class="m.color"
-                        x-text="m.value"
-                      ></div>
-                      <div
-                        class="mt-1 text-xs text-slate-500"
-                        x-text="m.hint"
-                      ></div>
+                      <div class="text-[11px] uppercase tracking-[0.18em] font-mono text-slate-500" x-text="m.label"></div>
+                      <div class="mt-2 text-4xl font-semibold neon-text tabular-nums" :class="m.color" x-text="m.value"></div>
+                      <div class="mt-1 text-xs text-slate-500" x-text="m.hint"></div>
                     </div>
                     <div class="icon-tile" :class="m.color">
                       <i :data-lucide="m.icon" class="w-5 h-5"></i>
@@ -597,108 +510,215 @@
               </template>
             </div>
 
-            <div class="grid grid-cols-1 gap-4 mt-6">
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.8fr)] gap-4 mb-5">
               <div class="card card-accent accent-cyan p-5">
-                <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h2 class="font-semibold flex items-center gap-2">
+                      <i data-lucide="briefcase" class="w-4 h-4 text-neon-cyan"></i>
+                      Opportunity Portfolio
+                    </h2>
+                    <div class="text-xs text-slate-500 mt-1">
+                      Active workspace:
+                      <span class="text-neon-cyan font-mono" x-text="stats.workspace || 'none'"></span>
+                    </div>
+                  </div>
+                  <button class="btn btn-ghost text-xs border border-edge" @click="loadAriadne()" :disabled="ariadne.loading">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5" :class="ariadne.loading ? 'animate-spin' : ''"></i>
+                    Refresh
+                  </button>
+                </div>
+
+                <div x-show="!ariadneWorkspaceRows().length" class="text-xs font-mono text-slate-600 py-8 text-center">
+                  No opportunity workspaces found.
+                </div>
+
+                <div class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                  <template x-for="row in ariadneWorkspaceRows()" :key="row.name">
+                    <div class="rounded-lg border bg-ink-900/60 p-3 transition" :class="row.is_active ? 'border-neon-cyan/60 shadow-glow' : 'border-edge hover:border-neon-cyan/35'">
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-semibold text-slate-100 truncate" x-text="row.name"></span>
+                            <span x-show="row.is_active" class="pill bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30">active</span>
+                            <span class="pill border text-[10px]" :class="ariadneStageClass(row)" x-text="ariadneStage(row)"></span>
+                          </div>
+                          <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mt-3 text-[11px] font-mono">
+                            <div><span class="text-slate-600">docs</span> <span class="text-slate-300" x-text="row.documents || 0"></span></div>
+                            <div><span class="text-slate-600">entities</span> <span class="text-slate-300" x-text="row.entities || 0"></span></div>
+                            <div><span class="text-slate-600">kg</span> <span class="text-slate-300" x-text="row.neo4j_nodes || 0"></span></div>
+                            <div><span class="text-slate-600">inputs</span> <span class="text-slate-300" x-text="row.inputs_files || 0"></span></div>
+                            <div><span class="text-slate-600">storage</span> <span class="text-slate-300" x-text="row.storage_mb == null ? 'n/a' : row.storage_mb + ' MB'"></span></div>
+                          </div>
+                        </div>
+                        <div class="flex flex-col gap-1.5 shrink-0">
+                          <button class="studio-action" title="Activate workspace" @click="activateAriadneWorkspace(row.name)">
+                            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+                          </button>
+                          <button class="studio-action" title="Open workspace intelligence" @click="row.is_active ? active='intel' : activateAriadneWorkspace(row.name)">
+                            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <div class="card card-accent accent-magenta p-5">
+                <div class="flex items-center gap-2 mb-4">
+                  <i data-lucide="satellite" class="w-4 h-4 text-neon-magenta"></i>
+                  <h2 class="font-semibold">Capture Desk</h2>
+                </div>
+                <div class="space-y-3">
+                  <textarea
+                    x-model="ariadne.capture.body"
+                    rows="5"
+                    placeholder="Signal, risk, customer note, competitor move, lesson, call follow-up..."
+                    class="w-full bg-ink-900 border border-edge focus:border-neon-magenta/60 outline-none rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 font-mono resize-none"
+                  ></textarea>
+                  <div class="grid grid-cols-2 gap-2">
+                    <select x-model="ariadne.capture.bucket" class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono">
+                      <option value="inbox">inbox</option>
+                      <option value="notes">notes</option>
+                      <option value="intel">intel</option>
+                      <option value="llm-wiki">llm-wiki</option>
+                    </select>
+                    <select x-model="ariadne.capture.priority" class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono">
+                      <option value="normal">normal</option>
+                      <option value="high">high</option>
+                      <option value="urgent">urgent</option>
+                    </select>
+                  </div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <input x-model="ariadne.capture.slug" placeholder="slug" class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 placeholder-slate-600 font-mono" />
+                    <input x-model="ariadne.capture.tags" placeholder="tags" class="bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 placeholder-slate-600 font-mono" />
+                  </div>
+                  <select x-model="ariadne.capture.workspace" class="w-full bg-ink-900 border border-edge rounded px-2 py-2 text-xs text-slate-300 font-mono">
+                    <option value="">global only</option>
+                    <template x-for="name in ariadnePromoteOptions()" :key="name">
+                      <option :value="name" x-text="name"></option>
+                    </template>
+                  </select>
+                  <button class="w-full btn-hero-magenta inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold" @click="submitAriadneCapture()" :disabled="!ariadne.capture.body.trim() || ariadne.capture.busy">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span x-text="ariadne.capture.busy ? 'Capturing...' : 'Capture Signal'"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 mb-5">
+              <div class="card card-accent accent-amber p-5">
+                <div class="flex items-center justify-between gap-3 mb-4">
                   <h2 class="font-semibold flex items-center gap-2">
-                    <i data-lucide="zap" class="w-4 h-4 text-neon-cyan"></i>
-                    Quick Actions
+                    <i data-lucide="inbox" class="w-4 h-4 text-neon-amber"></i>
+                    Management Queue
                   </h2>
+                  <span class="text-[11px] font-mono text-slate-500" x-text="ariadneQueueItems('inbox', 999).length + ' inbox'"></span>
                 </div>
-                <div
-                  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
-                >
-                  <button
-                    class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-cyan/40 hover:bg-neon-cyan/5 transition text-left"
-                    @click="active='documents'"
-                  >
-                    <span
-                      class="w-9 h-9 rounded-md bg-neon-cyan/10 border border-neon-cyan/30 flex items-center justify-center text-neon-cyan shrink-0"
-                    >
-                      <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-                    </span>
-                    <span class="flex-1">
-                      <span class="block text-sm font-medium text-slate-100"
-                        >Upload an RFP</span
-                      >
-                      <span class="block text-[11px] text-slate-500"
-                        >MinerU + multimodal extraction</span
-                      >
-                    </span>
-                  </button>
-                  <button
-                    class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-magenta/40 hover:bg-neon-magenta/5 transition text-left"
-                    @click="newChat()"
-                  >
-                    <span
-                      class="w-9 h-9 rounded-md bg-neon-magenta/10 border border-neon-magenta/30 flex items-center justify-center text-neon-magenta shrink-0"
-                    >
-                      <i data-lucide="message-square-plus" class="w-4 h-4"></i>
-                    </span>
-                    <span class="flex-1">
-                      <span class="block text-sm font-medium text-slate-100"
-                        >Start a capture chat</span
-                      >
-                      <span class="block text-[11px] text-slate-500"
-                        >Streaming · multi-turn · Shipley mentor</span
-                      >
-                    </span>
-                  </button>
-                  <button
-                    class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-magenta/40 hover:bg-neon-magenta/5 transition text-left"
-                    @click="active='prompts'"
-                  >
-                    <span
-                      class="w-9 h-9 rounded-md bg-neon-magenta/10 border border-neon-magenta/30 flex items-center justify-center text-neon-magenta shrink-0"
-                    >
-                      <i data-lucide="library" class="w-4 h-4"></i>
-                    </span>
-                    <span class="flex-1">
-                      <span class="block text-sm font-medium text-slate-100"
-                        >Prompt Library</span
-                      >
-                      <span class="block text-[11px] text-slate-500">
-                        Shipley-aligned prompts · phases 3–6
-                      </span>
-                    </span>
-                  </button>
-                  <button
-                    class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-lime/40 hover:bg-neon-lime/5 transition text-left"
-                    @click="active='graph'"
-                  >
-                    <span
-                      class="w-9 h-9 rounded-md bg-neon-lime/10 border border-neon-lime/30 flex items-center justify-center text-neon-lime shrink-0"
-                    >
-                      <i data-lucide="git-fork" class="w-4 h-4"></i>
-                    </span>
-                    <span class="flex-1">
-                      <span class="block text-sm font-medium text-slate-100"
-                        >Open Knowledge Graph</span
-                      >
-                      <span class="block text-[11px] text-slate-500"
-                        >Top-degree subgraph · up to 5,000 nodes</span
-                      >
-                    </span>
-                  </button>
-                  <button
-                    class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-amber/40 hover:bg-neon-amber/5 transition text-left"
-                    @click="active='intel'"
-                  >
-                    <span
-                      class="w-9 h-9 rounded-md bg-neon-amber/10 border border-neon-amber/30 flex items-center justify-center text-neon-amber shrink-0"
-                    >
-                      <i data-lucide="layout-grid" class="w-4 h-4"></i>
-                    </span>
-                    <span class="flex-1">
-                      <span class="block text-sm font-medium text-slate-100"
-                        >RFP Intelligence</span
-                      >
-                      <span class="block text-[11px] text-slate-500"
-                        >L↔M matrix · traceability · gaps</span
-                      >
-                    </span>
-                  </button>
+                <div x-show="!ariadneQueueItems('inbox').length" class="text-xs font-mono text-slate-600 py-6 text-center">
+                  Queue clear.
                 </div>
+                <div class="space-y-2">
+                  <template x-for="item in ariadneQueueItems('inbox', 5)" :key="item.path">
+                    <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
+                      <div class="flex items-start gap-3">
+                        <div class="min-w-0 flex-1">
+                          <div class="text-sm font-semibold text-slate-100 truncate" x-text="item.frontmatter?.title || item.path"></div>
+                          <div class="text-[10px] font-mono text-slate-600 truncate" x-text="item.path"></div>
+                          <div class="markdown-preview mt-2" x-html="renderMd(item.preview)"></div>
+                        </div>
+                        <div class="flex flex-col gap-1.5 min-w-[160px]">
+                          <select x-model="ariadne.promoteTarget[item.path]" class="bg-ink-900 border border-edge rounded px-2 py-1.5 text-[10px] text-slate-300 font-mono">
+                            <option value="">workspace...</option>
+                            <template x-for="name in ariadnePromoteOptions()" :key="name">
+                              <option :value="name" x-text="name"></option>
+                            </template>
+                          </select>
+                          <button class="pill bg-neon-magenta/10 border border-neon-magenta/40 text-neon-magenta px-2 py-1 text-[10px] justify-center" @click="promoteAriadneNote(item.path)" :disabled="!ariadne.promoteTarget[item.path]">
+                            Promote
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <div class="card card-accent accent-lime p-5">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                  <h2 class="font-semibold flex items-center gap-2">
+                    <i data-lucide="radar" class="w-4 h-4 text-neon-lime"></i>
+                    Knowledge & Intel
+                  </h2>
+                  <div class="flex gap-2 text-[11px] font-mono text-slate-500">
+                    <span x-text="ariadneQueueItems('intel', 999).length + ' intel'"></span>
+                    <span x-text="ariadneQueueItems('llm-wiki', 999).length + ' wiki'"></span>
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div class="rounded-lg border border-edge bg-ink-900/60 p-3 min-h-[180px]">
+                    <div class="text-xs uppercase tracking-[0.16em] font-mono text-neon-magenta mb-2">cross-opp intel</div>
+                    <div x-show="!ariadneQueueItems('intel').length" class="text-xs text-slate-600 font-mono">No intel yet.</div>
+                    <ul class="space-y-2">
+                      <template x-for="item in ariadneQueueItems('intel', 4)" :key="item.path">
+                        <li class="text-sm text-slate-200">
+                          <div class="font-semibold truncate" x-text="item.frontmatter?.title || item.path"></div>
+                          <div class="markdown-preview mt-1" x-html="renderMd(item.preview)"></div>
+                        </li>
+                      </template>
+                    </ul>
+                  </div>
+                  <div class="rounded-lg border border-edge bg-ink-900/60 p-3 min-h-[180px]">
+                    <div class="text-xs uppercase tracking-[0.16em] font-mono text-neon-cyan mb-2">llm wiki</div>
+                    <div x-show="!ariadneQueueItems('llm-wiki').length" class="text-xs text-slate-600 font-mono">No wiki pages yet.</div>
+                    <ul class="space-y-2">
+                      <template x-for="item in ariadneQueueItems('llm-wiki', 4)" :key="item.path">
+                        <li class="text-sm text-slate-200">
+                          <div class="font-semibold truncate" x-text="item.frontmatter?.title || item.path"></div>
+                          <div class="text-[10px] font-mono text-slate-600 truncate" x-text="item.path"></div>
+                        </li>
+                      </template>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card card-accent accent-cyan p-5">
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <h2 class="font-semibold flex items-center gap-2">
+                  <i data-lucide="route" class="w-4 h-4 text-neon-cyan"></i>
+                  Command Lanes
+                </h2>
+                <span class="text-[11px] font-mono text-slate-500">workspace-aware actions</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
+                <button class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-cyan/40 hover:bg-neon-cyan/5 transition text-left" @click="active='documents'">
+                  <span class="nav-icon-tile tile-cyan"><i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i></span>
+                  <span class="text-sm font-medium text-slate-100">Ingest</span>
+                </button>
+                <button class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-amber/40 hover:bg-neon-amber/5 transition text-left" @click="active='intel'">
+                  <span class="nav-icon-tile tile-amber"><i data-lucide="layout-grid" class="w-3.5 h-3.5"></i></span>
+                  <span class="text-sm font-medium text-slate-100">RFP Intel</span>
+                </button>
+                <button class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-lime/40 hover:bg-neon-lime/5 transition text-left" @click="active='graph'">
+                  <span class="nav-icon-tile tile-lime"><i data-lucide="git-fork" class="w-3.5 h-3.5"></i></span>
+                  <span class="text-sm font-medium text-slate-100">Knowledge</span>
+                </button>
+                <button class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-magenta/40 hover:bg-neon-magenta/5 transition text-left" @click="active='skills'">
+                  <span class="nav-icon-tile tile-magenta"><i data-lucide="wand-sparkles" class="w-3.5 h-3.5"></i></span>
+                  <span class="text-sm font-medium text-slate-100">Skills</span>
+                </button>
+                <button class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-cyan/40 hover:bg-neon-cyan/5 transition text-left" @click="active='chains'">
+                  <span class="nav-icon-tile tile-cyan"><i data-lucide="workflow" class="w-3.5 h-3.5"></i></span>
+                  <span class="text-sm font-medium text-slate-100">Chains</span>
+                </button>
+                <button class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-lime/40 hover:bg-neon-lime/5 transition text-left" @click="active='studio'">
+                  <span class="nav-icon-tile tile-lime"><i data-lucide="folder-open" class="w-3.5 h-3.5"></i></span>
+                  <span class="text-sm font-medium text-slate-100">Studio</span>
+                </button>
               </div>
             </div>
           </section>
@@ -7703,6 +7723,7 @@
     <script src="/ui/app/theseus-intel-helpers.js"></script>
     <script src="/ui/app/theseus-settings-helpers.js"></script>
     <script src="/ui/app/theseus-workspace-helpers.js"></script>
+    <script src="/ui/app/theseus-ariadne-helpers.js"></script>
     <script src="/ui/app/theseus-palette-helpers.js"></script>
     <script src="/ui/app/theseus-view-helpers.js"></script>
     <script src="/ui/app/theseus-app-factory.js"></script>

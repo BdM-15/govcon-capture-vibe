@@ -294,10 +294,9 @@ def register_ui(
         restart_func=lambda: _self_restart(),
     )
 
-    # ---- Static SPA assets at /ui (Ariadne dashboard overrides /ui and /ui/) -
-    # Register dashboard routes FIRST so explicit `/ui` and `/ui/` GET handlers
-    # win over the StaticFiles mount that follows. The mount continues to serve
-    # child assets (styles, js, images) under /ui/<path>.
+    # ---- Static SPA at /ui ------------------------------------------------
+    # Register root/workspace aliases first; `/ui` remains the canonical static
+    # app mount, and its Dashboard view is Ariadne's Thread.
     register_dashboard_routes(app, static_dir=_STATIC_DIR)
 
     app.mount(

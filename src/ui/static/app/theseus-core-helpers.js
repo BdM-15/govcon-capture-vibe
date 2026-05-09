@@ -24,6 +24,9 @@ const theseusHandleActiveChange = function theseusHandleActiveChange(app) {
   if (app.active === "settings" && !app.dangerZone.loaded) {
     app.loadWorkspaceInventory();
   }
+  if (app.active === "dashboard" && !app.ariadne.loaded && !app.ariadne.loading) {
+    app.loadAriadne();
+  }
   theseusSyncActivePanels(app);
   if (app.active === "skills" && !app.skills.loaded) app.loadSkills();
   if (app.active === "chains" && !app.chains.loaded) app.loadChains();
@@ -61,6 +64,11 @@ window.theseusInit = async function theseusInit(app) {
     "studioPreview.sheetIdx",
     "chains.current",
     "chains.items",
+    "ariadne.workspaces",
+    "ariadne.inventory",
+    "ariadne.buckets.inbox",
+    "ariadne.buckets.notes",
+    "ariadne.buckets.intel",
   ]);
 
   app.$watch("currentChat", () =>
@@ -103,6 +111,7 @@ window.theseusRefreshAll = async function theseusRefreshAll(app) {
     app.loadChats(),
     app.loadPromptLibrary(),
     app.loadWorkspaceList(),
+    app.loadAriadne(),
   ]);
 };
 

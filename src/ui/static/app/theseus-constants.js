@@ -7,7 +7,7 @@ window.createTheseusNavGroups = function createTheseusNavGroups() {
       items: [
         {
           id: "dashboard",
-          label: "Dashboard",
+          label: "Ariadne",
           icon: "layout-dashboard",
           accent: "cyan",
         },
