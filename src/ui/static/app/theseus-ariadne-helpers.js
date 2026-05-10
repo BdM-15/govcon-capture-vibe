@@ -52,6 +52,14 @@ const ARIADNE_VIEWS = [
   },
 ];
 const ARIADNE_VIEW_IDS = new Set(ARIADNE_VIEWS.map((view) => view.id));
+const ARIADNE_LANE_VIEWS = {
+  ingest: "agent-ops",
+  intel: "intel-desk",
+  knowledge: "knowledge",
+  skills: "agent-ops",
+  chains: "agent-ops",
+  studio: "agent-ops",
+};
 
 const theseusSafeArray = function theseusSafeArray(value) {
   return Array.isArray(value) ? value : [];
@@ -129,6 +137,54 @@ window.theseusAriadneInitRouting = function theseusAriadneInitRouting(app) {
   };
   window.addEventListener("hashchange", app._ariadneHashHandler);
 };
+
+window.theseusActivateNavItem = function theseusActivateNavItem(app, item) {
+  if (!item?.id) return;
+  if (item.id === "dashboard") {
+    window.theseusSetAriadneView(
+      app,
+      app?.ariadne?.view || theseusReadAriadneHashView() || "today",
+    );
+    return;
+  }
+  app.active = item.id;
+};
+
+window.theseusAriadneOpenNewOpportunity =
+  function theseusAriadneOpenNewOpportunity(app) {
+    window.theseusSetAriadneView(app, "pipeline");
+    app.openWorkspaceModal();
+  };
+
+window.theseusAriadneRouteLane = function theseusAriadneRouteLane(app, lane) {
+  window.theseusSetAriadneView(
+    app,
+    ARIADNE_LANE_VIEWS[lane] || "today",
+  );
+};
+
+window.theseusAriadneFocusCapture = function theseusAriadneFocusCapture(
+  app,
+  bucket = "inbox",
+  view = "today",
+) {
+  if (app.ariadne?.capture) app.ariadne.capture.bucket = bucket;
+  window.theseusSetAriadneView(app, view);
+  requestAnimationFrame(() => {
+    document
+      .querySelector("[data-testid=ariadne-capture-desk] textarea")
+      ?.focus();
+  });
+};
+
+window.theseusAriadnePortfolioBrief =
+  async function theseusAriadnePortfolioBrief(app) {
+    window.theseusSetAriadneView(app, "pipeline");
+    await window.theseusAriadneAsk(
+      app,
+      "Give me a capture manager portfolio brief across all active Theseus workspaces. Focus on opportunity status, missing intel, compliance risk, proposal-product status, and next decisions.",
+    );
+  };
 
 const ARIADNE_PURSUIT_STAGES = new Set([
   "identify",
@@ -228,7 +284,9 @@ window.theseusAriadneWorkspaceRows = function theseusAriadneWorkspaceRows(app) {
 };
 
 window.theseusAriadneStage = function theseusAriadneStage(row) {
-  const pursuitStage = String(row?.pursuit?.stage || "").trim().toLowerCase();
+  const pursuitStage = String(row?.pursuit?.stage || "")
+    .trim()
+    .toLowerCase();
   if (ARIADNE_PURSUIT_STAGES.has(pursuitStage)) return pursuitStage;
   if (!row || (!row.documents && !row.entities && !row.neo4j_nodes))
     return "intake";
@@ -344,7 +402,10 @@ window.theseusAriadneMetrics = function theseusAriadneMetrics(app) {
       label: "gates ≤ 7d",
       value: upcomingGates.length,
       hint: upcomingGates.length
-        ? upcomingGates.map((row) => row.name).slice(0, 2).join(" · ")
+        ? upcomingGates
+            .map((row) => row.name)
+            .slice(0, 2)
+            .join(" · ")
         : "no near-term gates",
       icon: "calendar-clock",
       accent: "lime",
@@ -644,7 +705,9 @@ window.theseusAriadneOpportunityCards = function theseusAriadneOpportunityCards(
       pwin: pursuit
         ? {
             value: Number.isFinite(pwinValue) ? pwinValue : null,
-            label: Number.isFinite(pwinValue) ? `${Math.round(pwinValue)}%` : "-",
+            label: Number.isFinite(pwinValue)
+              ? `${Math.round(pwinValue)}%`
+              : "-",
             detail: [pursuit.pwin?.confidence, pursuit.pwin?.trend]
               .filter(Boolean)
               .join(" / "),

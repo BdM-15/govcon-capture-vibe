@@ -323,7 +323,7 @@
                       active === item.id && 'nav-item-active',
                       'nav-item-' + (item.accent || 'cyan')
                     ]"
-                    @click="active = item.id"
+                    @click="activateNavItem(item)"
                   >
                     <span
                       class="nav-icon-tile"
@@ -484,21 +484,21 @@
               <div class="flex gap-2.5 flex-wrap justify-end">
                 <button
                   class="btn-hero-cyan inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold text-ink-950"
-                  @click="openWorkspaceModal()"
+                  @click="openAriadneOpportunityModal()"
                 >
                   <i data-lucide="folder-plus" class="w-4 h-4"></i>
                   <span>New Opportunity</span>
                 </button>
                 <button
                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-neon-lime bg-neon-lime/10 border border-neon-lime/40 hover:bg-neon-lime/20 transition"
-                  @click="active='documents'"
+                  @click="routeAriadneLane('ingest')"
                 >
                   <i data-lucide="upload-cloud" class="w-4 h-4"></i>
                   <span>Ingest Docs</span>
                 </button>
                 <button
                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-neon-magenta bg-neon-magenta/10 border border-neon-magenta/40 hover:bg-neon-magenta/20 transition"
-                  @click="ariadneAsk('Give me a capture manager portfolio brief across all active Theseus workspaces. Focus on opportunity status, missing intel, compliance risk, proposal-product status, and next decisions.')"
+                  @click="openAriadnePortfolioBrief()"
                 >
                   <i data-lucide="messages-square" class="w-4 h-4"></i>
                   <span>Portfolio Brief</span>
@@ -1046,7 +1046,7 @@
                         <button
                           x-show="item.kind === 'refresh'"
                           class="pill bg-neon-magenta/10 border border-neon-magenta/40 text-neon-magenta px-2 py-1 text-[10px] shrink-0"
-                          @click="ariadne.capture.bucket='intel'; document.querySelector('[data-testid=ariadne-capture-desk] textarea')?.focus()"
+                          @click="focusAriadneCapture('intel', 'intel-desk')"
                         >
                           <span x-text="item.cta"></span>
                         </button>
@@ -1219,7 +1219,7 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
                 <button
                   class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-cyan/40 hover:bg-neon-cyan/5 transition text-left"
-                  @click="active='documents'"
+                  @click="routeAriadneLane('ingest')"
                 >
                   <span class="nav-icon-tile tile-cyan"
                     ><i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i
@@ -1228,7 +1228,7 @@
                 </button>
                 <button
                   class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-amber/40 hover:bg-neon-amber/5 transition text-left"
-                  @click="active='intel'"
+                  @click="routeAriadneLane('intel')"
                 >
                   <span class="nav-icon-tile tile-amber"
                     ><i data-lucide="layout-grid" class="w-3.5 h-3.5"></i
@@ -1239,7 +1239,7 @@
                 </button>
                 <button
                   class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-lime/40 hover:bg-neon-lime/5 transition text-left"
-                  @click="active='graph'"
+                  @click="routeAriadneLane('knowledge')"
                 >
                   <span class="nav-icon-tile tile-lime"
                     ><i data-lucide="git-fork" class="w-3.5 h-3.5"></i
@@ -1250,7 +1250,7 @@
                 </button>
                 <button
                   class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-magenta/40 hover:bg-neon-magenta/5 transition text-left"
-                  @click="active='skills'"
+                  @click="routeAriadneLane('skills')"
                 >
                   <span class="nav-icon-tile tile-magenta"
                     ><i data-lucide="wand-sparkles" class="w-3.5 h-3.5"></i
@@ -1259,7 +1259,7 @@
                 </button>
                 <button
                   class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-cyan/40 hover:bg-neon-cyan/5 transition text-left"
-                  @click="active='chains'"
+                  @click="routeAriadneLane('chains')"
                 >
                   <span class="nav-icon-tile tile-cyan"
                     ><i data-lucide="workflow" class="w-3.5 h-3.5"></i
@@ -1268,7 +1268,7 @@
                 </button>
                 <button
                   class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-lime/40 hover:bg-neon-lime/5 transition text-left"
-                  @click="active='studio'"
+                  @click="routeAriadneLane('studio')"
                 >
                   <span class="nav-icon-tile tile-lime"
                     ><i data-lucide="folder-open" class="w-3.5 h-3.5"></i

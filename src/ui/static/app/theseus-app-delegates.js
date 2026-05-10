@@ -44,6 +44,26 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusSetAriadneView(this, view);
     },
 
+    activateNavItem(item) {
+      return window.theseusActivateNavItem(this, item);
+    },
+
+    openAriadneOpportunityModal() {
+      return window.theseusAriadneOpenNewOpportunity(this);
+    },
+
+    routeAriadneLane(lane) {
+      return window.theseusAriadneRouteLane(this, lane);
+    },
+
+    focusAriadneCapture(bucket = "inbox", view = "today") {
+      return window.theseusAriadneFocusCapture(this, bucket, view);
+    },
+
+    async openAriadnePortfolioBrief() {
+      return window.theseusAriadnePortfolioBrief(this);
+    },
+
     ariadneMorningBrief() {
       return window.theseusAriadneMorningBrief(this);
     },
