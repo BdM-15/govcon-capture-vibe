@@ -1459,6 +1459,92 @@ const theseusAriadnePromotionStatusAccent = function (status) {
   return "amber";
 };
 
+const theseusAriadneClamp = function theseusAriadneClamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+};
+
+const theseusAriadneFitAccent = function theseusAriadneFitAccent(score) {
+  if (score >= 75) return "lime";
+  if (score >= 50) return "cyan";
+  if (score >= 25) return "amber";
+  return "magenta";
+};
+
+const theseusAriadneEntityPoints = function theseusAriadneEntityPoints(count) {
+  if (count >= 100) return 25;
+  if (count >= 50) return 22;
+  if (count >= 20) return 18;
+  if (count > 0) return 12;
+  return 0;
+};
+
+const theseusAriadneFitScoreForRow = function theseusAriadneFitScoreForRow(
+  app,
+  row,
+) {
+  const workspace = row?.name || "";
+  const wiki = theseusAriadneBucket(app, "llm-wiki");
+  const promotions = theseusSafeArray(app.ariadne?.promotions?.[workspace]);
+  const processedPromotions = promotions.filter(
+    (record) => (record.ingestion_status || "pending") === "processed",
+  ).length;
+  const pendingPromotions = promotions.filter(
+    (record) => (record.ingestion_status || "pending") !== "processed",
+  ).length;
+  const documents = Number(row?.documents || 0);
+  const entities = Number(row?.entities || 0);
+  const nodes = Number(row?.neo4j_nodes || 0);
+  const drivers = theseusSafeArray(row?.pursuit?.pwin_drivers);
+  const pwin = Number(row?.pursuit?.pwin?.value);
+  const hasGate = !!(row?.pursuit?.gate?.due || row?.pursuit?.proposal_due);
+
+  const kgPoints =
+    (documents > 0 ? 10 : 0) +
+    theseusAriadneEntityPoints(entities) +
+    (nodes > 0 ? 10 : 0);
+  const promotedPoints = theseusAriadneClamp(
+    processedPromotions * 10 + Math.min(pendingPromotions, 2) * 3,
+    0,
+    30,
+  );
+  const wikiPoints = wiki.length ? theseusAriadneClamp(8 + wiki.length * 2, 0, 15) : 0;
+  const metadataPoints =
+    (Number.isFinite(pwin) ? 4 : 0) +
+    (drivers.length ? 4 : 0) +
+    (hasGate ? 2 : 0);
+  const score = theseusAriadneClamp(
+    kgPoints + promotedPoints + wikiPoints + metadataPoints,
+    0,
+    100,
+  );
+  const blockers = [];
+  if (!documents) blockers.push("load solicitation docs");
+  if (!entities) blockers.push("extract KG entities");
+  if (!processedPromotions) blockers.push("refresh promoted source");
+  if (!wiki.length) blockers.push("seed capability wiki");
+  if (!Number.isFinite(pwin)) blockers.push("set PWin");
+
+  return {
+    workspace,
+    score,
+    accent: theseusAriadneFitAccent(score),
+    stage: window.theseusAriadneStage(row),
+    is_active_workspace: workspace === (app.ariadne?.active || app.stats?.workspace || ""),
+    detail: blockers.length
+      ? blockers.slice(0, 2).join(" / ")
+      : "KG, source, wiki, metadata ready",
+    blockers,
+    components: [
+      { label: "KG", value: kgPoints, max: 45 },
+      { label: "Sources", value: promotedPoints, max: 30 },
+      { label: "Wiki", value: wikiPoints, max: 15 },
+      { label: "Meta", value: metadataPoints, max: 10 },
+    ],
+    promoted_processed: processedPromotions,
+    promoted_pending: pendingPromotions,
+  };
+};
+
 window.theseusAriadnePromotionRows = function theseusAriadnePromotionRows(
   app,
   limit = 8,
@@ -1534,6 +1620,22 @@ window.theseusAriadneKnowledgeFitSeeds = function theseusAriadneKnowledgeFitSeed
       accent: processedPromotions.length ? "lime" : "amber",
     },
   ];
+};
+
+window.theseusAriadneRequirementsFitScores = function theseusAriadneRequirementsFitScores(
+  app,
+  limit = 6,
+) {
+  return window
+    .theseusAriadneWorkspaceRows(app)
+    .map((row) => theseusAriadneFitScoreForRow(app, row))
+    .sort((left, right) => {
+      if (left.is_active_workspace !== right.is_active_workspace) {
+        return left.is_active_workspace ? -1 : 1;
+      }
+      return right.score - left.score;
+    })
+    .slice(0, limit);
 };
 
 window.theseusAriadneAgentOpsSummary = function theseusAriadneAgentOpsSummary(

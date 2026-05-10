@@ -124,6 +124,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusAriadneKnowledgeFitSeeds(this);
     },
 
+    ariadneRequirementsFitScores(limit = 6) {
+      return window.theseusAriadneRequirementsFitScores(this, limit);
+    },
+
     ariadnePromotionRows(limit = 8) {
       return window.theseusAriadnePromotionRows(this, limit);
     },

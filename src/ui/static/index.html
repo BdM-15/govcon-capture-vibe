@@ -1816,6 +1816,42 @@
                     </div>
                   </template>
                 </div>
+                <div class="mb-4" data-testid="ariadne-requirements-fit-scores">
+                  <div class="flex items-center justify-between gap-3 mb-2">
+                    <div class="text-[10px] uppercase tracking-[0.16em] font-mono text-slate-600">requirements fit score</div>
+                    <span class="text-[10px] font-mono text-slate-600" x-text="ariadneRequirementsFitScores(999).length + ' workspace' + (ariadneRequirementsFitScores(999).length === 1 ? '' : 's')"></span>
+                  </div>
+                  <div x-show="!ariadneRequirementsFitScores(999).length" class="rounded-lg border border-edge bg-ink-900/60 p-4 text-xs font-mono text-slate-600">No workspaces yet.</div>
+                  <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                    <template x-for="fit in ariadneRequirementsFitScores(4)" :key="fit.workspace + '-fit-score'">
+                      <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
+                        <div class="flex items-start justify-between gap-3">
+                          <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                              <span class="text-sm font-semibold text-slate-100 truncate" x-text="fit.workspace"></span>
+                              <span x-show="fit.is_active_workspace" class="pill bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan text-[10px]">active</span>
+                            </div>
+                            <div class="text-xs text-slate-500 mt-1" x-text="fit.detail"></div>
+                          </div>
+                          <div class="text-2xl font-semibold shrink-0" :class="'text-neon-' + fit.accent" x-text="fit.score + '%'">
+                          </div>
+                        </div>
+                        <div class="mt-3 h-1.5 rounded-full bg-ink-950 overflow-hidden border border-edge/60">
+                          <div class="h-full rounded-full" :class="'bg-neon-' + fit.accent" :style="'width: ' + fit.score + '%'">
+                          </div>
+                        </div>
+                        <div class="mt-3 grid grid-cols-4 gap-2">
+                          <template x-for="component in fit.components" :key="fit.workspace + component.label">
+                            <div class="rounded border border-edge/80 bg-ink-950/50 p-2">
+                              <div class="text-[9px] uppercase tracking-[0.12em] font-mono text-slate-600 truncate" x-text="component.label"></div>
+                              <div class="text-[11px] font-mono text-slate-300 mt-1" x-text="component.value + '/' + component.max"></div>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
                 <div class="space-y-3">
                   <template x-for="item in ariadneKnowledgeFeed(12)" :key="item.kind + ':' + item.path">
                     <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
