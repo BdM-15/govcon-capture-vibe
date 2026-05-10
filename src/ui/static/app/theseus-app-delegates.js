@@ -84,6 +84,18 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusAriadneDecisionQueue(this, limit);
     },
 
+    ariadneTodayFocus(limit = 4) {
+      return window.theseusAriadneTodayFocus(this, limit);
+    },
+
+    ariadnePipelineSummary() {
+      return window.theseusAriadnePipelineSummary(this);
+    },
+
+    ariadnePipelinePressure(limit = 6) {
+      return window.theseusAriadnePipelinePressure(this, limit);
+    },
+
     ariadneOpportunityCards() {
       return window.theseusAriadneOpportunityCards(this);
     },

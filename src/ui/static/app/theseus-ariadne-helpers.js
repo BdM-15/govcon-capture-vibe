@@ -650,6 +650,262 @@ window.theseusAriadneDecisionQueue = function theseusAriadneDecisionQueue(
   return items.slice(0, limit);
 };
 
+window.theseusAriadneTodayFocus = function theseusAriadneTodayFocus(
+  app,
+  limit = 4,
+) {
+  const rows = window.theseusAriadneWorkspaceRows(app);
+  const items = [];
+  const seen = new Set();
+  const pushItem = (item) => {
+    if (!item || seen.has(item.key)) return;
+    seen.add(item.key);
+    items.push(item);
+  };
+
+  const decision = window.theseusAriadneDecisionQueue(app, 1)[0];
+  if (decision) {
+    pushItem({
+      key: `decision:${decision.workspace}`,
+      kind: "decision",
+      icon: "gavel",
+      accent: "magenta",
+      title: decision.workspace,
+      detail: decision.reasons.join(" · "),
+      cta: "Review decision",
+      workspace: decision.workspace,
+      stage: decision.stage,
+      stage_class: decision.stage_class,
+    });
+  }
+
+  const ingest = rows.find(
+    (row) => (row.inputs_files || 0) > 0 && (row.documents || 0) === 0,
+  );
+  if (ingest) {
+    pushItem({
+      key: `ingest:${ingest.name}`,
+      kind: "ingest",
+      icon: "upload-cloud",
+      accent: "amber",
+      title: ingest.name,
+      detail: `${ingest.inputs_files} input file${ingest.inputs_files === 1 ? "" : "s"} still waiting for ingest.`,
+      cta: "Open ingest",
+      workspace: ingest.name,
+      stage: window.theseusAriadneStage(ingest),
+      stage_class: window.theseusAriadneStageClass(ingest),
+    });
+  }
+
+  const extract = rows.find(
+    (row) =>
+      row.name !== ingest?.name &&
+      (row.documents || 0) > 0 &&
+      (row.entities || 0) === 0,
+  );
+  if (extract) {
+    pushItem({
+      key: `extract:${extract.name}`,
+      kind: "extract",
+      icon: "git-fork",
+      accent: "amber",
+      title: extract.name,
+      detail: `${extract.documents} document${extract.documents === 1 ? "" : "s"} loaded but no entities extracted yet.`,
+      cta: "Open workspace",
+      workspace: extract.name,
+      stage: window.theseusAriadneStage(extract),
+      stage_class: window.theseusAriadneStageClass(extract),
+    });
+  }
+
+  const inbox = theseusAriadneBucket(app, "inbox");
+  if (inbox.length) {
+    pushItem({
+      key: "inbox:backlog",
+      kind: "inbox",
+      icon: "inbox",
+      accent: "cyan",
+      title: "Inbox backlog",
+      detail: `${inbox.length} note${inbox.length === 1 ? "" : "s"} waiting for promotion or routing.`,
+      cta: "Review inbox",
+    });
+  }
+
+  const intel = theseusAriadneBucket(app, "intel");
+  const lastIntel = intel.reduce(
+    (max, entry) => Math.max(max, entry.modified_at || 0),
+    0,
+  );
+  const intelAgeDays = lastIntel
+    ? Math.floor((theseusAriadneNowSec() - lastIntel) / ARIADNE_DAY_SECONDS)
+    : null;
+  if (intelAgeDays === null || intelAgeDays > ARIADNE_STALE_INTEL_DAYS) {
+    pushItem({
+      key: "intel:freshness",
+      kind: "refresh",
+      icon: "clock-alert",
+      accent: "magenta",
+      title: "Intel freshness",
+      detail:
+        intelAgeDays === null
+          ? "No cross-opp intel captured yet."
+          : `Last intel ${intelAgeDays}d ago — refresh customer and competitor read.`,
+      cta: "Capture intel",
+    });
+  }
+
+  if (!items.length) {
+    const lead =
+      window.theseusAriadneOpportunityCards(app).find((card) => card.is_active) ||
+      window.theseusAriadneOpportunityCards(app)[0];
+    if (lead) {
+      pushItem({
+        key: `workspace:${lead.name}`,
+        kind: "workspace",
+        icon: "briefcase",
+        accent: "lime",
+        title: lead.name,
+        detail: `${lead.stage} stage · PWin ${lead.pwin?.label || "-"} · ${lead.gate_due?.label || "no gate set"}`,
+        cta: "Open workspace",
+        workspace: lead.name,
+        stage: lead.stage,
+        stage_class: lead.stage_class,
+      });
+    }
+  }
+
+  return items.slice(0, limit);
+};
+
+window.theseusAriadnePipelineSummary = function theseusAriadnePipelineSummary(
+  app,
+) {
+  const cards = window.theseusAriadneOpportunityCards(app);
+  const nearGates = cards.filter((card) => {
+    const days = theseusAriadneDaysUntil(card.gate_due?.date);
+    return days !== null && days <= 14;
+  });
+  const scoredPwins = cards
+    .map((card) => card.pwin?.value)
+    .filter((value) => Number.isFinite(value));
+  const avgPwin = scoredPwins.length
+    ? Math.round(
+        scoredPwins.reduce((sum, value) => sum + value, 0) /
+          scoredPwins.length,
+      )
+    : null;
+  const captureAndProposal = cards.filter(
+    (card) => card.stage === "capture" || card.stage === "proposal",
+  );
+  const lateStage = cards.filter(
+    (card) =>
+      card.stage === "proposal" ||
+      card.stage === "submitted" ||
+      card.stage === "award",
+  );
+
+  return [
+    {
+      label: "tracked",
+      value: cards.length,
+      detail: `${captureAndProposal.length} in capture / proposal`,
+      icon: "briefcase",
+      accent: "cyan",
+    },
+    {
+      label: "near gates ≤ 14d",
+      value: nearGates.length,
+      detail: nearGates.length
+        ? nearGates
+            .map((card) => card.name)
+            .slice(0, 2)
+            .join(" · ")
+        : "no gate pressure",
+      icon: "calendar-clock",
+      accent: "magenta",
+    },
+    {
+      label: "avg PWin",
+      value: avgPwin === null ? "-" : `${avgPwin}%`,
+      detail: scoredPwins.length
+        ? `${scoredPwins.length} pursuit${scoredPwins.length === 1 ? "" : "s"} scored`
+        : "no PWin values yet",
+      icon: "target",
+      accent: "lime",
+    },
+    {
+      label: "late-stage",
+      value: lateStage.length,
+      detail: lateStage.length
+        ? lateStage
+            .map((card) => card.name)
+            .slice(0, 2)
+            .join(" · ")
+        : "nothing submitted yet",
+      icon: "trophy",
+      accent: "amber",
+    },
+  ];
+};
+
+window.theseusAriadnePipelinePressure =
+  function theseusAriadnePipelinePressure(app, limit = 6) {
+    const items = window.theseusAriadneOpportunityCards(app)
+      .map((card) => {
+        const reasons = [];
+        let score = 0;
+        const gateDays = theseusAriadneDaysUntil(card.gate_due?.date);
+        if (gateDays !== null && gateDays <= 7) {
+          score += 5;
+          reasons.push(
+            `${card.gate_due?.name || "gate"} ${theseusAriadneDueLabel(card.gate_due?.date)}`,
+          );
+        } else if (gateDays !== null && gateDays <= 14) {
+          score += 4;
+          reasons.push(
+            `${card.gate_due?.name || "gate"} ${theseusAriadneDueLabel(card.gate_due?.date)}`,
+          );
+        }
+        if (!Number.isFinite(card.pwin?.value)) {
+          score += 2;
+          reasons.push("PWin unset");
+        }
+        if (card.top_blocker?.detail) {
+          score += 2;
+          reasons.push(card.top_blocker.detail);
+        }
+        if (card.intel_age_days === null) {
+          score += 1;
+          reasons.push("no tagged intel");
+        } else if (card.intel_age_days > ARIADNE_STALE_INTEL_DAYS) {
+          score += 2;
+          reasons.push(`${card.intel_age_days}d since intel`);
+        }
+        const lowReadiness = card.readiness
+          .filter((bar) => bar.score !== null && bar.score <= 2)
+          .map((bar) => bar.dim)
+          .slice(0, 2);
+        if (lowReadiness.length) {
+          score += 1;
+          reasons.push(`low readiness: ${lowReadiness.join(", ")}`);
+        }
+        return {
+          workspace: card.name,
+          stage: card.stage,
+          stage_class: card.stage_class,
+          reasons,
+          score,
+        };
+      })
+      .filter((item) => item.score > 0)
+      .sort((left, right) => {
+        if (left.score !== right.score) return right.score - left.score;
+        return left.workspace.localeCompare(right.workspace);
+      });
+
+    return items.slice(0, limit);
+  };
+
 // Opportunity Card (174.4b slice 3): per-pursuit summary card.
 // Today: name + heuristic phase + derivable blocker + intel age.
 // 174.6: agency, PWin + confidence + trend, gate_due, 7 readiness bars,
