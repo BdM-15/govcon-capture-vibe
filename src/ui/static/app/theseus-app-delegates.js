@@ -112,6 +112,26 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusAriadneKnowledgeFeed(this, limit);
     },
 
+    ariadneKnowledgeSummary() {
+      return window.theseusAriadneKnowledgeSummary(this);
+    },
+
+    ariadneWikiLeaderboard(limit = 5) {
+      return window.theseusAriadneWikiLeaderboard(this, limit);
+    },
+
+    ariadneKnowledgeFitSeeds() {
+      return window.theseusAriadneKnowledgeFitSeeds(this);
+    },
+
+    ariadneAgentOpsSummary() {
+      return window.theseusAriadneAgentOpsSummary(this);
+    },
+
+    ariadneAgentActivity(limit = 8) {
+      return window.theseusAriadneAgentActivity(this, limit);
+    },
+
     ariadneIntelSummary() {
       return window.theseusAriadneIntelSummary(this);
     },

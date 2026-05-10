@@ -1016,6 +1016,230 @@ const theseusAriadneIntelAgeDaysForWorkspace = function theseusAriadneIntelAgeDa
     : null;
 };
 
+const theseusAriadneTimeAgo = function theseusAriadneTimeAgo(value) {
+  if (!value) return "-";
+  const raw = Number(value);
+  const ms = Number.isFinite(raw)
+    ? raw < 1000000000000
+      ? raw * 1000
+      : raw
+    : Date.parse(String(value));
+  if (!Number.isFinite(ms)) return "-";
+  const days = Math.floor((Date.now() - ms) / (ARIADNE_DAY_SECONDS * 1000));
+  if (days < 0) return "scheduled";
+  if (days === 0) return "today";
+  return `${days}d ago`;
+};
+
+const theseusAriadneIsoDate = function theseusAriadneIsoDate(ms) {
+  if (!Number.isFinite(ms)) return "";
+  return new Date(ms).toISOString().slice(0, 10);
+};
+
+const theseusAriadneLatestModified = function theseusAriadneLatestModified(entries) {
+  return entries.reduce((max, entry) => Math.max(max, entry.modified_at || 0), 0);
+};
+
+const theseusAriadneEntryTitle = function theseusAriadneEntryTitle(entry) {
+  return entry?.frontmatter?.title || entry?.path || "untitled";
+};
+
+const theseusAriadneLowestReadiness = function theseusAriadneLowestReadiness(
+  readiness,
+) {
+  return readiness
+    .filter((bar) => Number.isFinite(bar.score))
+    .sort((left, right) => left.score - right.score)[0] || null;
+};
+
+const theseusAriadneSkillForReadiness = function theseusAriadneSkillForReadiness(
+  dim,
+) {
+  const mapping = {
+    customer: "grill-me-capture",
+    compete: "competitive-intel",
+    solution: "proposal-generator",
+    team: "grill-me-bid-strategy",
+    price: "price-to-win",
+    compliance: "compliance-auditor",
+    proposal: "proposal-generator",
+  };
+  return mapping[dim] || "grill-me-govcon";
+};
+
+const theseusAriadneSkillLabel = function theseusAriadneSkillLabel(skill) {
+  return String(skill || "")
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+};
+
+const theseusAriadneNextActionForCard = function theseusAriadneNextActionForCard(
+  row,
+  blocker,
+  readiness,
+) {
+  const low = theseusAriadneLowestReadiness(readiness);
+  let skill = "grill-me-govcon";
+  let label = "Pressure-test pursuit";
+  let detail = "No major blocker surfaced; run focused capture challenge.";
+  let icon = "sparkles";
+  let accent = "cyan";
+
+  if (blocker?.kind === "ingest") {
+    skill = "govcon-ontology";
+    label = "Ingest source material";
+    detail = blocker.detail;
+    icon = "upload-cloud";
+    accent = "amber";
+  } else if (blocker?.kind === "extract") {
+    skill = "govcon-ontology";
+    label = "Repair extraction gap";
+    detail = blocker.detail;
+    icon = "git-fork";
+    accent = "amber";
+  } else if (low && low.score <= 3) {
+    skill = theseusAriadneSkillForReadiness(low.dim);
+    label = `Raise ${low.dim} readiness`;
+    detail = `${low.dim} readiness ${low.score}/5; use ${theseusAriadneSkillLabel(skill)} next.`;
+    icon = "target";
+    accent = low.score <= 2 ? "magenta" : "amber";
+  } else if (row?.pursuit?.stage === "proposal") {
+    skill = "proposal-generator";
+    label = "Draft proposal roadmap";
+    detail = "Proposal stage; build outline, win themes, and compliance trail.";
+    icon = "file-text";
+    accent = "magenta";
+  } else if (row?.pursuit?.stage === "capture") {
+    skill = "grill-me-capture";
+    label = "Stress-test capture plan";
+    detail = "Capture stage; challenge customer, competitor, and discriminator assumptions.";
+    icon = "flame";
+    accent = "cyan";
+  }
+
+  return {
+    skill,
+    label,
+    detail,
+    icon,
+    accent,
+    cta: theseusAriadneSkillLabel(skill),
+    prompt: `${label} for workspace ${row?.name || "this pursuit"}. Use available Theseus workspace evidence, global llm-wiki context, and current pursuit metadata. Start with exact gaps and next 3 actions.`,
+  };
+};
+
+const theseusAriadneAnalysisPosture = function theseusAriadneAnalysisPosture(
+  row,
+  counts,
+) {
+  if ((counts.inputs || 0) > 0 && (counts.documents || 0) === 0) {
+    return {
+      label: "ingest pending",
+      detail: `${counts.inputs} input file${counts.inputs === 1 ? "" : "s"} waiting before analysis can be trusted.`,
+      skill: "govcon-ontology",
+      accent: "amber",
+      prompt: `For workspace ${row.name}, identify what source material still needs ingest before compliant outline, audit, or fit assessment can run.`,
+    };
+  }
+  if ((counts.documents || 0) > 0 && (counts.entities || 0) === 0) {
+    return {
+      label: "extraction needed",
+      detail: `${counts.documents} document${counts.documents === 1 ? "" : "s"} loaded but ontology entities are missing.`,
+      skill: "govcon-ontology",
+      accent: "amber",
+      prompt: `For workspace ${row.name}, diagnose extraction readiness and list next steps to get requirements, CLINs, evaluation factors, and instructions into the KG.`,
+    };
+  }
+  if ((counts.entities || 0) > 0) {
+    return {
+      label: "analysis ready",
+      detail: `${counts.entities} KG entities available for compliance audit, proposal outline, and solutioning prompts.`,
+      skill: "compliance-auditor",
+      accent: "lime",
+      prompt: `Run a compliance-roadmap style review for workspace ${row.name}. Summarize instruction/evaluation coverage, requirement gaps, and which llm-wiki capability notes could mitigate gaps.`,
+    };
+  }
+  return {
+    label: "workspace empty",
+    detail: "No processed content yet; stage source docs before analysis.",
+    skill: "govcon-ontology",
+    accent: "amber",
+    prompt: `For workspace ${row.name}, recommend first ingest and ontology extraction steps.`,
+  };
+};
+
+const theseusAriadneSuggestedGateDate = function theseusAriadneSuggestedGateDate(
+  row,
+) {
+  const proposalMs = theseusAriadneParseDueMs(row?.pursuit?.proposal_due);
+  if (!Number.isFinite(proposalMs)) return "";
+  const stage = window.theseusAriadneStage(row);
+  const offsets = {
+    identify: 45,
+    qualify: 35,
+    capture: 21,
+    proposal: 10,
+    submitted: 0,
+    award: 0,
+  };
+  const offset = offsets[stage] ?? 21;
+  const targetMs = proposalMs - offset * ARIADNE_DAY_SECONDS * 1000;
+  return targetMs < Date.now()
+    ? theseusAriadneIsoDate(Date.now())
+    : theseusAriadneIsoDate(targetMs);
+};
+
+const theseusAriadneGateReviewForCard = function theseusAriadneGateReviewForCard(
+  row,
+) {
+  const gate = row?.pursuit?.gate || {};
+  const suggested = theseusAriadneSuggestedGateDate(row);
+  return {
+    current: gate.name || "gate unset",
+    due: gate.due || "",
+    due_label: gate.due ? theseusAriadneDueLabel(gate.due) : "-",
+    suggested,
+    suggested_label: suggested ? theseusAriadneDueLabel(suggested) : "proposal due unset",
+  };
+};
+
+const theseusAriadneSolutioningChips = function theseusAriadneSolutioningChips(
+  row,
+  readiness,
+) {
+  const low = theseusAriadneLowestReadiness(readiness);
+  const base = [
+    {
+      skill: "grill-me-capture",
+      label: "Capture grill",
+      icon: "flame",
+      prompt: `Grill me on the capture plan for workspace ${row.name}. Use customer intel, competitor clues, win themes, proof points, and missing assumptions. One hard question at a time.`,
+    },
+    {
+      skill: "proposal-generator",
+      label: "Win themes",
+      icon: "sparkles",
+      prompt: `Generate and stress-test win themes for workspace ${row.name}. Tie each theme to evaluation factors, requirements, proof points, and llm-wiki capability evidence where available.`,
+    },
+    {
+      skill: "grill-me-proposal",
+      label: "Pink-team risk",
+      icon: "shield-alert",
+      prompt: `Stress-test proposal strategy for workspace ${row.name}. Focus on traceability, discriminator credibility, hot-button coverage, and proof-point gaps.`,
+    },
+  ];
+  if (low?.dim === "price" || row?.pursuit?.stage === "proposal") {
+    base.push({
+      skill: "price-to-win",
+      label: "PTW check",
+      icon: "calculator",
+      prompt: `Build a price-to-win risk check for workspace ${row.name}. Focus on scope magnitude, likely cost drivers, incumbent pressure, and pricing assumptions to verify.`,
+    });
+  }
+  return base.slice(0, 3);
+};
+
 // Opportunity Card (174.4b slice 3): per-pursuit summary card.
 // Today: name + heuristic phase + derivable blocker + intel age.
 // 174.6: agency, PWin + confidence + trend, gate_due, 7 readiness bars,
@@ -1041,9 +1265,36 @@ window.theseusAriadneOpportunityCards = function theseusAriadneOpportunityCards(
     const pursuit = row.pursuit || null;
     const blocker = queue.find((action) => action.workspace === row.name);
     const intelAgeDays = theseusAriadneIntelAgeDaysForWorkspace(row, intel);
+    const intelEntries = theseusAriadneIntelEntriesForWorkspace(row, intel)
+      .sort((left, right) => (right.modified_at || 0) - (left.modified_at || 0))
+      .slice(0, 3)
+      .map((entry) => ({
+        title: theseusAriadneEntryTitle(entry),
+        path: entry.path,
+        age_label: theseusAriadneTimeAgo(entry.modified_at),
+        preview: entry.preview || "",
+      }));
     const pwinValue = Number(pursuit?.pwin?.value);
     const gateDue = pursuit?.gate?.due || null;
     const proposalDue = pursuit?.proposal_due || null;
+    const counts = {
+      documents: row.documents || 0,
+      entities: row.entities || 0,
+      inputs: row.inputs_files || 0,
+    };
+    const readiness = ARIADNE_READINESS_DIMS.map((dim) => {
+      const raw = Number(pursuit?.readiness?.[dim]);
+      const score = Number.isFinite(raw)
+        ? Math.max(0, Math.min(5, raw))
+        : null;
+      return {
+        dim,
+        score,
+        title: `${dim}: ${score === null ? "unset" : `${score}/5`}`,
+        class_name: theseusAriadneReadinessClass(score),
+      };
+    });
+    const analysisPosture = theseusAriadneAnalysisPosture(row, counts);
 
     return {
       name: row.name,
@@ -1085,24 +1336,13 @@ window.theseusAriadneOpportunityCards = function theseusAriadneOpportunityCards(
         ? { kind: blocker.kind, detail: blocker.detail, cta: blocker.cta }
         : null,
       intel_age_days: intelAgeDays,
-      readiness: ARIADNE_READINESS_DIMS.map((dim) => {
-        const raw = Number(pursuit?.readiness?.[dim]);
-        const score = Number.isFinite(raw)
-          ? Math.max(0, Math.min(5, raw))
-          : null;
-        return {
-          dim,
-          score,
-          title: `${dim}: ${score === null ? "unset" : `${score}/5`}`,
-          class_name: theseusAriadneReadinessClass(score),
-        };
-      }),
-      next_action: blocker || null,
-      counts: {
-        documents: row.documents || 0,
-        entities: row.entities || 0,
-        inputs: row.inputs_files || 0,
-      },
+      intel_entries: intelEntries,
+      readiness,
+      next_action: theseusAriadneNextActionForCard(row, blocker, readiness),
+      analysis_posture: analysisPosture,
+      solutioning: theseusAriadneSolutioningChips(row, readiness),
+      gate_review: theseusAriadneGateReviewForCard(row),
+      counts,
     };
   });
 };
@@ -1159,6 +1399,158 @@ window.theseusAriadneKnowledgeFeed = function theseusAriadneKnowledgeFeed(
   ];
   entries.sort((left, right) => (right.modified_at || 0) - (left.modified_at || 0));
   return entries.slice(0, limit);
+};
+
+window.theseusAriadneKnowledgeSummary = function theseusAriadneKnowledgeSummary(
+  app,
+) {
+  return ARIADNE_BUCKETS.map((bucket) => {
+    const entries = theseusAriadneBucket(app, bucket);
+    const latest = theseusAriadneLatestModified(entries);
+    const labels = {
+      inbox: "inbox",
+      notes: "notes",
+      "llm-wiki": "llm wiki",
+      intel: "intel",
+    };
+    const icons = {
+      inbox: "inbox",
+      notes: "notebook-text",
+      "llm-wiki": "book-open-text",
+      intel: "radar",
+    };
+    const accents = {
+      inbox: "amber",
+      notes: "cyan",
+      "llm-wiki": "lime",
+      intel: "magenta",
+    };
+    return {
+      bucket,
+      label: labels[bucket] || bucket,
+      value: entries.length,
+      latest_label: latest ? theseusAriadneTimeAgo(latest) : "empty",
+      icon: icons[bucket] || "file-text",
+      accent: accents[bucket] || "cyan",
+    };
+  });
+};
+
+window.theseusAriadneWikiLeaderboard = function theseusAriadneWikiLeaderboard(
+  app,
+  limit = 5,
+) {
+  return theseusAriadneBucket(app, "llm-wiki")
+    .slice()
+    .sort((left, right) => (right.modified_at || 0) - (left.modified_at || 0))
+    .slice(0, limit)
+    .map((entry) => ({
+      title: theseusAriadneEntryTitle(entry),
+      path: entry.path,
+      age_label: theseusAriadneTimeAgo(entry.modified_at),
+      preview: entry.preview || "",
+    }));
+};
+
+window.theseusAriadneKnowledgeFitSeeds = function theseusAriadneKnowledgeFitSeeds(
+  app,
+) {
+  const wiki = theseusAriadneBucket(app, "llm-wiki");
+  const rows = window.theseusAriadneWorkspaceRows(app);
+  const readyRows = rows.filter((row) => (row.entities || 0) > 0);
+  return [
+    {
+      label: "capability wiki",
+      value: wiki.length,
+      detail: wiki.length ? "global_wiki-style material present" : "seed company capability notes",
+      icon: "book-open-check",
+      accent: "lime",
+    },
+    {
+      label: "pursuit KGs",
+      value: readyRows.length,
+      detail: readyRows.length ? "requirements can be compared later" : "process RFPs first",
+      icon: "network",
+      accent: "cyan",
+    },
+    {
+      label: "fit score",
+      value: "174.8",
+      detail: "defer scoring until ontology promoter + wiki round-trip exists",
+      icon: "gauge",
+      accent: "amber",
+    },
+  ];
+};
+
+window.theseusAriadneAgentOpsSummary = function theseusAriadneAgentOpsSummary(
+  app,
+) {
+  return [
+    {
+      label: "workspaces",
+      value: window.theseusAriadneWorkspaceRows(app).length,
+      detail: "tracked pursuits",
+      icon: "briefcase",
+      accent: "cyan",
+    },
+    {
+      label: "open actions",
+      value: window.theseusAriadneActionQueue(app, 999).length,
+      detail: "capture queue",
+      icon: "list-checks",
+      accent: "amber",
+    },
+    {
+      label: "skill chains",
+      value: app.chains?.items?.length || 0,
+      detail: app.chains?.loaded ? "loaded" : "lazy load on this view",
+      icon: "workflow",
+      accent: "magenta",
+    },
+    {
+      label: "deliverables",
+      value: app.studio?.deliverables?.length || 0,
+      detail: app.studio?.loaded ? "studio indexed" : "lazy load on this view",
+      icon: "archive",
+      accent: "lime",
+    },
+  ];
+};
+
+window.theseusAriadneAgentActivity = function theseusAriadneAgentActivity(
+  app,
+  limit = 8,
+) {
+  const chains = (app.chains?.items || []).map((chain) => ({
+    key: `chain:${chain.chain_id}`,
+    kind: "chain",
+    title: chain.name || chain.chain_id,
+    detail: `${chain.status || "unknown"} · ${chain.step_count || 0} steps · ${chain.workspace || "workspace unset"}`,
+    when: chain.updated_at || chain.finished_at || chain.created_at || "",
+    when_label: theseusAriadneTimeAgo(
+      chain.updated_at || chain.finished_at || chain.created_at,
+    ),
+    icon: "workflow",
+    accent: chain.status === "completed" ? "lime" : "amber",
+  }));
+  const deliverables = (app.studio?.deliverables || []).map((item) => ({
+    key: `artifact:${item.skill}:${item.run_id}:${item.filename}`,
+    kind: "artifact",
+    title: item.display_name || item.filename || item.run_id,
+    detail: `${item.skill || "skill"} · ${item.ext || item.mime || "artifact"}`,
+    when: item.created_at || "",
+    when_label: theseusAriadneTimeAgo(item.created_at),
+    icon: "file-output",
+    accent: "cyan",
+  }));
+  return [...chains, ...deliverables]
+    .map((item) => ({
+      ...item,
+      sort: Date.parse(item.when || "") || 0,
+    }))
+    .sort((left, right) => right.sort - left.sort)
+    .slice(0, limit);
 };
 
 window.theseusAriadneIntelSummary = function theseusAriadneIntelSummary(app) {
