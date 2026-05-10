@@ -6,6 +6,7 @@ Provides centralized configuration, shared utilities, and custom exceptions.
 
 from src.core.config import get_settings, reset_settings, Settings
 from src.core.env import env_float, env_int
+from src.core.ariadne_fit import FORMULA_VERSION as ARIADNE_FIT_FORMULA_VERSION
 from src.core.global_store import GlobalStore
 from src.core.neo4j_config import Neo4jConnectionConfig, get_neo4j_connection_config
 from src.core.ontology_promoter import OntologyPromoter
@@ -27,6 +28,7 @@ __all__ = [
     "Settings",
     "env_float",
     "env_int",
+    "ARIADNE_FIT_FORMULA_VERSION",
     "GlobalStore",
     "OntologyPromoter",
     "Neo4jConnectionConfig",

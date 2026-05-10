@@ -70,6 +70,7 @@ from src.server.admin_routes import (
 )
 from src.server.dashboard_routes import register_dashboard_routes
 from src.server.document_routes import register_processing_log_routes
+from src.server.ariadne_routes import register_ariadne_fit_routes
 from src.server.global_routes import register_global_routes
 from src.server.prompt_library import register_prompt_library_routes
 from src.server.skill_routes import register_skill_ui_routes
@@ -202,6 +203,13 @@ def _register_feature_routes(
         workspace_root=context.working_dir,
         today=lambda: context.now().split("T", 1)[0],
         promotion_refresh_func=promotion_refresh_func,
+    )
+
+    register_ariadne_fit_routes(
+        app,
+        workspace_name=context.workspace_name,
+        working_dir=context.working_dir,
+        graph_storage=context.graph_storage,
     )
 
     register_chat_routes(

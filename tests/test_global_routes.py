@@ -207,3 +207,4 @@ def test_register_ui_mounts_global_routes() -> None:
     assert "/api/global/capture" in paths
     assert "/api/global/promote" in paths
     assert "/api/global/promotions" in paths
+    assert "/api/ariadne/fit-scores" in paths

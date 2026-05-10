@@ -109,6 +109,8 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       },
       promotions: {},
       promotionBusy: {},
+      fitScores: [],
+      fitFormulaVersion: "",
       promoteTarget: {},
       capture: {
         body: "",
