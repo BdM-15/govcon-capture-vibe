@@ -1452,12 +1452,63 @@ window.theseusAriadneWikiLeaderboard = function theseusAriadneWikiLeaderboard(
     }));
 };
 
+const theseusAriadnePromotionStatusAccent = function (status) {
+  if (status === "processed") return "lime";
+  if (status === "refreshing") return "cyan";
+  if (status === "failed") return "magenta";
+  return "amber";
+};
+
+window.theseusAriadnePromotionRows = function theseusAriadnePromotionRows(
+  app,
+  limit = 8,
+) {
+  const activeWorkspace = app.ariadne?.active || app.stats?.workspace || "";
+  const byWorkspace = app.ariadne?.promotions || {};
+  return Object.entries(byWorkspace)
+    .flatMap(([workspace, promotions]) =>
+      theseusSafeArray(promotions).map((record) => {
+        const status = record.ingestion_status || "pending";
+        const busyKey = `${workspace}:${record.source}`;
+        return {
+          ...record,
+          workspace,
+          busy_key: busyKey,
+          busy: !!app.ariadne?.promotionBusy?.[busyKey],
+          is_active_workspace: workspace === activeWorkspace,
+          status,
+          status_accent: theseusAriadnePromotionStatusAccent(status),
+          updated_label: theseusAriadneTimeAgo(
+            record.last_refresh_at || record.updated_at || record.promoted_at,
+          ),
+        };
+      }),
+    )
+    .sort((left, right) => {
+      const leftTime = Date.parse(
+        left.last_refresh_at || left.updated_at || left.promoted_at || "",
+      );
+      const rightTime = Date.parse(
+        right.last_refresh_at || right.updated_at || right.promoted_at || "",
+      );
+      return (rightTime || 0) - (leftTime || 0);
+    })
+    .slice(0, limit);
+};
+
 window.theseusAriadneKnowledgeFitSeeds = function theseusAriadneKnowledgeFitSeeds(
   app,
 ) {
   const wiki = theseusAriadneBucket(app, "llm-wiki");
   const rows = window.theseusAriadneWorkspaceRows(app);
   const readyRows = rows.filter((row) => (row.entities || 0) > 0);
+  const promotions = window.theseusAriadnePromotionRows(app, 999);
+  const processedPromotions = promotions.filter(
+    (record) => record.status === "processed",
+  );
+  const pendingPromotions = promotions.filter(
+    (record) => record.status !== "processed",
+  );
   return [
     {
       label: "capability wiki",
@@ -1474,11 +1525,13 @@ window.theseusAriadneKnowledgeFitSeeds = function theseusAriadneKnowledgeFitSeed
       accent: "cyan",
     },
     {
-      label: "fit score",
-      value: "174.8",
-      detail: "defer scoring until ontology promoter + wiki round-trip exists",
-      icon: "gauge",
-      accent: "amber",
+      label: "promoted sources",
+      value: processedPromotions.length,
+      detail: pendingPromotions.length
+        ? `${pendingPromotions.length} pending refresh`
+        : "manifest-backed round-trip sources",
+      icon: "refresh-cw",
+      accent: processedPromotions.length ? "lime" : "amber",
     },
   ];
 };
@@ -1687,6 +1740,27 @@ window.theseusLoadAriadneBucket = async function theseusLoadAriadneBucket(
   app.ariadne.buckets[bucket] = response.entries || [];
 };
 
+window.theseusLoadAriadnePromotions = async function theseusLoadAriadnePromotions(
+  app,
+  workspace,
+) {
+  if (!workspace) return;
+  try {
+    const response = await app.api(
+      `/api/global/promotions?workspace=${encodeURIComponent(workspace)}&active_only=true`,
+    );
+    app.ariadne.promotions = {
+      ...(app.ariadne.promotions || {}),
+      [workspace]: response.promotions || [],
+    };
+  } catch {
+    app.ariadne.promotions = {
+      ...(app.ariadne.promotions || {}),
+      [workspace]: [],
+    };
+  }
+};
+
 window.theseusLoadAriadne = async function theseusLoadAriadne(app) {
   if (!app.ariadne) return;
   app.ariadne.loading = true;
@@ -1702,6 +1776,17 @@ window.theseusLoadAriadne = async function theseusLoadAriadne(app) {
     await Promise.all(
       ARIADNE_BUCKETS.map((bucket) =>
         window.theseusLoadAriadneBucket(app, bucket),
+      ),
+    );
+    const promotionWorkspaces = Array.from(
+      new Set([
+        app.ariadne.active,
+        ...window.theseusAriadneWorkspaceRows(app).map((row) => row.name),
+      ]),
+    ).filter(Boolean);
+    await Promise.all(
+      promotionWorkspaces.map((workspace) =>
+        window.theseusLoadAriadnePromotions(app, workspace),
       ),
     );
     app.ariadne.loaded = true;
@@ -1765,9 +1850,71 @@ window.theseusPromoteAriadneNote = async function theseusPromoteAriadneNote(
     delete app.ariadne.promoteTarget[path];
     app.toast(`Promoted to ${workspace}`, "success");
     await window.theseusLoadAriadneBucket(app, "inbox");
+    await window.theseusLoadAriadnePromotions(app, workspace);
   } catch (error) {
     app.toast(`Promote failed: ${error.message || error}`, "error");
   } finally {
+    window.theseusAfterRender(app);
+  }
+};
+
+window.theseusRefreshAriadnePromotion = async function theseusRefreshAriadnePromotion(
+  app,
+  promotion,
+) {
+  if (!promotion?.source || !promotion?.workspace) return;
+  const busyKey = `${promotion.workspace}:${promotion.source}`;
+  app.ariadne.promotionBusy = {
+    ...(app.ariadne.promotionBusy || {}),
+    [busyKey]: true,
+  };
+  try {
+    await app.api("/api/global/promote/refresh", {
+      method: "POST",
+      body: JSON.stringify({
+        path: promotion.source,
+        workspace: promotion.workspace,
+        delete_existing: true,
+      }),
+    });
+    app.toast(`Refreshed ${promotion.source}`, "success");
+    await window.theseusLoadAriadnePromotions(app, promotion.workspace);
+  } catch (error) {
+    app.toast(`Refresh failed: ${error.message || error}`, "error");
+  } finally {
+    const nextBusy = { ...(app.ariadne.promotionBusy || {}) };
+    delete nextBusy[busyKey];
+    app.ariadne.promotionBusy = nextBusy;
+    window.theseusAfterRender(app);
+  }
+};
+
+window.theseusUnpromoteAriadneNote = async function theseusUnpromoteAriadneNote(
+  app,
+  promotion,
+) {
+  if (!promotion?.source || !promotion?.workspace) return;
+  const busyKey = `${promotion.workspace}:${promotion.source}`;
+  app.ariadne.promotionBusy = {
+    ...(app.ariadne.promotionBusy || {}),
+    [busyKey]: true,
+  };
+  try {
+    await app.api("/api/global/promote", {
+      method: "DELETE",
+      body: JSON.stringify({
+        path: promotion.source,
+        workspace: promotion.workspace,
+      }),
+    });
+    app.toast(`Unpromoted ${promotion.source}`, "success");
+    await window.theseusLoadAriadnePromotions(app, promotion.workspace);
+  } catch (error) {
+    app.toast(`Unpromote failed: ${error.message || error}`, "error");
+  } finally {
+    const nextBusy = { ...(app.ariadne.promotionBusy || {}) };
+    delete nextBusy[busyKey];
+    app.ariadne.promotionBusy = nextBusy;
     window.theseusAfterRender(app);
   }
 };

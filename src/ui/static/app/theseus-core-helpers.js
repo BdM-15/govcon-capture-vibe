@@ -90,8 +90,10 @@ window.theseusInit = async function theseusInit(app) {
     "ariadne.inventory",
     "ariadne.buckets.inbox",
     "ariadne.buckets.notes",
-    "ariadne.buckets.llm-wiki",
+    "ariadne.buckets['llm-wiki']",
     "ariadne.buckets.intel",
+    "ariadne.promotions",
+    "ariadne.promotionBusy",
   ]);
 
   app.$watch("currentChat", () =>

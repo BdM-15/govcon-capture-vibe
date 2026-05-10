@@ -107,6 +107,8 @@ window.createTheseusInitialState = function createTheseusInitialState() {
         "llm-wiki": [],
         intel: [],
       },
+      promotions: {},
+      promotionBusy: {},
       promoteTarget: {},
       capture: {
         body: "",

@@ -124,6 +124,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusAriadneKnowledgeFitSeeds(this);
     },
 
+    ariadnePromotionRows(limit = 8) {
+      return window.theseusAriadnePromotionRows(this, limit);
+    },
+
     ariadneAgentOpsSummary() {
       return window.theseusAriadneAgentOpsSummary(this);
     },
@@ -166,6 +170,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
 
     async promoteAriadneNote(path) {
       return window.theseusPromoteAriadneNote(this, path);
+    },
+
+    async refreshAriadnePromotion(promotion) {
+      return window.theseusRefreshAriadnePromotion(this, promotion);
+    },
+
+    async unpromoteAriadneNote(promotion) {
+      return window.theseusUnpromoteAriadneNote(this, promotion);
     },
 
     async activateAriadneWorkspace(name) {
