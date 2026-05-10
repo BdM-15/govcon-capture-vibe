@@ -97,6 +97,9 @@ def test_register_ui_mounts_dashboard() -> None:
     assert "data-testid=\"ariadne-opportunity-cards\"" in resp.text
     assert "data-testid=\"ariadne-stage-board\"" in resp.text
     assert "data-testid=\"ariadne-view-decision-queue\"" in resp.text
+    assert "data-testid=\"ariadne-decision-summary\"" in resp.text
+    assert "data-testid=\"ariadne-view-intel-desk\"" in resp.text
+    assert "data-testid=\"ariadne-intel-radar\"" in resp.text
     assert "data-testid=\"ariadne-view-opp-360\"" in resp.text
     assert "data-testid=\"ariadne-view-knowledge\"" in resp.text
     assert "data-testid=\"ariadne-view-agent-ops\"" in resp.text

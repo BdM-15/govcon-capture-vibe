@@ -84,6 +84,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusAriadneDecisionQueue(this, limit);
     },
 
+    ariadneDecisionSummary() {
+      return window.theseusAriadneDecisionSummary(this);
+    },
+
+    ariadneDecisionEscalations(limit = 4) {
+      return window.theseusAriadneDecisionEscalations(this, limit);
+    },
+
     ariadneTodayFocus(limit = 4) {
       return window.theseusAriadneTodayFocus(this, limit);
     },
@@ -102,6 +110,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
 
     ariadneKnowledgeFeed(limit = 12) {
       return window.theseusAriadneKnowledgeFeed(this, limit);
+    },
+
+    ariadneIntelSummary() {
+      return window.theseusAriadneIntelSummary(this);
+    },
+
+    ariadneIntelTargets(limit = 6) {
+      return window.theseusAriadneIntelTargets(this, limit);
     },
 
     ariadneStageBoard() {

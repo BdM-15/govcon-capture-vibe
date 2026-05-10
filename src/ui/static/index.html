@@ -1501,6 +1501,40 @@
                 </div>
                 <span class="text-[11px] font-mono text-slate-500" x-text="ariadneDecisionQueue(999).length + ' queued'"></span>
               </div>
+              <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4" data-testid="ariadne-decision-summary">
+                <template x-for="item in ariadneDecisionSummary()" :key="item.label">
+                  <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
+                        <div class="text-[10px] uppercase tracking-[0.14em] font-mono text-slate-500" x-text="item.label"></div>
+                        <div class="mt-2 text-2xl font-semibold" :class="'text-neon-' + item.accent" x-text="item.value"></div>
+                        <div class="mt-1 text-[11px] text-slate-500" x-text="item.detail"></div>
+                      </div>
+                      <div class="icon-tile" :class="'text-neon-' + item.accent">
+                        <i :data-lucide="item.icon" class="w-4 h-4"></i>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+              <div class="rounded-lg border border-neon-magenta/25 bg-neon-magenta/5 p-3 mb-4">
+                <div class="flex items-center justify-between gap-3 mb-2">
+                  <div class="text-[11px] uppercase tracking-[0.16em] font-mono text-neon-magenta">Escalate first</div>
+                  <span class="text-[10px] font-mono text-slate-500">top pressure</span>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-2">
+                  <template x-for="item in ariadneDecisionEscalations()" :key="item.key">
+                    <button class="rounded-lg border border-edge bg-ink-900/60 px-3 py-2 text-left hover:border-neon-magenta/35 transition" @click="activateAriadneWorkspace(item.workspace)">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-sm font-semibold text-slate-100" x-text="item.workspace"></span>
+                        <span class="pill border text-[10px]" :class="item.stage_class" x-text="item.stage"></span>
+                      </div>
+                      <div class="mt-1 text-[12px] text-slate-300" x-text="item.primary_reason"></div>
+                      <div class="mt-1 text-[10px] font-mono text-slate-600" x-text="item.extra_reasons ? '+' + item.extra_reasons + ' more signal(s)' : 'single driving reason'"></div>
+                    </button>
+                  </template>
+                </div>
+              </div>
               <div x-show="!ariadneDecisionQueue(999).length" class="text-xs font-mono text-slate-600 py-6 text-center">
                 No decision pressure detected.
               </div>
@@ -1525,6 +1559,97 @@
                             </li>
                           </template>
                         </ul>
+
+                        <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)] gap-4 mb-5" x-show="ariadneIsView('intel-desk')" data-testid="ariadne-view-intel-desk">
+                          <div class="card card-accent accent-magenta p-5" data-testid="ariadne-intel-radar">
+                            <div class="flex items-center justify-between gap-3 mb-4">
+                              <div>
+                                <h2 class="font-semibold flex items-center gap-2">
+                                  <i data-lucide="radar" class="w-4 h-4 text-neon-magenta"></i>
+                                  Intel Radar
+                                </h2>
+                                <div class="text-xs text-slate-500 mt-1">
+                                  Freshness, gate pressure, knowledge coverage.
+                                </div>
+                              </div>
+                              <span class="text-[11px] font-mono text-slate-500">cross-opp watch</span>
+                            </div>
+                            <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
+                              <template x-for="item in ariadneIntelSummary()" :key="item.label">
+                                <div class="rounded-lg border border-edge bg-ink-900/60 p-3">
+                                  <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                      <div class="text-[10px] uppercase tracking-[0.14em] font-mono text-slate-500" x-text="item.label"></div>
+                                      <div class="mt-2 text-2xl font-semibold" :class="'text-neon-' + item.accent" x-text="item.value"></div>
+                                      <div class="mt-1 text-[11px] text-slate-500" x-text="item.detail"></div>
+                                    </div>
+                                    <div class="icon-tile" :class="'text-neon-' + item.accent">
+                                      <i :data-lucide="item.icon" class="w-4 h-4"></i>
+                                    </div>
+                                  </div>
+                                </div>
+                              </template>
+                            </div>
+                            <div>
+                              <div class="text-[11px] uppercase tracking-[0.16em] font-mono text-neon-magenta mb-2">Latest intel feed</div>
+                              <div x-show="!ariadneQueueItems('intel', 999).length" class="text-xs font-mono text-slate-600 py-4 text-center">
+                                No intel yet.
+                              </div>
+                              <div class="space-y-2">
+                                <template x-for="item in ariadneQueueItems('intel', 5)" :key="item.path">
+                                  <div class="rounded-lg border border-edge bg-ink-900/60 px-3 py-2.5">
+                                    <div class="text-sm font-semibold text-slate-100 truncate" x-text="item.frontmatter?.title || item.path"></div>
+                                    <div class="text-[10px] font-mono text-slate-600 truncate mt-1" x-text="item.path"></div>
+                                    <div class="markdown-preview mt-2" x-html="renderMd(item.preview)"></div>
+                                  </div>
+                                </template>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="card card-accent accent-cyan p-5">
+                            <div class="flex items-center justify-between gap-3 mb-4">
+                              <div>
+                                <h2 class="font-semibold flex items-center gap-2">
+                                  <i data-lucide="crosshair" class="w-4 h-4 text-neon-cyan"></i>
+                                  Refresh Targets
+                                </h2>
+                                <div class="text-xs text-slate-500 mt-1">
+                                  Which pursuits need new customer / competitor read next.
+                                </div>
+                              </div>
+                            </div>
+                            <div x-show="!ariadneIntelTargets().length" class="text-xs font-mono text-slate-600 py-6 text-center">
+                              No intel refresh targets right now.
+                            </div>
+                            <div class="space-y-2">
+                              <template x-for="item in ariadneIntelTargets()" :key="item.workspace">
+                                <div class="rounded-lg border border-edge bg-ink-900/60 px-3 py-3">
+                                  <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0 flex-1">
+                                      <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="text-sm font-semibold text-slate-100" x-text="item.workspace"></span>
+                                        <span class="pill border text-[10px]" :class="item.stage_class" x-text="item.stage"></span>
+                                      </div>
+                                      <div class="mt-1 text-[10px] font-mono text-slate-600">
+                                        pressure <span x-text="item.score"></span>
+                                        · intel <span x-text="item.intel_age_days === null ? 'none' : item.intel_age_days + 'd old'"></span>
+                                      </div>
+                                      <ul class="mt-2 space-y-1">
+                                        <template x-for="reason in item.reasons" :key="reason">
+                                          <li class="text-[12px] text-slate-400" x-text="reason"></li>
+                                        </template>
+                                      </ul>
+                                    </div>
+                                    <button class="pill bg-neon-magenta/10 border border-neon-magenta/40 text-neon-magenta px-2 py-1 text-[10px] shrink-0" @click="ariadne.capture.workspace = item.workspace; focusAriadneCapture('intel', 'intel-desk')">
+                                      Capture intel
+                                    </button>
+                                  </div>
+                                </div>
+                              </template>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                       <button
                         class="pill bg-neon-magenta/10 border border-neon-magenta/40 text-neon-magenta px-2 py-1 text-[10px] shrink-0"
