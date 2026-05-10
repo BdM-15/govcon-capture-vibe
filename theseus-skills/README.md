@@ -26,21 +26,21 @@ When adding a new skill, pick the tier first and set `metadata.developer_only` a
 
 Skills shown in the Theseus govcon UI. Query the active workspace KG and use govcon personas.
 
-| Skill                 | Source of truth                                                  | Theseus runtime adapter                                                           |
-| --------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| huashu-design         | `.github/skills/huashu-design/` (vendored — see UPSTREAM.md)     | `src/skills/manager.py` (auto)                                                    |
-| govcon-ontology       | `.github/skills/govcon-ontology/`                                | `src/skills/manager.py` (auto)                                                    |
-| proposal-generator    | `.github/skills/proposal-generator/`                             | `src/skills/manager.py` (auto)                                                    |
-| compliance-auditor    | `.github/skills/compliance-auditor/`                             | `src/skills/manager.py` (auto)                                                    |
-| competitive-intel     | `.github/skills/competitive-intel/`                              | `src/skills/manager.py` (auto)                                                    |
-| grill-me-govcon       | `.github/skills/grill-me-govcon/`                                | `src/skills/manager.py` (auto)                                                    |
-| grill-me-bid-strategy | `.github/skills/grill-me-bid-strategy/`                          | `src/skills/manager.py` (auto)                                                    |
-| grill-me-capture      | `.github/skills/grill-me-capture/`                               | `src/skills/manager.py` (auto)                                                    |
-| grill-me-proposal     | `.github/skills/grill-me-proposal/`                              | `src/skills/manager.py` (auto)                                                    |
-| grill-me-ptw          | `.github/skills/grill-me-ptw/`                                   | `src/skills/manager.py` (auto)                                                    |
+| Skill                 | Source of truth                                                  | Theseus runtime adapter                                                                   |
+| --------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| huashu-design         | `.github/skills/huashu-design/` (vendored — see UPSTREAM.md)     | `src/skills/manager.py` (auto)                                                            |
+| govcon-ontology       | `.github/skills/govcon-ontology/`                                | `src/skills/manager.py` (auto)                                                            |
+| proposal-generator    | `.github/skills/proposal-generator/`                             | `src/skills/manager.py` (auto)                                                            |
+| compliance-auditor    | `.github/skills/compliance-auditor/`                             | `src/skills/manager.py` (auto)                                                            |
+| competitive-intel     | `.github/skills/competitive-intel/`                              | `src/skills/manager.py` (auto)                                                            |
+| grill-me-govcon       | `.github/skills/grill-me-govcon/`                                | `src/skills/manager.py` (auto)                                                            |
+| grill-me-bid-strategy | `.github/skills/grill-me-bid-strategy/`                          | `src/skills/manager.py` (auto)                                                            |
+| grill-me-capture      | `.github/skills/grill-me-capture/`                               | `src/skills/manager.py` (auto)                                                            |
+| grill-me-proposal     | `.github/skills/grill-me-proposal/`                              | `src/skills/manager.py` (auto)                                                            |
+| grill-me-ptw          | `.github/skills/grill-me-ptw/`                                   | `src/skills/manager.py` (auto)                                                            |
 | global-idea-capturer  | `.github/skills/global-idea-capturer/`                           | Global-first capture to `global/inbox/`; workspace promotion deferred to `phase-promoter` |
-| obsidian-markdown     | `.github/skills/obsidian-markdown/` (vendored — see UPSTREAM.md) | Dual-purpose — powers MD authoring in workspace evergreen layer + dev note-taking |
-| idea-capturer         | `.github/skills/idea-capturer/` (vendored — see UPSTREAM.md)     | Dual-purpose — capture/brainstorm for both govcon ideation and dev research       |
+| obsidian-markdown     | `.github/skills/obsidian-markdown/` (vendored — see UPSTREAM.md) | Dual-purpose — powers MD authoring in workspace evergreen layer + dev note-taking         |
+| idea-capturer         | `.github/skills/idea-capturer/` (vendored — see UPSTREAM.md)     | Dual-purpose — capture/brainstorm for both govcon ideation and dev research               |
 
 ## Index — Developer-only skills
 
