@@ -39,6 +39,12 @@ class GlobalPromotePayload(BaseModel):
     workspace: str = Field(..., min_length=1, max_length=64)
 
 
+class GlobalUnpromotePayload(GlobalPromotePayload):
+    """Body for DELETE /api/global/promote."""
+
+    delete_target: bool = True
+
+
 def _slugify(text: str) -> str:
     normalized = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
     slug = re.sub(r"[^a-z0-9]+", "-", normalized.lower()).strip("-")
@@ -130,6 +136,38 @@ def register_global_routes(
                 payload.path,
                 workspace=payload.workspace,
                 workspace_root=workspace_root(),
+            )
+        except FileNotFoundError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        return JSONResponse(result)
+
+    @app.get("/api/global/promotions", tags=["theseus-ui"])
+    async def list_global_promotions(
+        workspace: str = Query(..., min_length=1, max_length=64),
+        active_only: bool = False,
+    ) -> JSONResponse:
+        store = store_factory()
+        try:
+            promotions = store.list_promotions(
+                workspace=workspace,
+                workspace_root=workspace_root(),
+                active_only=active_only,
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        return JSONResponse({"workspace": workspace, "promotions": promotions})
+
+    @app.delete("/api/global/promote", tags=["theseus-ui"])
+    async def unpromote_global_note(payload: GlobalUnpromotePayload) -> JSONResponse:
+        store = store_factory()
+        try:
+            result = store.unpromote(
+                payload.path,
+                workspace=payload.workspace,
+                workspace_root=workspace_root(),
+                delete_target=payload.delete_target,
             )
         except FileNotFoundError as exc:
             raise HTTPException(404, str(exc)) from exc

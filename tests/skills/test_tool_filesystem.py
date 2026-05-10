@@ -184,9 +184,9 @@ def test_tool_promote_global_note_copies_into_workspace_sources(tmp_path: Path) 
     result = _run(tool_promote_global_note(ctx, "notes/promote-me.md"))
 
     target = tmp_path / "repo" / "rag_storage" / "demo" / "sources" / "promote-me.md"
-    assert result.payload == {
-        "source": "notes/promote-me.md",
-        "workspace": "demo",
-        "target": str(target),
-    }
+    assert result.payload["source"] == "notes/promote-me.md"
+    assert result.payload["workspace"] == "demo"
+    assert result.payload["target"] == str(target)
+    assert result.payload["target_relative"] == "sources/promote-me.md"
+    assert result.payload["ingestion_status"] == "pending"
     assert target.read_text(encoding="utf-8") == content

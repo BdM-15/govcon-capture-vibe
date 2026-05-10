@@ -89,7 +89,44 @@ def test_global_promote_route_copies_note_into_workspace_sources(tmp_path: Path)
     assert response.status_code == 200, response.text
     target = tmp_path / "rag_storage" / "afcap6_drfp_171" / "sources" / "2026-05-09-promote.md"
     assert response.json()["target"] == str(target)
+    assert response.json()["target_relative"] == "sources/2026-05-09-promote.md"
+    assert response.json()["ingestion_status"] == "pending"
     assert target.read_text(encoding="utf-8") == _note("Promote this note")
+
+
+def test_global_promotions_route_lists_and_unpromotes_managed_source(tmp_path: Path) -> None:
+    client, store = _client(tmp_path)
+    store.write("notes/2026-05-09-promote.md", _note("Promote this note"))
+    promoted = client.post(
+        "/api/global/promote",
+        json={
+            "path": "notes/2026-05-09-promote.md",
+            "workspace": "afcap6_drfp_171",
+        },
+    )
+    assert promoted.status_code == 200, promoted.text
+
+    listed = client.get(
+        "/api/global/promotions",
+        params={"workspace": "afcap6_drfp_171", "active_only": True},
+    )
+
+    assert listed.status_code == 200, listed.text
+    assert listed.json()["promotions"][0]["source"] == "notes/2026-05-09-promote.md"
+    assert listed.json()["promotions"][0]["active"] is True
+
+    removed = client.request(
+        "DELETE",
+        "/api/global/promote",
+        json={
+            "path": "notes/2026-05-09-promote.md",
+            "workspace": "afcap6_drfp_171",
+        },
+    )
+
+    assert removed.status_code == 200, removed.text
+    assert removed.json()["deleted_target"] is True
+    assert not Path(promoted.json()["target"]).exists()
 
 
 def test_global_routes_reject_invalid_bucket_and_workspace(tmp_path: Path) -> None:
@@ -128,3 +165,4 @@ def test_register_ui_mounts_global_routes() -> None:
     assert "/api/global/inbox" in paths
     assert "/api/global/capture" in paths
     assert "/api/global/promote" in paths
+    assert "/api/global/promotions" in paths

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -64,12 +65,96 @@ def test_global_store_promote_copies_note_into_workspace_sources(tmp_path: Path)
     )
 
     expected = workspace_root / "afcap6_drfp_171" / "sources" / "2026-05-09-promote.md"
-    assert result == {
-        "source": "inbox/2026-05-09-promote.md",
-        "workspace": "afcap6_drfp_171",
-        "target": str(expected),
-    }
+    assert result["source"] == "inbox/2026-05-09-promote.md"
+    assert result["workspace"] == "afcap6_drfp_171"
+    assert result["target"] == str(expected)
+    assert result["target_relative"] == "sources/2026-05-09-promote.md"
+    assert result["ingestion_status"] == "pending"
     assert expected.read_text(encoding="utf-8") == content
+
+    manifest = json.loads(
+        (workspace_root / "afcap6_drfp_171" / "sources" / ".ariadne_promotions.json").read_text(
+            encoding="utf-8",
+        ),
+    )
+    assert manifest["version"] == 1
+    assert manifest["promotions"][0]["source"] == "inbox/2026-05-09-promote.md"
+    assert manifest["promotions"][0]["target"] == "sources/2026-05-09-promote.md"
+    assert manifest["promotions"][0]["active"] is True
+
+
+def test_global_store_promote_is_idempotent_and_listable(tmp_path: Path) -> None:
+    store = GlobalStore(root=tmp_path / "global")
+    workspace_root = tmp_path / "rag_storage"
+    content = _note(body="Promote me", workspace="afcap6_drfp_171")
+    store.write("notes/2026-05-09-promote.md", content)
+
+    first = store.promote(
+        "notes/2026-05-09-promote.md",
+        workspace="afcap6_drfp_171",
+        workspace_root=workspace_root,
+    )
+    second = store.promote(
+        "notes/2026-05-09-promote.md",
+        workspace="afcap6_drfp_171",
+        workspace_root=workspace_root,
+    )
+
+    promotions = store.list_promotions(
+        workspace="afcap6_drfp_171",
+        workspace_root=workspace_root,
+        active_only=True,
+    )
+    assert first["promotion_id"] == second["promotion_id"]
+    assert len(promotions) == 1
+    assert promotions[0]["source"] == "notes/2026-05-09-promote.md"
+
+
+def test_global_store_unpromote_removes_managed_target(tmp_path: Path) -> None:
+    store = GlobalStore(root=tmp_path / "global")
+    workspace_root = tmp_path / "rag_storage"
+    content = _note(body="Promote me", workspace="afcap6_drfp_171")
+    store.write("inbox/2026-05-09-promote.md", content)
+    promoted = store.promote(
+        "inbox/2026-05-09-promote.md",
+        workspace="afcap6_drfp_171",
+        workspace_root=workspace_root,
+    )
+
+    result = store.unpromote(
+        "inbox/2026-05-09-promote.md",
+        workspace="afcap6_drfp_171",
+        workspace_root=workspace_root,
+    )
+
+    assert result["promotion_id"] == promoted["promotion_id"]
+    assert result["deleted_target"] is True
+    assert not Path(promoted["target"]).exists()
+    promotions = store.list_promotions(
+        workspace="afcap6_drfp_171",
+        workspace_root=workspace_root,
+    )
+    assert promotions[0]["active"] is False
+    assert promotions[0]["revoked_at"]
+
+
+def test_global_store_unpromote_refuses_modified_target(tmp_path: Path) -> None:
+    store = GlobalStore(root=tmp_path / "global")
+    workspace_root = tmp_path / "rag_storage"
+    store.write("inbox/2026-05-09-promote.md", _note(body="Promote me"))
+    promoted = store.promote(
+        "inbox/2026-05-09-promote.md",
+        workspace="afcap6_drfp_171",
+        workspace_root=workspace_root,
+    )
+    Path(promoted["target"]).write_text("manual edit\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Promoted target changed"):
+        store.unpromote(
+            "inbox/2026-05-09-promote.md",
+            workspace="afcap6_drfp_171",
+            workspace_root=workspace_root,
+        )
 
 
 def test_global_store_rejects_path_escape(tmp_path: Path) -> None:
