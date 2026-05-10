@@ -144,6 +144,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusAriadneIntelSummary(this);
     },
 
+    ariadnePatternFeed(limit = 5) {
+      return window.theseusAriadnePatternFeed(this, limit);
+    },
+
     ariadneIntelTargets(limit = 6) {
       return window.theseusAriadneIntelTargets(this, limit);
     },

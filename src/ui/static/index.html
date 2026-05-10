@@ -1617,6 +1617,24 @@
                     </template>
                   </div>
                 </div>
+                <div class="mt-4" data-testid="ariadne-pattern-feed">
+                  <div class="text-[11px] uppercase tracking-[0.16em] font-mono text-neon-cyan mb-2">Cross-opp pattern feed</div>
+                  <div x-show="!ariadnePatternFeed(999).length" class="text-xs font-mono text-slate-600 py-4 text-center">
+                    No reusable patterns yet.
+                  </div>
+                  <div class="space-y-2">
+                    <template x-for="item in ariadnePatternFeed(4)" :key="item.path + '-pattern-feed'">
+                      <div class="rounded-lg border border-edge bg-ink-900/60 px-3 py-2.5">
+                        <div class="flex items-center justify-between gap-3">
+                          <div class="text-sm font-semibold text-slate-100 truncate" x-text="item.title"></div>
+                          <div class="text-[10px] font-mono text-slate-600 shrink-0" x-text="item.age_label"></div>
+                        </div>
+                        <div class="text-[10px] font-mono text-slate-600 truncate mt-1" x-text="item.path"></div>
+                        <div class="markdown-preview mt-2" x-html="renderMd(item.preview)"></div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
               </div>
 
               <div class="card card-accent accent-cyan p-5">

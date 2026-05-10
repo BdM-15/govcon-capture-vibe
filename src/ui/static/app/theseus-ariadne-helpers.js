@@ -1040,6 +1040,10 @@ const theseusAriadneLatestModified = function theseusAriadneLatestModified(entri
   return entries.reduce((max, entry) => Math.max(max, entry.modified_at || 0), 0);
 };
 
+const theseusAriadneEntryTags = function theseusAriadneEntryTags(entry) {
+  return (entry?.frontmatter?.tags || []).map((tag) => String(tag).toLowerCase());
+};
+
 const theseusAriadneEntryTitle = function theseusAriadneEntryTitle(entry) {
   return entry?.frontmatter?.title || entry?.path || "untitled";
 };
@@ -1681,6 +1685,22 @@ window.theseusAriadneIntelSummary = function theseusAriadneIntelSummary(app) {
       accent: "lime",
     },
   ];
+};
+
+window.theseusAriadnePatternFeed = function theseusAriadnePatternFeed(
+  app,
+  limit = 5,
+) {
+  return theseusAriadneBucket(app, "intel")
+    .filter((entry) => theseusAriadneEntryTags(entry).includes("pattern"))
+    .slice()
+    .sort((left, right) => (right.modified_at || 0) - (left.modified_at || 0))
+    .slice(0, limit)
+    .map((entry) => ({
+      ...entry,
+      title: theseusAriadneEntryTitle(entry),
+      age_label: theseusAriadneTimeAgo(entry.modified_at),
+    }));
 };
 
 window.theseusAriadneIntelTargets = function theseusAriadneIntelTargets(
