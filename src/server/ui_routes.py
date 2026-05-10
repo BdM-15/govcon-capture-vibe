@@ -183,6 +183,7 @@ def _register_feature_routes(
     query_func: QueryFunc,
     data_func: QueryDataFunc | None,
     llm_func: "LlmFunc" | None,
+    promotion_refresh_func: Callable[..., Awaitable[dict[str, Any]]] | None = None,
 ) -> None:
     """Register all feature-owner route modules behind the UI shell."""
     register_dashboard_stats_routes(
@@ -200,6 +201,7 @@ def _register_feature_routes(
         app,
         workspace_root=context.working_dir,
         today=lambda: context.now().split("T", 1)[0],
+        promotion_refresh_func=promotion_refresh_func,
     )
 
     register_chat_routes(
@@ -258,11 +260,48 @@ def _register_feature_routes(
 LlmFunc = Callable[[str], Awaitable[str]]
 
 
+def _build_promotion_refresh_func(
+    *,
+    context: UIRouteContext,
+    rag_instance: Any | None,
+) -> Callable[..., Awaitable[dict[str, Any]]] | None:
+    if rag_instance is None:
+        return None
+
+    from src.core.global_store import GlobalStore
+    from src.core.ontology_promoter import OntologyPromoter
+    from src.server.routes import process_document_with_semantic_inference
+
+    async def refresh_promotion(
+        *,
+        path: str,
+        workspace: str,
+        delete_existing: bool = True,
+        delete_llm_cache: bool = False,
+    ) -> dict[str, Any]:
+        promoter = OntologyPromoter(
+            store=GlobalStore(),
+            workspace_root=context.working_dir(),
+            rag_instance=rag_instance,
+            process_document_func=process_document_with_semantic_inference,
+            active_workspace=context.workspace_name(),
+        )
+        return await promoter.refresh(
+            path,
+            workspace=workspace,
+            delete_existing=delete_existing,
+            delete_llm_cache=delete_llm_cache,
+        )
+
+    return refresh_promotion
+
+
 def register_ui(
     app: FastAPI,
     query_func: QueryFunc,
     data_func: QueryDataFunc | None = None,
     llm_func: LlmFunc | None = None,
+    rag_instance: Any | None = None,
 ) -> None:
     """
     Register the Project Theseus UI routes on an existing FastAPI app.
@@ -311,6 +350,10 @@ def register_ui(
         query_func=query_func,
         data_func=data_func,
         llm_func=llm_func,
+        promotion_refresh_func=_build_promotion_refresh_func(
+            context=context,
+            rag_instance=rag_instance,
+        ),
     )
 
     logger.info("✅ Project Theseus UI mounted at /ui (static: %s)", _STATIC_DIR)

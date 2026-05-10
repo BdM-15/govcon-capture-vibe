@@ -138,6 +138,31 @@ def test_global_store_unpromote_removes_managed_target(tmp_path: Path) -> None:
     assert promotions[0]["revoked_at"]
 
 
+def test_global_store_update_promotion_ingestion_records_doc_id(tmp_path: Path) -> None:
+    store = GlobalStore(root=tmp_path / "global")
+    workspace_root = tmp_path / "rag_storage"
+    store.write("notes/2026-05-09-promote.md", _note(body="Promote me"))
+    store.promote(
+        "notes/2026-05-09-promote.md",
+        workspace="afcap6_drfp_171",
+        workspace_root=workspace_root,
+    )
+
+    record = store.update_promotion_ingestion(
+        "notes/2026-05-09-promote.md",
+        workspace="afcap6_drfp_171",
+        workspace_root=workspace_root,
+        ingestion_status="processed",
+        doc_id="doc-123",
+        refresh_result={"status": "success"},
+    )
+
+    assert record["ingestion_status"] == "processed"
+    assert record["doc_id"] == "doc-123"
+    assert record["last_refresh_result"] == {"status": "success"}
+    assert record["last_refresh_at"]
+
+
 def test_global_store_unpromote_refuses_modified_target(tmp_path: Path) -> None:
     store = GlobalStore(root=tmp_path / "global")
     workspace_root = tmp_path / "rag_storage"

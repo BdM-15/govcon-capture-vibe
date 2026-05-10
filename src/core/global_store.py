@@ -276,6 +276,42 @@ class GlobalStore:
         promotions.sort(key=lambda record: str(record.get("updated_at") or ""), reverse=True)
         return promotions
 
+    def update_promotion_ingestion(
+        self,
+        path: str,
+        *,
+        workspace: str,
+        ingestion_status: str,
+        workspace_root: str | Path | None = None,
+        doc_id: str | None = None,
+        refresh_result: dict[str, Any] | None = None,
+        error: str | None = None,
+    ) -> dict[str, Any]:
+        source = self._resolve(path)
+        source_relative = source.relative_to(self.root).as_posix()
+        workspace_dir = self._workspace_dir(workspace_root, workspace)
+        manifest = self._read_promotion_manifest(workspace_dir)
+        promotion_id = self._promotion_id(source_relative)
+        record = self._find_promotion(manifest, promotion_id)
+        if record is None or not record.get("active"):
+            raise FileNotFoundError(f"Promotion not found: {source_relative} -> {workspace}")
+
+        now = self._utc_now()
+        record["ingestion_status"] = ingestion_status
+        record["updated_at"] = now
+        record["last_refresh_at"] = now
+        if doc_id is not None:
+            record["doc_id"] = doc_id
+        if refresh_result is not None:
+            record["last_refresh_result"] = self._json_safe(refresh_result)
+        if error:
+            record["ingestion_error"] = error
+        else:
+            record.pop("ingestion_error", None)
+
+        self._write_promotion_manifest(workspace_dir, manifest)
+        return dict(record)
+
     def unpromote(
         self,
         path: str,

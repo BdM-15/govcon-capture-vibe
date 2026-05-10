@@ -345,7 +345,13 @@ def build_server_runtime(
     register_custom_ingestion_routes_fn(app, rag_instance, logger=logger)
 
     ui_bridges = make_ui_query_bridges_fn(rag_instance, logger=logger)
-    register_ui_fn(app, ui_bridges.query, ui_bridges.query_data, llm_func=ui_bridges.llm)
+    register_ui_fn(
+        app,
+        ui_bridges.query,
+        ui_bridges.query_data,
+        llm_func=ui_bridges.llm,
+        rag_instance=rag_instance,
+    )
 
     graph_storage = (
         global_args_obj.graph_storage

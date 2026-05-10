@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 import re
 import unicodedata
+from collections.abc import Awaitable
 from pathlib import Path
 from typing import Any, Callable
 
@@ -16,6 +17,7 @@ from src.core.global_store import GlobalStore
 
 _GLOBAL_BUCKETS = ("inbox", "notes", "llm-wiki", "intel")
 _BUCKET_SET = frozenset(_GLOBAL_BUCKETS)
+PromotionRefreshFunc = Callable[..., Awaitable[dict[str, Any]]]
 
 
 class GlobalCapturePayload(BaseModel):
@@ -43,6 +45,13 @@ class GlobalUnpromotePayload(GlobalPromotePayload):
     """Body for DELETE /api/global/promote."""
 
     delete_target: bool = True
+
+
+class GlobalRefreshPayload(GlobalPromotePayload):
+    """Body for POST /api/global/promote/refresh."""
+
+    delete_existing: bool = True
+    delete_llm_cache: bool = False
 
 
 def _slugify(text: str) -> str:
@@ -83,6 +92,7 @@ def register_global_routes(
     store_factory: Callable[[], GlobalStore] | None = None,
     workspace_root: Callable[[], Path] | None = None,
     today: Callable[[], str] | None = None,
+    promotion_refresh_func: PromotionRefreshFunc | None = None,
 ) -> None:
     """Register `/api/global/*` routes backed by `GlobalStore`."""
     if store_factory is None:
@@ -174,6 +184,23 @@ def register_global_routes(
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
         return JSONResponse(result)
+
+    if promotion_refresh_func is not None:
+
+        @app.post("/api/global/promote/refresh", tags=["theseus-ui"])
+        async def refresh_global_promotion(payload: GlobalRefreshPayload) -> JSONResponse:
+            try:
+                result = await promotion_refresh_func(
+                    path=payload.path,
+                    workspace=payload.workspace,
+                    delete_existing=payload.delete_existing,
+                    delete_llm_cache=payload.delete_llm_cache,
+                )
+            except FileNotFoundError as exc:
+                raise HTTPException(404, str(exc)) from exc
+            except ValueError as exc:
+                raise HTTPException(400, str(exc)) from exc
+            return JSONResponse(result)
 
 
 __all__ = ["register_global_routes"]

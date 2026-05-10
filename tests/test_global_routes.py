@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -127,6 +128,46 @@ def test_global_promotions_route_lists_and_unpromotes_managed_source(tmp_path: P
     assert removed.status_code == 200, removed.text
     assert removed.json()["deleted_target"] is True
     assert not Path(promoted.json()["target"]).exists()
+
+
+def test_global_promote_refresh_route_invokes_refresh_func(tmp_path: Path) -> None:
+    app = FastAPI()
+    store = GlobalStore(root=tmp_path / "global")
+    calls: list[dict[str, Any]] = []
+
+    async def refresh(**kwargs) -> dict[str, Any]:
+        calls.append(kwargs)
+        return {"status": "processed", "doc_id": "doc-1"}
+
+    register_global_routes(
+        app,
+        store_factory=lambda: store,
+        workspace_root=lambda: tmp_path / "rag_storage",
+        today=lambda: "2026-05-09",
+        promotion_refresh_func=refresh,
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/global/promote/refresh",
+        json={
+            "path": "notes/2026-05-09-promote.md",
+            "workspace": "afcap6_drfp_171",
+            "delete_existing": True,
+            "delete_llm_cache": True,
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {"status": "processed", "doc_id": "doc-1"}
+    assert calls == [
+        {
+            "path": "notes/2026-05-09-promote.md",
+            "workspace": "afcap6_drfp_171",
+            "delete_existing": True,
+            "delete_llm_cache": True,
+        }
+    ]
 
 
 def test_global_routes_reject_invalid_bucket_and_workspace(tmp_path: Path) -> None:

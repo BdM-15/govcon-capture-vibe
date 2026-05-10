@@ -362,6 +362,7 @@ async def process_document_with_semantic_inference(
 
         return {
             "status": "success",
+            "doc_id": doc_id,
             "relationships_inferred": 0,
             "method": "native_rag_anything",
             "message": "✅ Document processed via RAG-Anything native pipeline.",

@@ -64,8 +64,8 @@ def test_build_server_runtime_wires_app_routes_ui_and_banner() -> None:
         make_ui_query_bridges_fn=lambda rag_instance, *, logger: calls.append(
             ("make_ui_query_bridges", rag_instance, logger)
         ) or ui_bridges,
-        register_ui_fn=lambda built_app, query, query_data, *, llm_func: calls.append(
-            ("register_ui", built_app, query, query_data, llm_func)
+        register_ui_fn=lambda built_app, query, query_data, *, llm_func, rag_instance: calls.append(
+            ("register_ui", built_app, query, query_data, llm_func, rag_instance)
         ),
         build_startup_banner_items_fn=lambda settings, **kwargs: calls.append(
             ("build_startup_banner_items", settings, kwargs)
@@ -82,7 +82,7 @@ def test_build_server_runtime_wires_app_routes_ui_and_banner() -> None:
         ("create_app", global_args),
         ("register_custom_ingestion_routes", app, "rag-instance", logger),
         ("make_ui_query_bridges", "rag-instance", logger),
-        ("register_ui", app, "query-fn", "query-data-fn", "llm-fn"),
+        ("register_ui", app, "query-fn", "query-data-fn", "llm-fn", "rag-instance"),
         (
             "build_startup_banner_items",
             SimpleNamespace(workspace="demo"),

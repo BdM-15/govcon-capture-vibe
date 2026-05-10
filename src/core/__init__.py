@@ -8,6 +8,7 @@ from src.core.config import get_settings, reset_settings, Settings
 from src.core.env import env_float, env_int
 from src.core.global_store import GlobalStore
 from src.core.neo4j_config import Neo4jConnectionConfig, get_neo4j_connection_config
+from src.core.ontology_promoter import OntologyPromoter
 from src.core.exceptions import (
     GovConError,
     ConfigurationError,
@@ -27,6 +28,7 @@ __all__ = [
     "env_float",
     "env_int",
     "GlobalStore",
+    "OntologyPromoter",
     "Neo4jConnectionConfig",
     "get_neo4j_connection_config",
     # Exceptions
