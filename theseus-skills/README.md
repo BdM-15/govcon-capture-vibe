@@ -28,24 +28,24 @@ Skills shown in the Theseus govcon UI. Query the active workspace KG and use gov
 
 | Skill              | Source of truth                                              | Theseus runtime adapter        |
 | ------------------ | ------------------------------------------------------------ | ------------------------------ |
-| huashu-design         | `.github/skills/huashu-design/` (vendored — see UPSTREAM.md) | `src/skills/manager.py` (auto) |
-| govcon-ontology       | `.github/skills/govcon-ontology/`                            | `src/skills/manager.py` (auto) |
-| proposal-generator    | `.github/skills/proposal-generator/`                         | `src/skills/manager.py` (auto) |
-| compliance-auditor    | `.github/skills/compliance-auditor/`                         | `src/skills/manager.py` (auto) |
-| competitive-intel     | `.github/skills/competitive-intel/`                          | `src/skills/manager.py` (auto) |
+| huashu-design      | `.github/skills/huashu-design/` (vendored — see UPSTREAM.md) | `src/skills/manager.py` (auto) |
+| govcon-ontology    | `.github/skills/govcon-ontology/`                            | `src/skills/manager.py` (auto) |
+| proposal-generator | `.github/skills/proposal-generator/`                         | `src/skills/manager.py` (auto) |
+| compliance-auditor | `.github/skills/compliance-auditor/`                         | `src/skills/manager.py` (auto) |
+| competitive-intel  | `.github/skills/competitive-intel/`                          | `src/skills/manager.py` (auto) |
 
 ## Index — Developer-only skills
 
 Not shown in the Theseus UI (`metadata.developer_only: true`). Invokable from Copilot Chat only. Do not query the KG or govcon workspace.
 
-| Skill                         | Source of truth                                                              | Notes                                                 |
-| ----------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------- |
-| improve-codebase-architecture | `.github/skills/improve-codebase-architecture/` (vendored — see UPSTREAM.md) | Uses `graphify-out/GRAPH_REPORT.md` as dependency map |
-| caveman                       | `.github/skills/caveman/` (vendored — see UPSTREAM.md)                       | Ultra-compressed communication mode; no KG access     |
-| grill-me                      | `.github/skills/grill-me/` (vendored — see UPSTREAM.md)                      | Generic plan stress-tester; govcon variants in platform tier above  |
-| to-prd                        | `.github/skills/to-prd/` (vendored — see UPSTREAM.md)                        | Converts conversation context to PRD; files to GitHub Issues |
-| to-issues                     | `.github/skills/to-issues/` (vendored — see UPSTREAM.md)                     | Breaks plan into vertical-slice GitHub issues                |
-| tdd                           | `.github/skills/tdd/` (vendored — see UPSTREAM.md)                           | Red-green-refactor TDD loop with 5 reference files           |
+| Skill                         | Source of truth                                                              | Notes                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| improve-codebase-architecture | `.github/skills/improve-codebase-architecture/` (vendored — see UPSTREAM.md) | Uses `graphify-out/GRAPH_REPORT.md` as dependency map              |
+| caveman                       | `.github/skills/caveman/` (vendored — see UPSTREAM.md)                       | Ultra-compressed communication mode; no KG access                  |
+| grill-me                      | `.github/skills/grill-me/` (vendored — see UPSTREAM.md)                      | Generic plan stress-tester; govcon variants in platform tier above |
+| to-prd                        | `.github/skills/to-prd/` (vendored — see UPSTREAM.md)                        | Converts conversation context to PRD; files to GitHub Issues       |
+| to-issues                     | `.github/skills/to-issues/` (vendored — see UPSTREAM.md)                     | Breaks plan into vertical-slice GitHub issues                      |
+| tdd                           | `.github/skills/tdd/` (vendored — see UPSTREAM.md)                           | Red-green-refactor TDD loop with 5 reference files                 |
 
 ## Adding a Theseus-only Test Fixture
 
