@@ -1044,6 +1044,35 @@ const theseusAriadneEntryTags = function theseusAriadneEntryTags(entry) {
   return (entry?.frontmatter?.tags || []).map((tag) => String(tag).toLowerCase());
 };
 
+const ARIADNE_PATTERN_MODES = ["capture", "intel", "proposal", "color-team"];
+
+const theseusAriadnePatternLabel = function theseusAriadnePatternLabel(value) {
+  return value === "color-team" ? "color team" : value;
+};
+
+const theseusAriadnePatternFilter = function theseusAriadnePatternFilter(app) {
+  const value = String(app?.ariadne?.patternFilter || "all")
+    .trim()
+    .toLowerCase();
+  return value === "all" || ARIADNE_PATTERN_MODES.includes(value) ? value : "all";
+};
+
+const theseusAriadnePatternEntries = function theseusAriadnePatternEntries(app) {
+  return theseusAriadneBucket(app, "intel")
+    .filter((entry) => theseusAriadneEntryTags(entry).includes("pattern"))
+    .slice()
+    .sort((left, right) => (right.modified_at || 0) - (left.modified_at || 0))
+    .map((entry) => {
+      const tags = theseusAriadneEntryTags(entry);
+      return {
+        ...entry,
+        title: theseusAriadneEntryTitle(entry),
+        age_label: theseusAriadneTimeAgo(entry.modified_at),
+        mode_tags: ARIADNE_PATTERN_MODES.filter((mode) => tags.includes(mode)),
+      };
+    });
+};
+
 const theseusAriadneEntryTitle = function theseusAriadneEntryTitle(entry) {
   return entry?.frontmatter?.title || entry?.path || "untitled";
 };
@@ -1691,16 +1720,31 @@ window.theseusAriadnePatternFeed = function theseusAriadnePatternFeed(
   app,
   limit = 5,
 ) {
-  return theseusAriadneBucket(app, "intel")
-    .filter((entry) => theseusAriadneEntryTags(entry).includes("pattern"))
-    .slice()
-    .sort((left, right) => (right.modified_at || 0) - (left.modified_at || 0))
-    .slice(0, limit)
-    .map((entry) => ({
-      ...entry,
-      title: theseusAriadneEntryTitle(entry),
-      age_label: theseusAriadneTimeAgo(entry.modified_at),
-    }));
+  const selected = theseusAriadnePatternFilter(app);
+  return theseusAriadnePatternEntries(app)
+    .filter(
+      (entry) => selected === "all" || entry.mode_tags.includes(selected),
+    )
+    .slice(0, limit);
+};
+
+window.theseusAriadnePatternFilters = function theseusAriadnePatternFilters(app) {
+  const entries = theseusAriadnePatternEntries(app);
+  const selected = theseusAriadnePatternFilter(app);
+  return [
+    {
+      id: "all",
+      label: "all",
+      count: entries.length,
+      active: selected === "all",
+    },
+    ...ARIADNE_PATTERN_MODES.map((mode) => ({
+      id: mode,
+      label: theseusAriadnePatternLabel(mode),
+      count: entries.filter((entry) => entry.mode_tags.includes(mode)).length,
+      active: selected === mode,
+    })),
+  ];
 };
 
 window.theseusAriadneIntelTargets = function theseusAriadneIntelTargets(

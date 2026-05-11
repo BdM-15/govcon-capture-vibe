@@ -111,6 +111,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       promotionBusy: {},
       fitScores: [],
       fitFormulaVersion: "",
+      patternFilter: "all",
       promoteTarget: {},
       capture: {
         body: "",

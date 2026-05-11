@@ -12,6 +12,7 @@ _EXPECTED_SEEDS = {
     "llm-wiki/templates/red-team-readiness-template.md": {"template", "color-team", "red-team"},
     "intel/patterns/capture-signal-patterns.md": {"pattern", "capture", "signal"},
     "intel/patterns/customer-intel-refresh-patterns.md": {"pattern", "intel", "signal"},
+    "intel/patterns/color-team-signal-patterns.md": {"pattern", "color-team", "signal"},
     "intel/patterns/proposal-recovery-patterns.md": {"pattern", "proposal", "signal"},
 }
 

@@ -1618,9 +1618,24 @@
                   </div>
                 </div>
                 <div class="mt-4" data-testid="ariadne-pattern-feed">
-                  <div class="text-[11px] uppercase tracking-[0.16em] font-mono text-neon-cyan mb-2">Cross-opp pattern feed</div>
+                  <div class="flex items-center justify-between gap-3 mb-2 flex-wrap">
+                    <div class="text-[11px] uppercase tracking-[0.16em] font-mono text-neon-cyan">Cross-opp pattern feed</div>
+                    <span class="text-[10px] font-mono text-slate-600" x-text="ariadnePatternFeed(999).length + ' shown'"></span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mb-3" data-testid="ariadne-pattern-filters">
+                    <template x-for="item in ariadnePatternFilters()" :key="item.id + '-pattern-filter'">
+                      <button
+                        class="pill border px-2 py-1 text-[10px]"
+                        :class="item.active ? 'bg-neon-cyan/10 text-neon-cyan border-neon-cyan/40' : 'bg-ink-950/40 text-slate-400 border-edge hover:text-slate-200'"
+                        @click="ariadne.patternFilter = item.id"
+                      >
+                        <span x-text="item.label"></span>
+                        <span class="ml-1 text-slate-500" x-text="item.count"></span>
+                      </button>
+                    </template>
+                  </div>
                   <div x-show="!ariadnePatternFeed(999).length" class="text-xs font-mono text-slate-600 py-4 text-center">
-                    No reusable patterns yet.
+                    No reusable patterns for this mode.
                   </div>
                   <div class="space-y-2">
                     <template x-for="item in ariadnePatternFeed(4)" :key="item.path + '-pattern-feed'">
@@ -1628,6 +1643,11 @@
                         <div class="flex items-center justify-between gap-3">
                           <div class="text-sm font-semibold text-slate-100 truncate" x-text="item.title"></div>
                           <div class="text-[10px] font-mono text-slate-600 shrink-0" x-text="item.age_label"></div>
+                        </div>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                          <template x-for="tag in item.mode_tags" :key="item.path + tag">
+                            <span class="pill bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan px-2 py-0.5 text-[9px]" x-text="tag === 'color-team' ? 'color team' : tag"></span>
+                          </template>
                         </div>
                         <div class="text-[10px] font-mono text-slate-600 truncate mt-1" x-text="item.path"></div>
                         <div class="markdown-preview mt-2" x-html="renderMd(item.preview)"></div>
