@@ -12,7 +12,7 @@
 ## Adaptations
 
 1. **Metadata block added** — `license: Apache-2.0` and a `metadata:` block with Theseus Phase 4j taxonomy keys (`personas_primary`, `capability`, `developer_only`, etc.) added to frontmatter. No upstream spec field is removed or changed.
-2. **Description extended** — added a forward reference to govcon-specific grill-me skills (planned: `grill-me-bid-strategy`, `grill-me-boss`, `grill-me-proposal-readiness`) so trigger routing is unambiguous once those exist.
+2. **Description extended** — added a Theseus-local routing boundary so `grill-me` stays a developer-only stress-test skill while govcon-specific capture, proposal, pricing, compliance, and intel work routes to purpose-built domain skills.
 3. **`evals/evals.json` added** — three Theseus-specific eval prompts targeting codebase design decisions. Upstream has no evals directory.
 
 ## Re-vendor instructions

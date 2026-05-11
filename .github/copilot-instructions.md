@@ -16,10 +16,12 @@
 
 ### Supporting Documentation
 
-- `docs/ARCHITECTURE.md` - Overall system architecture, technology stack, and performance metrics
-- `docs/ENHANCEMENT_FRAMEWORK.md` - Upstream library enhancement mapping
-- `docs/MINERU_3X_INTEGRATION_ASSESSMENT.md` - MinerU 3.0 upgrade notes
-- `docs/PROJECT_THESEUS_USE_CASE.md` - Project Theseus use case
+- `README.md` - Repo overview, setup, and active backlog
+- `docs/README.md` - Current documentation index
+- `docs/STYLE_GUIDE.md` - UI styling rules and frontend constraints
+- `docs/SKILLS.md` - Dual-use Agent Skills platform overview
+- `docs/SKILL_SPEC_COMPLIANCE.md` - Skill spec audit and migration notes
+- `docs/SKILL_TAXONOMY.md` - Closed-vocabulary skill taxonomy
 
 ### Root Folders
 
@@ -246,6 +248,41 @@ When modifying a skill or the runtime, you MUST:
 
 ---
 
+## Architecture Philosophy — Improve Codebase Architecture
+
+Follow Matt Pocock's `improve-codebase-architecture` philosophy in all build, bugfix, refactor, and review work. Always prefer simple, deep structures over shallow wrappers, pass-through modules, or feature-shaped bloat.
+
+### Exact vocabulary
+
+- **Module** — anything with an interface and an implementation (function, class, file, folder, or vertical slice)
+- **Interface** — everything a caller must know to use a module correctly (types, rules, error cases, ordering, config)
+- **Depth** — how much useful behavior sits behind a small, simple interface
+- **Deep module** — high leverage + high locality behind a small interface
+- **Shallow module** — interface almost as complicated as the code inside it
+- **Seam** — the place where behavior can be swapped without editing the calling code
+- **Adapter** — a concrete thing that fills a seam
+- **Leverage** — what callers gain from depth
+- **Locality** — what maintainers gain from depth
+
+### Daily mindset
+
+- Hunt shallow modules, duplicated logic, and places where understanding one concept requires hopping between many small files.
+- Favor deep modules: small interface, deep implementation, high leverage, high locality.
+- Prefer deletion, consolidation, or deepening over new wrappers, helper layers, or adapter soup.
+- Always seek opportunities to uncomplicate the codebase when found.
+- Use the project's ubiquitous language when naming code or explaining changes: the govcon ontology, canonical relationship types, and Shipley terms are the default vocabulary.
+
+### Presenting structural changes
+
+When surfacing a non-trivial structural change:
+
+1. State the problem plainly.
+2. Describe the solution in plain English.
+3. Explain benefits in terms of leverage, locality, and testability.
+4. Ask which candidate the user wants to explore next before proposing full interfaces.
+
+---
+
 ## Development Guidelines
 
 ### Coding Style & Conventions
@@ -273,6 +310,7 @@ When modifying a skill or the runtime, you MUST:
 - **Modifications**: Honor existing local modifications. Never revert user changes without explicit instruction.
 - **Planning**: For non-trivial work, create a multi-step plan.
 - **Validation**: Always validate changes by running relevant tests (`pytest` or specific scripts).
+- **Simplification**: Prefer deleting or deepening code over adding abstractions. If you find a way to uncomplicate the codebase without widening scope, take it.
 - **Cross-cutting awareness**: Before completing any feature branch, review the Cross-Cutting Change Checklist above if the change touches ontology, prompts, or domain vocabulary.
 
 ### Frontend / UI (Alpine + Tailwind CDN, external CSS)

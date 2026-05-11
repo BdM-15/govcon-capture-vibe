@@ -1,16 +1,16 @@
 {
   "evals": [
     {
-      "prompt": "Let's build the new extraction pipeline using TDD.",
-      "expected_behavior": "Skill activates, asks user to confirm interface changes and which behaviors to prioritize, identifies deep module opportunities, gets approval on plan, then starts the tracer bullet: one test → minimal implementation → repeat."
+      "prompt": "Let's build the new extraction pipeline using TDD, but keep the module deep and not spread across tiny helpers.",
+      "expected_behavior": "Skill activates, confirms the public interface and priority behaviors, identifies any shallow module risk, calls out leverage and locality goals, gets approval on the plan, then starts one tracer bullet: one test -> minimal implementation -> repeat."
     },
     {
-      "prompt": "I want to add the skill rating feature test-first.",
-      "expected_behavior": "Skill activates, explores codebase for domain vocabulary and ADRs, designs testable interfaces, writes first RED test, implements minimal GREEN code, continues incremental loop, then refactors."
+      "prompt": "I want to add the skill rating feature test-first. Keep code simple, high-locality, no adapter soup.",
+      "expected_behavior": "Skill activates, explores domain vocabulary and ADRs, designs a simple testable interface, avoids speculative seams or adapters, writes the first RED test, implements the smallest GREEN change, continues vertical slices, then refactors toward a deeper module."
     },
     {
-      "prompt": "Help me fix this bug using red-green-refactor.",
-      "expected_behavior": "Skill activates, writes a failing test that reproduces the bug (RED), writes minimal fix to pass the test (GREEN), checks for refactor candidates, runs the checklist per cycle."
+      "prompt": "Help me fix this bug using red-green-refactor. Current auth flow feels shallow and split across too many files.",
+      "expected_behavior": "Skill activates, writes a failing test that reproduces the bug, implements the minimal fix, then looks for a simplification that improves leverage and locality instead of adding more wrappers or micro-modules."
     }
   ]
 }

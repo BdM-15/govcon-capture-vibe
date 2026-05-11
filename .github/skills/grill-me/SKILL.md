@@ -5,11 +5,11 @@ description: >
   understanding, resolving each branch of the decision tree one question at a time.
   Use when user wants to stress-test a plan, get grilled on their design, or
   mentions "grill me". Developer-only utility — does not query the Theseus KG.
-  For govcon-specific grilling (bid strategy, capture gate, boss prep), use the
-  govcon grill-me skills instead.
+  For govcon-specific capture, proposal, pricing, compliance, or intel work, use
+  the corresponding domain skills instead.
 license: Apache-2.0
 metadata:
-  version: 1.0.0
+  version: 1.0.1
   category: developer-tool
   status: active
   runtime: legacy

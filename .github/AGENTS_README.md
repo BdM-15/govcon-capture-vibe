@@ -228,7 +228,7 @@ Use this agent when:
 - [VS Code Context Engineering Guide](https://code.visualstudio.com/docs/copilot/guides/context-engineering-guide)
 - [Custom Agents Documentation](https://code.visualstudio.com/docs/copilot/customization/custom-agents)
 - [Prompt Files Documentation](https://code.visualstudio.com/docs/copilot/customization/prompt-files)
-- `docs/ARCHITECTURE.md`
+- `docs/README.md`
 
 ---
 

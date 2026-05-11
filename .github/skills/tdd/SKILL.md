@@ -1,9 +1,9 @@
 ---
 name: tdd
-description: Test-driven development with a red-green-refactor loop. Builds features or fixes bugs one vertical slice at a time. Use when user wants to build features or fix bugs using TDD, mentions "red-green-refactor", wants integration tests, or asks for test-first development.
+description: Test-driven development with a red-green-refactor loop that keeps code simple, deep, and easy to test. Use when user wants to build features or fix bugs using TDD, mentions "red-green-refactor", wants integration tests, asks for test-first development, or needs to deepen a shallow module while changing behavior.
 license: Apache-2.0
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   category: developer-tool
   status: active
   runtime: legacy
@@ -21,6 +21,12 @@ metadata:
 
 **Core principle**: Tests should verify behavior through public interfaces, not
 implementation details. Code can change entirely; tests shouldn't.
+
+**Architecture target**: Use TDD to deepen modules, not to spread behavior
+across shallow modules. A deep module gives callers leverage and maintainers
+locality: small interface, deep implementation, complexity concentrated in one
+place. If a change wants more wrappers, helpers, seams, or adapters than real
+behavior, simplify first.
 
 **Good tests** are integration-style: they exercise real code paths through
 public APIs. They describe _what_ the system does, not _how_ it does it. A
@@ -57,6 +63,10 @@ implementation → repeat. Each test responds to what you learned from the
 previous cycle. Because you just wrote the code, you know exactly what behavior
 matters and how to verify it.
 
+Each tracer bullet should deepen one module or keep one module coherent. Do not
+use TDD as cover for spraying logic across more files with no gain in leverage
+or locality.
+
 ```
 WRONG (horizontal):
   RED:   test1, test2, test3, test4, test5
@@ -81,14 +91,17 @@ Before writing any code:
 
 - [ ] Confirm with user what interface changes are needed
 - [ ] Confirm with user which behaviors to test (prioritize)
+- [ ] Identify the current module, its interface, and any shallow-module risk
 - [ ] Identify opportunities for [deep modules](references/deep-modules.md)
-      (small interface, deep implementation)
+  (small interface, deep implementation, high leverage, high locality)
 - [ ] Design interfaces for [testability](references/interface-design.md)
+- [ ] Add a seam or adapter only if there is a real swap point to justify it
 - [ ] List the behaviors to test (not implementation steps)
 - [ ] Get user approval on the plan
 
 Ask: "What should the public interface look like? Which behaviors are most
-important to test?"
+important to test? Is there a shallow module we should deepen instead of adding
+more surface area?"
 
 **You can't test everything.** Confirm with the user exactly which behaviors
 matter most. Focus testing effort on critical paths and complex logic, not
@@ -120,6 +133,7 @@ Rules:
 - Only enough code to pass current test
 - Don't anticipate future tests
 - Keep tests focused on observable behavior
+- Prefer deepening an existing module over creating a new shallow one
 
 ### 4. Refactor
 
@@ -128,6 +142,7 @@ After all tests pass, look for
 
 - [ ] Extract duplication
 - [ ] Deepen modules (move complexity behind simple interfaces)
+- [ ] Delete pass-through code and merge shallow modules when leverage is low
 - [ ] Apply SOLID principles where natural
 - [ ] Consider what new code reveals about existing code
 - [ ] Run tests after each refactor step
@@ -141,5 +156,6 @@ After all tests pass, look for
 [ ] Test uses public interface only
 [ ] Test would survive internal refactor
 [ ] Code is minimal for this test
+[ ] Change improves leverage/locality or at least does not create a shallower module
 [ ] No speculative features added
 ```

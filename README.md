@@ -411,7 +411,7 @@ The full backlog is tracked in [GitHub Issues #87 – #114](https://github.com/B
 
 | Group                          | Examples                                                                                                                                                                                                                                               |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **v1.4.0 — JSON extraction**   | [Issue #124 roadmap](docs/LIGHTRAG_JSON_EXTRACTION_ROADMAP.md): strict LightRAG JSON extraction is the foundation; Phase 2 targets recall recovery for scoring criteria, document hierarchy, strategic signals, workload metrics, and clause breadth.  |
+| **v1.4.0 — JSON extraction**   | [Issue #124 roadmap](https://github.com/BdM-15/proj-theseus/issues/124): strict LightRAG JSON extraction is the foundation; Phase 2 targets recall recovery for scoring criteria, document hierarchy, strategic signals, workload metrics, and clause breadth.  |
 | **Tier 1 — graph quality**     | #88 confidence + provenance on edges, #93 orphan candidate links                                                                                                                                                                                       |
 | **Tier 2 — Intel Panels**      | #87 Past Performance, #99 Tech Inventory, #100 Innovation Signals, #96 Glossary, #97 Hot Buttons, #101 Deliverable Catalog                                                                                                                             |
 | **Tier 3 — quality of life**   | #109 "Ask Theseus" pre-filled chat buttons, #103 CSV/XLSX export, #110 diff vs prior run                                                                                                                                                               |
@@ -475,13 +475,9 @@ dependencies = [
 
 | Document                                                                                                                               | Description                                              |
 | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)                                                                                           | System architecture, ADRs, performance metrics           |
+| [docs/README.md](docs/README.md)                                                                                                       | Living documentation index                               |
 | [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md)                                                                                             | Capture Workbench UI conventions (read before UI work)   |
-| [docs/PROJECT_THESEUS_USE_CASE.md](docs/PROJECT_THESEUS_USE_CASE.md)                                                                   | End-to-end capture-team use case                         |
-| [docs/ENHANCEMENT_FRAMEWORK.md](docs/ENHANCEMENT_FRAMEWORK.md)                                                                         | Upstream library enhancement mapping                     |
-| [docs/MINERU_3X_INTEGRATION_ASSESSMENT.md](docs/MINERU_3X_INTEGRATION_ASSESSMENT.md)                                                   | MinerU 3.0 upgrade notes                                 |
-| [docs/Ontology-Based-RAG-for-Government-Contracting-White-Paper.md](docs/Ontology-Based-RAG-for-Government-Contracting-White-Paper.md) | Technical white paper                                    |
-| [docs/Why-General-Purpose-AI-Fails-Specialized-Domains.md](docs/Why-General-Purpose-AI-Fails-Specialized-Domains.md)                   | Domain-specialization argument                           |
+| [docs/SKILLS.md](docs/SKILLS.md)                                                                                                       | Dual-use Agent Skills platform                           |
 | [docs/SKILL_TAXONOMY.md](docs/SKILL_TAXONOMY.md)                                                                                       | Three-axis skill taxonomy (persona / phase / capability) |
 | [docs/SKILL_SPEC_COMPLIANCE.md](docs/SKILL_SPEC_COMPLIANCE.md)                                                                         | Open Agent Skills spec audit + migration plan            |
 | [.github/copilot-instructions.md](.github/copilot-instructions.md)                                                                     | Agent rules + cross-cutting prompt change checklist      |

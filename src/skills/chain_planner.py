@@ -21,11 +21,6 @@ _STEP_SAFE = re.compile(r"[^a-z0-9_-]+")
 _EXCLUDED_BY_DEFAULT = {
     "caveman",
     "grill-me",
-    "grill-me-bid-strategy",
-    "grill-me-capture",
-    "grill-me-govcon",
-    "grill-me-proposal",
-    "grill-me-ptw",
     "govcon-ontology",
     "improve-codebase-architecture",
     "skill-creator",

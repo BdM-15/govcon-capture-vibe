@@ -147,11 +147,6 @@ All 11 in-tree skills (10 pre-existing + new `oci-sweeper`) at branch
 | `proposal-generator`        | proposal_writer    | [proposal_manager, capture_manager]   | [proposal_development]                             | draft        |
 | `data-analyzer`             | none               | []                                    | []                                                 | analyze      |
 | `renderers`                 | none               | []                                    | []                                                 | render       |
-| `grill-me-govcon`           | capture_manager    | [proposal_manager, cost_estimator]    | [pursuit, capture, strategy, proposal_development] | analyze      |
-| `grill-me-bid-strategy`     | capture_manager    | []                                    | [pursuit, capture]                                 | analyze      |
-| `grill-me-capture`          | capture_manager    | [proposal_manager]                    | [capture, strategy]                                | analyze      |
-| `grill-me-proposal`         | proposal_manager   | [proposal_writer, capture_manager]    | [strategy, proposal_development]                   | analyze      |
-| `grill-me-ptw`              | cost_estimator     | [capture_manager]                     | [capture, strategy]                                | analyze      |
 | `workload-analyzer`         | cost_estimator     | [capture_manager]                     | [capture, strategy]                                | analyze      |
 | `rfp-reverse-engineer`      | capture_manager    | [proposal_manager]                    | [capture, strategy]                                | analyze      |
 | `skill-creator`             | none               | []                                    | []                                                 | meta         |
@@ -163,7 +158,7 @@ All 11 in-tree skills (10 pre-existing + new `oci-sweeper`) at branch
 | ------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------- |
 | `improve-codebase-architecture` | meta         | Vendored from mattpocock/skills (Apache-2.0); graphify-backed                                         |
 | `caveman`                       | meta         | Vendored from mattpocock/skills (Apache-2.0); communication mode modifier                             |
-| `grill-me`                      | meta         | Vendored from mattpocock/skills (Apache-2.0); developer plan stress-tester; see govcon variants above |
+| `grill-me`                      | meta         | Vendored from mattpocock/skills (Apache-2.0); developer plan stress-tester; route govcon work to domain skills |
 | `to-prd`                        | meta         | Vendored from mattpocock/skills (Apache-2.0); PRD publisher to GitHub Issues                          |
 | `to-issues`                     | meta         | Vendored from mattpocock/skills (Apache-2.0); vertical-slice issue creator                            |
 | `tdd`                           | meta         | Vendored from mattpocock/skills (Apache-2.0); red-green-refactor loop                                 |
