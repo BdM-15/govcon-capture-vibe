@@ -93,7 +93,8 @@ Usage Example:
 For detailed architecture documentation, see:
 - HANDOFF_SUMMARY.md - Branch 004 results and quick start
 - docs/BRANCH_004_CODE_OPTIMIZATION.md - Charter and constraints
-- docs/ARCHITECTURE.md - Complete technical details
+- README.md - Current project overview
+- docs/README.md - Current documentation index
 """
 
 __version__ = "4.0.0"

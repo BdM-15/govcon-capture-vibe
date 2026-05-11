@@ -47,7 +47,7 @@ It is the authoritative gap list driving sub-phases 2.1 through 2.3.
 └── LICENSE / LICENSE.txt
 ```
 
-**Note:** spec uses `assets/` — we currently use `templates/` in two skills.
+**Note:** spec uses `assets/`. Historical `templates/` directories were renamed during the phase 2.2 compliance pass.
 
 ### 1.3 Progressive disclosure
 
@@ -94,11 +94,6 @@ Copy this checklist:
 | `to-prd` (vendored)                        |        ~70 | evals                                            | none (`metadata:` block)                      | ✅ Yes (2026-05-01, branch `156-developer-skills`)                                                                                             |
 | `to-issues` (vendored)                     |        ~60 | evals                                            | none (`metadata:` block)                      | ✅ Yes (2026-05-01, branch `156-developer-skills`)                                                                                             |
 | `tdd` (vendored)                           |        ~80 | references, evals                                | none (`metadata:` block)                      | ✅ Yes (2026-05-01, branch `156-developer-skills`)                                                                                             |
-| `grill-me-govcon`                          |        ~75 | references (4), evals                            | none (`metadata:` block)                      | ✅ Yes (2026-05-01, branch `156-developer-skills`)                                                                                             |
-| `grill-me-bid-strategy`                    |        ~65 | evals                                            | none (`metadata:` block)                      | ✅ Yes (2026-05-01, branch `156-developer-skills`)                                                                                             |
-| `grill-me-capture`                         |        ~65 | evals                                            | none (`metadata:` block)                      | ✅ Yes (2026-05-01, branch `156-developer-skills`)                                                                                             |
-| `grill-me-proposal`                        |        ~65 | evals                                            | none (`metadata:` block)                      | ✅ Yes (2026-05-01, branch `156-developer-skills`)                                                                                             |
-| `grill-me-ptw`                             |        ~65 | evals                                            | none (`metadata:` block)                      | ✅ Yes (2026-05-01, branch `156-developer-skills`)                                                                                             |
 | `competitive-intel`                        |         60 | references                                       | `category`, `version`, `status`               | ⚠️ Extras at top level                                                                                                                         |
 | `compliance-auditor`                       |        116 | references                                       | `category`, `version`                         | ⚠️ Extras at top level                                                                                                                         |
 | `govcon-ontology`                          |        166 | references                                       | `category`, `version`, `authoritative_source` | ⚠️ Extras at top level                                                                                                                         |

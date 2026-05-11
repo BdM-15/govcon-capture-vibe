@@ -3,7 +3,7 @@ from src.skills.manager import get_skill_manager
 from datetime import datetime
 
 mgr = get_skill_manager()
-skill = mgr.get_skill('grill-me-govcon')
+skill = mgr.get_skill('proposal-generator')
 if not skill:
     print('Skill not found')
     raise SystemExit(1)

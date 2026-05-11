@@ -4,7 +4,7 @@ Three canonical visual layouts for showing the proposal_instruction ↔ evaluati
 
 ## Pattern A — Table (preferred for compliance matrices)
 
-Single table, monospaced clause IDs, status column. See `templates/compliance_matrix.html`.
+Single table, monospaced clause IDs, status column. See `assets/compliance_matrix.html`.
 
 ```
 | L Instruction | M Factor          | C Requirement(s)        | Volume | Pages | Status |

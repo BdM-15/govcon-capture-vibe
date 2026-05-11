@@ -142,7 +142,7 @@ def test_project_run_payload_marks_question_run_as_resumeable(tmp_path: Path) ->
 
     run_id, _run_dir = store.persist_legacy_run(
         workspace_root=tmp_path,
-        skill_name="grill-me-govcon",
+        skill_name="grill-me",
         workspace="demo-ws",
         user_prompt="Grill me on AFCAP VI",
         composed_prompt="full prompt",
@@ -157,12 +157,12 @@ def test_project_run_payload_marks_question_run_as_resumeable(tmp_path: Path) ->
         started_at=started,
     )
 
-    listed = store.list_runs(tmp_path, skill_name="grill-me-govcon")
+    listed = store.list_runs(tmp_path, skill_name="grill-me")
     assert listed[0]["run_id"] == run_id
     assert listed[0]["status"] == "interrupted"
     assert listed[0]["can_resume"] is True
 
-    detail = store.get_run(tmp_path, "grill-me-govcon", run_id)
+    detail = store.get_run(tmp_path, "grill-me", run_id)
     assert detail is not None
 
     projected = store.project_run_payload(detail)
@@ -176,7 +176,7 @@ def test_project_run_payload_marks_question_run_as_resumeable(tmp_path: Path) ->
         "needed": True,
         "kind": "question",
         "title": "Question",
-        "skill": "grill-me-govcon",
+        "skill": "grill-me",
         "prompt": "What's your estimated Pwin threshold for pursuing AFCAP VI, and what specific evidence sets that number?",
         "missing_inputs": [
             "What's your estimated Pwin threshold for pursuing AFCAP VI, and what specific evidence sets that number?"
@@ -192,7 +192,7 @@ def test_project_run_payload_marks_long_question_run_as_resumeable(
 
     run_id, _run_dir = store.persist_legacy_run(
         workspace_root=tmp_path,
-        skill_name="grill-me-govcon",
+        skill_name="grill-me",
         workspace="demo-ws",
         user_prompt="Grill me on AFCAP VI",
         composed_prompt="full prompt",
@@ -206,12 +206,12 @@ def test_project_run_payload_marks_long_question_run_as_resumeable(
         started_at=started,
     )
 
-    listed = store.list_runs(tmp_path, skill_name="grill-me-govcon")
+    listed = store.list_runs(tmp_path, skill_name="grill-me")
     assert listed[0]["run_id"] == run_id
     assert listed[0]["status"] == "interrupted"
     assert listed[0]["can_resume"] is True
 
-    detail = store.get_run(tmp_path, "grill-me-govcon", run_id)
+    detail = store.get_run(tmp_path, "grill-me", run_id)
     assert detail is not None
 
     projected = store.project_run_payload(detail)
@@ -226,7 +226,7 @@ def test_project_run_payload_marks_long_question_run_as_resumeable(
         "needed": True,
         "kind": "question",
         "title": "Question",
-        "skill": "grill-me-govcon",
+        "skill": "grill-me",
         "prompt": expected_question,
         "missing_inputs": [expected_question],
     }

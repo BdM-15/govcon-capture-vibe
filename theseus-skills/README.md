@@ -33,11 +33,6 @@ Skills shown in the Theseus govcon UI. Query the active workspace KG and use gov
 | proposal-generator    | `.github/skills/proposal-generator/`                         | `src/skills/manager.py` (auto) |
 | compliance-auditor    | `.github/skills/compliance-auditor/`                         | `src/skills/manager.py` (auto) |
 | competitive-intel     | `.github/skills/competitive-intel/`                          | `src/skills/manager.py` (auto) |
-| grill-me-govcon       | `.github/skills/grill-me-govcon/`                            | `src/skills/manager.py` (auto) |
-| grill-me-bid-strategy | `.github/skills/grill-me-bid-strategy/`                      | `src/skills/manager.py` (auto) |
-| grill-me-capture      | `.github/skills/grill-me-capture/`                           | `src/skills/manager.py` (auto) |
-| grill-me-proposal     | `.github/skills/grill-me-proposal/`                          | `src/skills/manager.py` (auto) |
-| grill-me-ptw          | `.github/skills/grill-me-ptw/`                               | `src/skills/manager.py` (auto) |
 
 ## Index — Developer-only skills
 

@@ -28,7 +28,7 @@ By writing skills to the agentskills.io standard, we get:
 .github/skills/<slug>/
 ├── SKILL.md              # YAML frontmatter + instructions (required)
 ├── references/           # On-demand reference material (loaded via "see references/X.md")
-├── templates/            # Output skeletons (Markdown, HTML, JSON)
+├── assets/               # Output skeletons or bundled artifacts (Markdown, HTML, JSON, fonts)
 ├── scripts/              # Optional executables (Python, Node, shell)
 └── evals/                # Optional eval scenarios (theseus-skills/evals/ preferred)
 ```
@@ -39,11 +39,13 @@ By writing skills to the agentskills.io standard, we get:
 ---
 name: my-skill # slug, must match folder name
 description: One sentence trigger # used by Copilot for skill selection
-category: design|ontology|proposal|compliance|intel|other
-version: 0.1.0 # semver
 license: MIT
-upstream: org/repo # optional — if forked
-status: stable|experimental # optional
+compatibility: {} # optional
+metadata:
+  category: design|ontology|proposal|compliance|intel|other
+  version: 0.1.0
+  status: stable|experimental
+  upstream: org/repo
 ---
 ```
 
@@ -51,15 +53,22 @@ The body is Markdown — write **imperative instructions** (the agent's playbook
 
 ---
 
-## Built-in skills (this repo)
+## Current skills (selected)
 
-| Slug                                                                    | Category   | What it does                                                           |
-| ----------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------- |
-| [huashu-design](../.github/skills/huashu-design/SKILL.md)               | design     | Vendored upstream HTML→PPTX/PDF/MP4 design engine (Personal Use License). Drive with `proposal-generator` content for govcon visuals. |
-| [govcon-ontology](../.github/skills/govcon-ontology/SKILL.md)           | ontology   | Authoritative reference for the 33 entity / 35 relationship schema     |
-| [proposal-generator](../.github/skills/proposal-generator/SKILL.md)     | proposal   | Shipley capture mentor: compliance spine → win themes → FAB → outlines + govcon HTML render templates |
-| [compliance-auditor](../.github/skills/compliance-auditor/SKILL.md)     | compliance | 8-check audit (clause coverage, regulatory resolution, L↔M, cyber, …)  |
-| [competitive-intel](../.github/skills/competitive-intel/SKILL.md)       | intel      | Roadmap placeholder for competitor / black-hat workflows               |
+| Slug                                                                                      | Category   | What it does                                                                                                                          |
+| ----------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| [huashu-design](../.github/skills/huashu-design/SKILL.md)                                 | design     | Vendored upstream HTML→PPTX/PDF/MP4 design engine (Personal Use License). Drive with `proposal-generator` content for govcon visuals. |
+| [govcon-ontology](../.github/skills/govcon-ontology/SKILL.md)                             | ontology   | Authoritative reference for the 33 entity / 35 relationship schema                                                                    |
+| [proposal-generator](../.github/skills/proposal-generator/SKILL.md)                       | proposal   | Shipley capture mentor: compliance spine → win themes → FAB → outlines + govcon HTML render templates                                 |
+| [compliance-auditor](../.github/skills/compliance-auditor/SKILL.md)                       | compliance | 8-check audit (clause coverage, regulatory resolution, L↔M, cyber, …)                                                                 |
+| [competitive-intel](../.github/skills/competitive-intel/SKILL.md)                         | intel      | Live incumbent, award-history, and competitor research via USAspending                                                                |
+| [improve-codebase-architecture](../.github/skills/improve-codebase-architecture/SKILL.md) | developer  | Developer-only deepening skill: find shallow modules, increase leverage/locality                                                      |
+| [grill-me](../.github/skills/grill-me/SKILL.md)                                           | developer  | Developer-only stress-test skill for plans and designs                                                                                |
+| [tdd](../.github/skills/tdd/SKILL.md)                                                     | developer  | Developer-only red-green-refactor loop focused on deep, simple modules                                                                |
+
+Redundant `grill-me-*` variants were removed during repo cleanup. Use
+`grill-me` for generic developer stress-testing and keep govcon work routed
+through purpose-built domain skills.
 
 ---
 
@@ -103,14 +112,14 @@ Skills should specify their preferred entity slice in their SKILL.md "Workspace 
 1. **Pick a slug**: short, kebab-case, no spaces. Match the folder name to the frontmatter `name`.
 2. **Create the folder**: `.github/skills/<slug>/`
 3. **Write `SKILL.md`**:
-   - Frontmatter with `name`, `description` (one tight sentence — Copilot uses this to decide when to invoke), `category`, `version`, `license`
+   - Frontmatter with `name`, `description` (one tight sentence — Copilot uses this to decide when to invoke), `license`, optional `compatibility`, and `metadata` for repo-specific fields like `category`, `version`, `status`, and `upstream`
    - Body in **imperative voice**, ~100-200 lines max
    - Section: "When to use" / "When NOT to use"
    - Section: "Workflow" — numbered steps the agent should follow
    - Section: "Output Contract" — exact JSON envelope or Markdown structure
    - Section: "Workspace Context Injection" — what entity types to pull
 4. **Add references on demand**: anything longer than ~30 lines goes in `references/<topic>.md` and is referenced via `see references/<topic>.md`. This is the **progressive disclosure** pattern from the agentskills.io spec.
-5. **Add templates** if your skill produces structured output: `templates/<artifact>.md` or `.html`.
+5. **Add assets** if your skill produces structured output: `assets/<artifact>.md` or `.html`.
 6. **Add scripts only if necessary**: prefer LLM-only skills. Scripts must be self-contained and read inputs from `build/context.json` if they need data.
 7. **Validate**:
    - Open the repo in VS Code and ask Copilot a question that should trigger the skill — verify the skill description is specific enough
