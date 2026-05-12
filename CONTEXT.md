@@ -125,6 +125,14 @@ Runtime mode resolution order: `runtime_mode_override` arg → `SKILL_RUNTIME_MO
 Skill chaining: tools-mode skills can call `invoke_skill(child_name, child_prompt)` as a tool. Max depth = 1 (one child per parent, no recursion). Cycle detection prevents `A→B→A`. `SkillManager.invoke_chain()` runs deterministic multi-skill sequences via `SkillChainExecutor` (LangGraph).
 _Avoid_: "skill runner" (ambiguous — both runners exist); "skill pipeline" (see Flagged ambiguities).
 
+**Artifact auto-emission** (`src/skills/skill_emitters.py`):
+`auto_emit_artifacts(skill, run_dir)` — called at the end of every tools-mode run unless `metadata.auto_emit_artifacts: false`. Detects JSON + Markdown artifacts written by the skill in `run_dir/artifacts/`, then calls the `renderers` and `huashu-design` render scripts to produce `.docx` (from `.md` via Pandoc) and `.xlsx` (from `.json` via openpyxl).
+
+`_PRODUCT_PROFILES` maps 10 known skills (competitive-intel, compliance-auditor, proposal-generator, price-to-win, oci-sweeper, ot-prototype-strategist, rfp-reverse-engineer, subcontractor-sow-builder, workload-analyzer, data-analyzer) to `{base, label, xlsx_sources}` — controls base filename stem and which JSON files to render into workbook sheets. Unknown skills get defaults derived from `skill.name`.
+
+Format control: `metadata.auto_emit_formats` (comma-separated or list) → set of `{"html", "md", "json", "docx", "xlsx"}`; default `{"md", "json", "docx", "xlsx"}`. XLSX source priority: `metadata.auto_emit_xlsx_source` → profile `xlsx_sources` → discovered `*.json` (alpha-sorted, excluding `report.json`). Render outcome written back to artifact manifest: `render_status: failed` with `render_message` / `render_log_excerpt` if subprocess fails.
+_Avoid_: "auto-save" (these are render conversions, not simple copies); assuming all skills emit — skills can opt out per `metadata.auto_emit_artifacts: false`.
+
 **SkillSettingsStore** (`src/skills/settings.py`):
 Per-workspace settings file (`rag_storage/<workspace>/ui_skill_settings.json`). Two independent settings surfaces:
 
