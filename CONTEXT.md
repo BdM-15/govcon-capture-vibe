@@ -48,6 +48,10 @@ _Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambig
 A user-defined group of documents uploaded together for which exactly one semantic post-processor run is guaranteed. Auto-detected by an idle-timeout window (`BATCH_TIMEOUT_SECONDS`): when no new document completes for that duration, the batch is declared complete and post-processing fires once. Without batching, uploading N documents would trigger N post-processor runs -- each exponentially more expensive as the graph grows.
 _Avoid_: job, run, upload session.
 
+**Track ID**:
+Correlation token for one ingest operation. Format: `{prefix}_{YYYYMMDD_HHMMSS}_{8hex}`. Prefix is `insert` for upload-path calls (LightRAG's `generate_track_id("insert")`) and `scan-{8hex}` for `/scan-rfp` (our code). Stored in `kv_store_doc_status.json` per document. Emitted in server log lines as `[scan <track_id>]`. Use to grep server log for all events from one ingest session.
+_Avoid_: request ID, job ID (neither is a first-class concept here).
+
 **Skill run directory**:
 Per-invocation working directory for one skill execution. Path: `rag_storage/<workspace>/skill_runs/<skill>/<YYYYMMDD_HHMMSS_slug>/`. Contains `artifacts/` (skill output files), `tool_outputs/` (raw tool call results), `run.md` (run envelope), `transcript.json` (tool call log). Scoped to one workspace + one skill execution. Created by `SkillRunStore.create_run_dir()`.
 _Avoid_: run-dir, output dir, workspace.
