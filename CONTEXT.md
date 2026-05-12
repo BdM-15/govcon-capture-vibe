@@ -23,7 +23,7 @@ The 7-phase sequence that turns a raw RFP document into graph data: upload -> Mi
 _Avoid_: "the pipeline" (ambiguous -- see Flagged ambiguities).
 
 **Semantic post-processor**:
-The 6-phase inference pass that runs exactly once after a batch completes. Phases: (1) data loading, (2) entity normalization, (3) relationship normalization, (4) relationship inference, (5) workload enrichment (optional), (6) VDB sync. Lives in `src/inference/`.
+The 5-phase inference pass that runs exactly once after a batch completes. Phases: (1) data loading, (2) entity normalization, (3) relationship normalization, (4) relationship inference, (5) VDB sync. Lives in `src/inference/`. _Note_: a "workload enrichment" phase existed previously but was removed when the ontology gained native `workload_metric` entities — extraction handles that coverage now.
 
 Phase 4 runs 3 **inference algorithms** in parallel (`src/inference/algorithms/`): `infer_lm_links` (L↔M cross-document linking), `infer_document_structure` (heuristic regex, zero LLM cost), `resolve_orphans` (reconnect unlinked entities). Algorithms are the mechanisms inside Phase 4; phases are the overarching structure of the whole pass.
 _Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambiguities). Never conflate phases with algorithms.

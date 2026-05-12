@@ -7,8 +7,7 @@ Neo4j-native LLM-powered enhancements to the extracted knowledge graph:
 1. **Entity Normalization**: Fix table/hash/unknown entity types
 2. **Relationship Normalization**: Re-type generic RELATED_TO via entity-pair lookup
 3. **Relationship Inference**: Infer missing semantic relationships using 3 algorithms
-4. **Optional Workload Enrichment**: Add BOE metadata to requirements when explicitly enabled
-5. **VDB Synchronization**: Sync inferred relationships to LightRAG vector stores
+4. **VDB Synchronization**: Sync inferred relationships to LightRAG vector stores
 
 Architecture (Issue #54 - Back to Basics):
 - Entity extraction uses native LightRAG with the govcon ontology
