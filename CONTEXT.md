@@ -125,6 +125,23 @@ Runtime mode resolution order: `runtime_mode_override` arg → `SKILL_RUNTIME_MO
 Skill chaining: tools-mode skills can call `invoke_skill(child_name, child_prompt)` as a tool. Max depth = 1 (one child per parent, no recursion). Cycle detection prevents `A→B→A`. `SkillManager.invoke_chain()` runs deterministic multi-skill sequences via `SkillChainExecutor` (LangGraph).
 _Avoid_: "skill runner" (ambiguous — both runners exist); "skill pipeline" (see Flagged ambiguities).
 
+**Skill tools** (`src/skills/tools.py`, `tool_kg.py`, `tool_filesystem.py`, `tool_mcp.py`):
+The bounded tool set exposed to the LLM during tools-mode runs. All tool calls are captured in `transcript.json`.
+
+| Tool | Source | Behaviour |
+|------|--------|-----------|
+| `kg_query(cypher)` | `tool_kg.py` | Read-only Cypher. Blocks `CREATE/MERGE/DELETE/DETACH/SET/REMOVE/DROP/FOREACH/LOAD CSV`. Must start with `MATCH/OPTIONAL MATCH/WITH/UNWIND/CALL/RETURN`. Returns up to **100 rows**. No-op (returns `available:false`) when `GRAPH_STORAGE!=Neo4JStorage`. |
+| `kg_entities(types, limit, max_chunks_per_entity, max_relationships_per_entity)` | `tool_kg.py` | Bulk KG slice by entity type. Delegates to `slice_fn` bound from `SkillInvokePayload` limits. |
+| `kg_chunks(query, top_k, mode)` | `tool_kg.py` | Hybrid retrieval — delegates to `retrieve_fn`. Mode must be a `VALID_SKILL_RETRIEVAL_MODES` value. |
+| `read_file(path)` | `tool_filesystem.py` | Reads `references/`, `assets/`, `scripts/` from skill dir or run dir. Sandboxed to skill tree. `max_read_bytes` from `SkillToolsRuntimeLimits`. |
+| `run_script(path, stdin, timeout)` | `tool_filesystem.py` | Executes `scripts/*.py` or `*.sh` in subprocess. `cwd` locked to skill dir. `max_script_seconds` cap. |
+| `write_file(path, content, label)` | `tool_filesystem.py` | Writes to `run_dir/artifacts/` only. `max_write_bytes` cap. Optional `label` stored in artifact manifest as `display_name`. |
+| `invoke_skill(name, prompt, context)` | `tools.py` | Single-level Tier A chaining. Max depth 1, cycle detection prevents `A→B→A`. |
+| MCP tools | `tool_mcp.py` | Forwarded to MCP session. Indistinguishable from in-process tools from the model's view. |
+
+Result serialization: `serialize_tool_payload_for_model()` → compact JSON, truncated at `SKILL_TOOLS_MAX_TOOL_RESULT_CHARS` (default 12 000) with `…[truncated at N chars]` sentinel.
+_Avoid_: "KG API" (tools are not an API — they are bounded function calls); using `kg_query` for writes (blocked); assuming `kg_query` returns Neo4j objects (all values are jsonified via `jsonable()` helper).
+
 **Artifact auto-emission** (`src/skills/skill_emitters.py`):
 `auto_emit_artifacts(skill, run_dir)` — called at the end of every tools-mode run unless `metadata.auto_emit_artifacts: false`. Detects JSON + Markdown artifacts written by the skill in `run_dir/artifacts/`, then calls the `renderers` and `huashu-design` render scripts to produce `.docx` (from `.md` via Pandoc) and `.xlsx` (from `.json` via openpyxl).
 
