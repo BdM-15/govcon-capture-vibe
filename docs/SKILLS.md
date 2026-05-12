@@ -103,7 +103,7 @@ Skills should specify their preferred entity slice in their SKILL.md "Workspace 
 
 ### Install ledger
 
-`rag_storage/_platform/skills.json` records `source` (`builtin` vs `installed`), `source_url`, `installed_at`, `last_invoked_at`. It's a single workspace-independent file because skills are global to a Theseus instance, not per-RFP.
+`var/platform/skills.json` records `source` (`builtin` vs `installed`), `source_url`, `installed_at`, `last_invoked_at`. It's a single workspace-independent file because skills are global to a Theseus instance, not per-RFP.
 
 ---
 
@@ -153,7 +153,7 @@ rm -rf .github/skills/<slug>/.git
 - **Cloned skills are shallow** (`--depth=1`) and the `.git` directory is removed after install.
 - **The skill name is validated** against `^[a-z0-9][a-z0-9_-]{0,63}$` to prevent path traversal.
 - **Skills cannot directly mutate the Neo4j RFP graph** — invocation only reads the entity store and dispatches to the LLM. Any output that should go back into the graph must flow through the normal `/insert` pipeline.
-- **The install ledger lives in `rag_storage/_platform/`** — outside any individual workspace, so workspace deletion does not silently uninstall skills.
+- **The install ledger lives in `var/platform/`** — outside the LightRAG workspace tree, so workspace deletion does not silently uninstall skills.
 
 ---
 

@@ -16,7 +16,7 @@ location). Each ``SKILL.md`` is a Markdown file with YAML frontmatter:
 
 The manager:
   * Walks ``.github/skills/`` at startup (and on demand) to register skills
-  * Stores install metadata in ``rag_storage/_platform/skills.json`` (a single
+  * Stores install metadata in ``var/platform/skills.json`` (a single
     workspace-independent JSON file — installed skills are global to the
     Theseus instance, not per-RFP)
   * Pulls relevant entity slices from the active workspace KG when a skill is
@@ -76,7 +76,7 @@ _STUDIO_EXTRA_MIME = STUDIO_EXTRA_MIME
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SKILLS_DIR = _REPO_ROOT / ".github" / "skills"
-_PLATFORM_DIR = _REPO_ROOT / "rag_storage" / "_platform"
+_PLATFORM_DIR = _REPO_ROOT / "var" / "platform"
 _INSTALL_LEDGER = _PLATFORM_DIR / "skills.json"
 
 

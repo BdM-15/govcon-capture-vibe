@@ -60,7 +60,7 @@ def test_discover_workspaces_reports_data_and_skips_private_dirs(tmp_path) -> No
     chats = alpha / "chats"
     chats.mkdir()
     (chats / "one.json").write_text("{}", encoding="utf-8")
-    (tmp_path / "_platform").mkdir()
+    (tmp_path / "_platform").mkdir()  # legacy name; still skipped
 
     assert discover_workspaces(tmp_path) == [
         {
