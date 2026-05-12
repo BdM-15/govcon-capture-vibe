@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.skills.tool_skill_chain import tool_invoke_skill
+from src.skills.tool_registry import tool_invoke_skill
 from src.skills.tools import ToolContext, ToolError, tool_read_file, tool_run_script, tool_write_file
 
 
