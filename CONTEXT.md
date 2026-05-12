@@ -12,7 +12,9 @@ An isolated knowledge graph + vector database for exactly one RFP. Lives at `rag
 `rag_storage/<name>/` layout (traced from live workspace):
 - `graph_chunk_entity_relation.graphml` — GraphML snapshot; legacy file, KG lives in Neo4j
 - `vdb_entities.json`, `vdb_relationships.json`, `vdb_chunks.json` — LightRAG VDB embedding stores
-- `kv_store_*.json` — LightRAG KV stores (doc status, full docs, text chunks, LLM cache, etc.)
+- `kv_store_doc_status.json` — primary doc lifecycle store. Keys = `doc-<hash>`. Each record: `status` (PENDING → PROCESSING → PREPROCESSED → PROCESSED | FAILED), `chunks_count`, `chunks_list`, `content_summary`, `content_length`, `created_at`, `updated_at`, `file_path`, `track_id`, `metadata` (timing, engine). First file to check for "doc processed but missing from KG".
+- `kv_store_text_chunks.json`, `kv_store_full_docs.json`, `kv_store_entity_chunks.json`, `kv_store_full_entities.json`, `kv_store_full_relations.json`, `kv_store_relation_chunks.json` — LightRAG chunk/entity/relation KV stores
+- `kv_store_llm_response_cache.json`, `kv_store_parse_cache.json` — LLM + parse caches (safe to delete to force reprocessing)
 - `.ontology_bootstrap` — bootstrap marker; present = skip bootstrap on next startup
 - `<name>_errors.log`, `<name>_processing.log` — per-workspace ingest logs
 - `chats/` — persisted chat history for this workspace
