@@ -187,6 +187,18 @@ LangGraph-backed executor for deterministic multi-skill chains. Called by `Skill
 `chain_contracts.py` declares which skills can chain and what they accept/produce — planner uses this to validate a proposed sequence before constructing a `ChainSpec`.
 _Avoid_: calling chains "pipelines" (see Flagged ambiguities); confusing `ChainSpec` (plan) with `ChainRunState` (execution state); using `ChainRunState.steps` as a list (it is keyed by step id).
 
+**SkillChainPlanner** (`src/skills/chain_planner.py`):
+Deterministic, scoring-based planner that converts a goal string (`prompt` + optional `outcome`) into a `ChainPlan`. No LLM call — pure keyword/contract matching.
+
+Scoring: for each eligible skill, `_score()` awards `4 × |goal_tokens ∩ contract.keywords|` + `2 × name tokens` + `1 × capability tokens`. Skills not in `CONTRACT_REGISTRY` fall back to description text (capped at 3 pts). Minimum threshold: **score ≥ 4** to become a target skill.
+
+Selection: `_target_skills()` → `_select_skills()` → for each target skill, upstream skills in `CONTRACT_REGISTRY.downstream_skills(target)` are prepended in phase-rank order. Renderer skills (`renderers`, `huashu-design`) appended if `include_rendering=True` and goal contains output terms (`docx`, `xlsx`, `pdf`, etc.) and the upstream skill's contract marks it as `renderable_upstream`. Disconnected skills (no valid handoff path to any other selected skill) are pruned by `_prune_disconnected()`.
+
+`_EXCLUDED_BY_DEFAULT = {"caveman", "grill-me", "govcon-ontology", "improve-codebase-architecture", "skill-creator", "tdd", "to-issues", "to-prd"}` — meta/analysis skills excluded from planning unless explicitly named in the goal tokens.
+
+Output: `ChainPlan` → `spec: ChainSpec` (step IDs are slugified skill names, `artifact_requirements` wired from contract `produces`/`accepts`), `selected_skills` (with scores + roles), `rejected_skills` (top 10 scored but not selected), `warnings`, `rationale`, `iteration_policy: {mode: "outcome-gated-linear"}`. If no skills match: raises `ValueError`.
+_Avoid_: "AI planner" (no LLM); "automatic chain" (user must invoke `/api/ui/skill-chains/plan` explicitly); confusing plan threshold (score ≥ 4) with runtime quality gates.
+
 **Skill run directory**:
 Per-invocation working directory for one skill execution. Path: `rag_storage/<workspace>/skill_runs/<skill>/<YYYYMMDD_HHMMSS_slug>/`. Contains:
 - `run.md` — run envelope (YAML-ish frontmatter); parsed by `parse_run_envelope()` to produce `metadata` dict with `run_id`, `skill`, `workspace`, `created_at`, `user_prompt`, `elapsed_ms`, etc.
