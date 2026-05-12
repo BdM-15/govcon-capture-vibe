@@ -68,6 +68,17 @@ Runtime mode resolution order: `runtime_mode_override` arg → `SKILL_RUNTIME_MO
 Skill chaining: tools-mode skills can call `invoke_skill(child_name, child_prompt)` as a tool. Max depth = 1 (one child per parent, no recursion). Cycle detection prevents `A→B→A`. `SkillManager.invoke_chain()` runs deterministic multi-skill sequences via `SkillChainExecutor` (LangGraph).
 _Avoid_: "skill runner" (ambiguous — both runners exist); "skill pipeline" (see Flagged ambiguities).
 
+**Briefing book** (`entity_payload`):
+The source-grounded context package assembled by the route layer and passed to `SkillManager.invoke()` as `entity_payload`. Built in two steps:
+1. **Retrieval** (`_retrieve_relevant_entities_for_skill()`): runs a hybrid KG+VDB query against the user prompt + skill description; returns a lowercased entity-name whitelist (`names`) and matched chunk IDs.
+2. **Slice** (`build_skill_briefing_book()` in `src/skills/context.py` → `SkillWorkspaceEvidenceStore.build_briefing_book()`): reads workspace KV stores and graph, filters to whitelisted entity names (or bulk-slices if retrieval is off), returns a dict with three keys:
+   - `entities`: `{entity_type: [{name, description, source_chunks}]}`
+   - `source_chunks`: verbatim RFP text blocks (model must quote from these, not fabricate)
+   - `relationships`: typed KG edges connected to sliced entities
+
+In the prompt the briefing book is framed under the header `"## Workspace Briefing Book (JSON)"` and declared the "authoritative source of truth" (`src/skills/skill_prompting.py`). Size cap: `SKILL_MAX_PAYLOAD_CHARS` env var. Retrieval mode and `top_k` are per-request; `mode="off"` disables retrieval and falls back to bulk entity slice.
+_Avoid_: "entity context", "workspace context" (both too generic); "KG dump" (loses the retrieval-grounding step).
+
 **Skill run directory**:
 Per-invocation working directory for one skill execution. Path: `rag_storage/<workspace>/skill_runs/<skill>/<YYYYMMDD_HHMMSS_slug>/`. Contains `artifacts/` (skill output files), `tool_outputs/` (raw tool call results), `run.md` (run envelope), `transcript.json` (tool call log). Scoped to one workspace + one skill execution. Created by `SkillRunStore.create_run_dir()`.
 _Avoid_: run-dir, output dir, workspace.
@@ -97,6 +108,31 @@ _Avoid_: edge types, link types, relationship schema.
 
 **Chunking**:
 LightRAG splits each document into token-bounded chunks before extraction. Two required `.env` knobs — `CHUNK_SIZE` (tokens per chunk) and `CHUNK_OVERLAP_SIZE` (overlap tokens) — both mandatory, no safe default, startup fails without them. The custom chunker (`src/extraction/govcon_chunking.py`, registered via `global_args.chunking_func`) wraps LightRAG's native `chunking_by_token_size` and prepends a `[GOVCON_DOC: type=...; note=...]` banner to every chunk so the extraction prompt and query prompt know the doc type. No other chunking parameters exist.
+
+**Per-role LLM models** (`src/server/llm_routing.py`):
+LightRAG 1.5.0 allows a separate model per processing role. `build_role_llm_routing()` constructs all role wrappers from two config fields (`extraction_llm_name`, `reasoning_llm_name`); the other roles reuse `extraction_llm_name` by default.
+
+| Role | `.env` var | Default model | What it does |
+|------|-----------|---------------|-------------|
+| `extract` | `EXTRACT_LLM_MODEL` | `grok-4-1-fast-non-reasoning` | Entity + relationship extraction (LightRAG `extract` role). Optionally enforces strict JSON schema (`ENTITY_EXTRACTION_STRICT_SCHEMA=true`). Max 32 k tokens. |
+| `query` | `QUERY_LLM_MODEL` | `grok-4.20-0309-reasoning` | RAG query answering via Shipley mentor persona (LightRAG `query` role). Max `llm_max_output_tokens`. |
+| `keyword` | `KEYWORD_LLM_MODEL` | reuses `EXTRACT_LLM_MODEL` | Query-time keyword extraction (LightRAG `keyword` role). Max 4 k tokens. |
+| `vlm` | `VLM_LLM_MODEL` | reuses `EXTRACT_LLM_MODEL` | VLM table/image/equation analysis (LightRAG `vlm` role). Max 8 k tokens. |
+| `post_process` | `POST_PROCESS_LLM_MODEL` | `grok-4-1-fast-reasoning` | Inference algorithms in `src/inference/`. **Not** a LightRAG role — called directly by `SemanticPostProcessor`. |
+
+`keyword` and `vlm` reuse `extraction_llm_name` at the function level; their `.env` vars exist in config but are not wired in `llm_routing.py`. `modal_llm_func` (RAGAnything multimodal processor) also reuses `extraction_llm_name` and strips any strict JSON schema `response_format` if accidentally passed.
+_Avoid_: "the LLM" (five model slots exist); "reasoning model" without specifying which role.
+
+**mineru/ cache** (`rag_storage/<workspace>/mineru/`):
+MinerU parse artifacts written once per document. Layout: `<doc_filename>_<hash8>/<doc_filename>/auto/` containing:
+- `<doc>.md` — reconstructed markdown of the full document
+- `<doc>_content_list.json` / `_content_list_v2.json` — structured content blocks (text, table, image, equation items) passed to RAGAnything for modal processing
+- `<doc>_middle.json` / `_model.json` — intermediate layout analysis from MinerU
+- `<doc>_layout.pdf` / `_span.pdf` / `_origin.pdf` — layout visualisation and original copy
+- `images/` — extracted image files referenced by content blocks
+
+`kv_store_parse_cache.json` (workspace root, namespace `parse_cache`): LightRAG KV store mapping doc hash → content list. Prevents re-running MinerU when the same file is re-uploaded. Safe to delete to force a fresh parse; rebuilds on next ingest.
+_Avoid_: "MinerU output" (ambiguous with `output_dir`); "parser cache" (both the `mineru/` folder and `kv_store_parse_cache.json` exist — qualify which).
 
 ### Prompt systems
 
@@ -166,6 +202,16 @@ Quantified evidence (past performance metric, contract value, throughput figure)
 
 **Compliance matrix**:
 An L-to-M cross-reference table showing every proposal instruction is addressed in the proposal. Built from `MAPS_TO` relationships in the knowledge graph.
+
+### Capture management
+
+**Pursuit** (`rag_storage/<workspace>/pursuits/<slug>/`):
+A single bid opportunity being tracked through Shipley stage gates. On-disk layout per pursuit:
+- `00_pursuit.yaml` — manifest with fields: `workspace`, `slug`, `title`, `agency`, `stage` (current gate: `identify`/`qualify`/`capture`/`proposal`/`submitted`/`award`), `gate.due`, `proposal_due`, `pwin.value`/`confidence`/`trend`, `pwin_drivers[]` (weighted scoring: customer 30%, solution 30%, competition 25%, price 15%; each has `score`, `rationale`, `next_action`), `readiness` scores (7 dimensions), `shipley_folders`
+- `01-identify/` through `06-award/` — Shipley phase folders; capture artifacts go here as the pursuit advances
+
+One workspace = one pursuit tracked (workspace slug = pursuit slug). No backend routes yet — YAML on disk read/written by the UI only. `stage` in `00_pursuit.yaml` is the single source of truth for current gate.
+_Avoid_: "opportunity" (generic); "bid" (use pursuit when the Shipley stage-gate context applies).
 
 ## Relationships
 
