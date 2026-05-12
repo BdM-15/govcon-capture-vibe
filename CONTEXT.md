@@ -125,6 +125,17 @@ Runtime mode resolution order: `runtime_mode_override` arg → `SKILL_RUNTIME_MO
 Skill chaining: tools-mode skills can call `invoke_skill(child_name, child_prompt)` as a tool. Max depth = 1 (one child per parent, no recursion). Cycle detection prevents `A→B→A`. `SkillManager.invoke_chain()` runs deterministic multi-skill sequences via `SkillChainExecutor` (LangGraph).
 _Avoid_: "skill runner" (ambiguous — both runners exist); "skill pipeline" (see Flagged ambiguities).
 
+**Tool loop** (`run_tool_loop()` in `src/skills/runtime.py`):
+Core agentic dispatch loop for tools-mode skills. Inputs: `skill_name`, `skill_body` (SKILL.md body verbatim — this is the authoritative workflow contract in the system message), `user_prompt`, `ctx: ToolContext`, `max_turns` (default 12), `temperature` (default 0.2). Returns `ToolLoopResult(final_response, transcript, turns, tool_calls_total, usage_total, warnings, finish_reason)`.
+
+Loop per turn: (1) `chat_with_tools(messages, tools, temperature)` → `ChatResponse`; accumulate usage. (2) No tool calls → extract final answer, break. (3) For each tool call: `dispatch_tool_call(call, specs_by_name, ctx)` → `(payload_str, extra)`. Extract `chunk-<32hex>` IDs from full payload before the 500-char `result_preview` slice; store as `chunk_ids` on transcript entry. Append `{role: tool, content: payload_str}` to messages. (4) `persist_transcript(run_dir, transcript)` after every turn — crash-safe partial transcript.
+
+Turn cap: if `max_turns` reached without a final answer, inject a "stop calling tools and summarize" user message, then make one final `chat_with_tools` call **without** tool schemas → forced summary. Finish reasons: `"stop"` | `"tool_calls_exhausted"` | `"error"`.
+
+Tool names: in-process tools registered in `build_tool_specs()`; MCP tools named `mcp__<server>__<tool>` via `build_mcp_tool_specs()`.
+`compose_system_prompt()` assembles: skill identity header + workspace name + available tool list + SKILL.md body.
+_Avoid_: "agentic loop" in code symbols (canonical name is `run_tool_loop`); assuming turn cap = silent truncation (a closing summarize call is always forced).
+
 **Skill tools** (`src/skills/tools.py`, `tool_kg.py`, `tool_filesystem.py`, `tool_mcp.py`):
 The bounded tool set exposed to the LLM during tools-mode runs. All tool calls are captured in `transcript.json`.
 
