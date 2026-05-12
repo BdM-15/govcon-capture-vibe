@@ -49,6 +49,22 @@ The 5-phase inference pass that runs exactly once after a batch completes. Phase
 Phase 4 runs 3 **inference algorithms** in parallel (`src/inference/algorithms/`): `infer_lm_links` (L↔M cross-document linking), `infer_document_structure` (heuristic regex, zero LLM cost), `resolve_orphans` (reconnect unlinked entities). Algorithms are the mechanisms inside Phase 4; phases are the overarching structure of the whole pass.
 _Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambiguities). Never conflate phases with algorithms.
 
+**Inference algorithms** (`src/inference/algorithms/`, Phase 4 of the semantic post-processor):
+Three algorithms run in parallel via `asyncio.gather` under a shared concurrency semaphore (`MAX_CONCURRENT_LLM_CALLS`):
+
+| Algorithm | Function | LLM | Relationship types produced | When it fires |
+|-----------|----------|-----|----------------------------|---------------|
+| `infer_lm_links` | `infer_lm_links.py` | ✅ yes | `GUIDES` | Instructions × eval factors: gathers `proposal_instruction`, `proposal_volume`, instruction-flavoured `deliverable`/`requirement` entities; sends instruction–eval factor pairs to LLM via `instruction_evaluation_linking.md` prompt; extracts `GUIDES` edges |
+| `infer_document_structure` | `infer_document_structure.py` | ❌ no | `REFERENCES`, `CHILD_OF` | Pure regex: detects CDRL/DID/DD-Form-1423 cross-refs, doc-section refs, attachment refs; builds numbered-hierarchy `CHILD_OF` edges from dot-notation prefixes (e.g. `F.1.5.7` → `F.1.5`) — deterministic, zero API cost |
+| `resolve_orphans` | `resolve_orphans.py` | ✅ yes | any canonical type | Queries Neo4j for entities with zero edges; batches them 30 orphans × 100 targets; sends each batch to LLM via `orphan_resolution.md` prompt; prioritises high-value target types (`requirement`, `document_section`, `deliverable`…) |
+
+Reduced from 8 → 3 algorithms in Issue #85: algorithms 2–6 became redundant once the extraction prompt + specialized entity types handled that coverage natively.
+_Avoid_: calling them "phases" (phases = the 5-phase wrapper; algorithms = parallel workers inside Phase 4).
+
+**VDB sync** (Phase 5, `src/inference/vdb_sync.py`):
+`sync_discoveries_to_vdb()` — syncs Neo4j-resident inferred relationships back to LightRAG's VDB stores after Phase 4 completes. Without this step, algorithm-discovered edges exist in Neo4j but are invisible to `/query` results (KG retrieval reads the VDB, not Neo4j directly). Mechanism: calls `lightrag.ainsert_custom_kg()` on relationships tagged `source='semantic_post_processor'`. Dedupe: normalises source/target to a pair key (sorted tuple) — VDB is pair-keyed, not direction-keyed, so duplicate pair writes are harmless but tracked in `_build_sync_audit()` stats. `sync_all_relationships_to_vdb` (full resync) was removed in commit `5f4c5b8`; only `sync_discoveries_to_vdb` is active.
+_Avoid_: "update VDB" (too generic); "Phase 6" (there is no Phase 6 — VDB sync is Phase 5).
+
 **Batch**:
 A user-defined group of documents uploaded together for which exactly one semantic post-processor run is guaranteed. Auto-detected by an idle-timeout window (`BATCH_TIMEOUT_SECONDS`): when no new document completes for that duration, the batch is declared complete and post-processing fires once. Without batching, uploading N documents would trigger N post-processor runs -- each exponentially more expensive as the graph grows.
 _Avoid_: job, run, upload session.
@@ -230,7 +246,7 @@ _Avoid_: "opportunity" (generic); "bid" (use pursuit when the Shipley stage-gate
 
 > **Dev:** "Should I call this a 'pipeline' in the function name?"
 >
-> **Domain expert:** "Which pipeline? The ingest pipeline (the 7-phase doc processing) or the semantic post-processor (the 6-phase inference pass)? Both exist. The ambiguity is real -- see Flagged ambiguities."
+> **Domain expert:** "Which pipeline? The ingest pipeline (the multi-phase doc processing) or the semantic post-processor (the 5-phase inference pass)? Both exist. The ambiguity is real -- see Flagged ambiguities."
 
 > **Dev:** "The L-to-M mapping query isn't finding anything -- are the requirements in the wrong entity type?"
 >
