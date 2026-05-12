@@ -123,6 +123,15 @@ Runtime mode resolution order: `runtime_mode_override` arg → `SKILL_RUNTIME_MO
 Skill chaining: tools-mode skills can call `invoke_skill(child_name, child_prompt)` as a tool. Max depth = 1 (one child per parent, no recursion). Cycle detection prevents `A→B→A`. `SkillManager.invoke_chain()` runs deterministic multi-skill sequences via `SkillChainExecutor` (LangGraph).
 _Avoid_: "skill runner" (ambiguous — both runners exist); "skill pipeline" (see Flagged ambiguities).
 
+**SkillSettingsStore** (`src/skills/settings.py`):
+Per-workspace settings file (`rag_storage/<workspace>/ui_skill_settings.json`). Two independent settings surfaces:
+
+1. **Briefing-book params** (stored in file, per-workspace): `max_entities_per_type` (default 40), `max_chunks_per_entity` (default 3), `max_relationships_per_entity` (default 8), `retrieval_mode` (default from `SKILL_RETRIEVAL_MODE` env, fallback `"mix"`), `retrieval_top_k` (default 60). `read()` merges stored keys over defaults; `write()` atomic tmp-replace.
+2. **Tools-mode runtime limits** (stored in `.env`, global to process, not per-workspace): 13 env vars — `SKILL_TOOLS_MAX_TURNS` (20), `SKILL_TOOLS_LLM_TIMEOUT` (180 s), `MCP_HANDSHAKE_TIMEOUT` (15 s), `MCP_TOOL_CALL_TIMEOUT` (60 s), `MCP_SHUTDOWN_TIMEOUT` (3 s), `SKILL_TOOLS_MAX_TOOL_RESULT_CHARS` (12 000), `SKILL_TOOLS_MAX_READ_BYTES` (200 000), `SKILL_TOOLS_MAX_WRITE_BYTES` (1 000 000), `SKILL_TOOLS_MAX_SCRIPT_SECONDS` (120), `SKILL_TOOLS_MAX_KG_ENTITIES_PER_TYPE` (50), `SKILL_TOOLS_MAX_KG_CHUNKS` (30), `SKILL_TOOLS_MAX_CHUNKS_PER_ENTITY` (5), `SKILL_TOOLS_MAX_RELATIONSHIPS_PER_ENTITY` (20). Written via `set_env_var` (triggers `reset_settings()` — see Workspace management). Read at call-time via `skill_tools_runtime_limits()` → `SkillToolsRuntimeLimits` frozen dataclass.
+
+`VALID_SKILL_RETRIEVAL_MODES = {"hybrid", "local", "global", "naive", "mix", "off"}`. `"off"` disables retrieval entirely — briefing book falls back to bulk entity slice. `VALID_SKILL_RUNTIME_MODES = {"tools", "legacy"}`.
+_Avoid_: "skill settings" without specifying which surface (briefing-book params vs tools-mode runtime limits — different backing stores, different scope).
+
 **Briefing book** (`entity_payload`):
 The source-grounded context package assembled by the route layer and passed to `SkillManager.invoke()` as `entity_payload`. Built in two steps:
 
