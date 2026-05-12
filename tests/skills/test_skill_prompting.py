@@ -1,5 +1,5 @@
 from src.skills.skill_models import Skill, SkillFrontmatter
-from src.skills.skill_prompting import compose_skill_prompt
+from src.skills.skill_legacy_runner import compose_skill_prompt
 
 
 def test_compose_skill_prompt_includes_core_contract() -> None:
