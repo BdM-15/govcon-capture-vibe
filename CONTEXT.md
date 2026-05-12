@@ -26,12 +26,16 @@ An isolated knowledge graph + vector database for exactly one RFP. Lives at `rag
 _Avoid_: project, environment, instance.
 
 **Knowledge graph (KG)**:
-The Neo4j graph database holding all entities and relationships for a workspace. Always Neo4j — NetworkX is not used. Accessed via `src/core/neo4j_io.py`. The semantic post-processor reads from and writes to this graph. Skills query it via the `kg_query(cypher)` and `kg_entities(types[])` tools.
+The graph database holding all entities and relationships for a workspace. Backed by Neo4j when `GRAPH_STORAGE=Neo4JStorage` (production default). Accessed via `src/core/neo4j_io.py`. The semantic post-processor reads from and writes to this graph. Skills query it via the `kg_query(cypher)` and `kg_entities(types[])` tools.
 _Avoid_: "the graph" alone (ambiguous between the KG and GraphML files on disk).
 
 **VDB (vector database)**:
-LightRAG's internal embedding stores: `entity_vdb` + `relationships_vdb`. Managed entirely by LightRAG via `ainsert_custom_kg()`. Workspace-scoped — lives under `rag_storage/<name>/` alongside the KG. Powers hybrid retrieval (`kg_chunks` tool). Phase 6 of the semantic post-processor syncs inference-discovered relationships into it so queries can find them.
+LightRAG's internal embedding stores: `entity_vdb` + `relationships_vdb`. Managed entirely by LightRAG via `ainsert_custom_kg()`. Workspace-scoped — lives under `rag_storage/<name>/` alongside the KG. Powers hybrid retrieval (`kg_chunks` tool). Phase 5 of the semantic post-processor (VDB sync) pushes inference-discovered relationships into it so queries can find them.
 _Avoid_: treating VDB and KG as interchangeable — KG = Neo4j graph (structure); VDB = embeddings (retrieval).
+
+**Graph storage** (`GRAPH_STORAGE` env var):
+Selects the KG backend. Two options: `Neo4JStorage` (production; requires `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `NEO4J_DATABASE`) and `NetworkXStorage` (config default; in-memory, no Neo4j required; used for local tests / CI where Neo4j is unavailable). When `GRAPH_STORAGE=NetworkXStorage` the inference algorithms and `Neo4jGraphIO` skip Neo4j reads/writes and emit a warning — skills that issue Cypher (`kg_query` tool) will get empty results. Connection details wrapped in `Neo4jConnectionConfig` (`src/core/neo4j_config.py`). `Neo4jConnectionConfig.enabled` property returns `True` only for `Neo4JStorage` — guard used everywhere before issuing Cypher.
+_Avoid_: assuming Neo4j is always active; scripts that hard-code `bolt://localhost:7687` without checking `enabled`.
 
 **Ingest pipeline**:
 The sequence that turns a raw RFP document into graph data: MinerU parse -> content filter/rebalance -> `insert_content_list` (multimodal analysis + LightRAG chunking + entity/relationship extraction) -> batch completion -> semantic post-processing trigger. Entry point: `process_document_with_semantic_inference()` in `src/server/document_processing.py`. This function is passed as `process_document_func` to both upload and scan routes — identical pipeline regardless of trigger.
@@ -95,6 +99,17 @@ The source-grounded context package assembled by the route layer and passed to `
 In the prompt the briefing book is framed under the header `"## Workspace Briefing Book (JSON)"` and declared the "authoritative source of truth" (`src/skills/skill_prompting.py`). Size cap: `SKILL_MAX_PAYLOAD_CHARS` env var. Retrieval mode and `top_k` are per-request; `mode="off"` disables retrieval and falls back to bulk entity slice.
 _Avoid_: "entity context", "workspace context" (both too generic); "KG dump" (loses the retrieval-grounding step).
 
+**SkillChainExecutor** (`src/skills/chain_executor.py`):
+LangGraph-backed executor for deterministic multi-skill chains. Called by `SkillManager.invoke_chain()` when the planner (or explicit API call) needs a fixed sequence of skills rather than a single-skill invocation. Uses a `StateGraph` with one node per chain step; steps share a `ChainRunState` carried through `ChainExecutionState`. Key contract:
+- `invoke(spec, ...)` → runs a new `ChainSpec` (list of `ChainStepSpec`s) from scratch
+- `resume(chain, from_step_id=...)` → re-executes from a specific step after user supplies missing inputs
+- `blocked` flag set when any step reports `needs_input`; planner surfaces the `input_request` to the user
+- Artifacts produced by step N are promoted (via `_promoted_artifacts()`) and available as inputs to step N+1 — this is the cross-skill handoff mechanism
+- `mode` field: `"original"` (production) or `"dry_run"` (validation without LLM calls)
+
+`ChainSpec` is the planner-facing description (steps, artifact contracts, user prompt). `ChainRunState` is the execution ledger (current step, status, step run results, promoted artifacts). `chain_contracts.py` declares which skills can chain and what they accept/produce — planner uses this to validate a proposed sequence before constructing a `ChainSpec`.
+_Avoid_: calling chains "pipelines" (see Flagged ambiguities); confusing `ChainSpec` (plan) with `ChainRunState` (execution state).
+
 **Skill run directory**:
 Per-invocation working directory for one skill execution. Path: `rag_storage/<workspace>/skill_runs/<skill>/<YYYYMMDD_HHMMSS_slug>/`. Contains `artifacts/` (skill output files), `tool_outputs/` (raw tool call results), `run.md` (run envelope), `transcript.json` (tool call log). Scoped to one workspace + one skill execution. Created by `SkillRunStore.create_run_dir()`.
 _Avoid_: run-dir, output dir, workspace.
@@ -121,6 +136,14 @@ _Avoid_: entity types list, entity schema.
 **Canonical relationship types**:
 The 35 fixed relationship type strings defined in `src/ontology/schema.py -> VALID_RELATIONSHIP_TYPES`. Every relationship in the knowledge graph must use one of these as its `keywords` first token.
 _Avoid_: edge types, link types, relationship schema.
+
+**Strict schema extraction** (`ENTITY_EXTRACTION_STRICT_SCHEMA`, `src/ontology/extraction_schema.py`):
+Optional mode that passes `response_format={"type": "json_schema", "json_schema": {..., "strict": True}}` to xAI's OpenAI-compatible API for the `extract` role, constraining the model to emit exactly the field names LightRAG's parser expects. Enabled via `ENTITY_EXTRACTION_STRICT_SCHEMA=true` in `.env`. Schema name: `GovConExtractionResult`. Enforces:
+- `entities[].type` constrained to the entity catalog enum (no invented types at extraction time)
+- Required fields `name`, `type`, `description` always present on each entity object
+- Required fields `source`, `target`, `keywords`, `description` always present on each relationship object
+
+**Why `keywords` has no `pattern` constraint**: xAI strict mode rejects JSON-Schema `pattern` (returns HTTP 400). First-token relationship type enforcement is handled by (a) the extraction prompt and (b) downstream `normalize_relationship_type()` in `src/ontology/schema.py`. **Cache identity note**: switching `ENTITY_EXTRACTION_STRICT_SCHEMA` on or off changes the `response_format` argument, which changes the cache key in `kv_store_llm_response_cache.json` — existing cached responses from the opposite mode will not be reused. Baseline data (mcpp_drfp): strict mode `GovConExtractionResult` yielded 4994 entities / 8603 relationships vs 2614 / 4245 for JSON without schema (−48% / −51%).
 
 **Chunking**:
 LightRAG splits each document into token-bounded chunks before extraction. Two required `.env` knobs — `CHUNK_SIZE` (tokens per chunk) and `CHUNK_OVERLAP_SIZE` (overlap tokens) — both mandatory, no safe default, startup fails without them. The custom chunker (`src/extraction/govcon_chunking.py`, registered via `global_args.chunking_func`) wraps LightRAG's native `chunking_by_token_size` and prepends a `[GOVCON_DOC: type=...; note=...]` banner to every chunk so the extraction prompt and query prompt know the doc type. No other chunking parameters exist.
