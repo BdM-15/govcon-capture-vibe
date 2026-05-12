@@ -14,6 +14,10 @@ _Avoid_: project, environment, instance.
 The Neo4j graph database holding all entities and relationships for a workspace. Always Neo4j — NetworkX is not used. Accessed via `src/core/neo4j_io.py`. The semantic post-processor reads from and writes to this graph. Skills query it via the `kg_query(cypher)` and `kg_entities(types[])` tools.
 _Avoid_: "the graph" alone (ambiguous between the KG and GraphML files on disk).
 
+**VDB (vector database)**:
+LightRAG's internal embedding stores: `entity_vdb` + `relationships_vdb`. Managed entirely by LightRAG via `ainsert_custom_kg()`. Workspace-scoped — lives under `rag_storage/<name>/` alongside the KG. Powers hybrid retrieval (`kg_chunks` tool). Phase 6 of the semantic post-processor syncs inference-discovered relationships into it so queries can find them.
+_Avoid_: treating VDB and KG as interchangeable — KG = Neo4j graph (structure); VDB = embeddings (retrieval).
+
 **Ingest pipeline**:
 The 7-phase sequence that turns a raw RFP document into graph data: upload -> MinerU parse -> multimodal analysis -> LightRAG chunking -> entity extraction -> relationship extraction -> semantic post-processing trigger.
 _Avoid_: "the pipeline" (ambiguous -- see Flagged ambiguities).
