@@ -8,6 +8,18 @@ Ontology-backed RAG system that ingests federal RFPs into a knowledge graph and 
 
 **Workspace**:
 An isolated knowledge graph + vector database for exactly one RFP. Lives at `rag_storage/<name>/`. All entities, relationships, and embeddings are workspace-scoped. Created manually: user names the workspace, switches to it via the UI, then uploads documents through the Documents page. Not auto-created on first upload.
+
+`rag_storage/<name>/` layout (traced from live workspace):
+- `graph_chunk_entity_relation.graphml` — GraphML snapshot; legacy file, KG lives in Neo4j
+- `vdb_entities.json`, `vdb_relationships.json`, `vdb_chunks.json` — LightRAG VDB embedding stores
+- `kv_store_*.json` — LightRAG KV stores (doc status, full docs, text chunks, LLM cache, etc.)
+- `.ontology_bootstrap` — bootstrap marker; present = skip bootstrap on next startup
+- `<name>_errors.log`, `<name>_processing.log` — per-workspace ingest logs
+- `chats/` — persisted chat history for this workspace
+- `pursuits/` — capture pursuit artifacts (skill outputs)
+- `mineru/` — MinerU parse cache (intermediate PDF extraction results)
+- `skill_runs/<skill>/<timestamp>/` — per-invocation skill run directories
+
 _Avoid_: project, environment, instance.
 
 **Knowledge graph (KG)**:
