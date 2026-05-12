@@ -15,8 +15,12 @@ The 7-phase sequence that turns a raw RFP document into graph data: upload -> Mi
 _Avoid_: "the pipeline" (ambiguous -- see Flagged ambiguities).
 
 **Semantic post-processor**:
-The 6-phase inference pass that runs automatically after a batch completes: data loading -> entity normalization -> relationship normalization -> relationship inference -> workload enrichment -> VDB sync. Lives in `src/inference/`.
+The 6-phase inference pass that runs exactly once after a batch completes: data loading -> entity normalization -> relationship normalization -> relationship inference -> workload enrichment -> VDB sync. Lives in `src/inference/`.
 _Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambiguities).
+
+**Batch**:
+A user-defined group of documents uploaded together for which exactly one semantic post-processor run is guaranteed. Auto-detected by an idle-timeout window (`BATCH_TIMEOUT_SECONDS`): when no new document completes for that duration, the batch is declared complete and post-processing fires once. Without batching, uploading N documents would trigger N post-processor runs -- each exponentially more expensive as the graph grows.
+_Avoid_: job, run, upload session.
 
 **Bootstrap**:
 One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge (Shipley methodology, FAR patterns, evaluation frameworks) before any RFP documents are uploaded. Controlled by `.ontology_bootstrap` marker file per workspace.
@@ -85,6 +89,7 @@ An L-to-M cross-reference table showing every proposal instruction is addressed 
 
 ## Relationships
 
+- A **batch** completion triggers exactly one **semantic post-processor** run. See [ADR-0001](docs/adr/0001-batch-idle-timer-deduplicates-post-processing.md).
 - A **workspace** contains one knowledge graph and one VDB (vector database).
 - The **entity catalog** defines the valid types for all entities in the knowledge graph.
 - **Canonical relationship types** define the valid `keywords` for all relationships in the knowledge graph.
