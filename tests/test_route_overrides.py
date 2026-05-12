@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.server.route_overrides import register_custom_ingestion_routes
+from src.server.routes import register_custom_ingestion_routes
 
 
 class _FakeLogger:

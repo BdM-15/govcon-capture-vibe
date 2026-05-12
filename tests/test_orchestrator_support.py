@@ -1,4 +1,4 @@
-from src.inference.algorithms.orchestrator_support import (
+from src.inference.algorithms.orchestrator import (
     AlgorithmRunSpec,
     collect_algorithm_relationships,
 )
