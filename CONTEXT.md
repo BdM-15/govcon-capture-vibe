@@ -185,7 +185,13 @@ Filesystem staging area for batch ingest. Drop PDFs/DOCX here, then call `POST /
 _Avoid_: upload folder, queue (there is no queue; scan is synchronous per-file in a background task).
 
 **Upload** (`POST /documents/upload`):
-Interactive single-file ingest via the UI. Saves the file to `inputs/<workspace>/` then immediately processes it through the ingest pipeline. Supports `stage_only=true` to save without processing (defers to scan). Primary/preferred path for day-to-day use.
+Interactive single-file ingest via the UI. Saves the file to `inputs/<workspace>/` then immediately processes it through the ingest pipeline. Supports `stage_only=true` to save without processing (defers to scan). Primary/preferred path for day-to-day use. Upload staging (`src/server/upload_staging.py`):
+
+- `sanitize_upload_filename(name)`: strips `/`, `\`, and leading `.` from the filename — prevents path traversal before saving.
+- SHA-256 content dedup: if a file with the same name already exists in `inputs/<workspace>/`, the two files are hashed. Identical content → existing file reused (no overwrite, no re-ingest). Different content → new file saved with `_YYYYMMDD_HHMMSS` timestamp suffix.
+- Write: atomic temp file in the same folder → `tmp.replace(target)` — avoids torn writes.
+- `list_scannable_files(folder)`: non-recursive glob for `DEFAULT_SCAN_EXTENSIONS` — used by scan to find pending files; deduplicates case variants.
+_Avoid_: "file upload" without noting the SHA-256 dedup (identical re-upload silently reuses the existing file).
 
 **Scan** (`POST /scan-rfp`):
 Filesystem batch ingest. Reads all unprocessed files from `inputs/<workspace>/`, processes each sequentially in a background task, skips already-processed files. Returns a `track_id` immediately; progress visible in server logs. Same `process_document_func` as upload — identical pipeline, different trigger. Intended for bulk/automated ingestion when comfortable with that workflow.
