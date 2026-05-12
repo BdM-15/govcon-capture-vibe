@@ -214,7 +214,7 @@ Per-invocation working directory for one skill execution. Path: `rag_storage/<wo
 - `run.md` — run envelope (YAML-ish frontmatter); parsed by `parse_run_envelope()` to produce `metadata` dict with `run_id`, `skill`, `workspace`, `created_at`, `user_prompt`, `elapsed_ms`, etc.
 - `response.md` — raw LLM response text
 - `prompt.md` — full prompt sent to LLM (briefing book + skill body)
-- `artifacts/` — skill output files (`.docx`, `.xlsx`, `.md`, etc.); discoverable via `list_run_artifacts()` using `artifact_manifest.json` for metadata + MIME
+- `artifacts/` — skill output files (`.docx`, `.xlsx`, `.md`, etc.); discoverable via `list_run_artifacts()` using `artifacts_manifest.json` for metadata + MIME
 - `tool_outputs/` — raw tool call results per turn (tools-mode only)
 - `transcript.json` — array of tool call events; fed to `build_reasoning_view()` for the UI reasoning panel
 
@@ -223,6 +223,18 @@ Per-invocation working directory for one skill execution. Path: `rag_storage/<wo
 `SkillRunIndex.read_run()`: full detail — adds `artifacts`, `transcript`, `tool_outputs`. Run ID must pass `_SAFE_RUN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")`.
 
 Trash: `rag_storage/<workspace>/.trash/studio_artifacts/<trash_id>/`. `trash_id` format: `YYYYMMDD_HHMMSS_microseconds_original.ext`. Restore: moves back to original path. Bulk trash/restore endpoints under Studio (`GET/POST /api/ui/studio/trash`, `/restore`, `/delete`).
+
+**Artifact manifest** (`src/skills/run_metadata.py`):
+`artifacts_manifest.json` in `run_dir/` — keyed by artifact filename, values are per-artifact metadata dicts. Fields: `display_name` (sanitized label, max 120 chars), `render_status` (`"failed"` only — absent means success or not-yet-run), `render_message` (max 400 chars), `render_targets`, `render_logs`, `render_log_excerpt` (max 1200 chars), `products` (normalized semantic product labels, lowercase, max 128 chars each). Read by `read_artifact_manifest()` (validates all fields on load); written by `write_artifact_manifest()`.
+
+`STUDIO_DELIVERABLE_EXTENSIONS` = {`docx`, `xlsx`, `pptx`, `pdf`, `html`, `htm`, `mp4`, `gif`, `png`, `jpg`, `jpeg`, `webp`}. `is_studio_deliverable(filename)` returns True for these — controls which artifacts surface in the Studio "Deliverables" panel.
+
+`STUDIO_EXTRA_MIME`: 14-entry dict for extensions the `mimetypes` stdlib misses on Windows. `resolve_artifact_mime(filename)` checks this first, then `mimetypes.guess_type`, then `application/octet-stream`.
+
+`slugify_for_filename(text, max_len=32)` — lowercase + non-alphanumeric → `_` + length cap. Used for run ID slug component.
+`humanize_artifact_name(filename)` — stem split on `_/-`, capitalized tokens (digits + ALL_CAPS preserved). Used as fallback display name when manifest has no `display_name`.
+_Avoid_: "artifact_manifest.json" (correct name is `artifacts_manifest.json`); assuming render_status absent means failed (absent = success or not yet rendered).
+
 _Avoid_: run-dir, output dir, workspace; "run.md is JSON" (it's an envelope parsed by `parse_run_envelope`, not raw JSON).
 
 **MCP skill integration** (`src/skills/mcp_client.py`, `src/skills/mcp_session.py`):
