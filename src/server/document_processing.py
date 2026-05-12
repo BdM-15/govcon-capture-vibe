@@ -1,4 +1,4 @@
-"""Document processing pipeline and doc_status repair helpers."""
+"""Document ingest pipeline and doc_status repair helpers."""
 
 from __future__ import annotations
 

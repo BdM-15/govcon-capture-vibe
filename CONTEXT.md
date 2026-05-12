@@ -107,6 +107,6 @@ An L-to-M cross-reference table showing every proposal instruction is addressed 
 
 ## Flagged ambiguities
 
-- **"pipeline"** was used to mean both the 7-phase ingest sequence and the 6-phase post-ingest inference pass -- resolved: use **ingest pipeline** for the former and **semantic post-processor** for the latter. Never use bare "pipeline."
-- **"entity"** is used generically in Python code (e.g., LightRAG internals) but must never be used as a domain term in issue titles, test names, or refactor proposals -- always use the specific catalog type (requirement, evaluation_factor, etc.).
-- **"prompt"** without qualification is ambiguous -- three independent prompt systems exist (extraction, query, multimodal). Always say which one.
+- **"pipeline"** -- resolved. `src/server/document_processing.py` docstring now says "ingest pipeline"; `src/inference/semantic_post_processor.py` docstring and banner now say "semantic post-processor." Never use bare "pipeline" in new code, issue titles, or test names.
+- **"entity"** -- `entity` is used generically inside LightRAG internals; do not use it as a domain term in new code, issue titles, or test names. Always use the specific entity catalog type (requirement, evaluation_factor, proposal_instruction, etc.).
+- **"prompt"** -- resolved by naming convention: each prompt module names itself by system (extraction.py, query.py, multimodal prompts). Always qualify: "extraction prompt", "query prompt", or "multimodal prompt." Never write bare "prompt" when the system matters.
