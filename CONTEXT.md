@@ -77,6 +77,10 @@ _Avoid_: job, run, upload session.
 Correlation token for one ingest operation. Format: `{prefix}_{YYYYMMDD_HHMMSS}_{8hex}`. Prefix is `insert` for upload-path calls (LightRAG's `generate_track_id("insert")`) and `scan-{8hex}` for `/scan-rfp` (our code). Stored in `kv_store_doc_status.json` per document. Emitted in server log lines as `[scan <track_id>]`. Use to grep server log for all events from one ingest session.
 _Avoid_: request ID, job ID (neither is a first-class concept here).
 
+**LLM response cache** (`kv_store_llm_response_cache.json`, workspace root):
+LightRAG's content-addressed cache of LLM API responses. Cache key = hash of `(model, prompt, system_prompt, response_format, history_messages)`. On a repeated ingest of the same document against the same model+config, identical prompts hit the cache and skip the API call entirely — safe for dev iteration but must be invalidated when switching modes. **Cache identity rule**: when `ENTITY_EXTRACTION_STRICT_SCHEMA=true`, `llm_routing.py` appends `#strict-jsonschema` to the `host` field in the `extract` role metadata. This changes the cache namespace — cached responses from the non-strict path will not be served for strict-mode runs and vice versa. Safe to delete the entire file to force full re-extraction; LightRAG rebuilds it on the next ingest. Do not delete mid-batch (partial cache leaves some chunks re-extracted, some served from cache — mismatched entity sets).
+_Avoid_: "clearing the cache" without qualifying which cache (`kv_store_parse_cache.json` = MinerU parse cache; `kv_store_llm_response_cache.json` = LLM API response cache — deleting one does not affect the other).
+
 **SkillManager** (`src/skills/manager.py`):
 Singleton that discovers, installs, and invokes agent skills. Discovery: walks `.github/skills/` at startup, parses YAML frontmatter from each `SKILL.md`; install ledger at `var/platform/skills.json` (global to instance, not per-workspace). Invocation: `SkillManager.invoke(name, workspace, user_prompt, entity_payload, llm, ...)` → `SkillExecutor.invoke()` → runtime branch:
 
