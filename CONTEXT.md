@@ -37,7 +37,7 @@ Filesystem staging area for batch ingest. Drop PDFs/DOCX here, then call `POST /
 _Avoid_: upload folder, queue (there is no queue; scan is synchronous per-file in a background task).
 
 **Bootstrap**:
-One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge (Shipley methodology, FAR patterns, evaluation frameworks) before any RFP documents are uploaded. Controlled by `.ontology_bootstrap` marker file per workspace.
+One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge (Shipley methodology, FAR patterns, evaluation frameworks) before any RFP documents are uploaded. Triggered automatically at server startup via `maybe_bootstrap_ontology()` in `src/server/rag_post_init.py`. Gate: `AUTO_BOOTSTRAP_ONTOLOGY` env var (default `true`). Fresh workspace (no marker) + env enabled -> ontology entities/relationships become the initial KG foundation. `.ontology_bootstrap` marker written after success; present -> skip on subsequent startups. `ONTOLOGY_BOOTSTRAP_FORCE=true` re-seeds even if marker exists.
 _Avoid_: initialization (overloaded with server startup), seed.
 
 **Entity catalog**:
