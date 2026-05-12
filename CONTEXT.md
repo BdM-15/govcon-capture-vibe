@@ -291,6 +291,10 @@ _Avoid_: "MCP server" without qualifying "vendored MCP server under `tools/mcps/
 Filesystem staging area for batch ingest. Drop PDFs/DOCX here, then call `POST /scan-rfp` to process all unprocessed files in the folder sequentially. Already-processed files are skipped. The server also copies uploaded files here when using the Documents UI (`/documents/upload`). `inputs/__enqueued__/` is a reserved name (never written to by any code — skip it).
 _Avoid_: upload folder, queue (there is no queue; scan is synchronous per-file in a background task).
 
+**Ingestion route seam** (`src/server/routes.py`):
+`register_custom_ingestion_routes(app, rag_instance)` replaces LightRAG's stock `POST /insert` and `POST /documents/upload` routes with Theseus multimodal handlers. Strategy: `_preserve_non_overridden_post_routes()` filters out the two overridden paths from `app.router.routes`, then re-registers them via `create_insert_endpoint`, `create_documents_upload_endpoint`, `create_scan_endpoint`. All three share the same `process_document_with_semantic_inference` adapter (wraps `document_processing.py` with callback injection) and the singleton `GovConProcessingCallback`. `_OVERRIDDEN_POST_PATHS = {"/insert", "/documents/upload"}` is the closed set of replaced endpoints.
+_Avoid_: "route overrides module" (that's the shim `route_overrides.py`); the real seam is `routes.py`.
+
 **Upload** (`POST /documents/upload`):
 Interactive single-file ingest via the UI. Saves the file to `inputs/<workspace>/` then immediately processes it through the ingest pipeline. Supports `stage_only=true` to save without processing (defers to scan). Primary/preferred path for day-to-day use. Upload staging (`src/server/upload_staging.py`):
 
