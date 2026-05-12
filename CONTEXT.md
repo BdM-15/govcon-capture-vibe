@@ -62,6 +62,8 @@ The 5-phase inference pass that runs exactly once after a batch completes. Phase
 
 **Trigger mechanism**: `GovConProcessingCallback` (`src/server/processing_callback.py`) tracks in-flight documents. Each `on_document_complete` / `on_document_error` schedules a `asyncio.call_later` timer (`BATCH_TIMEOUT_SECONDS`). Timer fires `_check_batch_complete()`: if `pending_uploads == 0` and `processing_docs == 0` and `enhancement_pending`, it calls `enhance_knowledge_graph()`. New document arriving cancels and resets the timer. Gate: `ENABLE_POST_PROCESSING` env var (default true). No background thread — runs in the server's asyncio event loop.
 
+Two tracking levels: HTTP-layer (`pending_uploads` set, managed by `register_request_start(filename)` / `register_request_end(filename)`) and parse-layer (`processing_docs` set, added on `on_parse_complete`, removed on `on_document_complete`/`on_document_error`). Batch completion requires *both* sets empty. `enhancement_running` flag prevents duplicate concurrent runs. Singleton pattern: `get_processing_callback()` returns `_callback` module-level instance.
+
 Phase 4 runs 3 **inference algorithms** in parallel (`src/inference/algorithms/`): `infer_lm_links` (L↔M cross-document linking), `infer_document_structure` (heuristic regex, zero LLM cost), `resolve_orphans` (reconnect unlinked entities). Algorithms are the mechanisms inside Phase 4; phases are the overarching structure of the whole pass.
 _Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambiguities). Never conflate phases with algorithms.
 
