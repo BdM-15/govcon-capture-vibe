@@ -267,6 +267,17 @@ MinerU parse artifacts written once per document. Layout: `<doc_filename>_<hash8
 `kv_store_parse_cache.json` (workspace root, namespace `parse_cache`): LightRAG KV store mapping doc hash → content list. Prevents re-running MinerU when the same file is re-uploaded. Safe to delete to force a fresh parse; rebuilds on next ingest.
 _Avoid_: "MinerU output" (ambiguous with `output_dir`); "parser cache" (both the `mineru/` folder and `kv_store_parse_cache.json` exist — qualify which).
 
+**Processing log** (`rag_storage/<workspace>/<workspace>_processing.log`):
+Workspace-scoped log file written by the ingest and semantic post-processing pipelines. Distinct from `logs/server.log.*` (global server log). Path resolved at runtime via `_log_path()` using `global_args.working_dir + WORKSPACE` — not a static path. Routes in `src/server/document_routes.py`:
+
+- `GET /api/ui/processing-log?limit=<n>` — `read_snapshot()` reads the tail of the log file (up to `limit`, hard cap 2000); returns `{path, exists, events[]}`. `events[]` items: `{id, ts, level, logger, message, category, kind, phase?}`.
+- `GET /api/ui/processing-log/stream` — SSE stream via `stream_events()`: yields a `snapshot` frame first (last `limit` events), then `event` frames as new lines are appended (1.5 s poll), with `ping` keep-alives every 15 s.
+
+Event classification (`classify_workspace_log_event`): each parsed log line is tagged with `category` (`"processing"` / `"query"` / `"lightrag-processing"` / `"lightrag-query"` / other) based on logger name and message prefix markers. `_PHASE_RE` regex extracts phase number/label from `"Phase N: ..."` lines (semantic post-processor banners).
+
+`parse_workspace_log_lines(lines)` is the text-format parser: expects `YYYY-MM-DD HH:MM:SS | LEVEL | logger | message` format; silently discards malformed lines. `_read_tail_lines(path, max_lines)` does backwards block-read (64 KB blocks, `seek(0, 2)`) — never reads more than needed.
+_Avoid_: "server log" (that's the global `logs/server.log.*`); "processing log" without specifying workspace (each workspace has its own file).
+
 ### Prompt systems
 
 **Extraction prompt** (System 1):
