@@ -180,6 +180,10 @@ The source-grounded context package assembled by the route layer and passed to `
    - `relationships`: typed KG edges connected to sliced entities
 
 In the prompt the briefing book is framed under the header `"## Workspace Briefing Book (JSON)"` and declared the "authoritative source of truth" (`src/skills/skill_prompting.py`). Size cap: `SKILL_MAX_PAYLOAD_CHARS` env var. Retrieval mode and `top_k` are per-request; `mode="off"` disables retrieval and falls back to bulk entity slice.
+
+**Legacy skill prompt** (`compose_skill_prompt()` in `src/skills/skill_prompting.py`):
+Composes the single-shot prompt for legacy-mode skill runs. Structure: (1) `# Agent Skill: {name} ({version})` + active workspace; (2) `## Skill Instructions` — verbatim `skill.body_md`; (3) `## Workspace Briefing Book (JSON)` — four-section description (`entities`, `source_chunks`, `relationships`, `retrieval_metadata`) + **Citation Discipline** (mandatory quote-verbatim + `[chunk-xxxxxxxx]` inline citation + `GAP` marker when source missing + use KG relationships for traceability) + **Coverage Discipline** (briefing book = complete evidence set, no inventing absent entities, UCF/non-UCF format agnostic, `GAP: insufficient retrieval coverage` when topic absent, no bleeding across sections) + raw `payload_json`; (4) `## User Request`; (5) `## Output` — Output Contract reminder with JSON envelope instruction. Used only in legacy mode — tools mode builds its prompt via `compose_system_prompt()` in `src/skills/runtime_support.py`.
+_Avoid_: "skill prompt" without qualifier (two builders exist: legacy `compose_skill_prompt` vs tools `compose_system_prompt`).
 _Avoid_: "entity context", "workspace context" (both too generic); "KG dump" (loses the retrieval-grounding step).
 
 **SkillCatalog** (`src/skills/skill_catalog.py`):
