@@ -15,8 +15,10 @@ The 7-phase sequence that turns a raw RFP document into graph data: upload -> Mi
 _Avoid_: "the pipeline" (ambiguous -- see Flagged ambiguities).
 
 **Semantic post-processor**:
-The 6-phase inference pass that runs exactly once after a batch completes: data loading -> entity normalization -> relationship normalization -> relationship inference -> workload enrichment -> VDB sync. Lives in `src/inference/`.
-_Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambiguities).
+The 6-phase inference pass that runs exactly once after a batch completes. Phases: (1) data loading, (2) entity normalization, (3) relationship normalization, (4) relationship inference, (5) workload enrichment (optional), (6) VDB sync. Lives in `src/inference/`.
+
+Phase 4 runs 3 **inference algorithms** in parallel (`src/inference/algorithms/`): `infer_lm_links` (L↔M cross-document linking), `infer_document_structure` (heuristic regex, zero LLM cost), `resolve_orphans` (reconnect unlinked entities). Algorithms are the mechanisms inside Phase 4; phases are the overarching structure of the whole pass.
+_Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambiguities). Never conflate phases with algorithms.
 
 **Batch**:
 A user-defined group of documents uploaded together for which exactly one semantic post-processor run is guaranteed. Auto-detected by an idle-timeout window (`BATCH_TIMEOUT_SECONDS`): when no new document completes for that duration, the batch is declared complete and post-processing fires once. Without batching, uploading N documents would trigger N post-processor runs -- each exponentially more expensive as the graph grows.

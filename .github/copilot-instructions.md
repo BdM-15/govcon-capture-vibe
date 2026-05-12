@@ -12,7 +12,7 @@
 
 **Ontology-based RAG system** for federal RFP analysis. Uses **RAG-Anything** (multimodal PDF parsing via MinerU) + **LightRAG** (knowledge graph/queries) with **xAI Grok** cloud processing.
 
-**Core Innovation**: 33 government contracting entity types + 35 canonical relationship types + 8 LLM-powered relationship inference algorithms enable Section L↔M mapping, requirement traceability, and Shipley methodology compliance.
+**Core Innovation**: 33 government contracting entity types + 35 canonical relationship types + 3 active relationship inference algorithms (L↔M linking, document structure, orphan resolution) enable Section L↔M mapping, requirement traceability, and Shipley methodology compliance.
 
 ### Supporting Documentation
 
