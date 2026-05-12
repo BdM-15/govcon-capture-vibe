@@ -254,7 +254,7 @@ The VLM prompt for analyzing tables, images, and equations extracted by MinerU. 
 ### Query modes
 
 **Query mode** (`mode` param on `QueryParam`, default `mix`):
-How LightRAG retrieves context before generating an answer. Passed per-chat; stored in `kv_store_chats.json`; code default = `"mix"` in `chat_routes.py` and `settings.py`.
+How LightRAG retrieves context before generating an answer. Passed per-chat; stored in the chat JSON file (see **Chat**); code default = `"mix"` in `chat_routes.py` and `settings.py`. Valid set: `{"local", "global", "hybrid", "mix", "naive", "bypass"}` — enforced in `VALID_QUERY_MODES`.
 
 | Mode     | What it fetches                                           | When to use                                                                                            |
 | -------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
