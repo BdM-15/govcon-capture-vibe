@@ -139,6 +139,19 @@ Runtime mode resolution order: `runtime_mode_override` arg → `SKILL_RUNTIME_MO
 Skill chaining: tools-mode skills can call `invoke_skill(child_name, child_prompt)` as a tool. Max depth = 1 (one child per parent, no recursion). Cycle detection prevents `A→B→A`. `SkillManager.invoke_chain()` runs deterministic multi-skill sequences via `SkillChainExecutor` (LangGraph).
 _Avoid_: "skill runner" (ambiguous — both runners exist); "skill pipeline" (see Flagged ambiguities).
 
+**LLM chat client** (`src/skills/llm_chat.py`):
+Direct OpenAI-compatible chat-completion client used exclusively by the skill tool loop. LightRAG's default `llm_model_func` does not expose a `tools=[...]` parameter, so the skill runtime bypasses it and calls the API directly.
+
+`chat_with_tools(messages, tools, *, tool_choice, temperature, max_tokens, model, timeout) → ChatResponse`.
+- Always uses `settings.reasoning_llm_name` (maps to `QUERY_LLM_MODEL` env var) — skills are multi-turn reasoning agents and always get the most powerful model.
+- Timeout from `skill_tools_runtime_limits().llm_timeout_seconds` (`SKILL_TOOLS_LLM_TIMEOUT` env) when not overridden.
+- Lazy-imports `openai.AsyncOpenAI` — keeps the dep optional in environments that never run tools-mode skills.
+- Credentials from `settings.llm_binding_api_key` + `settings.llm_binding_host`.
+
+`ChatResponse`: `content`, `tool_calls: list[ChatToolCall]`, `finish_reason`, `usage: dict`, `raw_message` (exact dict to re-inject into the messages list for the next turn).
+`ChatToolCall`: `id`, `name`, `arguments_json` (raw string — caller parses and validates).
+_Avoid_: "LightRAG LLM func" for skill calls (skills use `chat_with_tools`, not the LightRAG func); "tool_calls XOR content" (spec allows both; runtime persists both).
+
 **Tool loop** (`run_tool_loop()` in `src/skills/runtime.py`):
 Core agentic dispatch loop for tools-mode skills. Inputs: `skill_name`, `skill_body` (SKILL.md body verbatim — this is the authoritative workflow contract in the system message), `user_prompt`, `ctx: ToolContext`, `max_turns` (default 12), `temperature` (default 0.2). Returns `ToolLoopResult(final_response, transcript, turns, tool_calls_total, usage_total, warnings, finish_reason)`.
 
