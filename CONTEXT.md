@@ -7,7 +7,7 @@ Ontology-backed RAG system that ingests federal RFPs into a knowledge graph and 
 ### Core system concepts
 
 **Workspace**:
-An isolated knowledge graph + vector database for exactly one RFP. Lives at `rag_storage/<name>/`. All entities, relationships, and embeddings are workspace-scoped.
+An isolated knowledge graph + vector database for exactly one RFP. Lives at `rag_storage/<name>/`. All entities, relationships, and embeddings are workspace-scoped. Created manually: user names the workspace, switches to it via the UI, then uploads documents through the Documents page. Not auto-created on first upload.
 _Avoid_: project, environment, instance.
 
 **Ingest pipeline**:
