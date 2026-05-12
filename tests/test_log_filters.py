@@ -1,6 +1,6 @@
 import logging
 
-from src.utils.log_filters import ConsoleFilter, ProcessingFilter, ServerFilter
+from src.utils.logging_config import ConsoleFilter, ProcessingFilter, ServerFilter
 
 
 def _record(name: str, level: int = logging.INFO, message: str = "hello"):

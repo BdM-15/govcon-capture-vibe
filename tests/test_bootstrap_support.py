@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.ontology.bootstrap_support import (
+from src.ontology.bootstrap import (
     marker_path_for_workspace,
     prepare_custom_kg,
     read_bootstrap_marker,

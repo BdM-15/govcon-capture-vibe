@@ -1,4 +1,4 @@
-from src.ontology.govcon_kg_support import (
+from src.ontology.govcon_kg import (
     build_ontology_stats,
     combine_knowledge_graph_parts,
     validate_custom_kg,

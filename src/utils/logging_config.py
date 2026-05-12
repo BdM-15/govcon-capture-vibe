@@ -21,11 +21,129 @@ import logging
 import logging.handlers
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple, Optional
 
-from src.utils.log_filters import ConsoleFilter, ProcessingFilter, ServerFilter
-from src.utils.log_helpers import get_log_summary, log_graceful_failure
+
+# ---------------------------------------------------------------------------
+# Log filters (previously log_filters.py)
+# ---------------------------------------------------------------------------
+
+class ConsoleFilter(logging.Filter):
+    """Allowlist filter for console output."""
+
+    _ALLOWED = {
+        "src.raganything_server",
+        "uvicorn.error",
+        "src.server.routes",
+        "src.inference",
+        "src.extraction.govcon_reranker",
+    }
+
+    def filter(self, record):
+        if record.levelno >= logging.WARNING:
+            return True
+        if record.name == "uvicorn.access":
+            return False
+        return any(
+            record.name == name or record.name.startswith(name + ".")
+            for name in self._ALLOWED
+        )
+
+
+class ProcessingFilter(logging.Filter):
+    """Capture RFP processing logs for per-workspace processing logs."""
+
+    _PROCESSING_LOGGERS = [
+        "lightrag",
+        "raganything",
+        "src.server.routes",
+        "src.inference",
+        "src.ingestion",
+        "src.extraction.govcon_reranker",
+    ]
+    _PROCESSING_KEYWORDS = [
+        "Processing",
+        "entities",
+        "relationships",
+        "semantic",
+        "GraphML",
+        "Neo4j",
+        "inference",
+        "enrichment",
+        "parsing",
+        "extraction",
+    ]
+
+    def filter(self, record):
+        for logger_name in self._PROCESSING_LOGGERS:
+            if record.name.startswith(logger_name):
+                return True
+        message = record.getMessage()
+        return any(keyword in message for keyword in self._PROCESSING_KEYWORDS)
+
+
+class ServerFilter(logging.Filter):
+    """Exclude deep processing logs from central server log."""
+
+    _PROCESSING_LOGGERS = [
+        "lightrag.llm",
+        "lightrag.kg",
+        "raganything",
+    ]
+
+    def filter(self, record):
+        for logger_name in self._PROCESSING_LOGGERS:
+            if record.name.startswith(logger_name):
+                return False
+        return True
+
+
+# ---------------------------------------------------------------------------
+# Log helpers (previously log_helpers.py)
+# ---------------------------------------------------------------------------
+
+def log_graceful_failure(logger, operation: str, error: Exception, context: str = "") -> None:
+    """Log expected non-fatal failure with truncated message."""
+    error_msg = str(error)[:100]
+    if context:
+        logger.warning(
+            f"\u26a0\ufe0f {operation} failed ({context}): {error_msg} - continuing with degraded result"
+        )
+    else:
+        logger.warning(
+            f"\u26a0\ufe0f {operation} failed: {error_msg} - continuing with degraded result"
+        )
+
+
+def get_log_summary(log_dir: str = "logs") -> dict:
+    """Get summary of current log files with sizes and timestamps."""
+    log_path = Path(log_dir)
+
+    if not log_path.exists():
+        return {"error": "Log directory does not exist"}
+
+    log_files = []
+    for log_file in sorted(log_path.glob("*.log*")):
+        try:
+            stat = log_file.stat()
+            log_files.append(
+                {
+                    "name": log_file.name,
+                    "size_mb": round(stat.st_size / 1024 / 1024, 2),
+                    "modified": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+                    "path": str(log_file.absolute()),
+                }
+            )
+        except Exception as exc:  # noqa: BLE001
+            log_files.append({"name": log_file.name, "error": str(exc)})
+
+    return {
+        "log_directory": str(log_path.absolute()),
+        "total_files": len(log_files),
+        "files": log_files,
+    }
 
 
 if sys.platform == 'win32':
@@ -297,9 +415,8 @@ def setup_logging(
         root_logger.addHandler(console_handler)
     
     # Write session-start marker directly to processing log for run auditability
-    from datetime import datetime as _dt
     _session_marker = (
-        f"\n{'─' * 38} SESSION START {_dt.now().strftime('%Y-%m-%d %H:%M:%S')} {'─' * 38}\n"
+        f"\n{'─' * 38} SESSION START {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {'─' * 38}\n"
         f"Workspace: {workspace_log_path.name}  |  Log: {processing_log_file}\n"
         f"{'─' * 94}\n"
     )

@@ -1,4 +1,4 @@
-from src.utils.log_helpers import get_log_summary, log_graceful_failure
+from src.utils.logging_config import get_log_summary, log_graceful_failure
 
 
 class _Logger:
