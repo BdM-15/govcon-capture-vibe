@@ -198,7 +198,7 @@ The YAML-driven registry of 33 govcon entity types at `prompts/extraction/govcon
 _Avoid_: entity types list, entity schema.
 
 **Canonical relationship types**:
-The 35 fixed relationship type strings defined in `src/ontology/schema.py -> VALID_RELATIONSHIP_TYPES`. Every relationship in the knowledge graph must use one of these as its `keywords` first token.
+The 35 fixed relationship type strings defined in `src/ontology/schema.py -> VALID_RELATIONSHIP_TYPES`. Every relationship in the knowledge graph must use one of these as its `keywords` first token. `normalize_relationship_type(rel_type, fallback="RELATED_TO")` (`src/ontology/schema.py`) converts any extracted or inferred string to the nearest valid canonical type; unknown types silently become `RELATED_TO` (WARNING logged). `_INFERENCE_ONLY_REL_TYPES` frozenset in `src/ontology/extraction_schema.py` lists types produced only by inference algorithms (e.g. `GUIDES`) — excluded from the strict schema's relationship type enum so extraction never emits them directly.
 _Avoid_: edge types, link types, relationship schema.
 
 **Strict schema extraction** (`ENTITY_EXTRACTION_STRICT_SCHEMA`, `src/ontology/extraction_schema.py`):
@@ -250,6 +250,14 @@ The RAG response prompt that answers user queries through the Shipley mentor per
 
 **Multimodal prompt** (System 3):
 The VLM prompt for analyzing tables, images, and equations extracted by MinerU. Lives at `prompts/multimodal/govcon_multimodal_prompts.py`.
+
+**Reasoning filter** (`src/server/reasoning_filter.py`):
+`strip_think(text)` removes `<think>...</think>` reasoning blocks that xAI Grok reasoning models emit before the visible response. Applied to every assistant message before it is persisted to the chat JSON. `ThinkStripper` is the stateful streaming variant — buffers input and emits only text outside `<think>` blocks, used in the SSE streaming path. Neither class modifies the query LLM output seen by skills (skills receive post-reasoning text via `aquery()`). If `<think>` tags appear in the KG (e.g. extraction chunked through a reasoning model), they are not cleaned — that is an extraction config problem, not a filter gap.
+_Avoid_: calling it "chain-of-thought stripping" (specific to Grok's `<think>` tag convention, not a general CoT mechanism).
+
+**Entity name normalization** (`normalize_entity_name`, `src/inference/relationship_inference_support.py`):
+Pure text normalization for duplicate detection comparison only — removes `section`, `sec`, `.`, `-`, `:`, and spaces from a name string, then lowercases. Used by `plan_entity_name_updates()` to compare two entity names ignoring punctuation drift. **Not** used for canonical storage or display — normalized form is never written to Neo4j or VDB. Do not use for any other purpose.
+_Avoid_: calling it "entity deduplication" (dedup uses this as one comparison step; the output is never the canonical form).
 
 ### Query modes
 
