@@ -278,7 +278,7 @@ Project Theseus implements the open [Agent Skills specification](https://agentsk
 
 **MCP integration** (see `tools/mcps/`): 8 federal-data MCPs vendored via `uvx` (USAspending, eCFR, GSA CALC+, GSA Per Diem, Federal Register, SAM.gov, BLS OEWS, regulations.gov) provide live regulatory + procurement data to the relevant skills. MCP credentials are configured per-user in the Settings panel.
 
-**12 production skills:**
+**14 govcon platform skills:**
 
 | Skill                       | Stance / Capability                                                       | MCPs                                  |
 | --------------------------- | ------------------------------------------------------------------------- | ------------------------------------- |
@@ -290,10 +290,14 @@ Project Theseus implements the open [Agent Skills specification](https://agentsk
 | `subcontractor-sow-builder` | Prime-side SOW/PWS for subs (FAR 37.102(d)/37.602/16.601(c)(2)/16.306(d)) | —                                     |
 | `rfp-reverse-engineer`      | Reverse the CO's hidden 3+6 decision tree from a received RFP             | —                                     |
 | `ot-prototype-strategist`   | 10 USC 4021 / 4022 / 4022(d) / 4022(f) prototype bid strategist           | `bls_oews`, `gsa_calc`, `gsa_perdiem` |
+| `workload-analyzer`         | Section J workload attachment analysis: demand trends, pricing risks      | —                                     |
+| `data-analyzer`             | Statistical analysis, pattern detection, and insight generation           | —                                     |
 | `huashu-design`             | HTML → PPTX / PDF / MP4 / GIF design engine (Personal Use License)        | —                                     |
 | `renderers`                 | Universal artifact renderers (DOCX via Pandoc, XLSX via openpyxl)         | —                                     |
 | `govcon-ontology`           | Authoritative reference for the 33-entity / 35-relationship schema        | —                                     |
 | `skill-creator`             | Foundational meta-skill for authoring / refining / evaluating skills      | —                                     |
+
+**16 developer workflow skills** (Copilot Chat only, not shown in the Theseus UI): `caveman`, `diagnose`, `grill-me`, `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `prototype`, `setup-matt-pocock-skills`, `setup-pre-commit`, `tdd`, `to-issues`, `to-prd`, `triage`, `write-a-skill`, `zoom-out`, `git-guardrails-claude-code`. See [theseus-skills/README.md](theseus-skills/README.md) for the full index.
 
 **Studio cross-skill artifact library** (`/ui` → Studio tab): single index of every deliverable produced by any skill across all runs. Filters by skill / format / free-text. Per-row actions: anchor pin (sticks to top, persisted to localStorage), inline preview (PDF / DOCX via Mammoth.js / XLSX via SheetJS / video / image / MD / JSON / CSV / TXT), "Why this artifact?" reasoning view (deterministic transcript-to-prose renderer over `transcript.json`), download, open originating run. JSON envelopes are parsed for `chunk-<hex>` ids and rendered as clickable chips that open the chunk-preview modal — closes the **artifact → chunk → entity** audit chain in two clicks. Studio is **read-only by design**: every artifact has full provenance via an audited `SkillManager.invoke(...)` run, so the namespace is append-only. User-uploaded inputs live in a separate (planned) Library lane (#123) to preserve the audit chain.
 

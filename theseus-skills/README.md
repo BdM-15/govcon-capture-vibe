@@ -26,26 +26,45 @@ When adding a new skill, pick the tier first and set `metadata.developer_only` a
 
 Skills shown in the Theseus govcon UI. Query the active workspace KG and use govcon personas.
 
-| Skill              | Source of truth                                              | Theseus runtime adapter        |
-| ------------------ | ------------------------------------------------------------ | ------------------------------ |
-| huashu-design      | `.github/skills/huashu-design/` (vendored — see UPSTREAM.md) | `src/skills/manager.py` (auto) |
-| govcon-ontology    | `.github/skills/govcon-ontology/`                            | `src/skills/manager.py` (auto) |
-| proposal-generator | `.github/skills/proposal-generator/`                         | `src/skills/manager.py` (auto) |
-| compliance-auditor | `.github/skills/compliance-auditor/`                         | `src/skills/manager.py` (auto) |
-| competitive-intel  | `.github/skills/competitive-intel/`                          | `src/skills/manager.py` (auto) |
+| Skill                       | Source of truth                                               | Theseus runtime adapter        |
+| --------------------------- | ------------------------------------------------------------- | ------------------------------ |
+| proposal-generator          | `.github/skills/proposal-generator/`                          | `src/skills/manager.py` (auto) |
+| compliance-auditor          | `.github/skills/compliance-auditor/`                          | `src/skills/manager.py` (auto) |
+| competitive-intel           | `.github/skills/competitive-intel/`                           | `src/skills/manager.py` (auto) |
+| price-to-win                | `.github/skills/price-to-win/`                                | `src/skills/manager.py` (auto) |
+| oci-sweeper                 | `.github/skills/oci-sweeper/`                                 | `src/skills/manager.py` (auto) |
+| subcontractor-sow-builder   | `.github/skills/subcontractor-sow-builder/`                   | `src/skills/manager.py` (auto) |
+| rfp-reverse-engineer        | `.github/skills/rfp-reverse-engineer/`                        | `src/skills/manager.py` (auto) |
+| ot-prototype-strategist     | `.github/skills/ot-prototype-strategist/`                     | `src/skills/manager.py` (auto) |
+| workload-analyzer           | `.github/skills/workload-analyzer/`                           | `src/skills/manager.py` (auto) |
+| data-analyzer               | `.github/skills/data-analyzer/`                               | `src/skills/manager.py` (auto) |
+| govcon-ontology             | `.github/skills/govcon-ontology/`                             | `src/skills/manager.py` (auto) |
+| huashu-design               | `.github/skills/huashu-design/` (vendored — see UPSTREAM.md)  | `src/skills/manager.py` (auto) |
+| renderers                   | `.github/skills/renderers/`                                   | `src/skills/manager.py` (auto) |
+| skill-creator               | `.github/skills/skill-creator/` (vendored — see UPSTREAM.md)  | `src/skills/manager.py` (auto) |
 
 ## Index — Developer-only skills
 
 Not shown in the Theseus UI (`metadata.developer_only: true`). Invokable from Copilot Chat only. Do not query the KG or govcon workspace.
 
-| Skill                         | Source of truth                                                              | Notes                                                              |
-| ----------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| improve-codebase-architecture | `.github/skills/improve-codebase-architecture/` (vendored — see UPSTREAM.md) | Uses `graphify-out/GRAPH_REPORT.md` as dependency map              |
-| caveman                       | `.github/skills/caveman/` (vendored — see UPSTREAM.md)                       | Ultra-compressed communication mode; no KG access                  |
-| grill-me                      | `.github/skills/grill-me/` (vendored — see UPSTREAM.md)                      | Generic plan stress-tester; govcon variants in platform tier above |
-| to-prd                        | `.github/skills/to-prd/` (vendored — see UPSTREAM.md)                        | Converts conversation context to PRD; files to GitHub Issues       |
-| to-issues                     | `.github/skills/to-issues/` (vendored — see UPSTREAM.md)                     | Breaks plan into vertical-slice GitHub issues                      |
-| tdd                           | `.github/skills/tdd/` (vendored — see UPSTREAM.md)                           | Red-green-refactor TDD loop with 5 reference files                 |
+| Skill                         | Source of truth                                                              | Notes                                                           |
+| ----------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| improve-codebase-architecture | `.github/skills/improve-codebase-architecture/` (vendored — see UPSTREAM.md) | Uses `graphify-out/GRAPH_REPORT.md` as dependency map           |
+| diagnose                      | `.github/skills/diagnose/` (vendored — see UPSTREAM.md)                      | Reproduce → minimise → hypothesise → fix → regression-test loop |
+| tdd                           | `.github/skills/tdd/` (vendored — see UPSTREAM.md)                           | Red-green-refactor TDD loop                                     |
+| grill-me                      | `.github/skills/grill-me/` (vendored — see UPSTREAM.md)                      | Generic plan stress-tester                                      |
+| grill-with-docs               | `.github/skills/grill-with-docs/` (vendored — see UPSTREAM.md)               | Grills plan against CONTEXT.md + ADRs; updates docs inline      |
+| prototype                     | `.github/skills/prototype/` (vendored — see UPSTREAM.md)                     | Terminal or UI throwaway prototype builder                      |
+| to-prd                        | `.github/skills/to-prd/` (vendored — see UPSTREAM.md)                        | Converts conversation context to PRD; files to GitHub Issues    |
+| to-issues                     | `.github/skills/to-issues/` (vendored — see UPSTREAM.md)                     | Breaks plan into vertical-slice GitHub issues                   |
+| triage                        | `.github/skills/triage/` (vendored — see UPSTREAM.md)                        | Issue triage state machine (needs-triage → ready-for-agent)     |
+| handoff                       | `.github/skills/handoff/` (vendored — see UPSTREAM.md)                       | Compacts conversation into a handoff doc for another agent      |
+| write-a-skill                 | `.github/skills/write-a-skill/` (vendored — see UPSTREAM.md)                 | Author new skills with proper structure and evals               |
+| setup-pre-commit              | `.github/skills/setup-pre-commit/` (vendored — see UPSTREAM.md)              | Husky pre-commit hooks with lint-staged + type-check + tests    |
+| git-guardrails-claude-code    | `.github/skills/git-guardrails-claude-code/` (vendored — see UPSTREAM.md)    | Blocks destructive git ops before they execute                  |
+| caveman                       | `.github/skills/caveman/` (vendored — see UPSTREAM.md)                       | Ultra-compressed communication mode (~75% token reduction)      |
+| zoom-out                      | `.github/skills/zoom-out/` (vendored — see UPSTREAM.md)                      | Steps back to reframe a problem at the right level              |
+| setup-matt-pocock-skills      | `.github/skills/setup-matt-pocock-skills/` (vendored — see UPSTREAM.md)      | Re-vendor or update the MP developer skill bundle               |
 
 ## Adding a Theseus-only Test Fixture
 
