@@ -39,6 +39,7 @@ _Avoid_: assuming Neo4j is always active; scripts that hard-code `bolt://localho
 
 **Neo4jGraphIO** (`src/inference/neo4j_graph_io.py`):
 The write/read bridge between the inference algorithms and Neo4j. Instantiated per semantic post-processor run (`SemanticPostProcessingRun._io()`). Opens a direct Neo4j `GraphDatabase.driver` connection from `Settings` at `__init__`; must be closed after the run. Key methods used by the post-processor:
+
 - `get_all_entities()` — `MATCH (n:<workspace>)` → entity dicts (`id`, `entity_name`, `entity_type`, `description`, `source_id`)
 - `get_all_relationships()` — `MATCH (a)<-[r]->(b)` → relationship dicts (`source`, `target`, `rel_type`, `keywords`, `weight`, `description`)
 - `update_entity_types(updates)` — batch `SET n.entity_type =` for Phase 2 entity normalization
@@ -64,14 +65,34 @@ The 5-phase inference pass that runs exactly once after a batch completes. Phase
 Phase 4 runs 3 **inference algorithms** in parallel (`src/inference/algorithms/`): `infer_lm_links` (L↔M cross-document linking), `infer_document_structure` (heuristic regex, zero LLM cost), `resolve_orphans` (reconnect unlinked entities). Algorithms are the mechanisms inside Phase 4; phases are the overarching structure of the whole pass.
 _Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambiguities). Never conflate phases with algorithms.
 
+**Entity normalization** (Phase 2, `src/inference/semantic_post_process_support.py`):
+Four sequential sub-operations applied to Neo4j entities before relationship work:
+
+1. **Type cleanup** (`plan_entity_type_updates()`): Deterministic scan of all entities grouped by `entity_type`. Three patterns caught:
+   - `table` type → `heuristic_table_type_mapping()`: keyword match on entity name + description → maps to `proposal_instruction`, `deliverable`, `evaluation_factor`, `performance_standard`, `requirement`, `clause`, etc. (RAG-Anything VLM outputs these as `table` before downstream context is available)
+   - `#evaluation_factor` / `|requirement` prefix artifacts → strip `#`/`|` prefix → valid entity type (LightRAG occasionally emits these prefix-polluted strings)
+   - `unknown` type → collected for LLM batch retyping (step 2)
+   
+2. **UNKNOWN retyping** (`_retype_unknown_entities()`): LLM call via `retype_entities_batch()`, batches of 20. Entities whose description can't map to a valid govcon type stay `unknown`.
+
+3. **Name canonicalization** (`plan_entity_name_updates()`): Targets `evaluation_factor` entities with punctuation-drift duplicates (e.g. `Factor 1 Technical Approach` vs `Factor 1: Technical Approach`). `canonicalize_factor_like_name()` normalises to `Factor <ordinal>: <label>` form. Returns `(name_updates, canonical_mapping)`. Neo4j updated via `Neo4jGraphIO.update_entity_names()`; VDB updated via `apply_entity_name_updates_to_vdb()` — rewrites `entity_name` in `vdb_entities.json` and `src_id`/`tgt_id` in `vdb_relationships.json`.
+
+4. **VDB metadata sync** (`sync_entity_metadata_to_vdb()`): After type cleanup commits, patches `vdb_entities.json` with updated `entity_type`, `source_id`, and `description` from Neo4j without touching embedding vectors. Prevents query-time drift between Neo4j entity types and VDB metadata.
+
+_Avoid_: calling Phase 2 "type fixing" (it also handles name dedup and VDB sync); conflating `apply_entity_name_updates_to_vdb` (name remap) with `sync_entity_metadata_to_vdb` (type/metadata patch).
+
+**Relationship normalization** (Phase 3, `src/inference/semantic_post_process_support.py`):
+Retype of generic edges using entity-pair context. `resolve_generic_relationship()` checks if a relationship's `rel_type` is in `GENERIC_REL_TYPES` (currently `{"RELATED_TO"}`); if so, looks up `(source_entity_type, target_entity_type)` in `ENTITY_PAIR_REL_MAP` (50+ pairs) → returns canonical relationship type or keeps original if no match. Examples: `(requirement, deliverable)` → `SATISFIED_BY`; `(evaluation_factor, evaluation_factor)` → `CHILD_OF`; `(requirement, clause)` → `GOVERNED_BY`. Applied in `_normalize_relationships()` — re-writes Neo4j relationship types in-place. Does NOT fire LLM.
+_Avoid_: calling this "Phase 4" (Phase 3 is heuristic normalization; Phase 4 is LLM inference algorithms).
+
 **Inference algorithms** (`src/inference/algorithms/`, Phase 4 of the semantic post-processor):
 Three algorithms run in parallel via `asyncio.gather` under a shared concurrency semaphore (`MAX_CONCURRENT_LLM_CALLS`):
 
-| Algorithm | Function | LLM | Relationship types produced | When it fires |
-|-----------|----------|-----|----------------------------|---------------|
-| `infer_lm_links` | `infer_lm_links.py` | ✅ yes | `GUIDES` | Instructions × eval factors: gathers `proposal_instruction`, `proposal_volume`, instruction-flavoured `deliverable`/`requirement` entities; sends instruction–eval factor pairs to LLM via `instruction_evaluation_linking.md` prompt; extracts `GUIDES` edges |
-| `infer_document_structure` | `infer_document_structure.py` | ❌ no | `REFERENCES`, `CHILD_OF` | Pure regex: detects CDRL/DID/DD-Form-1423 cross-refs, doc-section refs, attachment refs; builds numbered-hierarchy `CHILD_OF` edges from dot-notation prefixes (e.g. `F.1.5.7` → `F.1.5`) — deterministic, zero API cost |
-| `resolve_orphans` | `resolve_orphans.py` | ✅ yes | any canonical type | Queries Neo4j for entities with zero edges; batches them 30 orphans × 100 targets; sends each batch to LLM via `orphan_resolution.md` prompt; prioritises high-value target types (`requirement`, `document_section`, `deliverable`…) |
+| Algorithm                  | Function                      | LLM    | Relationship types produced | When it fires                                                                                                                                                                                                                                                  |
+| -------------------------- | ----------------------------- | ------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `infer_lm_links`           | `infer_lm_links.py`           | ✅ yes | `GUIDES`                    | Instructions × eval factors: gathers `proposal_instruction`, `proposal_volume`, instruction-flavoured `deliverable`/`requirement` entities; sends instruction–eval factor pairs to LLM via `instruction_evaluation_linking.md` prompt; extracts `GUIDES` edges |
+| `infer_document_structure` | `infer_document_structure.py` | ❌ no  | `REFERENCES`, `CHILD_OF`    | Pure regex: detects CDRL/DID/DD-Form-1423 cross-refs, doc-section refs, attachment refs; builds numbered-hierarchy `CHILD_OF` edges from dot-notation prefixes (e.g. `F.1.5.7` → `F.1.5`) — deterministic, zero API cost                                       |
+| `resolve_orphans`          | `resolve_orphans.py`          | ✅ yes | any canonical type          | Queries Neo4j for entities with zero edges; batches them 30 orphans × 100 targets; sends each batch to LLM via `orphan_resolution.md` prompt; prioritises high-value target types (`requirement`, `document_section`, `deliverable`…)                          |
 
 Reduced from 8 → 3 algorithms in Issue #85: algorithms 2–6 became redundant once the extraction prompt + specialized entity types handled that coverage natively.
 _Avoid_: calling them "phases" (phases = the 5-phase wrapper; algorithms = parallel workers inside Phase 4).
@@ -105,6 +126,7 @@ _Avoid_: "skill runner" (ambiguous — both runners exist); "skill pipeline" (se
 
 **Briefing book** (`entity_payload`):
 The source-grounded context package assembled by the route layer and passed to `SkillManager.invoke()` as `entity_payload`. Built in two steps:
+
 1. **Retrieval** (`_retrieve_relevant_entities_for_skill()`): runs a hybrid KG+VDB query against the user prompt + skill description; returns a lowercased entity-name whitelist (`names`) and matched chunk IDs.
 2. **Slice** (`build_skill_briefing_book()` in `src/skills/context.py` → `SkillWorkspaceEvidenceStore.build_briefing_book()`): reads workspace KV stores and graph, filters to whitelisted entity names (or bulk-slices if retrieval is off), returns a dict with three keys:
    - `entities`: `{entity_type: [{name, description, source_chunks}]}`
@@ -116,6 +138,7 @@ _Avoid_: "entity context", "workspace context" (both too generic); "KG dump" (lo
 
 **SkillChainExecutor** (`src/skills/chain_executor.py`):
 LangGraph-backed executor for deterministic multi-skill chains. Called by `SkillManager.invoke_chain()` when the planner (or explicit API call) needs a fixed sequence of skills rather than a single-skill invocation. Uses a `StateGraph` with one node per chain step; steps share a `ChainRunState` carried through `ChainExecutionState`. Key contract:
+
 - `invoke(spec, ...)` → runs a new `ChainSpec` (list of `ChainStepSpec`s) from scratch
 - `resume(chain, from_step_id=...)` → re-executes from a specific step after user supplies missing inputs
 - `blocked` flag set when any step reports `needs_input`; planner surfaces the `input_request` to the user
@@ -146,6 +169,7 @@ _Avoid_: initialization (overloaded with server startup), seed.
 
 **Chat** (chat session, `rag_storage/<workspace>/chats/<id>.json`):
 Persisted UI conversation stored as one JSON file per chat. `ChatStore` (`src/server/chat_store.py`) manages the lifecycle — one `ChatStore` instance per server, scoped to the active workspace dir. Chat schema: `id` (16-hex UUID), `title`, `mode` (query mode: `local`/`global`/`hybrid`/`mix`/`naive`/`bypass`), `rfp_context` (optional free-text context prepended to queries), `messages[]` (`{role, content, timestamp}`), `created_at`, `updated_at`. Key behaviors:
+
 - Atomic write: writes to `<id>.json.tmp` then renames — no partial-write corruption on server kill
 - `build_history()`: extracts `(role, content)` pairs from `messages[]`; caps to `CHAT_HISTORY_PAIRS` most-recent pairs to bound context window sent to LightRAG
 - `maybe_autotitle()`: if title is still "New chat", sets it to the first 60 chars of the first user message
@@ -164,6 +188,7 @@ _Avoid_: edge types, link types, relationship schema.
 
 **Strict schema extraction** (`ENTITY_EXTRACTION_STRICT_SCHEMA`, `src/ontology/extraction_schema.py`):
 Optional mode that passes `response_format={"type": "json_schema", "json_schema": {..., "strict": True}}` to xAI's OpenAI-compatible API for the `extract` role, constraining the model to emit exactly the field names LightRAG's parser expects. Enabled via `ENTITY_EXTRACTION_STRICT_SCHEMA=true` in `.env`. Schema name: `GovConExtractionResult`. Enforces:
+
 - `entities[].type` constrained to the entity catalog enum (no invented types at extraction time)
 - Required fields `name`, `type`, `description` always present on each entity object
 - Required fields `source`, `target`, `keywords`, `description` always present on each relationship object
@@ -176,19 +201,20 @@ LightRAG splits each document into token-bounded chunks before extraction. Two r
 **Per-role LLM models** (`src/server/llm_routing.py`):
 LightRAG 1.5.0 allows a separate model per processing role. `build_role_llm_routing()` constructs all role wrappers from two config fields (`extraction_llm_name`, `reasoning_llm_name`); the other roles reuse `extraction_llm_name` by default.
 
-| Role | `.env` var | Default model | What it does |
-|------|-----------|---------------|-------------|
-| `extract` | `EXTRACT_LLM_MODEL` | `grok-4-1-fast-non-reasoning` | Entity + relationship extraction (LightRAG `extract` role). Optionally enforces strict JSON schema (`ENTITY_EXTRACTION_STRICT_SCHEMA=true`). Max 32 k tokens. |
-| `query` | `QUERY_LLM_MODEL` | `grok-4.20-0309-reasoning` | RAG query answering via Shipley mentor persona (LightRAG `query` role). Max `llm_max_output_tokens`. |
-| `keyword` | `KEYWORD_LLM_MODEL` | reuses `EXTRACT_LLM_MODEL` | Query-time keyword extraction (LightRAG `keyword` role). Max 4 k tokens. |
-| `vlm` | `VLM_LLM_MODEL` | reuses `EXTRACT_LLM_MODEL` | VLM table/image/equation analysis (LightRAG `vlm` role). Max 8 k tokens. |
-| `post_process` | `POST_PROCESS_LLM_MODEL` | `grok-4-1-fast-reasoning` | Inference algorithms in `src/inference/`. **Not** a LightRAG role — called directly by `SemanticPostProcessor`. |
+| Role           | `.env` var               | Default model                 | What it does                                                                                                                                                  |
+| -------------- | ------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `extract`      | `EXTRACT_LLM_MODEL`      | `grok-4-1-fast-non-reasoning` | Entity + relationship extraction (LightRAG `extract` role). Optionally enforces strict JSON schema (`ENTITY_EXTRACTION_STRICT_SCHEMA=true`). Max 32 k tokens. |
+| `query`        | `QUERY_LLM_MODEL`        | `grok-4.20-0309-reasoning`    | RAG query answering via Shipley mentor persona (LightRAG `query` role). Max `llm_max_output_tokens`.                                                          |
+| `keyword`      | `KEYWORD_LLM_MODEL`      | reuses `EXTRACT_LLM_MODEL`    | Query-time keyword extraction (LightRAG `keyword` role). Max 4 k tokens.                                                                                      |
+| `vlm`          | `VLM_LLM_MODEL`          | reuses `EXTRACT_LLM_MODEL`    | VLM table/image/equation analysis (LightRAG `vlm` role). Max 8 k tokens.                                                                                      |
+| `post_process` | `POST_PROCESS_LLM_MODEL` | `grok-4-1-fast-reasoning`     | Inference algorithms in `src/inference/`. **Not** a LightRAG role — called directly by `SemanticPostProcessor`.                                               |
 
 `keyword` and `vlm` reuse `extraction_llm_name` at the function level; their `.env` vars exist in config but are not wired in `llm_routing.py`. `modal_llm_func` (RAGAnything multimodal processor) also reuses `extraction_llm_name` and strips any strict JSON schema `response_format` if accidentally passed.
 _Avoid_: "the LLM" (five model slots exist); "reasoning model" without specifying which role.
 
 **mineru/ cache** (`rag_storage/<workspace>/mineru/`):
 MinerU parse artifacts written once per document. Layout: `<doc_filename>_<hash8>/<doc_filename>/auto/` containing:
+
 - `<doc>.md` — reconstructed markdown of the full document
 - `<doc>_content_list.json` / `_content_list_v2.json` — structured content blocks (text, table, image, equation items) passed to RAGAnything for modal processing
 - `<doc>_middle.json` / `_model.json` — intermediate layout analysis from MinerU
@@ -215,14 +241,14 @@ The VLM prompt for analyzing tables, images, and equations extracted by MinerU. 
 **Query mode** (`mode` param on `QueryParam`, default `mix`):
 How LightRAG retrieves context before generating an answer. Passed per-chat; stored in `kv_store_chats.json`; code default = `"mix"` in `chat_routes.py` and `settings.py`.
 
-| Mode | What it fetches | When to use |
-|------|-----------------|-------------|
-| `local` | Entity VDB lookup on `ll_keywords` + graph node traversal | Narrow entity facts ("what is the CLIN structure?") |
-| `global` | Relationship VDB lookup on `hl_keywords` + edge traversal | Broad cross-doc themes ("what are the evaluation priorities?") |
-| `hybrid` | Both entity and relationship paths, round-robin merged | General — balanced entity+relationship coverage |
-| `mix` | hybrid **+** `chunks_vdb` vector chunk retrieval appended | **Default / primary use.** Most comprehensive; adds raw text chunks to the entity+relationship context |
-| `naive` | Pure `chunks_vdb` vector search only — no KG | Baseline semantic similarity; use to compare against KG-backed modes |
-| `bypass` | No retrieval — direct LLM call | Prompt-only queries that need no document context |
+| Mode     | What it fetches                                           | When to use                                                                                            |
+| -------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `local`  | Entity VDB lookup on `ll_keywords` + graph node traversal | Narrow entity facts ("what is the CLIN structure?")                                                    |
+| `global` | Relationship VDB lookup on `hl_keywords` + edge traversal | Broad cross-doc themes ("what are the evaluation priorities?")                                         |
+| `hybrid` | Both entity and relationship paths, round-robin merged    | General — balanced entity+relationship coverage                                                        |
+| `mix`    | hybrid **+** `chunks_vdb` vector chunk retrieval appended | **Default / primary use.** Most comprehensive; adds raw text chunks to the entity+relationship context |
+| `naive`  | Pure `chunks_vdb` vector search only — no KG              | Baseline semantic similarity; use to compare against KG-backed modes                                   |
+| `bypass` | No retrieval — direct LLM call                            | Prompt-only queries that need no document context                                                      |
 
 Implementation: `local`/`global`/`hybrid`/`mix` all dispatch to `kg_query()` in LightRAG's `operate.py`; `mix` additionally calls `_get_vector_context()`. `naive` calls `naive_query()`. All except `bypass` are valid for `kg_chunks` skill tool.
 
@@ -271,6 +297,7 @@ An L-to-M cross-reference table showing every proposal instruction is addressed 
 
 **Pursuit** (`rag_storage/<workspace>/pursuits/<slug>/`):
 A single bid opportunity being tracked through Shipley stage gates. On-disk layout per pursuit:
+
 - `00_pursuit.yaml` — manifest with fields: `workspace`, `slug`, `title`, `agency`, `stage` (current gate: `identify`/`qualify`/`capture`/`proposal`/`submitted`/`award`), `gate.due`, `proposal_due`, `pwin.value`/`confidence`/`trend`, `pwin_drivers[]` (weighted scoring: customer 30%, solution 30%, competition 25%, price 15%; each has `score`, `rationale`, `next_action`), `readiness` scores (7 dimensions), `shipley_folders`
 - `01-identify/` through `06-award/` — Shipley phase folders; capture artifacts go here as the pursuit advances
 
