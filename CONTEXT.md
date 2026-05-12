@@ -10,6 +10,7 @@ Ontology-backed RAG system that ingests federal RFPs into a knowledge graph and 
 An isolated knowledge graph + vector database for exactly one RFP. Lives at `rag_storage/<name>/`. All entities, relationships, and embeddings are workspace-scoped. Created manually: user names the workspace, switches to it via the UI, then uploads documents through the Documents page. Not auto-created on first upload.
 
 `rag_storage/<name>/` layout (traced from live workspace):
+
 - `graph_chunk_entity_relation.graphml` — GraphML snapshot; legacy file, KG lives in Neo4j
 - `vdb_entities.json`, `vdb_relationships.json`, `vdb_chunks.json` — LightRAG VDB embedding stores
 - `kv_store_doc_status.json` — primary doc lifecycle store. Keys = `doc-<hash>`. Each record: `status` (PENDING → PROCESSING → PREPROCESSED → PROCESSED | FAILED), `chunks_count`, `chunks_list`, `content_summary`, `content_length`, `created_at`, `updated_at`, `file_path`, `track_id`, `metadata` (timing, engine). First file to check for "doc processed but missing from KG".
@@ -97,6 +98,22 @@ The RAG response prompt that answers user queries through the Shipley mentor per
 
 **Multimodal prompt** (System 3):
 The VLM prompt for analyzing tables, images, and equations extracted by MinerU. Lives at `prompts/multimodal/govcon_multimodal_prompts.py`.
+
+### Query modes
+
+**Query mode** (`mode` param on `QueryParam`, default `mix`):
+How LightRAG retrieves context before generating an answer. Passed per-chat; stored in `kv_store_chats.json`; code default = `"mix"` in `chat_routes.py` and `settings.py`.
+
+| Mode | What it fetches | When to use |
+|------|-----------------|-------------|
+| `local` | Entity VDB lookup on `ll_keywords` + graph node traversal | Narrow entity facts ("what is the CLIN structure?") |
+| `global` | Relationship VDB lookup on `hl_keywords` + edge traversal | Broad cross-doc themes ("what are the evaluation priorities?") |
+| `hybrid` | Both entity and relationship paths, round-robin merged | General — balanced entity+relationship coverage |
+| `mix` | hybrid **+** `chunks_vdb` vector chunk retrieval appended | **Default / primary use.** Most comprehensive; adds raw text chunks to the entity+relationship context |
+| `naive` | Pure `chunks_vdb` vector search only — no KG | Baseline semantic similarity; use to compare against KG-backed modes |
+| `bypass` | No retrieval — direct LLM call | Prompt-only queries that need no document context |
+
+Implementation: `local`/`global`/`hybrid`/`mix` all dispatch to `kg_query()` in LightRAG's `operate.py`; `mix` additionally calls `_get_vector_context()`. `naive` calls `naive_query()`. All except `bypass` are valid for `kg_chunks` skill tool.
 
 ### UCF and solicitation structure
 
