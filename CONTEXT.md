@@ -188,8 +188,20 @@ LangGraph-backed executor for deterministic multi-skill chains. Called by `Skill
 _Avoid_: calling chains "pipelines" (see Flagged ambiguities); confusing `ChainSpec` (plan) with `ChainRunState` (execution state); using `ChainRunState.steps` as a list (it is keyed by step id).
 
 **Skill run directory**:
-Per-invocation working directory for one skill execution. Path: `rag_storage/<workspace>/skill_runs/<skill>/<YYYYMMDD_HHMMSS_slug>/`. Contains `artifacts/` (skill output files), `tool_outputs/` (raw tool call results), `run.md` (run envelope), `transcript.json` (tool call log). Scoped to one workspace + one skill execution. Created by `SkillRunStore.create_run_dir()`.
-_Avoid_: run-dir, output dir, workspace.
+Per-invocation working directory for one skill execution. Path: `rag_storage/<workspace>/skill_runs/<skill>/<YYYYMMDD_HHMMSS_slug>/`. Contains:
+- `run.md` — run envelope (YAML-ish frontmatter); parsed by `parse_run_envelope()` to produce `metadata` dict with `run_id`, `skill`, `workspace`, `created_at`, `user_prompt`, `elapsed_ms`, etc.
+- `response.md` — raw LLM response text
+- `prompt.md` — full prompt sent to LLM (briefing book + skill body)
+- `artifacts/` — skill output files (`.docx`, `.xlsx`, `.md`, etc.); discoverable via `list_run_artifacts()` using `artifact_manifest.json` for metadata + MIME
+- `tool_outputs/` — raw tool call results per turn (tools-mode only)
+- `transcript.json` — array of tool call events; fed to `build_reasoning_view()` for the UI reasoning panel
+
+`SkillRunIndex.list_runs()`: walks `skill_runs/`, reads `run.md` envelopes, projects via `_project_run_summary_payload()` → adds `input_request`, `missing_inputs`, `status` (`"completed"` | `"interrupted"`), `can_resume` bool. `_extract_missing_inputs(response)` scans response text for bullet lists under "exact gaps"/"missing inputs" headers. `_extract_follow_up_question(response)` detects question-format lines.
+
+`SkillRunIndex.read_run()`: full detail — adds `artifacts`, `transcript`, `tool_outputs`. Run ID must pass `_SAFE_RUN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")`.
+
+Trash: `rag_storage/<workspace>/.trash/studio_artifacts/<trash_id>/`. `trash_id` format: `YYYYMMDD_HHMMSS_microseconds_original.ext`. Restore: moves back to original path. Bulk trash/restore endpoints under Studio (`GET/POST /api/ui/studio/trash`, `/restore`, `/delete`).
+_Avoid_: run-dir, output dir, workspace; "run.md is JSON" (it's an envelope parsed by `parse_run_envelope`, not raw JSON).
 
 **MCP skill integration** (`src/skills/mcp_client.py`, `src/skills/mcp_session.py`):
 Skills declare `metadata.mcps: [usaspending, sam_gov]` in `SKILL.md` frontmatter to access vendored MCP servers under `tools/mcps/<name>/`. Architecture:
