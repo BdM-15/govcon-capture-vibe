@@ -148,6 +148,20 @@ Deep module for skill discovery, install, and ledger persistence. Owns the in-me
 - `has_assets` / `has_templates` / `has_scripts` / `has_references` / `has_evals` — boolean flags from subdirectory presence, set at discovery time.
 _Avoid_: "skill registry" (that's `SkillManager`'s job); "skill store" (the JSON ledger is just the ledger, not the full catalog).
 
+**Skill routes** (`src/server/skill_routes.py`):
+HTTP API surface for skill invocation, runs management, and settings. Three registration functions:
+
+- `register_skill_catalog_ui_routes`: `GET /api/ui/skills`, `GET /api/ui/skills/{name}`, `POST /api/ui/skills/refresh`, `POST /api/ui/skills/install`, `DELETE /api/ui/skills/{name}`.
+- `register_skill_settings_ui_routes`: `GET/PUT/POST /api/ui/settings/skills` (briefing-book params: `max_entities_per_type`, `max_chunks_per_entity`, `max_relationships_per_entity`, `retrieval_mode`, `retrieval_top_k`) and `GET/PUT/POST /api/ui/settings/skills/runtime` (tools-mode ceiling params persisted to `.env` via `set_env_var`).
+- `register_skill_invoke_ui_routes`: `POST /api/ui/skills/{name}/invoke` + `POST /api/ui/skills/{name}/runs/{run_id}/resume` + chain invoke/plan endpoints + `GET/POST` runs management + Studio artifact endpoints.
+
+**Invoke flow** (`POST /api/ui/skills/{name}/invoke`): determine `effective_mode` via `resolve_skill_runtime_mode(frontmatter_mode)` → if `"tools"` mode, pass empty `entity_payload={}` and bound `slice_fn`/`retrieve_fn` closures (capped to payload limits) — the tool loop fetches KG data lazily. If `"legacy"` mode, eagerly build the briefing book (retrieval → slice → attach to `entity_payload`) before calling `mgr.invoke()`. Response shape: `{skill, workspace, response, entities_used, warnings, elapsed_ms, prompt_tokens_estimate, run_id, run_dir, finish_reason, runtime_mode, retrieval}`.
+
+**Resume flow** (`POST /api/ui/skills/{name}/runs/{run_id}/resume`): loads existing run, checks `can_resume` flag (HTTP 409 if not), merges `user_addendum` + `answers` dict, re-invokes with `user_supplied_context.resume_notes` in the entity payload.
+
+**Skill runs** (`rag_storage/<workspace>/skill_runs/<skill_name>/<run_id>/`): each invocation writes a run directory containing `metadata.json`, `response.md`, `transcript.json`, and any produced artifacts. Route: `GET /api/ui/skills/{name}/runs?limit=<n>` (list), `GET /api/ui/skills/{name}/runs/{run_id}` (detail), `/reasoning` (reasoning view extracted from transcript). Trash/restore: `list_trashed_runs`, restore + bulk delete endpoints under Studio (`GET/POST /api/ui/studio/*`).
+_Avoid_: "skill API" (three separate registration functions exist — be specific); "runtime_mode" (means legacy vs tools); "run" without qualifying it's a `SkillRunMetadata` record under `skill_runs/`.
+
 **SkillChainExecutor** (`src/skills/chain_executor.py`):
 LangGraph-backed executor for deterministic multi-skill chains. Called by `SkillManager.invoke_chain()` when the planner (or explicit API call) needs a fixed sequence of skills rather than a single-skill invocation. Uses a `StateGraph` with one node per chain step; steps share a `ChainRunState` carried through `ChainExecutionState`. Key contract:
 
