@@ -487,8 +487,16 @@ The RAG response prompt that answers user queries through the Shipley mentor per
 **Multimodal prompt** (System 3):
 The VLM prompt for analyzing tables, images, and equations extracted by MinerU. Lives at `prompts/multimodal/govcon_multimodal_prompts.py`.
 
-**Reasoning filter** (`src/server/reasoning_filter.py`):
-`strip_think(text)` removes `<think>...</think>` reasoning blocks that xAI Grok reasoning models emit before the visible response. Applied to every assistant message before it is persisted to the chat JSON. `ThinkStripper` is the stateful streaming variant — buffers input and emits only text outside `<think>` blocks, used in the SSE streaming path. Neither class modifies the query LLM output seen by skills (skills receive post-reasoning text via `aquery()`). If `<think>` tags appear in the KG (e.g. extraction chunked through a reasoning model), they are not cleaned — that is an extraction config problem, not a filter gap.
+**Log filters and helpers** (`src/utils/log_filters.py`, `src/utils/log_helpers.py`):
+Two logging filter classes control what appears on which output channel:
+- `ConsoleFilter`: allowlist filter — passes WARNINGs+ from all loggers, but INFO/DEBUG only from `src.raganything_server`, `uvicorn.error`, `src.server.routes`, `src.inference`, `src.extraction.govcon_reranker`. Suppresses `uvicorn.access` info lines entirely. Keeps the terminal readable during ingest without losing warning signals.
+- `ProcessingFilter`: capture filter — routes log records to the per-workspace processing log. Passes any record whose logger name starts with `lightrag`, `raganything`, `src.server.routes`, `src.inference`, `src.ingestion`, or `src.extraction.govcon_reranker`. Fallback: keyword match in message (`"Processing"`, `"entities"`, `"relationships"`, `"semantic"`, `"Neo4j"`, `"inference"`, `"enrichment"`, `"parsing"`, `"extraction"`).
+
+`log_graceful_failure(logger, operation, error, context)`: single-line WARNING helper — truncates error to 100 chars, appends "continuing with degraded result". Used at catch sites where partial results are acceptable.
+`get_log_summary(log_dir)` → dict of log files with sizes + timestamps in `logs/`.
+_Avoid_: editing `ConsoleFilter._ALLOWED` without considering what disappears from the terminal during ingest; "log routing" for `ProcessingFilter` (it is a capture filter, not a router — the same log record still goes to other handlers).
+
+**Reasoning filter** (`src/server/reasoning_filter.py`): Applied to every assistant message before it is persisted to the chat JSON. `ThinkStripper` is the stateful streaming variant — buffers input and emits only text outside `<think>` blocks, used in the SSE streaming path. Neither class modifies the query LLM output seen by skills (skills receive post-reasoning text via `aquery()`). If `<think>` tags appear in the KG (e.g. extraction chunked through a reasoning model), they are not cleaned — that is an extraction config problem, not a filter gap.
 _Avoid_: calling it "chain-of-thought stripping" (specific to Grok's `<think>` tag convention, not a general CoT mechanism).
 
 **Entity name normalization** (`normalize_entity_name`, `src/inference/relationship_inference_support.py`):
