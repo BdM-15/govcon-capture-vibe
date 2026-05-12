@@ -144,6 +144,16 @@ _Avoid_: confusing scan with upload — they share the pipeline but differ in tr
 One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge (Shipley methodology, FAR patterns, evaluation frameworks) before any RFP documents are uploaded. Triggered automatically at server startup via `maybe_bootstrap_ontology()` in `src/server/rag_post_init.py`. Gate: `AUTO_BOOTSTRAP_ONTOLOGY` env var (default `true`). Fresh workspace (no marker) + env enabled -> ontology entities/relationships become the initial KG foundation. `.ontology_bootstrap` marker written after success; present -> skip on subsequent startups. `ONTOLOGY_BOOTSTRAP_FORCE=true` re-seeds even if marker exists.
 _Avoid_: initialization (overloaded with server startup), seed.
 
+**Chat** (chat session, `rag_storage/<workspace>/chats/<id>.json`):
+Persisted UI conversation stored as one JSON file per chat. `ChatStore` (`src/server/chat_store.py`) manages the lifecycle — one `ChatStore` instance per server, scoped to the active workspace dir. Chat schema: `id` (16-hex UUID), `title`, `mode` (query mode: `local`/`global`/`hybrid`/`mix`/`naive`/`bypass`), `rfp_context` (optional free-text context prepended to queries), `messages[]` (`{role, content, timestamp}`), `created_at`, `updated_at`. Key behaviors:
+- Atomic write: writes to `<id>.json.tmp` then renames — no partial-write corruption on server kill
+- `build_history()`: extracts `(role, content)` pairs from `messages[]`; caps to `CHAT_HISTORY_PAIRS` most-recent pairs to bound context window sent to LightRAG
+- `maybe_autotitle()`: if title is still "New chat", sets it to the first 60 chars of the first user message
+- `mode` is stored per-chat; override accepted on each `POST /chats/{id}/messages` call
+
+`kv_store_chats.json` does **not** exist — chats are stored as individual files, not a single KV store. The UI calls `GET /chats` to list summaries (title, mode, message count, timestamps) without loading full message history.
+_Avoid_: "chat session" (not a server-side session object); "chat history" (ambiguous with LightRAG conversation_history — qualify which).
+
 **Entity catalog**:
 The YAML-driven registry of 33 govcon entity types at `prompts/extraction/govcon_entity_types.yaml`. Single source of truth — `VALID_ENTITY_TYPES` in `src/ontology/schema.py` is derived from it at import time (no regeneration step). The extraction prompt's Part D (`{entity_types_guidance}`) is also rendered from this YAML at runtime. To add a new entity type: edit the YAML only, then run `pytest tests/ontology/test_entity_catalog_coherence.py` to confirm parity. No other files need hand-editing.
 _Avoid_: entity types list, entity schema.
