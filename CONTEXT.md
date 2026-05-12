@@ -135,6 +135,19 @@ The source-grounded context package assembled by the route layer and passed to `
 In the prompt the briefing book is framed under the header `"## Workspace Briefing Book (JSON)"` and declared the "authoritative source of truth" (`src/skills/skill_prompting.py`). Size cap: `SKILL_MAX_PAYLOAD_CHARS` env var. Retrieval mode and `top_k` are per-request; `mode="off"` disables retrieval and falls back to bulk entity slice.
 _Avoid_: "entity context", "workspace context" (both too generic); "KG dump" (loses the retrieval-grounding step).
 
+**SkillCatalog** (`src/skills/skill_catalog.py`):
+Deep module for skill discovery, install, and ledger persistence. Owns the in-memory `dict[str, Skill]` registry plus a JSON ledger file (`rag_storage/<workspace>/skills_ledger.json`). Key behaviors:
+
+- `discover()` — walks `skills_dir/` for subfolders containing `SKILL.md`; parses frontmatter via `parse_frontmatter()`; merges ledger metadata (installed_at, last_invoked_at, source); rebuilds `_skills` dict. Called at server startup and after every install/uninstall. Silently skips folders that fail to parse.
+- `get_skill(name)` / `get_skill_detail(name)` — `get_skill_detail` adds `body_md`, `references`, `assets`, `templates`, `scripts` file lists.
+- `install_from_github(url)` — shallow `git clone --depth=1` into `skills_dir/`, validates `SKILL.md` exists, strips `.git/`, records ledger entry, re-calls `discover()`. Validates URL must begin with `https://github.com/` — only GitHub sources accepted.
+- `uninstall(name)` — refuses to delete `source == "builtin"` skills; calls `shutil.rmtree` on skill folder.
+- `touch_invocation(name)` — updates `last_invoked_at` in ledger on every `SkillManager.invoke()` call.
+- Skill `source` values: `"builtin"` (shipped with repo, never deletable), `"installed"` (installed via GitHub URL).
+- Name validation: `_SAFE_SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")`.
+- `has_assets` / `has_templates` / `has_scripts` / `has_references` / `has_evals` — boolean flags from subdirectory presence, set at discovery time.
+_Avoid_: "skill registry" (that's `SkillManager`'s job); "skill store" (the JSON ledger is just the ledger, not the full catalog).
+
 **SkillChainExecutor** (`src/skills/chain_executor.py`):
 LangGraph-backed executor for deterministic multi-skill chains. Called by `SkillManager.invoke_chain()` when the planner (or explicit API call) needs a fixed sequence of skills rather than a single-skill invocation. Uses a `StateGraph` with one node per chain step; steps share a `ChainRunState` carried through `ChainExecutionState`. Key contract:
 
