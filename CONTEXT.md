@@ -413,6 +413,18 @@ Optional mode that passes `response_format={"type": "json_schema", "json_schema"
 **Chunking**:
 LightRAG splits each document into token-bounded chunks before extraction. Two required `.env` knobs — `CHUNK_SIZE` (tokens per chunk) and `CHUNK_OVERLAP_SIZE` (overlap tokens) — both mandatory, no safe default, startup fails without them. The custom chunker (`src/extraction/govcon_chunking.py`, registered via `global_args.chunking_func`) wraps LightRAG's native `chunking_by_token_size` and prepends a `[GOVCON_DOC: type=...; note=...]` banner to every chunk so the extraction prompt and query prompt know the doc type. No other chunking parameters exist.
 
+**Settings** (`Settings` class + `get_settings()`, `src/core/config.py`):
+Pydantic `BaseSettings` singleton. Loaded once from `.env` at startup, cached as `_settings_instance`. All modules call `get_settings()` — never instantiate `Settings()` directly. `reset_settings()` clears the cache for tests.
+
+Key field groups:
+- **LLM**: `llm_binding_host`, `llm_binding_api_key`, `llm_timeout` (600 s), `llm_max_output_tokens` (128 k), `llm_max_retries` (5), `llm_model_temperature` (0.1).
+- **Per-role models** (env var names match LightRAG 1.5.0 role registry): `extraction_llm_name` (`EXTRACT_LLM_MODEL`), `reasoning_llm_name` (`QUERY_LLM_MODEL`), `post_processing_llm_name` (`POST_PROCESS_LLM_MODEL` — Theseus addition, not a LightRAG role), `keyword_llm_name`, `vlm_llm_name`.
+- **Embeddings**: `embedding_binding_host` (must be OpenAI endpoint — xAI has no embedding API), `embedding_binding_api_key`, `embedding_model` (`text-embedding-3-large`), `embedding_dim` (3072).
+- **Parallelism**: `max_parallel_insert` (4 concurrent docs), `llm_max_async` (16 concurrent LLM calls during extraction), `embedding_max_async` (16), `post_processing_max_async` / `get_effective_post_processing_max_async()`.
+
+`validate_required()` fails-fast at startup (called in `src/raganything_server.py`) with explicit missing-field errors rather than cryptic downstream failures.
+_Avoid_: reading `.env` directly (all code reads `get_settings()`); treating `post_processing_llm_name` as a LightRAG role (it is not).
+
 **Per-role LLM models** (`src/server/llm_routing.py`):
 LightRAG 1.5.0 allows a separate model per processing role. `build_role_llm_routing()` constructs all role wrappers from two config fields (`extraction_llm_name`, `reasoning_llm_name`); the other roles reuse `extraction_llm_name` by default.
 
