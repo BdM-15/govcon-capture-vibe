@@ -452,6 +452,16 @@ Key field groups:
 `validate_required()` fails-fast at startup (called in `src/raganything_server.py`) with explicit missing-field errors rather than cryptic downstream failures.
 _Avoid_: reading `.env` directly (all code reads `get_settings()`); treating `post_processing_llm_name` as a LightRAG role (it is not).
 
+**Centralized LLM client** (`src/utils/llm_client.py`):
+Single async LLM wrapper used by the inference algorithms (and legacy skill paths) when calling xAI Grok outside of LightRAG's role system. Three functions:
+
+- `call_llm_async(prompt, system_prompt?, model?, temperature?, max_tokens?)` — single async call. Uses `settings.post_processing_llm_name` as default model. Wraps `openai.AsyncOpenAI` with `@async_retry` + `CircuitBreaker` from RAGAnything's resilience infrastructure (exponential backoff, cascade protection).
+- `call_llm_batch(prompts, max_concurrent?, ...)` — concurrent batch via `asyncio.Semaphore`. `MAX_CONCURRENT_LLM_CALLS` caps concurrency.
+- `call_llm_structured(prompt, ResponseModel, max_retries?)` — uses `instructor` library for Pydantic-typed structured output; retries parse failures up to `max_retries`.
+
+Used by: inference algorithms (`infer_lm_links`, `resolve_orphans`, algorithm base), semantic post-processor's internal `llm_func`, `call_llm_reviewer` for QA-style reviewer-pattern calls.
+_Avoid_: confusing this with the skill `LLM chat client` (`src/skills/llm_chat.py`, which is for tool-loop turns and uses `reasoning_llm_name`). These are two separate wrappers for two different call sites.
+
 **Per-role LLM models** (`src/server/llm_routing.py`):
 LightRAG 1.5.0 allows a separate model per processing role. `build_role_llm_routing()` constructs all role wrappers from two config fields (`extraction_llm_name`, `reasoning_llm_name`); the other roles reuse `extraction_llm_name` by default.
 
