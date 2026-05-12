@@ -505,6 +505,16 @@ _Avoid_: calling it "entity deduplication" (dedup uses this as one comparison st
 
 ### Query modes
 
+**BGE reranker** (`src/extraction/govcon_reranker.py`):
+Optional local cross-encoder reranking step applied by LightRAG after its vector/entity/relation triple-merge but before LLM context assembly. Model: `BAAI/bge-reranker-v2-m3` (XLM-RoBERTa cross-encoder, 8192 ctx window, ~1.2 GB VRAM at FP16). Provides ~15–25% NDCG@10 lift on dense English RAG benchmarks.
+
+`govcon_rerank_func(query, documents, top_n, **kwargs)` — matches LightRAG's `rerank_model_func` contract. Returns `[{"index": int, "relevance_score": float}]` sorted descending; entries below `settings.min_rerank_score` are filtered out. Scores computed via `FlagReranker.compute_score(pairs, normalize=True)`.
+
+`make_govcon_rerank_func()` — factory called at server startup; returns `None` if `settings.enable_rerank=false` (default). Returning `None` lets LightRAG skip reranking entirely (zero import cost). Singleton: model loaded lazily on first query, reused for server lifetime — cold-start logged in ms.
+
+`min_rerank_score` override path: passed via `overrides` dict from the UI → `make_ui_query_bridges()` special-cases it to `rag_instance.lightrag.min_rerank_score` (not a `QueryParam` field).
+_Avoid_: "Phase 6 reranking" (reranking is NOT one of the 5 semantic post-processor phases); treating `enable_rerank=false` as a broken config (it is the intended default for CPU-only environments).
+
 **Query mode** (`mode` param on `QueryParam`, default `mix`):
 How LightRAG retrieves context before generating an answer. Passed per-chat; stored in the chat JSON file (see **Chat**); code default = `"mix"` in `chat_routes.py` and `settings.py`. Valid set: `{"local", "global", "hybrid", "mix", "naive", "bypass"}` — enforced in `VALID_QUERY_MODES`.
 
