@@ -287,6 +287,12 @@ _Avoid_: confusing scan with upload — they share the pipeline but differ in tr
 One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge (Shipley methodology, FAR patterns, evaluation frameworks) before any RFP documents are uploaded. Triggered automatically at server startup via `maybe_bootstrap_ontology()` in `src/server/rag_post_init.py`. Gate: `AUTO_BOOTSTRAP_ONTOLOGY` env var (default `true`). Fresh workspace (no marker) + env enabled -> ontology entities/relationships become the initial KG foundation. `.ontology_bootstrap` marker written after success; present -> skip on subsequent startups. `ONTOLOGY_BOOTSTRAP_FORCE=true` re-seeds even if marker exists.
 _Avoid_: initialization (overloaded with server startup), seed.
 
+**Dashboard stats** (`src/server/admin_routes.py`):
+`GET /api/ui/stats` → `gather_stats()` → payload for the UI header widget. Fields: `workspace`, `graph_storage`, `working_dir`, `documents` (kv_store_doc_status key count), `entities` (vdb_entities count), `relationships` (vdb_relationships count), `chunks` (vdb_chunks count), `chats` (JSON file count), `chat.history_pairs_cap` (`UI_CHAT_HISTORY_TURNS`, default 20), `version` (`THESEUS_RELEASE_VERSION` env → git describe → "v0.0.0"), `ontology.entity_type_count`, `ontology.relationship_type_count`, `ontology.extraction_relationship_type_count` (excludes `REQUIRES`/`ENABLED_BY`/`RESPONSIBLE_FOR` which are inference-only), `models.extraction`, `models.reasoning`, `models.embedding`, `models.rerank` (null when `enable_rerank=false`), `stack` (installed versions for lightrag-hku, raganything, mineru, transformers). All counts are fast key-counting reads — no Neo4j queries.
+
+`GET /api/ui/mcps` — lists vendored MCP servers from `tools/mcps/` with env-var status (secret values masked: first 4 + last 2 chars). `POST /api/ui/mcps/{name}/keys` — update MCP env vars (`_SAFE_MCP_NAME`, `_SAFE_ENV_KEY` regex guards) and optionally restart. `POST /api/ui/mcps/{name}/test` — test MCP connection.
+_Avoid_: counting documents from Neo4j (stats reads VDB JSON files — faster, no connection required).
+
 **Workspace management** (`src/server/workspace_routes.py`):
 Routes for creating, switching, inspecting, and deleting workspaces. `WorkspaceMaintenance` (deep module) implements discovery and deletion; `discover_workspaces(working_dir)` finds folders under `rag_storage/` that contain any of `kv_store_doc_status.json`, `vdb_entities.json`, `vdb_chunks.json`.
 
