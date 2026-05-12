@@ -254,6 +254,16 @@ _Avoid_: "artifact_manifest.json" (correct name is `artifacts_manifest.json`); a
 
 _Avoid_: run-dir, output dir, workspace; "run.md is JSON" (it's an envelope parsed by `parse_run_envelope`, not raw JSON).
 
+**Reasoning view** (`src/skills/reasoning.py`):
+`build_reasoning_view(transcript)` → `{steps, summary}`. Pure deterministic renderer — no LLM, no disk writes. Walks `transcript.json` flat entries (`{kind, turn, ...}`) where `kind` ∈ `{system, user, assistant, tool}`. Pairs each `kind=assistant` tool-call with its `kind=tool` result by `call_id`. Emits one step per logical event with fields: `index`, `kind`, `turn`, `summary` (1-sentence prose via `_summarize_tool_call()`), `preview` (short collapsed text), `chunk_ids` (regex-extracted `chunk-<32hex>` ids for source-link surfacing), `elapsed_ms`, `raw` (full call+result for power-user audit).
+
+`_summarize_tool_call(name, args, result_preview)` → closed-vocabulary mapping: `kg_entities` ("Pulled {types} from the knowledge graph"), `kg_chunks` ("Searched the chunk index"), `kg_query` ("Ran a structural Cypher query: `{first_line}`"), `read_file`, `run_script`, `write_file` — each maps to a short sentence. Unknown tools → "Called tool `{name}`".
+
+`_CHUNK_ID_RX = re.compile(r"\bchunk-[a-f0-9]{32}\b")` — requires full 32-hex shape so half-truncated IDs in `result_preview` (sliced at 500 chars) don't surface broken source links. Newer runs also store full `chunk_ids` directly on the transcript entry; regex is fallback for older runs.
+
+Summary fields: `turns` (unique `turn` integers seen), `tool_calls` (total tool calls counted), `messages` (assistant turns), `total_elapsed_ms`.
+_Avoid_: calling it "inference" (it's deterministic mapping, not LLM reasoning); expecting LightRAG chunk IDs shorter than 32 hex chars.
+
 **MCP skill integration** (`src/skills/mcp_client.py`, `src/skills/mcp_session.py`):
 Skills declare `metadata.mcps: [usaspending, sam_gov]` in `SKILL.md` frontmatter to access vendored MCP servers under `tools/mcps/<name>/`. Architecture:
 
