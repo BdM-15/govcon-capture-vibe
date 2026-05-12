@@ -426,6 +426,20 @@ Optional mode that passes `response_format={"type": "json_schema", "json_schema"
 **Chunking**:
 LightRAG splits each document into token-bounded chunks before extraction. Two required `.env` knobs — `CHUNK_SIZE` (tokens per chunk) and `CHUNK_OVERLAP_SIZE` (overlap tokens) — both mandatory, no safe default, startup fails without them. The custom chunker (`src/extraction/govcon_chunking.py`, registered via `global_args.chunking_func`) wraps LightRAG's native `chunking_by_token_size` and prepends a `[GOVCON_DOC: type=...; note=...]` banner to every chunk so the extraction prompt and query prompt know the doc type. No other chunking parameters exist.
 
+**GovCon doc type classifier** (`src/extraction/govcon_chunking.py`):
+Classifies each incoming document at chunk time by inspecting the first 5 KB (filename signals, section-header regex, structural markers like repeating `$0.00` rows). Result: a `govcon_doc_type` tag on every chunk dict + a single-line banner prepended to chunk `content`. Banner is: embedded in the chunk's vector (retrieval surfaces template context), visible to the extraction LLM (suppresses placeholder values becoming entities), visible during query response (mentor prompt Section 3a applies template guardrails).
+
+Doc types (closed set, ordered by classifier specificity):
+| Type | Covers |
+|------|--------|
+| `solicitation` | RFP, RFQ, FOPR, solicitation memorandum, UCF Sections L/M or non-UCF equivalents |
+| `pws` | Performance Work Statement, SOW, SOO |
+| `cdrl_exhibit` | CDRL list, Exhibit A, DD Form 1423 |
+| `template` | Customer-provided fillable templates (CLIN cost estimate, staffing matrix, Q&A form, past-perf form) — numeric values are offeror placeholders, structure is normative |
+| `unknown` | Could not classify; banner NOT added |
+
+Registered via `global_args.chunking_func` in `src/server/config.py`. Non-invasive: no library patches, no monkey patches.
+
 **Settings** (`Settings` class + `get_settings()`, `src/core/config.py`):
 Pydantic `BaseSettings` singleton. Loaded once from `.env` at startup, cached as `_settings_instance`. All modules call `get_settings()` — never instantiate `Settings()` directly. `reset_settings()` clears the cache for tests.
 
