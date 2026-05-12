@@ -363,6 +363,23 @@ Persisted UI conversation stored as one JSON file per chat. `ChatStore` (`src/se
 `kv_store_chats.json` does **not** exist — chats are stored as individual files, not a single KV store. The UI calls `GET /chats` to list summaries (title, mode, message count, timestamps) without loading full message history.
 _Avoid_: "chat session" (not a server-side session object); "chat history" (ambiguous with LightRAG conversation_history — qualify which).
 
+**Chat routes** (`src/server/chat_routes.py`):
+`register_chat_routes(app, ...)` wires: `GET /chats`, `POST /chats`, `GET /chats/{id}`, `PATCH /chats/{id}`, `DELETE /chats/{id}`, `POST /chats/{id}/messages` (non-streaming), `POST /chats/{id}/messages/stream` (SSE).
+
+SSE stream event sequence (`POST /chats/{id}/messages/stream`):
+1. `event: open` — connection established.
+2. `event: status` `{phase: "retrieving"}` — sources pre-flight starts.
+3. If `data_func` present and mode ≠ `bypass`: calls `aquery_data()` first → `event: sources` with `trim_sources(data_result)` — UI renders the sources panel before first token.
+4. Calls `query_func()` (streaming) → `event: status` `{phase: "generating", retrieve_ms}`.
+5. `event: token` per chunk — text filtered through `ThinkStripper` (removes `<think>…</think>` reasoning blocks). Non-streaming result emitted as single token.
+6. `event: error` on exception — partial content still saved.
+7. `event: done` — assistant message, updated chat summary, timing `{total_ms, ttft_ms, generate_ms, chunk_count, char_count}`.
+
+Timing fields tracked per message: `total_ms`, `ttft_ms` (time-to-first-token), `generate_ms`, `chunk_count`, `char_count`. Saved on the `assistant` message alongside `mode` and `sources`. On error, partial `collected` content is saved so chat history is not lost.
+
+`ThinkStripper`: stateful streaming filter. Drops everything between `<think>` and `</think>` including across chunk boundaries. `strip_think(text)` is the non-streaming variant (regex).
+_Avoid_: "websocket" (chat is SSE, not websocket); "sources event" before "open" (wrong order — open always first).
+
 **Entity catalog**:
 The YAML-driven registry of 33 govcon entity types at `prompts/extraction/govcon_entity_types.yaml`. Single source of truth — `VALID_ENTITY_TYPES` in `src/ontology/schema.py` is derived from it at import time (no regeneration step). The extraction prompt's Part D (`{entity_types_guidance}`) is also rendered from this YAML at runtime. To add a new entity type: edit the YAML only, then run `pytest tests/ontology/test_entity_catalog_coherence.py` to confirm parity. No other files need hand-editing.
 _Avoid_: entity types list, entity schema.
