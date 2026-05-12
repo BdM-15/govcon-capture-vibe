@@ -412,6 +412,10 @@ How LightRAG retrieves context before generating an answer. Passed per-chat; sto
 
 Implementation: `local`/`global`/`hybrid`/`mix` all dispatch to `kg_query()` in LightRAG's `operate.py`; `mix` additionally calls `_get_vector_context()`. `naive` calls `naive_query()`. All except `bypass` are valid for `kg_chunks` skill tool.
 
+**UI query bridge** (`make_ui_query_bridges()` in `src/raganything_server.py`):
+Thin adapter that binds the LightRAG instance to three callables exposed to the UI chat routes: `UIQueryBridges.query` (`aquery` — streaming-capable), `UIQueryBridges.query_data` (`aquery_data` — returns structured `{sources, response}` for the UI data tab), `UIQueryBridges.llm` (raw LLM call for non-RAG prompts). Override kwargs passed from the UI are filtered against `QueryParam.__dataclass_fields__` before forwarding — unknown fields are silently dropped. `min_rerank_score` is a special override applied directly to `rag_instance.lightrag.min_rerank_score` (not a `QueryParam` field).
+_Avoid_: "query API" (bridge is an internal adapter, not a public API); passing unknown `QueryParam` fields (they are dropped silently, not rejected).
+
 ### UCF and solicitation structure
 
 **UCF** (Uniform Contract Format):
