@@ -1,99 +1,112 @@
-# Context
+﻿# Theseus
 
-Domain vocabulary for Project Theseus — an ontology-based RAG system for federal RFP analysis.
+Ontology-backed RAG system that ingests federal RFPs into a knowledge graph and answers govcon capture questions through a Shipley-methodology mentor persona.
 
-Use this glossary when naming code, writing issues, proposing refactors, writing tests, or any output that touches the codebase. Prefer these terms; avoid the synonyms listed under _Avoid_.
+## Language
 
----
+### Core system concepts
 
-## Architecture vocabulary
+**Workspace**:
+An isolated knowledge graph + vector database for exactly one RFP. Lives at `rag_storage/<name>/`. All entities, relationships, and embeddings are workspace-scoped.
+_Avoid_: project, environment, instance.
 
-**Module**
-Anything with an interface and an implementation. Scale-agnostic — applies equally to a function, class, file, or vertical slice.
-_Avoid_: unit, component, service.
+**Ingest pipeline**:
+The 7-phase sequence that turns a raw RFP document into graph data: upload -> MinerU parse -> multimodal analysis -> LightRAG chunking -> entity extraction -> relationship extraction -> semantic post-processing trigger.
+_Avoid_: "the pipeline" (ambiguous -- see Flagged ambiguities).
 
-**Interface**
-Everything a caller must know to use a module correctly: type signature, invariants, ordering constraints, error modes, required configuration.
-_Avoid_: API, signature (too narrow).
+**Semantic post-processor**:
+The 6-phase inference pass that runs automatically after a batch completes: data loading -> entity normalization -> relationship normalization -> relationship inference -> workload enrichment -> VDB sync. Lives in `src/inference/`.
+_Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambiguities).
 
-**Depth**
-Leverage at the interface — how much behaviour a caller exercises per unit of interface they learn. A deep module has a large implementation behind a small interface.
+**Bootstrap**:
+One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge (Shipley methodology, FAR patterns, evaluation frameworks) before any RFP documents are uploaded. Controlled by `.ontology_bootstrap` marker file per workspace.
+_Avoid_: initialization (overloaded with server startup), seed.
 
-**Seam**
-A place where behaviour can be changed without editing the calling code. Where an interface lives.
-_Avoid_: boundary (overloaded with DDD's bounded context).
+**Entity catalog**:
+The YAML-driven registry of 33 govcon entity types at `prompts/extraction/govcon_entity_types.yaml`. Single source of truth -- `VALID_ENTITY_TYPES` in `src/ontology/schema.py` is derived from it at import time.
+_Avoid_: entity types list, entity schema.
 
-**Adapter**
-A concrete implementation that fills a seam and satisfies an interface.
+**Canonical relationship types**:
+The 35 fixed relationship type strings defined in `src/ontology/schema.py -> VALID_RELATIONSHIP_TYPES`. Every relationship in the knowledge graph must use one of these as its `keywords` first token.
+_Avoid_: edge types, link types, relationship schema.
 
-**Leverage**
-What callers gain from depth: more capability per unit of interface they must learn.
+### Prompt systems
 
-**Locality**
-What maintainers gain from depth: changes, bugs, and knowledge concentrate at one place.
+**Extraction prompt** (System 1):
+The LightRAG prompt that extracts entities and relationships from text chunks during the ingest pipeline. Lives at `prompts/govcon/extraction.py -> build_v8_system_prompt()`.
+_Avoid_: "the prompt" (three prompt systems exist -- always qualify which one).
 
----
+**Query prompt** (System 2):
+The RAG response prompt that answers user queries through the Shipley mentor persona. Lives at `prompts/govcon/query.py`.
 
-## Govcon domain vocabulary
+**Multimodal prompt** (System 3):
+The VLM prompt for analyzing tables, images, and equations extracted by MinerU. Lives at `prompts/multimodal/govcon_multimodal_prompts.py`.
 
-### Core system
+### UCF and solicitation structure
 
-**Workspace**
-An isolated knowledge graph + vector store for one RFP. Lives under `rag_storage/<name>/`. Each workspace is independent: different entities, relationships, embeddings.
+**UCF** (Uniform Contract Format):
+Standard DoD/civilian RFP structure. Key sections: C (statement of work), H (special requirements), J (attachments), L (proposal instructions), M (evaluation factors). Not all solicitations use UCF -- the system handles non-UCF formats too.
 
-**Pipeline**
-The 7-phase document processing sequence: upload → MinerU parse → multimodal analysis → LightRAG chunking → entity extraction → relationship extraction → semantic post-processing.
+**L-to-M mapping**:
+The core use case: tracing which proposal instruction (Section L) is addressed by which evaluation factor (Section M), expressed as `MAPS_TO` relationships in the knowledge graph. Works for UCF and non-UCF equivalents.
 
-**Semantic post-processing**
-6-phase pipeline that runs after batch ingestion: data loading → entity normalization → relationship normalization → relationship inference → workload enrichment → VDB sync.
+**Proposal instruction**:
+A direction in the RFP telling offerors how to structure or submit their proposal. UCF: lives in Section L. Non-UCF: equivalent instructions in any section.
+_Avoid_: "Section L item" (implies UCF only).
 
-**Extraction prompt (System 1)**
-The LightRAG prompt that extracts entities and relationships from text chunks. Lives in `prompts/govcon_prompt.py` → `_build_v8_system_prompt()`.
+**Evaluation factor**:
+A criterion the government uses to score proposals. UCF: lives in Section M. Non-UCF: equivalent scoring criteria wherever they appear.
+_Avoid_: "Section M factor" (implies UCF only).
 
-**Query/response prompt (System 2)**
-The LightRAG RAG response prompt with Shipley mentor persona. Lives in `prompts/govcon_prompt.py` → `rag_response`.
+**Requirement**:
+A stated or implied obligation the contractor must fulfill after award. Distinct from proposal instructions (which govern the bid) and evaluation factors (which govern scoring).
+_Avoid_: "shall statement" (too narrow -- requirements can be implied).
 
-**Multimodal prompt (System 3)**
-The VLM prompt for tables, images, and equations from MinerU. Lives in `prompts/multimodal/govcon_multimodal_prompts.py`.
+### Shipley methodology
 
-### Entity ontology
+**Win theme**:
+A discriminator backed by proof points, explicitly tied to a customer hot button. A win theme is not a feature claim -- it requires a benefit linkage.
+_Avoid_: selling point, highlight, strength.
 
-33 entity types defined in `prompts/extraction/govcon_entity_types.yaml` and exported as `src/ontology/schema.py → VALID_ENTITY_TYPES`. Key types:
+**Hot button**:
+A customer priority signal extracted from the RFP text -- a pain, goal, or emphasis that the win strategy should address.
 
-- `requirement` — a stated or implied obligation the offeror must meet
-- `evaluation_factor` — a criterion used to evaluate proposals (Section M)
-- `proposal_instruction` — a direction to offerors on how to structure or submit (Section L)
-- `deliverable` — a product or artifact the awardee must provide
-- `clause` — a FAR/DFARS clause incorporated by reference or full text
-- `clin` — contract line item number
-- `performance_standard` — measurable threshold for a deliverable or task
-- `win_theme` — a discriminator the proposal team intends to emphasize
-- `compliance_artifact` — evidence that a requirement is met
-- `company` — a bidder, incumbent, or teaming partner
+**Ghost language**:
+Language in the RFP written to advantage a specific incumbent: capability thresholds, proprietary terminology, or evaluation criteria that only one bidder can meet.
 
-_Avoid_: "entity" as a generic synonym for any of the above — always use the specific type.
+**FAB chain**:
+Feature -> Advantage -> Benefit -- the three-step structure for turning a capability into a win theme statement.
 
-### Relationship ontology
+**Proof point**:
+Quantified evidence (past performance metric, contract value, throughput figure) that substantiates a win theme claim.
 
-35 canonical relationship types defined in `src/ontology/schema.py → VALID_RELATIONSHIP_TYPES`. Key types:
+**Compliance matrix**:
+An L-to-M cross-reference table showing every proposal instruction is addressed in the proposal. Built from `MAPS_TO` relationships in the knowledge graph.
 
-- `MAPS_TO` — links a `proposal_instruction` (Section L) to an `evaluation_factor` (Section M)
-- `SATISFIES` — links a `compliance_artifact` to a `requirement`
-- `CHILD_OF` — structural parent/child between sections or work items
-- `REFERENCES` — a clause or requirement references another entity
-- `SCORED_BY` — an evaluation factor scored by a criterion
+## Relationships
 
-### Shipley methodology terms
+- A **workspace** contains one knowledge graph and one VDB (vector database).
+- The **entity catalog** defines the valid types for all entities in the knowledge graph.
+- **Canonical relationship types** define the valid `keywords` for all relationships in the knowledge graph.
+- The **extraction prompt** produces entities and relationships that populate the knowledge graph during the **ingest pipeline**.
+- The **semantic post-processor** reads the knowledge graph and adds inferred relationships using the **canonical relationship types**.
+- A **bootstrap** seeds a **workspace**'s knowledge graph with domain knowledge before the ingest pipeline runs.
+- A **proposal instruction** maps to an **evaluation factor** via an L-to-M mapping (`MAPS_TO` relationship).
+- A **win theme** is anchored to a **hot button** and supported by one or more **proof points**, structured as a **FAB chain**.
+- A **compliance matrix** is derived from the set of `MAPS_TO` relationships in a workspace.
 
-- **Hot button** — a customer priority signal in the RFP text
-- **Ghost language** — language written to favour a specific bidder
-- **Win theme** — a proof-point-backed discriminator tied to a hot button
-- **FAB chain** — Feature → Advantage → Benefit chain for a win theme
-- **Proof point** — quantified evidence supporting a claim
-- **Compliance matrix** — L↔M cross-reference showing every instruction is addressed
+## Example dialogue
 
----
+> **Dev:** "Should I call this a 'pipeline' in the function name?"
+>
+> **Domain expert:** "Which pipeline? The ingest pipeline (the 7-phase doc processing) or the semantic post-processor (the 6-phase inference pass)? Both exist. The ambiguity is real -- see Flagged ambiguities."
 
-## Architectural decisions
+> **Dev:** "The L-to-M mapping query isn't finding anything -- are the requirements in the wrong entity type?"
+>
+> **Domain expert:** "L-to-M mapping is `proposal_instruction` -> `evaluation_factor` via `MAPS_TO`. Requirements are a different entity type -- they represent contractor obligations after award, not proposal structure. Check whether the extraction prompt tagged the Section L items as `proposal_instruction` or accidentally as `requirement`."
 
-ADRs live in `docs/adr/` (system-wide). None yet — this directory is a placeholder for decisions resolved via `/grill-with-docs`.
+## Flagged ambiguities
+
+- **"pipeline"** was used to mean both the 7-phase ingest sequence and the 6-phase post-ingest inference pass -- resolved: use **ingest pipeline** for the former and **semantic post-processor** for the latter. Never use bare "pipeline."
+- **"entity"** is used generically in Python code (e.g., LightRAG internals) but must never be used as a domain term in issue titles, test names, or refactor proposals -- always use the specific catalog type (requirement, evaluation_factor, etc.).
+- **"prompt"** without qualification is ambiguous -- three independent prompt systems exist (extraction, query, multimodal). Always say which one.
