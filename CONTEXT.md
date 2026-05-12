@@ -416,6 +416,10 @@ Implementation: `local`/`global`/`hybrid`/`mix` all dispatch to `kg_query()` in 
 Thin adapter that binds the LightRAG instance to three callables exposed to the UI chat routes: `UIQueryBridges.query` (`aquery` — streaming-capable), `UIQueryBridges.query_data` (`aquery_data` — returns structured `{sources, response}` for the UI data tab), `UIQueryBridges.llm` (raw LLM call for non-RAG prompts). Override kwargs passed from the UI are filtered against `QueryParam.__dataclass_fields__` before forwarding — unknown fields are silently dropped. `min_rerank_score` is a special override applied directly to `rag_instance.lightrag.min_rerank_score` (not a `QueryParam` field).
 _Avoid_: "query API" (bridge is an internal adapter, not a public API); passing unknown `QueryParam` fields (they are dropped silently, not rejected).
 
+**Prompt library** (`src/server/prompt_library.py`):
+Static catalog of ~50 curated Shipley-aligned suggested prompts served at `GET /api/ui/prompt-library`. Schema: `{phase, category, title, prompt}`. Phases: `"3"` (Capture/RFP Discovery), `"4"` (Proposal Planning), `"5"` (Proposal Development), `"6"` (Review/Submission). Categories within each phase: Discovery, Strategy, Compliance, Pricing, Risk, Traceability, Writing, Review, Oral. The list is a static Python `PROMPT_LIBRARY` constant — no DB, no user customisation. Purpose: prime the UI chat with proven Shipley question patterns so analysts don't start from blank.
+_Avoid_: "dynamic prompts" (catalog is compiled-in, not user-managed).
+
 ### UCF and solicitation structure
 
 **UCF** (Uniform Contract Format):
