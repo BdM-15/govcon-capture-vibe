@@ -72,7 +72,6 @@ Four sequential sub-operations applied to Neo4j entities before relationship wor
    - `table` type → `heuristic_table_type_mapping()`: keyword match on entity name + description → maps to `proposal_instruction`, `deliverable`, `evaluation_factor`, `performance_standard`, `requirement`, `clause`, etc. (RAG-Anything VLM outputs these as `table` before downstream context is available)
    - `#evaluation_factor` / `|requirement` prefix artifacts → strip `#`/`|` prefix → valid entity type (LightRAG occasionally emits these prefix-polluted strings)
    - `unknown` type → collected for LLM batch retyping (step 2)
-   
 2. **UNKNOWN retyping** (`_retype_unknown_entities()`): LLM call via `retype_entities_batch()`, batches of 20. Entities whose description can't map to a valid govcon type stay `unknown`.
 
 3. **Name canonicalization** (`plan_entity_name_updates()`): Targets `evaluation_factor` entities with punctuation-drift duplicates (e.g. `Factor 1 Technical Approach` vs `Factor 1: Technical Approach`). `canonicalize_factor_like_name()` normalises to `Factor <ordinal>: <label>` form. Returns `(name_updates, canonical_mapping)`. Neo4j updated via `Neo4jGraphIO.update_entity_names()`; VDB updated via `apply_entity_name_updates_to_vdb()` — rewrites `entity_name` in `vdb_entities.json` and `src_id`/`tgt_id` in `vdb_relationships.json`.
@@ -155,6 +154,18 @@ _Avoid_: calling chains "pipelines" (see Flagged ambiguities); confusing `ChainS
 **Skill run directory**:
 Per-invocation working directory for one skill execution. Path: `rag_storage/<workspace>/skill_runs/<skill>/<YYYYMMDD_HHMMSS_slug>/`. Contains `artifacts/` (skill output files), `tool_outputs/` (raw tool call results), `run.md` (run envelope), `transcript.json` (tool call log). Scoped to one workspace + one skill execution. Created by `SkillRunStore.create_run_dir()`.
 _Avoid_: run-dir, output dir, workspace.
+
+**MCP skill integration** (`src/skills/mcp_client.py`, `src/skills/mcp_session.py`):
+Skills declare `metadata.mcps: [usaspending, sam_gov]` in `SKILL.md` frontmatter to access vendored MCP servers under `tools/mcps/<name>/`. Architecture:
+
+- **`MCPRegistry`** (one per server process, owned by `SkillManager`): maps `run_id → {name → MCPSession}`. `start_for_run(run_id, skill_mcps, ...)` spawns subprocesses + handshakes. `shutdown_run(run_id)` tears down all sessions for a run in the `finally` block of `run_tool_loop`.
+- **`MCPSession`** (one subprocess per MCP per skill run, no cross-run pooling): stdio transport + newline-delimited JSON-RPC (per MCP spec — one message per line). Performs `initialize` handshake, calls `tools/list`, registers each server tool as a `ToolSpec` named `mcp__<server>__<tool>`. Async futures map pending `id → Future`; `_reader_task` dispatches responses.
+- **`MCPManifest`** (`tools/mcps/<name>/theseus_manifest.json`): spawn command, `env_required`/`env_optional`, `vendored_from` URL + commit for re-vendor audit. Separate from upstream `package.json`/`mcp.json` — Theseus-side glue only.
+- **From the model's view**: MCP tools look identical to in-process tools (`read_file`, `kg_query`, etc.) — all flow through the same tool dispatch loop and transcript.
+- **Allowlist**: registry spawns only servers whose names appear in the calling skill's `metadata.mcps`. Empty = no MCP tools (closed by default).
+
+Missing env vars → `MCPError` at session start, logged as `missing` in `MCPStartupResult.missing[]` — skill run continues without that server's tools and warns in transcript.
+_Avoid_: "MCP server" without qualifying "vendored MCP server under `tools/mcps/`" (the VS Code MCP servers the user installs are a different concept; Theseus's vendored MCPs are skill-scoped subprocesses).
 
 **Inputs directory** (`inputs/<workspace>/`):
 Filesystem staging area for batch ingest. Drop PDFs/DOCX here, then call `POST /scan-rfp` to process all unprocessed files in the folder sequentially. Already-processed files are skipped. The server also copies uploaded files here when using the Documents UI (`/documents/upload`). `inputs/__enqueued__/` is a reserved name (never written to by any code — skip it).
