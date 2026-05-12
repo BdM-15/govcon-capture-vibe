@@ -62,7 +62,7 @@ The 5-phase inference pass that runs exactly once after a batch completes. Phase
 
 **Trigger mechanism**: `GovConProcessingCallback` (`src/server/processing_callback.py`) tracks in-flight documents. Each `on_document_complete` / `on_document_error` schedules a `asyncio.call_later` timer (`BATCH_TIMEOUT_SECONDS`). Timer fires `_check_batch_complete()`: if `pending_uploads == 0` and `processing_docs == 0` and `enhancement_pending`, it calls `enhance_knowledge_graph()`. New document arriving cancels and resets the timer. Gate: `ENABLE_POST_PROCESSING` env var (default true). No background thread — runs in the server's asyncio event loop.
 
-Two tracking levels: HTTP-layer (`pending_uploads` set, managed by `register_request_start(filename)` / `register_request_end(filename)`) and parse-layer (`processing_docs` set, added on `on_parse_complete`, removed on `on_document_complete`/`on_document_error`). Batch completion requires *both* sets empty. `enhancement_running` flag prevents duplicate concurrent runs. Singleton pattern: `get_processing_callback()` returns `_callback` module-level instance.
+Two tracking levels: HTTP-layer (`pending_uploads` set, managed by `register_request_start(filename)` / `register_request_end(filename)`) and parse-layer (`processing_docs` set, added on `on_parse_complete`, removed on `on_document_complete`/`on_document_error`). Batch completion requires _both_ sets empty. `enhancement_running` flag prevents duplicate concurrent runs. Singleton pattern: `get_processing_callback()` returns `_callback` module-level instance.
 
 Phase 4 runs 3 **inference algorithms** in parallel (`src/inference/algorithms/`): `infer_lm_links` (L↔M cross-document linking), `infer_document_structure` (heuristic regex, zero LLM cost), `resolve_orphans` (reconnect unlinked entities). Algorithms are the mechanisms inside Phase 4; phases are the overarching structure of the whole pass.
 _Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambiguities). Never conflate phases with algorithms.
@@ -97,6 +97,20 @@ Three algorithms run in parallel via `asyncio.gather` under a shared concurrency
 
 Reduced from 8 → 3 algorithms in Issue #85: algorithms 2–6 became redundant once the extraction prompt + specialized entity types handled that coverage natively.
 _Avoid_: calling them "phases" (phases = the 5-phase wrapper; algorithms = parallel workers inside Phase 4).
+
+**Semantic post-processor** (`src/inference/semantic_post_processor.py`):
+`enhance_knowledge_graph(rag_storage_path, llm_func)` → stats dict. Public entry point — delegates immediately to `SemanticPostProcessingRun.run()`. (`rag_storage_path` and `llm_func` args are kept for API compatibility; the run uses centralized `get_settings()` for the LLM model instead.)
+
+`SemanticPostProcessingRun` (dataclass): owns one run end-to-end. Phase sequence:
+
+1. **Data Loading** — `_load_graph()` reads all entities + relationships from Neo4j. Skips with `status="skipped"` if no entities found.
+2. **Entity Normalization** — `_normalize_entities()`: `plan_entity_type_updates()` for invalid types (heuristic table-type mapping + LLM batch correction) + `plan_entity_name_updates()` for name normalization; applies updates, syncs to VDB.
+3. **Relationship Normalization** — `_normalize_relationships()`: `collect_relationship_retype_updates()` — entity-pair lookup to retype generic `RELATED_TO` edges based on src/tgt entity types; re-groups entities.
+4. **Relationship Inference** — `_infer_relationships()`: delegates to `run_all_algorithms_parallel()` → 3 algorithms (`infer_l_m_links`, `infer_document_structure`, `resolve_orphans`). Writes `InferredRelationship` records to Neo4j.
+5. **VDB Synchronization** — `_sync_vdb()`: delegates to `sync_discoveries_to_vdb()`.
+
+Stats tracked: `entities_corrected`, `relationships_retyped`, `relationships_inferred`, `relationships_synced`, `phase_times` per phase name, `starting_entity_count`, `starting_relationship_count`. On error → returns `{status: "error", error: ..., entities_corrected: 0, ...}`.
+_Avoid_: "6-phase" (it is 5 phases as of the current implementation); "pipeline" (the semantic post-processor has its own name — see Flagged ambiguities); "LLM func arg" (the `llm_func` parameter is unused, kept for backward compatibility only).
 
 **VDB sync** (Phase 5, `src/inference/vdb_sync.py`):
 `sync_discoveries_to_vdb()` — syncs Neo4j-resident inferred relationships back to LightRAG's VDB stores after Phase 4 completes. Without this step, algorithm-discovered edges exist in Neo4j but are invisible to `/query` results (KG retrieval reads the VDB, not Neo4j directly). Mechanism: calls `lightrag.ainsert_custom_kg()` on relationships tagged `source='semantic_post_processor'`. Dedupe: normalises source/target to a pair key (sorted tuple) — VDB is pair-keyed, not direction-keyed, so duplicate pair writes are harmless but tracked in `_build_sync_audit()` stats. `sync_all_relationships_to_vdb` (full resync) was removed in commit `5f4c5b8`; only `sync_discoveries_to_vdb` is active.
@@ -139,16 +153,16 @@ _Avoid_: "agentic loop" in code symbols (canonical name is `run_tool_loop`); ass
 **Skill tools** (`src/skills/tools.py`, `tool_kg.py`, `tool_filesystem.py`, `tool_mcp.py`):
 The bounded tool set exposed to the LLM during tools-mode runs. All tool calls are captured in `transcript.json`.
 
-| Tool | Source | Behaviour |
-|------|--------|-----------|
-| `kg_query(cypher)` | `tool_kg.py` | Read-only Cypher. Blocks `CREATE/MERGE/DELETE/DETACH/SET/REMOVE/DROP/FOREACH/LOAD CSV`. Must start with `MATCH/OPTIONAL MATCH/WITH/UNWIND/CALL/RETURN`. Returns up to **100 rows**. No-op (returns `available:false`) when `GRAPH_STORAGE!=Neo4JStorage`. |
-| `kg_entities(types, limit, max_chunks_per_entity, max_relationships_per_entity)` | `tool_kg.py` | Bulk KG slice by entity type. Delegates to `slice_fn` bound from `SkillInvokePayload` limits. |
-| `kg_chunks(query, top_k, mode)` | `tool_kg.py` | Hybrid retrieval — delegates to `retrieve_fn`. Mode must be a `VALID_SKILL_RETRIEVAL_MODES` value. |
-| `read_file(path)` | `tool_filesystem.py` | Reads `references/`, `assets/`, `scripts/` from skill dir or run dir. Sandboxed to skill tree. `max_read_bytes` from `SkillToolsRuntimeLimits`. |
-| `run_script(path, stdin, timeout)` | `tool_filesystem.py` | Executes `scripts/*.py` or `*.sh` in subprocess. `cwd` locked to skill dir. `max_script_seconds` cap. |
-| `write_file(path, content, label)` | `tool_filesystem.py` | Writes to `run_dir/artifacts/` only. `max_write_bytes` cap. Optional `label` stored in artifact manifest as `display_name`. |
-| `invoke_skill(name, prompt, context)` | `tools.py` | Single-level Tier A chaining. Max depth 1, cycle detection prevents `A→B→A`. |
-| MCP tools | `tool_mcp.py` | Forwarded to MCP session. Indistinguishable from in-process tools from the model's view. |
+| Tool                                                                             | Source               | Behaviour                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kg_query(cypher)`                                                               | `tool_kg.py`         | Read-only Cypher. Blocks `CREATE/MERGE/DELETE/DETACH/SET/REMOVE/DROP/FOREACH/LOAD CSV`. Must start with `MATCH/OPTIONAL MATCH/WITH/UNWIND/CALL/RETURN`. Returns up to **100 rows**. No-op (returns `available:false`) when `GRAPH_STORAGE!=Neo4JStorage`. |
+| `kg_entities(types, limit, max_chunks_per_entity, max_relationships_per_entity)` | `tool_kg.py`         | Bulk KG slice by entity type. Delegates to `slice_fn` bound from `SkillInvokePayload` limits.                                                                                                                                                             |
+| `kg_chunks(query, top_k, mode)`                                                  | `tool_kg.py`         | Hybrid retrieval — delegates to `retrieve_fn`. Mode must be a `VALID_SKILL_RETRIEVAL_MODES` value.                                                                                                                                                        |
+| `read_file(path)`                                                                | `tool_filesystem.py` | Reads `references/`, `assets/`, `scripts/` from skill dir or run dir. Sandboxed to skill tree. `max_read_bytes` from `SkillToolsRuntimeLimits`.                                                                                                           |
+| `run_script(path, stdin, timeout)`                                               | `tool_filesystem.py` | Executes `scripts/*.py` or `*.sh` in subprocess. `cwd` locked to skill dir. `max_script_seconds` cap.                                                                                                                                                     |
+| `write_file(path, content, label)`                                               | `tool_filesystem.py` | Writes to `run_dir/artifacts/` only. `max_write_bytes` cap. Optional `label` stored in artifact manifest as `display_name`.                                                                                                                               |
+| `invoke_skill(name, prompt, context)`                                            | `tools.py`           | Single-level Tier A chaining. Max depth 1, cycle detection prevents `A→B→A`.                                                                                                                                                                              |
+| MCP tools                                                                        | `tool_mcp.py`        | Forwarded to MCP session. Indistinguishable from in-process tools from the model's view.                                                                                                                                                                  |
 
 Result serialization: `serialize_tool_payload_for_model()` → compact JSON, truncated at `SKILL_TOOLS_MAX_TOOL_RESULT_CHARS` (default 12 000) with `…[truncated at N chars]` sentinel.
 _Avoid_: "KG API" (tools are not an API — they are bounded function calls); using `kg_query` for writes (blocked); assuming `kg_query` returns Neo4j objects (all values are jsonified via `jsonable()` helper).
@@ -197,7 +211,7 @@ Deep module for skill discovery, install, and ledger persistence. Owns the in-me
 - Skill `source` values: `"builtin"` (shipped with repo, never deletable), `"installed"` (installed via GitHub URL).
 - Name validation: `_SAFE_SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")`.
 - `has_assets` / `has_templates` / `has_scripts` / `has_references` / `has_evals` — boolean flags from subdirectory presence, set at discovery time.
-_Avoid_: "skill registry" (that's `SkillManager`'s job); "skill store" (the JSON ledger is just the ledger, not the full catalog).
+  _Avoid_: "skill registry" (that's `SkillManager`'s job); "skill store" (the JSON ledger is just the ledger, not the full catalog).
 
 **Skill routes** (`src/server/skill_routes.py`):
 HTTP API surface for skill invocation, runs management, and settings. Three registration functions:
@@ -243,6 +257,7 @@ _Avoid_: "AI planner" (no LLM); "automatic chain" (user must invoke `/api/ui/ski
 
 **Skill run directory**:
 Per-invocation working directory for one skill execution. Path: `rag_storage/<workspace>/skill_runs/<skill>/<YYYYMMDD_HHMMSS_slug>/`. Contains:
+
 - `run.md` — run envelope (YAML-ish frontmatter); parsed by `parse_run_envelope()` to produce `metadata` dict with `run_id`, `skill`, `workspace`, `created_at`, `user_prompt`, `elapsed_ms`, etc.
 - `response.md` — raw LLM response text
 - `prompt.md` — full prompt sent to LLM (briefing book + skill body)
@@ -264,8 +279,8 @@ Trash: `rag_storage/<workspace>/.trash/studio_artifacts/<trash_id>/`. `trash_id`
 `STUDIO_EXTRA_MIME`: 14-entry dict for extensions the `mimetypes` stdlib misses on Windows. `resolve_artifact_mime(filename)` checks this first, then `mimetypes.guess_type`, then `application/octet-stream`.
 
 `slugify_for_filename(text, max_len=32)` — lowercase + non-alphanumeric → `_` + length cap. Used for run ID slug component.
-`humanize_artifact_name(filename)` — stem split on `_/-`, capitalized tokens (digits + ALL_CAPS preserved). Used as fallback display name when manifest has no `display_name`.
-_Avoid_: "artifact_manifest.json" (correct name is `artifacts_manifest.json`); assuming render_status absent means failed (absent = success or not yet rendered).
+`humanize_artifact_name(filename)` — stem split on `_/-`, capitalized tokens (digits + ALL*CAPS preserved). Used as fallback display name when manifest has no `display_name`.
+\_Avoid*: "artifact_manifest.json" (correct name is `artifacts_manifest.json`); assuming render_status absent means failed (absent = success or not yet rendered).
 
 _Avoid_: run-dir, output dir, workspace; "run.md is JSON" (it's an envelope parsed by `parse_run_envelope`, not raw JSON).
 
@@ -306,7 +321,7 @@ Interactive single-file ingest via the UI. Saves the file to `inputs/<workspace>
 - SHA-256 content dedup: if a file with the same name already exists in `inputs/<workspace>/`, the two files are hashed. Identical content → existing file reused (no overwrite, no re-ingest). Different content → new file saved with `_YYYYMMDD_HHMMSS` timestamp suffix.
 - Write: atomic temp file in the same folder → `tmp.replace(target)` — avoids torn writes.
 - `list_scannable_files(folder)`: non-recursive glob for `DEFAULT_SCAN_EXTENSIONS` — used by scan to find pending files; deduplicates case variants.
-_Avoid_: "file upload" without noting the SHA-256 dedup (identical re-upload silently reuses the existing file).
+  _Avoid_: "file upload" without noting the SHA-256 dedup (identical re-upload silently reuses the existing file).
 
 **Scan** (`POST /scan-rfp`):
 Filesystem batch ingest. Reads all unprocessed files from `inputs/<workspace>/`, processes each sequentially in a background task, skips already-processed files (`doc_status.get_doc_by_file_path(name)` with `status == "processed"`). Returns a `track_id` immediately (`scan-<8hex>`); progress visible in server logs by filtering on `[scan <track_id>]`. Response `status` values: `"scanning_started"` (files found + background task launched) | `"empty"` (no supported files in folder). Same `process_document_func` as upload — identical pipeline, different trigger. Intended for bulk/automated ingestion when comfortable with that workflow.
@@ -325,14 +340,14 @@ _Avoid_: counting documents from Neo4j (stats reads VDB JSON files — faster, n
 **Workspace management** (`src/server/workspace_routes.py`):
 Routes for creating, switching, inspecting, and deleting workspaces. `WorkspaceMaintenance` (deep module) implements discovery and deletion; `discover_workspaces(working_dir)` finds folders under `rag_storage/` that contain any of `kv_store_doc_status.json`, `vdb_entities.json`, `vdb_chunks.json`.
 
-| Route | Effect |
-|---|---|
-| `GET /api/ui/workspaces` | Lists discovered workspaces + active name |
-| `POST /api/ui/workspaces/switch` | Writes `WORKSPACE=<name>` to `.env`, resets settings, schedules `self_restart()` (0.75 s delay) — **process re-execs itself** |
-| `GET /api/ui/workspaces/inventory` | Cross-view table: Neo4j node counts + rag_storage MB + inputs file counts for every workspace |
-| `POST /api/ui/workspaces/{name}/delete` | Deletes selected buckets (`neo4j`, `rag_storage`, `inputs`); refuses to delete active workspace |
-| `POST /api/ui/workspaces/wipe-all` | Deletes all workspaces across selected buckets; requires `confirm="DELETE ALL"`; re-creates active workspace dir; schedules restart |
-| `POST /api/ui/restart` | Schedules `self_restart()` with 0.75 s delay |
+| Route                                   | Effect                                                                                                                              |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/ui/workspaces`                | Lists discovered workspaces + active name                                                                                           |
+| `POST /api/ui/workspaces/switch`        | Writes `WORKSPACE=<name>` to `.env`, resets settings, schedules `self_restart()` (0.75 s delay) — **process re-execs itself**       |
+| `GET /api/ui/workspaces/inventory`      | Cross-view table: Neo4j node counts + rag_storage MB + inputs file counts for every workspace                                       |
+| `POST /api/ui/workspaces/{name}/delete` | Deletes selected buckets (`neo4j`, `rag_storage`, `inputs`); refuses to delete active workspace                                     |
+| `POST /api/ui/workspaces/wipe-all`      | Deletes all workspaces across selected buckets; requires `confirm="DELETE ALL"`; re-creates active workspace dir; schedules restart |
+| `POST /api/ui/restart`                  | Schedules `self_restart()` with 0.75 s delay                                                                                        |
 
 `set_env_var(key, value)` writes directly to `.env` file (atomic tmp-rename), then calls `os.environ[key] = value` and `reset_settings()`. Switching workspace = `set_env_var("WORKSPACE", name)` + restart. Workspace name validation: `_SAFE_WS = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")`. Cannot delete active workspace — must switch first.
 _Avoid_: "workspace selector" (generic); "hot-swap" (switch requires a full process restart, not a live reconfigure).
