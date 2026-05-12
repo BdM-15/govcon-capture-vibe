@@ -10,6 +10,10 @@ Ontology-backed RAG system that ingests federal RFPs into a knowledge graph and 
 An isolated knowledge graph + vector database for exactly one RFP. Lives at `rag_storage/<name>/`. All entities, relationships, and embeddings are workspace-scoped. Created manually: user names the workspace, switches to it via the UI, then uploads documents through the Documents page. Not auto-created on first upload.
 _Avoid_: project, environment, instance.
 
+**Knowledge graph (KG)**:
+The Neo4j graph database holding all entities and relationships for a workspace. Always Neo4j — NetworkX is not used. Accessed via `src/core/neo4j_io.py`. The semantic post-processor reads from and writes to this graph. Skills query it via the `kg_query(cypher)` and `kg_entities(types[])` tools.
+_Avoid_: "the graph" alone (ambiguous between the KG and GraphML files on disk).
+
 **Ingest pipeline**:
 The 7-phase sequence that turns a raw RFP document into graph data: upload -> MinerU parse -> multimodal analysis -> LightRAG chunking -> entity extraction -> relationship extraction -> semantic post-processing trigger.
 _Avoid_: "the pipeline" (ambiguous -- see Flagged ambiguities).
