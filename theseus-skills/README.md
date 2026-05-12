@@ -26,22 +26,22 @@ When adding a new skill, pick the tier first and set `metadata.developer_only` a
 
 Skills shown in the Theseus govcon UI. Query the active workspace KG and use govcon personas.
 
-| Skill                       | Source of truth                                               | Theseus runtime adapter        |
-| --------------------------- | ------------------------------------------------------------- | ------------------------------ |
-| proposal-generator          | `.github/skills/proposal-generator/`                          | `src/skills/manager.py` (auto) |
-| compliance-auditor          | `.github/skills/compliance-auditor/`                          | `src/skills/manager.py` (auto) |
-| competitive-intel           | `.github/skills/competitive-intel/`                           | `src/skills/manager.py` (auto) |
-| price-to-win                | `.github/skills/price-to-win/`                                | `src/skills/manager.py` (auto) |
-| oci-sweeper                 | `.github/skills/oci-sweeper/`                                 | `src/skills/manager.py` (auto) |
-| subcontractor-sow-builder   | `.github/skills/subcontractor-sow-builder/`                   | `src/skills/manager.py` (auto) |
-| rfp-reverse-engineer        | `.github/skills/rfp-reverse-engineer/`                        | `src/skills/manager.py` (auto) |
-| ot-prototype-strategist     | `.github/skills/ot-prototype-strategist/`                     | `src/skills/manager.py` (auto) |
-| workload-analyzer           | `.github/skills/workload-analyzer/`                           | `src/skills/manager.py` (auto) |
-| data-analyzer               | `.github/skills/data-analyzer/`                               | `src/skills/manager.py` (auto) |
-| govcon-ontology             | `.github/skills/govcon-ontology/`                             | `src/skills/manager.py` (auto) |
-| huashu-design               | `.github/skills/huashu-design/` (vendored — see UPSTREAM.md)  | `src/skills/manager.py` (auto) |
-| renderers                   | `.github/skills/renderers/`                                   | `src/skills/manager.py` (auto) |
-| skill-creator               | `.github/skills/skill-creator/` (vendored — see UPSTREAM.md)  | `src/skills/manager.py` (auto) |
+| Skill                     | Source of truth                                              | Theseus runtime adapter        |
+| ------------------------- | ------------------------------------------------------------ | ------------------------------ |
+| proposal-generator        | `.github/skills/proposal-generator/`                         | `src/skills/manager.py` (auto) |
+| compliance-auditor        | `.github/skills/compliance-auditor/`                         | `src/skills/manager.py` (auto) |
+| competitive-intel         | `.github/skills/competitive-intel/`                          | `src/skills/manager.py` (auto) |
+| price-to-win              | `.github/skills/price-to-win/`                               | `src/skills/manager.py` (auto) |
+| oci-sweeper               | `.github/skills/oci-sweeper/`                                | `src/skills/manager.py` (auto) |
+| subcontractor-sow-builder | `.github/skills/subcontractor-sow-builder/`                  | `src/skills/manager.py` (auto) |
+| rfp-reverse-engineer      | `.github/skills/rfp-reverse-engineer/`                       | `src/skills/manager.py` (auto) |
+| ot-prototype-strategist   | `.github/skills/ot-prototype-strategist/`                    | `src/skills/manager.py` (auto) |
+| workload-analyzer         | `.github/skills/workload-analyzer/`                          | `src/skills/manager.py` (auto) |
+| data-analyzer             | `.github/skills/data-analyzer/`                              | `src/skills/manager.py` (auto) |
+| govcon-ontology           | `.github/skills/govcon-ontology/`                            | `src/skills/manager.py` (auto) |
+| huashu-design             | `.github/skills/huashu-design/` (vendored — see UPSTREAM.md) | `src/skills/manager.py` (auto) |
+| renderers                 | `.github/skills/renderers/`                                  | `src/skills/manager.py` (auto) |
+| skill-creator             | `.github/skills/skill-creator/` (vendored — see UPSTREAM.md) | `src/skills/manager.py` (auto) |
 
 ## Index — Developer-only skills
 

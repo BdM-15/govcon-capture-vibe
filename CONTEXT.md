@@ -143,6 +143,7 @@ _Avoid_: "skill runner" (ambiguous — both runners exist); "skill pipeline" (se
 Direct OpenAI-compatible chat-completion client used exclusively by the skill tool loop. LightRAG's default `llm_model_func` does not expose a `tools=[...]` parameter, so the skill runtime bypasses it and calls the API directly.
 
 `chat_with_tools(messages, tools, *, tool_choice, temperature, max_tokens, model, timeout) → ChatResponse`.
+
 - Always uses `settings.reasoning_llm_name` (maps to `QUERY_LLM_MODEL` env var) — skills are multi-turn reasoning agents and always get the most powerful model.
 - Timeout from `skill_tools_runtime_limits().llm_timeout_seconds` (`SKILL_TOOLS_LLM_TIMEOUT` env) when not overridden.
 - Lazy-imports `openai.AsyncOpenAI` — keeps the dep optional in environments that never run tools-mode skills.
@@ -382,6 +383,7 @@ _Avoid_: "workspace selector" (generic); "hot-swap" (switch requires a full proc
 Single-page Alpine.js + Tailwind CDN frontend. No build step, no inline `<style>` block. Two files only: `index.html` (markup + Alpine `theseus()` component + inline `tailwind.config` read by CDN) and `theseus.css` (all custom CSS — `:root` token block + components). Served via FastAPI `StaticFiles`; no server restart needed for UI changes — hard-reload (Ctrl+Shift+R).
 
 Key Alpine state (all on `theseus()` object):
+
 - `this.stats.workspace` — active workspace name (NOT `activeWorkspace`)
 - `this.currentChat.messages[]` — current chat message list
 - `this.toast(msg, kind)` — toast notifications
@@ -405,6 +407,7 @@ _Avoid_: "chat session" (not a server-side session object); "chat history" (ambi
 `register_chat_routes(app, ...)` wires: `GET /chats`, `POST /chats`, `GET /chats/{id}`, `PATCH /chats/{id}`, `DELETE /chats/{id}`, `POST /chats/{id}/messages` (non-streaming), `POST /chats/{id}/messages/stream` (SSE).
 
 SSE stream event sequence (`POST /chats/{id}/messages/stream`):
+
 1. `event: open` — connection established.
 2. `event: status` `{phase: "retrieving"}` — sources pre-flight starts.
 3. If `data_func` present and mode ≠ `bypass`: calls `aquery_data()` first → `event: sources` with `trim_sources(data_result)` — UI renders the sources panel before first token.
@@ -456,6 +459,7 @@ Registered via `global_args.chunking_func` in `src/server/config.py`. Non-invasi
 Pydantic `BaseSettings` singleton. Loaded once from `.env` at startup, cached as `_settings_instance`. All modules call `get_settings()` — never instantiate `Settings()` directly. `reset_settings()` clears the cache for tests.
 
 Key field groups:
+
 - **LLM**: `llm_binding_host`, `llm_binding_api_key`, `llm_timeout` (600 s), `llm_max_output_tokens` (128 k), `llm_max_retries` (5), `llm_model_temperature` (0.1).
 - **Per-role models** (env var names match LightRAG 1.5.0 role registry): `extraction_llm_name` (`EXTRACT_LLM_MODEL`), `reasoning_llm_name` (`QUERY_LLM_MODEL`), `post_processing_llm_name` (`POST_PROCESS_LLM_MODEL` — Theseus addition, not a LightRAG role), `keyword_llm_name`, `vlm_llm_name`.
 - **Embeddings**: `embedding_binding_host` (must be OpenAI endpoint — xAI has no embedding API), `embedding_binding_api_key`, `embedding_model` (`text-embedding-3-large`), `embedding_dim` (3072).
@@ -525,6 +529,7 @@ The VLM prompt for analyzing tables, images, and equations extracted by MinerU. 
 
 **Log filters and helpers** (`src/utils/log_filters.py`, `src/utils/log_helpers.py`):
 Two logging filter classes control what appears on which output channel:
+
 - `ConsoleFilter`: allowlist filter — passes WARNINGs+ from all loggers, but INFO/DEBUG only from `src.raganything_server`, `uvicorn.error`, `src.server.routes`, `src.inference`, `src.extraction.govcon_reranker`. Suppresses `uvicorn.access` info lines entirely. Keeps the terminal readable during ingest without losing warning signals.
 - `ProcessingFilter`: capture filter — routes log records to the per-workspace processing log. Passes any record whose logger name starts with `lightrag`, `raganything`, `src.server.routes`, `src.inference`, `src.ingestion`, or `src.extraction.govcon_reranker`. Fallback: keyword match in message (`"Processing"`, `"entities"`, `"relationships"`, `"semantic"`, `"Neo4j"`, `"inference"`, `"enrichment"`, `"parsing"`, `"extraction"`).
 

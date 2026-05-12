@@ -413,14 +413,14 @@ Served under `/api/ui/` by `src/server/ui_routes.py` — feeds the Capture Workb
 
 The full backlog is tracked in [GitHub Issues #87 – #114](https://github.com/BdM-15/proj-theseus/issues). High-level groupings:
 
-| Group                          | Examples                                                                                                                                                                                                                                               |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **v1.4.0 — JSON extraction**   | [Issue #124 roadmap](https://github.com/BdM-15/proj-theseus/issues/124): strict LightRAG JSON extraction is the foundation; Phase 2 targets recall recovery for scoring criteria, document hierarchy, strategic signals, workload metrics, and clause breadth.  |
-| **Tier 1 — graph quality**     | #88 confidence + provenance on edges, #93 orphan candidate links                                                                                                                                                                                       |
-| **Tier 2 — Intel Panels**      | #87 Past Performance, #99 Tech Inventory, #100 Innovation Signals, #96 Glossary, #97 Hot Buttons, #101 Deliverable Catalog                                                                                                                             |
-| **Tier 3 — quality of life**   | #109 "Ask Theseus" pre-filled chat buttons, #103 CSV/XLSX export, #110 diff vs prior run                                                                                                                                                               |
-| **UI / UX polish**             | #98 documents drawer, #92 KG presets, #91 search explorer, #94 .env knobs, #95 no-active-ws state, #90 chat latency, #89 bypass UX                                                                                                                     |
-| **Future panels & dashboards** | #108 activity feed, #113 health card, #102 notification center, #111 full Compliance Matrix, #106 Requirements Browser, #105 Win-Strategy view, #107 Risk Register, #112 Doc Structure tree, #104 section deep-dive drawer, #114 saved chats + pinning |
+| Group                          | Examples                                                                                                                                                                                                                                                       |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **v1.4.0 — JSON extraction**   | [Issue #124 roadmap](https://github.com/BdM-15/proj-theseus/issues/124): strict LightRAG JSON extraction is the foundation; Phase 2 targets recall recovery for scoring criteria, document hierarchy, strategic signals, workload metrics, and clause breadth. |
+| **Tier 1 — graph quality**     | #88 confidence + provenance on edges, #93 orphan candidate links                                                                                                                                                                                               |
+| **Tier 2 — Intel Panels**      | #87 Past Performance, #99 Tech Inventory, #100 Innovation Signals, #96 Glossary, #97 Hot Buttons, #101 Deliverable Catalog                                                                                                                                     |
+| **Tier 3 — quality of life**   | #109 "Ask Theseus" pre-filled chat buttons, #103 CSV/XLSX export, #110 diff vs prior run                                                                                                                                                                       |
+| **UI / UX polish**             | #98 documents drawer, #92 KG presets, #91 search explorer, #94 .env knobs, #95 no-active-ws state, #90 chat latency, #89 bypass UX                                                                                                                             |
+| **Future panels & dashboards** | #108 activity feed, #113 health card, #102 notification center, #111 full Compliance Matrix, #106 Requirements Browser, #105 Win-Strategy view, #107 Risk Register, #112 Doc Structure tree, #104 section deep-dive drawer, #114 saved chats + pinning         |
 
 Three silent-failure surfaces have already been plugged on `main`: extraction-time exceptions (#115), local-timezone timestamps (#116), and tabular-only document invisibility in `doc_status` (#117).
 
@@ -477,14 +477,14 @@ dependencies = [
 
 ## Documentation
 
-| Document                                                                                                                               | Description                                              |
-| -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| [docs/README.md](docs/README.md)                                                                                                       | Living documentation index                               |
-| [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md)                                                                                             | Capture Workbench UI conventions (read before UI work)   |
-| [docs/SKILLS.md](docs/SKILLS.md)                                                                                                       | Dual-use Agent Skills platform                           |
-| [docs/SKILL_TAXONOMY.md](docs/SKILL_TAXONOMY.md)                                                                                       | Three-axis skill taxonomy (persona / phase / capability) |
-| [docs/SKILL_SPEC_COMPLIANCE.md](docs/SKILL_SPEC_COMPLIANCE.md)                                                                         | Open Agent Skills spec audit + migration plan            |
-| [.github/copilot-instructions.md](.github/copilot-instructions.md)                                                                     | Agent rules + cross-cutting prompt change checklist      |
+| Document                                                           | Description                                              |
+| ------------------------------------------------------------------ | -------------------------------------------------------- |
+| [docs/README.md](docs/README.md)                                   | Living documentation index                               |
+| [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md)                         | Capture Workbench UI conventions (read before UI work)   |
+| [docs/SKILLS.md](docs/SKILLS.md)                                   | Dual-use Agent Skills platform                           |
+| [docs/SKILL_TAXONOMY.md](docs/SKILL_TAXONOMY.md)                   | Three-axis skill taxonomy (persona / phase / capability) |
+| [docs/SKILL_SPEC_COMPLIANCE.md](docs/SKILL_SPEC_COMPLIANCE.md)     | Open Agent Skills spec audit + migration plan            |
+| [.github/copilot-instructions.md](.github/copilot-instructions.md) | Agent rules + cross-cutting prompt change checklist      |
 
 ---
 
