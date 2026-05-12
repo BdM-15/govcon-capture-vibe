@@ -52,6 +52,9 @@ _Avoid_: entity types list, entity schema.
 The 35 fixed relationship type strings defined in `src/ontology/schema.py -> VALID_RELATIONSHIP_TYPES`. Every relationship in the knowledge graph must use one of these as its `keywords` first token.
 _Avoid_: edge types, link types, relationship schema.
 
+**Chunking**:
+LightRAG splits each document into token-bounded chunks before extraction. Two required `.env` knobs — `CHUNK_SIZE` (tokens per chunk) and `CHUNK_OVERLAP_SIZE` (overlap tokens) — both mandatory, no safe default, startup fails without them. The custom chunker (`src/extraction/govcon_chunking.py`, registered via `global_args.chunking_func`) wraps LightRAG's native `chunking_by_token_size` and prepends a `[GOVCON_DOC: type=...; note=...]` banner to every chunk so the extraction prompt and query prompt know the doc type. No other chunking parameters exist.
+
 ### Prompt systems
 
 **Extraction prompt** (System 1):
