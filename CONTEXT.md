@@ -241,7 +241,7 @@ Interactive single-file ingest via the UI. Saves the file to `inputs/<workspace>
 _Avoid_: "file upload" without noting the SHA-256 dedup (identical re-upload silently reuses the existing file).
 
 **Scan** (`POST /scan-rfp`):
-Filesystem batch ingest. Reads all unprocessed files from `inputs/<workspace>/`, processes each sequentially in a background task, skips already-processed files. Returns a `track_id` immediately; progress visible in server logs. Same `process_document_func` as upload — identical pipeline, different trigger. Intended for bulk/automated ingestion when comfortable with that workflow.
+Filesystem batch ingest. Reads all unprocessed files from `inputs/<workspace>/`, processes each sequentially in a background task, skips already-processed files (`doc_status.get_doc_by_file_path(name)` with `status == "processed"`). Returns a `track_id` immediately (`scan-<8hex>`); progress visible in server logs by filtering on `[scan <track_id>]`. Response `status` values: `"scanning_started"` (files found + background task launched) | `"empty"` (no supported files in folder). Same `process_document_func` as upload — identical pipeline, different trigger. Intended for bulk/automated ingestion when comfortable with that workflow.
 _Avoid_: confusing scan with upload — they share the pipeline but differ in trigger, batching, and background execution.
 
 **Bootstrap**:
