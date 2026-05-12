@@ -57,6 +57,17 @@ _Avoid_: job, run, upload session.
 Correlation token for one ingest operation. Format: `{prefix}_{YYYYMMDD_HHMMSS}_{8hex}`. Prefix is `insert` for upload-path calls (LightRAG's `generate_track_id("insert")`) and `scan-{8hex}` for `/scan-rfp` (our code). Stored in `kv_store_doc_status.json` per document. Emitted in server log lines as `[scan <track_id>]`. Use to grep server log for all events from one ingest session.
 _Avoid_: request ID, job ID (neither is a first-class concept here).
 
+**SkillManager** (`src/skills/manager.py`):
+Singleton that discovers, installs, and invokes agent skills. Discovery: walks `.github/skills/` at startup, parses YAML frontmatter from each `SKILL.md`; install ledger at `var/platform/skills.json` (global to instance, not per-workspace). Invocation: `SkillManager.invoke(name, workspace, user_prompt, entity_payload, llm, ...)` → `SkillExecutor.invoke()` → runtime branch:
+
+- **legacy mode** (`run_legacy_skill`): single-shot — compose full prompt (SKILL.md body + `entity_payload` JSON briefing book) → one `llm()` call → persist run. Simpler, cheaper, no tool calls.
+- **tools mode** (`run_tools_skill`): multi-turn agentic loop — LLM calls tools (`kg_query`, `kg_entities`, `kg_chunks`, `read_file`, `run_script`, `write_file`) up to `SKILL_TOOLS_MAX_TURNS` (default 20) per run. Skills declare `metadata.runtime: tools` in frontmatter to opt in.
+
+Runtime mode resolution order: `runtime_mode_override` arg → `SKILL_RUNTIME_MODE` env var → skill frontmatter `metadata.runtime` → default `legacy`.
+
+Skill chaining: tools-mode skills can call `invoke_skill(child_name, child_prompt)` as a tool. Max depth = 1 (one child per parent, no recursion). Cycle detection prevents `A→B→A`. `SkillManager.invoke_chain()` runs deterministic multi-skill sequences via `SkillChainExecutor` (LangGraph).
+_Avoid_: "skill runner" (ambiguous — both runners exist); "skill pipeline" (see Flagged ambiguities).
+
 **Skill run directory**:
 Per-invocation working directory for one skill execution. Path: `rag_storage/<workspace>/skill_runs/<skill>/<YYYYMMDD_HHMMSS_slug>/`. Contains `artifacts/` (skill output files), `tool_outputs/` (raw tool call results), `run.md` (run envelope), `transcript.json` (tool call log). Scoped to one workspace + one skill execution. Created by `SkillRunStore.create_run_dir()`.
 _Avoid_: run-dir, output dir, workspace.
