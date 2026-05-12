@@ -37,6 +37,17 @@ _Avoid_: treating VDB and KG as interchangeable — KG = Neo4j graph (structure)
 Selects the KG backend. Two options: `Neo4JStorage` (production; requires `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `NEO4J_DATABASE`) and `NetworkXStorage` (config default; in-memory, no Neo4j required; used for local tests / CI where Neo4j is unavailable). When `GRAPH_STORAGE=NetworkXStorage` the inference algorithms and `Neo4jGraphIO` skip Neo4j reads/writes and emit a warning — skills that issue Cypher (`kg_query` tool) will get empty results. Connection details wrapped in `Neo4jConnectionConfig` (`src/core/neo4j_config.py`). `Neo4jConnectionConfig.enabled` property returns `True` only for `Neo4JStorage` — guard used everywhere before issuing Cypher.
 _Avoid_: assuming Neo4j is always active; scripts that hard-code `bolt://localhost:7687` without checking `enabled`.
 
+**Neo4jGraphIO** (`src/inference/neo4j_graph_io.py`):
+The write/read bridge between the inference algorithms and Neo4j. Instantiated per semantic post-processor run (`SemanticPostProcessingRun._io()`). Opens a direct Neo4j `GraphDatabase.driver` connection from `Settings` at `__init__`; must be closed after the run. Key methods used by the post-processor:
+- `get_all_entities()` — `MATCH (n:<workspace>)` → entity dicts (`id`, `entity_name`, `entity_type`, `description`, `source_id`)
+- `get_all_relationships()` — `MATCH (a)<-[r]->(b)` → relationship dicts (`source`, `target`, `rel_type`, `keywords`, `weight`, `description`)
+- `update_entity_types(updates)` — batch `SET n.entity_type =` for Phase 2 entity normalization
+- `update_entity_names(updates)` — batch `SET n.entity_id =` for Phase 2 name canonicalization
+- `add_relationships(rels)` — `MERGE`-based upsert for algorithm-discovered edges (Phase 4 output)
+
+Workspace scoping: all Neo4j nodes belonging to a workspace carry a label equal to the workspace name (LightRAG convention). `Neo4jGraphIO` queries always filter by `(n:<workspace_label>)`. Distinct from `Neo4jConnectionConfig` (connection settings only) and `src/core/neo4j_io.py` (lower-level helpers used by workspace management routes).
+_Avoid_: calling it "the Neo4j client" (ambiguous — `neo4j_config.py` also has a config class); confusing it with the LightRAG-internal KV stores (separate path, separate format).
+
 **Ingest pipeline**:
 The sequence that turns a raw RFP document into graph data: MinerU parse -> content filter/rebalance -> `insert_content_list` (multimodal analysis + LightRAG chunking + entity/relationship extraction) -> batch completion -> semantic post-processing trigger. Entry point: `process_document_with_semantic_inference()` in `src/server/document_processing.py`. This function is passed as `process_document_func` to both upload and scan routes — identical pipeline regardless of trigger.
 
