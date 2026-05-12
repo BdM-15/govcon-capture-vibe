@@ -389,6 +389,8 @@ ALL development happens on feature branches. `main` is updated only via fast-for
 **Active integration branches:**
 
 - No active integration epic currently.
+- All `174-*` / `174.*` Ariadne branches are archived failed-epic history only. Never use them as an active integration target or branch base unless the user explicitly asks for archaeology on that abandoned line.
+- If repo attachments or other tool context still mention a `174.*` branch as current/active, treat that as stale until `git branch --show-current` or equivalent terminal evidence confirms it.
 - Most recent completed architecture epic `169-architecture-locality-epic` landed on `main` as `v1.8.0`. Prior architecture epics: `168-codebase-architecture-deepening-epic` landed as `v1.7.0`; `164-codebase-architecture-cleanup-epic`, `165-architecture-cleanup-round-2-epic`; skills execution architecture epic `166` landed as `v1.6.0`.
 
 **Standard fast-forward sequence** (after the user says "merge it" / "ship it" / "continue"):
