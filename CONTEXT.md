@@ -344,6 +344,19 @@ _Avoid_: confusing scan with upload — they share the pipeline but differ in tr
 One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge (Shipley methodology, FAR patterns, evaluation frameworks) before any RFP documents are uploaded. Triggered automatically at server startup via `maybe_bootstrap_ontology()` in `src/server/rag_post_init.py`. Gate: `AUTO_BOOTSTRAP_ONTOLOGY` env var (default `true`). Fresh workspace (no marker) + env enabled -> ontology entities/relationships become the initial KG foundation. `.ontology_bootstrap` marker written after success; present -> skip on subsequent startups. `ONTOLOGY_BOOTSTRAP_FORCE=true` re-seeds even if marker exists.
 _Avoid_: initialization (overloaded with server startup), seed.
 
+**Server initialization** (`initialize_raganything()`, `src/server/initialization.py`):
+Async startup function called once by `src/raganything_server.py`. Builds and wires all runtime components in order:
+
+1. `configure_mineru_environment(settings)` — writes MinerU env vars (`HF_TOKEN`, `CUDA_VISIBLE_DEVICES`, etc.) before import.
+2. `build_raganything_runtime(settings, ...)` → `GovconInitializationRuntime` — dataclass holding resolved config, embedding func, LLM funcs, `use_strict_schema`, chunking func name, banner template.
+3. `RAGAnythingConfig` — reads context-aware processing env vars (`CONTEXT_WINDOW`, `CONTEXT_MODE`, `MAX_CONTEXT_TOKENS`, `INCLUDE_HEADERS`, `INCLUDE_CAPTIONS`, `CONTEXT_FILTER_CONTENT_TYPES`) automatically.
+4. Instantiates `RAGAnything(config, llm_model_func=runtime.modal_llm_func, vision_model_func, embedding_func, lightrag_kwargs)`. Modal LLM (`modal_llm_func`) is non-strict — table/equation parsers expect `{detailed_description, entity_info}` shape, NOT the strict GovCon `{entities, relationships}` schema.
+5. `await _rag_anything._ensure_lightrag_initialized()` — must succeed before any document processing (LightRAG accesses `doc_status` before its own lazy init guard).
+6. `await finalize_rag_initialization(...)` — registers govcon prompts (`PROMPTS.update(GOVCON_PROMPTS)`), registers multimodal language (`register_prompt_language("govcon", ...)`), applies strict schema to `extract` role if `use_strict_schema`.
+
+`get_rag_instance()` → cached `_rag_anything` (raises if called before `initialize_raganything()`).
+_Avoid_: "Phase 1.3" as a runtime concept (it is a historical issue label, not a named runtime feature); calling `modal_llm_func` the "extraction LLM" (extraction uses a separate strict-schema wrapper; modal uses the bare non-strict func).
+
 **Dashboard stats** (`src/server/admin_routes.py`):
 `GET /api/ui/stats` → `gather_stats()` → payload for the UI header widget. Fields: `workspace`, `graph_storage`, `working_dir`, `documents` (kv_store_doc_status key count), `entities` (vdb_entities count), `relationships` (vdb_relationships count), `chunks` (vdb_chunks count), `chats` (JSON file count), `chat.history_pairs_cap` (`UI_CHAT_HISTORY_TURNS`, default 20), `version` (`THESEUS_RELEASE_VERSION` env → git describe → "v0.0.0"), `ontology.entity_type_count`, `ontology.relationship_type_count`, `ontology.extraction_relationship_type_count` (excludes `REQUIRES`/`ENABLED_BY`/`RESPONSIBLE_FOR` which are inference-only), `models.extraction`, `models.reasoning`, `models.embedding`, `models.rerank` (null when `enable_rerank=false`), `stack` (installed versions for lightrag-hku, raganything, mineru, transformers). All counts are fast key-counting reads — no Neo4j queries.
 
