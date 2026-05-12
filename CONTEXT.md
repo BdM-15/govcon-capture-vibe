@@ -182,6 +182,21 @@ _Avoid_: confusing scan with upload — they share the pipeline but differ in tr
 One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge (Shipley methodology, FAR patterns, evaluation frameworks) before any RFP documents are uploaded. Triggered automatically at server startup via `maybe_bootstrap_ontology()` in `src/server/rag_post_init.py`. Gate: `AUTO_BOOTSTRAP_ONTOLOGY` env var (default `true`). Fresh workspace (no marker) + env enabled -> ontology entities/relationships become the initial KG foundation. `.ontology_bootstrap` marker written after success; present -> skip on subsequent startups. `ONTOLOGY_BOOTSTRAP_FORCE=true` re-seeds even if marker exists.
 _Avoid_: initialization (overloaded with server startup), seed.
 
+**Workspace management** (`src/server/workspace_routes.py`):
+Routes for creating, switching, inspecting, and deleting workspaces. `WorkspaceMaintenance` (deep module) implements discovery and deletion; `discover_workspaces(working_dir)` finds folders under `rag_storage/` that contain any of `kv_store_doc_status.json`, `vdb_entities.json`, `vdb_chunks.json`.
+
+| Route | Effect |
+|---|---|
+| `GET /api/ui/workspaces` | Lists discovered workspaces + active name |
+| `POST /api/ui/workspaces/switch` | Writes `WORKSPACE=<name>` to `.env`, resets settings, schedules `self_restart()` (0.75 s delay) — **process re-execs itself** |
+| `GET /api/ui/workspaces/inventory` | Cross-view table: Neo4j node counts + rag_storage MB + inputs file counts for every workspace |
+| `POST /api/ui/workspaces/{name}/delete` | Deletes selected buckets (`neo4j`, `rag_storage`, `inputs`); refuses to delete active workspace |
+| `POST /api/ui/workspaces/wipe-all` | Deletes all workspaces across selected buckets; requires `confirm="DELETE ALL"`; re-creates active workspace dir; schedules restart |
+| `POST /api/ui/restart` | Schedules `self_restart()` with 0.75 s delay |
+
+`set_env_var(key, value)` writes directly to `.env` file (atomic tmp-rename), then calls `os.environ[key] = value` and `reset_settings()`. Switching workspace = `set_env_var("WORKSPACE", name)` + restart. Workspace name validation: `_SAFE_WS = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")`. Cannot delete active workspace — must switch first.
+_Avoid_: "workspace selector" (generic); "hot-swap" (switch requires a full process restart, not a live reconfigure).
+
 **Chat** (chat session, `rag_storage/<workspace>/chats/<id>.json`):
 Persisted UI conversation stored as one JSON file per chat. `ChatStore` (`src/server/chat_store.py`) manages the lifecycle — one `ChatStore` instance per server, scoped to the active workspace dir. Chat schema: `id` (16-hex UUID), `title`, `mode` (query mode: `local`/`global`/`hybrid`/`mix`/`naive`/`bypass`), `rfp_context` (optional free-text context prepended to queries), `messages[]` (`{role, content, timestamp}`), `created_at`, `updated_at`. Key behaviors:
 
