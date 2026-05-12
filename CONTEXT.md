@@ -26,6 +26,10 @@ _Avoid_: job, run, upload session.
 Per-invocation working directory for one skill execution. Path: `rag_storage/<workspace>/skill_runs/<skill>/<YYYYMMDD_HHMMSS_slug>/`. Contains `artifacts/` (skill output files), `tool_outputs/` (raw tool call results), `run.md` (run envelope), `transcript.json` (tool call log). Scoped to one workspace + one skill execution. Created by `SkillRunStore.create_run_dir()`.
 _Avoid_: run-dir, output dir, workspace.
 
+**Inputs directory** (`inputs/<workspace>/`):
+Filesystem staging area for batch ingest. Drop PDFs/DOCX here, then call `POST /scan-rfp` to process all unprocessed files in the folder sequentially. Already-processed files are skipped. The server also copies uploaded files here when using the Documents UI (`/documents/upload`). `inputs/__enqueued__/` is a reserved name (never written to by any code — skip it).
+_Avoid_: upload folder, queue (there is no queue; scan is synchronous per-file in a background task).
+
 **Bootstrap**:
 One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge (Shipley methodology, FAR patterns, evaluation frameworks) before any RFP documents are uploaded. Controlled by `.ontology_bootstrap` marker file per workspace.
 _Avoid_: initialization (overloaded with server startup), seed.
