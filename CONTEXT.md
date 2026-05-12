@@ -22,6 +22,10 @@ _Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambig
 A user-defined group of documents uploaded together for which exactly one semantic post-processor run is guaranteed. Auto-detected by an idle-timeout window (`BATCH_TIMEOUT_SECONDS`): when no new document completes for that duration, the batch is declared complete and post-processing fires once. Without batching, uploading N documents would trigger N post-processor runs -- each exponentially more expensive as the graph grows.
 _Avoid_: job, run, upload session.
 
+**Skill run directory**:
+Per-invocation working directory for one skill execution. Path: `rag_storage/<workspace>/skill_runs/<skill>/<YYYYMMDD_HHMMSS_slug>/`. Contains `artifacts/` (skill output files), `tool_outputs/` (raw tool call results), `run.md` (run envelope), `transcript.json` (tool call log). Scoped to one workspace + one skill execution. Created by `SkillRunStore.create_run_dir()`.
+_Avoid_: run-dir, output dir, workspace.
+
 **Bootstrap**:
 One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge (Shipley methodology, FAR patterns, evaluation frameworks) before any RFP documents are uploaded. Controlled by `.ontology_bootstrap` marker file per workspace.
 _Avoid_: initialization (overloaded with server startup), seed.
