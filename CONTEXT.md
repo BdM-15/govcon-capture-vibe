@@ -45,7 +45,7 @@ One-time pre-seeding of a workspace's knowledge graph with curated govcon domain
 _Avoid_: initialization (overloaded with server startup), seed.
 
 **Entity catalog**:
-The YAML-driven registry of 33 govcon entity types at `prompts/extraction/govcon_entity_types.yaml`. Single source of truth -- `VALID_ENTITY_TYPES` in `src/ontology/schema.py` is derived from it at import time.
+The YAML-driven registry of 33 govcon entity types at `prompts/extraction/govcon_entity_types.yaml`. Single source of truth — `VALID_ENTITY_TYPES` in `src/ontology/schema.py` is derived from it at import time (no regeneration step). The extraction prompt's Part D (`{entity_types_guidance}`) is also rendered from this YAML at runtime. To add a new entity type: edit the YAML only, then run `pytest tests/ontology/test_entity_catalog_coherence.py` to confirm parity. No other files need hand-editing.
 _Avoid_: entity types list, entity schema.
 
 **Canonical relationship types**:
