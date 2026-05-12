@@ -40,6 +40,13 @@ _Avoid_: run-dir, output dir, workspace.
 Filesystem staging area for batch ingest. Drop PDFs/DOCX here, then call `POST /scan-rfp` to process all unprocessed files in the folder sequentially. Already-processed files are skipped. The server also copies uploaded files here when using the Documents UI (`/documents/upload`). `inputs/__enqueued__/` is a reserved name (never written to by any code — skip it).
 _Avoid_: upload folder, queue (there is no queue; scan is synchronous per-file in a background task).
 
+**Upload** (`POST /documents/upload`):
+Interactive single-file ingest via the UI. Saves the file to `inputs/<workspace>/` then immediately processes it through the ingest pipeline. Supports `stage_only=true` to save without processing (defers to scan). Primary/preferred path for day-to-day use.
+
+**Scan** (`POST /scan-rfp`):
+Filesystem batch ingest. Reads all unprocessed files from `inputs/<workspace>/`, processes each sequentially in a background task, skips already-processed files. Returns a `track_id` immediately; progress visible in server logs. Same `process_document_func` as upload — identical pipeline, different trigger. Intended for bulk/automated ingestion when comfortable with that workflow.
+_Avoid_: confusing scan with upload — they share the pipeline but differ in trigger, batching, and background execution.
+
 **Bootstrap**:
 One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge (Shipley methodology, FAR patterns, evaluation frameworks) before any RFP documents are uploaded. Triggered automatically at server startup via `maybe_bootstrap_ontology()` in `src/server/rag_post_init.py`. Gate: `AUTO_BOOTSTRAP_ONTOLOGY` env var (default `true`). Fresh workspace (no marker) + env enabled -> ontology entities/relationships become the initial KG foundation. `.ontology_bootstrap` marker written after success; present -> skip on subsequent startups. `ONTOLOGY_BOOTSTRAP_FORCE=true` re-seeds even if marker exists.
 _Avoid_: initialization (overloaded with server startup), seed.
