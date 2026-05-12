@@ -33,7 +33,9 @@ LightRAG's internal embedding stores: `entity_vdb` + `relationships_vdb`. Manage
 _Avoid_: treating VDB and KG as interchangeable — KG = Neo4j graph (structure); VDB = embeddings (retrieval).
 
 **Ingest pipeline**:
-The 7-phase sequence that turns a raw RFP document into graph data: upload -> MinerU parse -> multimodal analysis -> LightRAG chunking -> entity extraction -> relationship extraction -> semantic post-processing trigger.
+The sequence that turns a raw RFP document into graph data: MinerU parse -> content filter/rebalance -> `insert_content_list` (multimodal analysis + LightRAG chunking + entity/relationship extraction) -> batch completion -> semantic post-processing trigger. Entry point: `process_document_with_semantic_inference()` in `src/server/document_processing.py`. This function is passed as `process_document_func` to both upload and scan routes — identical pipeline regardless of trigger.
+
+Steps inside `process_document_with_semantic_inference`: (1) `rag_instance.parse_document()` via MinerU, (2) `filter_discarded_content_blocks()`, (3) `rebalance_modal_content_blocks()`, (4) `rag_instance.insert_content_list()` — RAG-Anything native end-to-end (multimodal VLM + LightRAG chunking + extraction), (5) callback dispatches `on_document_complete` -> batch timer reset.
 _Avoid_: "the pipeline" (ambiguous -- see Flagged ambiguities).
 
 **Semantic post-processor**:
