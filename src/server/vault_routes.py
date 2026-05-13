@@ -183,9 +183,31 @@ def register_vault_routes(
     """Mount /api/ui/vault/* routes onto *app*."""
 
     @app.get("/api/ui/vault/notes", tags=["theseus-vault"])
-    async def list_notes() -> JSONResponse:
-        """List all vault notes, newest-updated first."""
-        return JSONResponse({"notes": vault_store.list_notes()})
+    async def list_notes(
+        q: str | None = None,
+        type: str | None = None,
+        status: str | None = None,
+        topic: str | None = None,
+        pursuit: str | None = None,
+    ) -> JSONResponse:
+        """List vault notes with optional search (q) and field filters."""
+        notes = vault_store.list_notes()
+        if q:
+            q_lower = q.lower()
+            notes = [
+                n for n in notes
+                if q_lower in (n.get("title") or "").lower()
+                or q_lower in (n.get("body") or "").lower()
+            ]
+        if type:
+            notes = [n for n in notes if n.get("type") == type]
+        if status:
+            notes = [n for n in notes if n.get("status") == status]
+        if topic:
+            notes = [n for n in notes if n.get("topic") == topic]
+        if pursuit:
+            notes = [n for n in notes if n.get("pursuit") == pursuit]
+        return JSONResponse({"notes": notes})
 
     @app.post("/api/ui/vault/preview", tags=["theseus-vault"])
     async def preview_note(payload: NotePreviewRequest) -> JSONResponse:

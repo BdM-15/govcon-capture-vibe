@@ -848,6 +848,22 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusLoadVaultNotes(this);
     },
 
+    async vaultSelectNote(note) {
+      return window.theseusVaultSelectNote(this, note);
+    },
+
+    async vaultNewNote() {
+      return window.theseusVaultNewNote(this);
+    },
+
+    async vaultSaveNote() {
+      return window.theseusVaultSaveNote(this);
+    },
+
+    vaultScheduleSave() {
+      return window.theseusVaultScheduleSave(this);
+    },
+
     async deleteVaultNote(id) {
       return window.theseusDeleteVaultNote(this, id);
     },

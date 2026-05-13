@@ -19,6 +19,9 @@
     <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
     <script src="https://unpkg.com/marked@14.1.3/marked.min.js"></script>
     <script src="https://unpkg.com/dompurify@3.1.7/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.17.0/dist/browser/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.17.0/dist/browser/index.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
@@ -4606,53 +4609,238 @@
               </button>
             </div>
 
-            <!-- notes tab content -->
-            <div x-show="vaultTab === 'notes'">
-              <div x-show="vaultNotesLoading" class="text-sm text-text-400 py-4 text-center">Loading…</div>
-              <div x-show="!vaultNotesLoading && vaultNotes.length === 0" class="text-sm text-text-400 py-4">
-                No notes yet. Use the <span class="font-mono text-neon-cyan">+</span> FAB to capture one.
+            <!-- notes tab content — 3-pane layout -->
+            <div x-show="vaultTab === 'notes'" class="flex gap-0 min-h-[600px] border border-edge-strong/40 rounded-lg overflow-hidden">
+
+              <!-- ── Left pane: search, filters, note list ─────────────────── -->
+              <div class="w-56 flex-shrink-0 border-r border-edge-strong/40 bg-ink-900 flex flex-col">
+
+                <!-- New Note button -->
+                <div class="p-2 border-b border-edge-strong/30">
+                  <button
+                    type="button"
+                    class="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 hover:bg-neon-cyan/20 transition-colors"
+                    @click="vaultNewNote()"
+                  >
+                    <i data-lucide="plus" class="w-3 h-3"></i>
+                    New Note
+                  </button>
+                </div>
+
+                <!-- Search -->
+                <div class="p-2 border-b border-edge-strong/30">
+                  <div class="relative">
+                    <i data-lucide="search" class="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-text-500 pointer-events-none"></i>
+                    <input
+                      type="search"
+                      placeholder="Search…"
+                      class="w-full pl-6 pr-2 py-1 text-xs bg-ink-800 border border-edge-subtle rounded text-text-200 placeholder-text-500 focus:outline-none focus:border-neon-cyan/50"
+                      x-model="vaultSearch"
+                      @input.debounce.300="loadVaultNotes()"
+                    />
+                  </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="p-2 border-b border-edge-strong/30 flex flex-col gap-1.5">
+                  <select
+                    class="w-full text-xs bg-ink-800 border border-edge-subtle rounded px-1.5 py-1 text-text-300 focus:outline-none focus:border-neon-cyan/50"
+                    x-model="vaultFilterType"
+                    @change="loadVaultNotes()"
+                  >
+                    <option value="">All types</option>
+                    <option value="insight">insight</option>
+                    <option value="action">action</option>
+                    <option value="risk">risk</option>
+                    <option value="theme">theme</option>
+                    <option value="question">question</option>
+                    <option value="raw">raw</option>
+                  </select>
+                  <select
+                    class="w-full text-xs bg-ink-800 border border-edge-subtle rounded px-1.5 py-1 text-text-300 focus:outline-none focus:border-neon-cyan/50"
+                    x-model="vaultFilterStatus"
+                    @change="loadVaultNotes()"
+                  >
+                    <option value="">All statuses</option>
+                    <option value="raw">raw</option>
+                    <option value="polished">polished</option>
+                    <option value="evergreen">evergreen</option>
+                  </select>
+                </div>
+
+                <!-- Note list -->
+                <div class="flex-1 overflow-y-auto">
+                  <div x-show="vaultNotesLoading" class="text-xs text-text-500 py-4 text-center">Loading…</div>
+                  <div x-show="!vaultNotesLoading && vaultNotes.length === 0" class="text-xs text-text-500 py-4 px-3">
+                    No notes.
+                  </div>
+                  <ul x-show="!vaultNotesLoading && vaultNotes.length > 0">
+                    <template x-for="note in vaultNotes" :key="note.id">
+                      <li
+                        class="px-3 py-2 cursor-pointer border-b border-edge-strong/20 hover:bg-ink-800 transition-colors"
+                        :class="vaultActiveNote && vaultActiveNote.id === note.id ? 'bg-neon-cyan/10 border-l-2 border-l-neon-cyan' : ''"
+                        @click="vaultSelectNote(note)"
+                      >
+                        <div class="flex items-center gap-1.5 mb-0.5">
+                          <span
+                            class="text-xs font-mono px-1 py-0 rounded border leading-tight"
+                            :class="{
+                              'text-neon-cyan border-neon-cyan/40 bg-neon-cyan/10': note.type === 'insight',
+                              'text-magenta-400 border-magenta-400/40 bg-magenta-400/10': note.type === 'action',
+                              'text-red-400 border-red-400/40 bg-red-400/10': note.type === 'risk',
+                              'text-amber-400 border-amber-400/40 bg-amber-400/10': note.type === 'theme',
+                              'text-lime-400 border-lime-400/40 bg-lime-400/10': note.type === 'question',
+                              'text-text-400 border-edge-subtle bg-ink-800': note.type === 'raw' || !note.type,
+                            }"
+                            x-text="note.type || 'raw'"
+                          ></span>
+                        </div>
+                        <p class="text-xs text-text-200 truncate" x-text="note.title || '(untitled)'"></p>
+                        <time class="text-xs text-text-500" x-text="note.updated ? new Date(note.updated).toLocaleDateString() : ''"></time>
+                      </li>
+                    </template>
+                  </ul>
+                </div>
               </div>
-              <ul x-show="!vaultNotesLoading && vaultNotes.length > 0" class="space-y-2">
-                <template x-for="note in vaultNotes" :key="note.id">
-                  <li class="rounded-lg border border-edge-subtle bg-ink-900 px-4 py-3 flex flex-col gap-1">
-                    <div class="flex items-center gap-2">
-                      <span
-                        class="text-xs font-mono px-1.5 py-0.5 rounded border"
-                        :class="{
-                          'text-neon-cyan border-neon-cyan/40 bg-neon-cyan/10': note.type === 'insight',
-                          'text-magenta-400 border-magenta-400/40 bg-magenta-400/10': note.type === 'action',
-                          'text-red-400 border-red-400/40 bg-red-400/10': note.type === 'risk',
-                          'text-amber-400 border-amber-400/40 bg-amber-400/10': note.type === 'theme',
-                          'text-lime-400 border-lime-400/40 bg-lime-400/10': note.type === 'question',
-                          'text-text-400 border-edge-subtle bg-ink-800': note.type === 'raw' || !note.type,
-                        }"
-                        x-text="note.type || 'raw'"
-                      ></span>
-                      <span class="text-sm font-medium text-text-100 truncate flex-1" x-text="note.title || '(untitled)'"></span>
-                      <div class="ml-auto flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          class="text-text-500 hover:text-neon-cyan transition-colors"
-                          :aria-label="'Polish note ' + (note.title || note.id)"
-                          @click="polishVaultNote(note.id)"
+
+              <!-- ── Center pane: editor / preview / mind map ───────────────── -->
+              <div class="flex-1 flex flex-col bg-ink-950 min-w-0">
+
+                <!-- Empty state -->
+                <div x-show="!vaultActiveNote" class="flex-1 flex items-center justify-center text-text-500 text-sm">
+                  <div class="text-center">
+                    <i data-lucide="file-text" class="w-8 h-8 mb-2 mx-auto opacity-30"></i>
+                    <p>Select a note or create a new one</p>
+                  </div>
+                </div>
+
+                <!-- Active note editor -->
+                <div x-show="vaultActiveNote" class="flex-1 flex flex-col min-h-0 p-4 gap-3">
+
+                  <!-- Title -->
+                  <input
+                    type="text"
+                    class="w-full text-lg font-bold bg-transparent border-0 border-b border-edge-strong/30 pb-1 text-text-100 focus:outline-none focus:border-neon-cyan/50 placeholder-text-500"
+                    placeholder="Note title…"
+                    x-model="vaultActiveNote.title"
+                    @blur="vaultSaveNote()"
+                    @input="vaultScheduleSave()"
+                  />
+
+                  <!-- Frontmatter property grid -->
+                  <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs border border-edge-strong/20 rounded px-3 py-2 bg-ink-900">
+                    <template x-if="vaultActiveNote">
+                      <div class="contents">
+                        <label class="text-text-500 flex items-center">Type</label>
+                        <select
+                          class="bg-ink-800 border border-edge-subtle rounded px-1 py-0.5 text-text-200 focus:outline-none focus:border-neon-cyan/40"
+                          x-model="vaultActiveNote.type"
+                          @change="vaultSaveNote()"
                         >
-                          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                        </button>
-                        <button
-                          type="button"
-                          class="text-text-500 hover:text-red-400 transition-colors"
-                          :aria-label="'Delete note ' + (note.title || note.id)"
-                          @click="deleteVaultNote(note.id)"
+                          <option value="insight">insight</option>
+                          <option value="action">action</option>
+                          <option value="risk">risk</option>
+                          <option value="theme">theme</option>
+                          <option value="question">question</option>
+                          <option value="raw">raw</option>
+                        </select>
+                        <label class="text-text-500 flex items-center">Status</label>
+                        <select
+                          class="bg-ink-800 border border-edge-subtle rounded px-1 py-0.5 text-text-200 focus:outline-none focus:border-neon-cyan/40"
+                          x-model="vaultActiveNote.status"
+                          @change="vaultSaveNote()"
                         >
-                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                        </button>
+                          <option value="raw">raw</option>
+                          <option value="polished">polished</option>
+                          <option value="evergreen">evergreen</option>
+                        </select>
+                        <label class="text-text-500 flex items-center">Topic</label>
+                        <input
+                          type="text"
+                          class="bg-ink-800 border border-edge-subtle rounded px-1 py-0.5 text-text-200 focus:outline-none focus:border-neon-cyan/40"
+                          x-model="vaultActiveNote.topic"
+                          @blur="vaultSaveNote()"
+                        />
+                        <label class="text-text-500 flex items-center">Pursuit</label>
+                        <input
+                          type="text"
+                          class="bg-ink-800 border border-edge-subtle rounded px-1 py-0.5 text-text-200 focus:outline-none focus:border-neon-cyan/40"
+                          x-model="vaultActiveNote.pursuit"
+                          @blur="vaultSaveNote()"
+                        />
                       </div>
+                    </template>
+                  </div>
+
+                  <!-- Editor toolbar -->
+                  <div class="flex items-center gap-1">
+                    <div class="flex rounded border border-edge-strong/40 overflow-hidden text-xs">
+                      <button
+                        type="button"
+                        class="px-3 py-1 transition-colors"
+                        :class="vaultEditorMode === 'editor' ? 'bg-neon-cyan/20 text-neon-cyan' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
+                        @click="vaultEditorMode = 'editor'"
+                      >Editor</button>
+                      <button
+                        type="button"
+                        class="px-3 py-1 border-l border-edge-strong/40 transition-colors"
+                        :class="vaultEditorMode === 'preview' ? 'bg-neon-cyan/20 text-neon-cyan' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
+                        @click="vaultEditorMode = 'preview'"
+                      >Preview</button>
+                      <button
+                        type="button"
+                        class="px-3 py-1 border-l border-edge-strong/40 transition-colors"
+                        :class="vaultEditorMode === 'mindmap' ? 'bg-neon-cyan/20 text-neon-cyan' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
+                        @click="vaultEditorMode = 'mindmap'"
+                      >Mind Map</button>
                     </div>
-                    <p class="text-xs text-text-400 line-clamp-2" x-text="note.body"></p>
-                    <time class="text-xs text-text-500" x-text="note.updated ? new Date(note.updated).toLocaleString() : ''"></time>
-                  </li>
-                </template>
-              </ul>
+                    <div class="ml-auto flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        class="text-xs text-text-500 hover:text-neon-cyan transition-colors flex items-center gap-1"
+                        :aria-label="'Polish note ' + (vaultActiveNote ? vaultActiveNote.title : '')"
+                        @click="vaultActiveNote && polishVaultNote(vaultActiveNote.id)"
+                      >
+                        <i data-lucide="sparkles" class="w-3 h-3"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="text-xs text-text-500 hover:text-red-400 transition-colors flex items-center gap-1"
+                        :aria-label="'Delete note ' + (vaultActiveNote ? vaultActiveNote.title : '')"
+                        @click="vaultActiveNote && deleteVaultNote(vaultActiveNote.id)"
+                      >
+                        <i data-lucide="trash-2" class="w-3 h-3"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Editor mode -->
+                  <textarea
+                    x-show="vaultEditorMode === 'editor'"
+                    class="flex-1 w-full min-h-[300px] bg-ink-900 border border-edge-strong/30 rounded p-3 text-sm text-text-200 font-mono resize-none focus:outline-none focus:border-neon-cyan/40"
+                    placeholder="Write your note in Markdown…"
+                    x-model="vaultActiveNote.body"
+                    @blur="vaultSaveNote()"
+                    @input="vaultScheduleSave()"
+                  ></textarea>
+
+                  <!-- Preview mode -->
+                  <div
+                    x-show="vaultEditorMode === 'preview'"
+                    class="flex-1 min-h-[300px] bg-ink-900 border border-edge-strong/30 rounded p-4 prose prose-invert prose-sm max-w-none overflow-y-auto"
+                    x-html="vaultActiveNote ? DOMPurify.sanitize(marked.parse(vaultActiveNote.body || '')) : ''"
+                  ></div>
+
+                  <!-- Mind Map mode -->
+                  <div
+                    x-show="vaultEditorMode === 'mindmap'"
+                    class="flex-1 min-h-[300px] bg-ink-900 border border-edge-strong/30 rounded overflow-hidden"
+                  >
+                    <svg id="vault-mindmap-svg" class="w-full h-full"></svg>
+                  </div>
+
+                </div>
+              </div>
             </div>
 
             <!-- intel feed tab content -->
@@ -4662,6 +4850,7 @@
                 <i data-lucide="loader" class="inline-block w-4 h-4 animate-spin mr-1"></i>
                 Computing intelligence…
               </div>
+
 
               <!-- empty state -->
               <div x-show="!intel.loading && !intel.data" class="py-6 text-sm text-text-400">

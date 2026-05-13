@@ -270,5 +270,13 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultTab: "notes",
     vaultNotes: [],
     vaultNotesLoading: false,
+    vaultActiveNote: null,
+    vaultEditorMode: "editor",
+    vaultSearch: "",
+    vaultFilterType: "",
+    vaultFilterStatus: "",
+    vaultFilterTopic: "",
+    vaultFilterPursuit: "",
+    vaultAutoSaveTimer: null,
   };
 };
