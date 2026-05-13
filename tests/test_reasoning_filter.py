@@ -1,4 +1,4 @@
-from src.server.reasoning_filter import ThinkStripper, strip_think
+from src.server.chat_routes import ThinkStripper, strip_think
 
 
 def test_strip_think_removes_complete_and_unclosed_blocks() -> None:
