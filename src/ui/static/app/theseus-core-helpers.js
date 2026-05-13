@@ -42,6 +42,12 @@ window.theseusInit = async function theseusInit(app) {
     app.$nextTick(() => theseusHandleActiveChange(app)),
   );
 
+  app.$watch("vaultTab", (tab) => {
+    if (tab === "intel-feed" && !app.intel.data && !app.intel.loading) {
+      app.loadIntel();
+    }
+  });
+
   theseusWatchAfterRender(app, [
     "documents",
     "docStats.pipeline.busy",
