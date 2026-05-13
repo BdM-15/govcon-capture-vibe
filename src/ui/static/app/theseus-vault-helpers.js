@@ -118,3 +118,47 @@ window.theseusVaultPromoteNote = async function theseusVaultPromoteNote(app, id)
   }
 };
 
+window.theseusVaultAskTheseus = async function theseusVaultAskTheseus(app, id) {
+  if (!id) return;
+  app.vaultAskLoading = true;
+  app.vaultAskAnswer = "";
+  app.vaultAskSources = [];
+  try {
+    const resp = await fetch("/api/ui/vault/notes/" + id + "/ask-theseus", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspace: app.stats ? app.stats.workspace : null }),
+    });
+    if (!resp.ok) throw new Error("Ask Theseus failed (" + resp.status + ")");
+    const data = await resp.json();
+    app.vaultAskAnswer = data.answer || "";
+    app.vaultAskSources = data.sources || [];
+  } catch (error) {
+    app.toast("Ask Theseus error: " + error.message, "error");
+  } finally {
+    app.vaultAskLoading = false;
+  }
+};
+
+window.theseusVaultSaveAsNote = async function theseusVaultSaveAsNote(app) {
+  if (!app.vaultAskAnswer || !app.vaultActiveNote) return;
+  try {
+    const resp = await fetch(
+      "/api/ui/vault/notes/" + app.vaultActiveNote.id + "/ask-theseus/save",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answer: app.vaultAskAnswer,
+          source_title: app.vaultActiveNote.title || "",
+        }),
+      }
+    );
+    if (!resp.ok) throw new Error("Save as Note failed (" + resp.status + ")");
+    await window.theseusLoadVaultNotes(app);
+    app.toast("Insight saved to vault", "success");
+  } catch (error) {
+    app.toast("Save as Note error: " + error.message, "error");
+  }
+};
+

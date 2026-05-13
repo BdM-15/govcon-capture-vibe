@@ -174,11 +174,21 @@ async def _classify_and_update(
 # ---------------------------------------------------------------------------
 
 
+class AskTheseusRequest(BaseModel):
+    workspace: str | None = None
+
+
+class SaveAsNoteRequest(BaseModel):
+    answer: str
+    source_title: str = ""
+
+
 def register_vault_routes(
     app: FastAPI,
     *,
     vault_store: VaultStore,
     vault_curation_func: Callable | None = None,
+    query_func: Callable | None = None,
 ) -> None:
     """Mount /api/ui/vault/* routes onto *app*."""
 
@@ -308,4 +318,59 @@ def register_vault_routes(
         if next_status != current:
             note = vault_store.update(note_id, status=next_status)
         return JSONResponse(note)
+
+    # ---------------------------------------------------------------------------
+    # Ask Theseus
+    # ---------------------------------------------------------------------------
+
+    _ASK_VAULT_FALLBACK = (
+        "No connected workspace. Based on vault notes matching your query:\n\n{snippets}"
+    )
+
+    @app.post("/api/ui/vault/notes/{note_id}/ask-theseus", tags=["theseus-vault"])
+    async def ask_theseus(note_id: str, payload: AskTheseusRequest = AskTheseusRequest()) -> JSONResponse:
+        """Query workspace KG (or vault) using the note body as context."""
+        note = vault_store.read(note_id)  # raises 404 if missing
+        query_text = note.get("body") or note.get("title") or ""
+
+        if query_func is not None:
+            try:
+                answer_text = await query_func(query_text, "hybrid", [], False, {})
+                if not isinstance(answer_text, str):
+                    answer_text = str(answer_text)
+            except Exception:
+                logger.exception("ask-theseus workspace_kg query failed for note %s", note_id)
+                answer_text = "Query failed — check workspace connectivity."
+            return JSONResponse({"answer": answer_text, "sources": [], "mode": "workspace_kg"})
+
+        # Vault-only fallback: fulltext search of all notes
+        all_notes = vault_store.list_notes()
+        q_lower = query_text.lower()[:200]
+        matches = [
+            n for n in all_notes
+            if n["id"] != note_id
+            and (q_lower[:40] in (n.get("title") or "").lower()
+                 or any(w in (n.get("body") or "").lower() for w in q_lower.split()[:6] if len(w) > 3))
+        ][:5]
+        sources = [{"note_id": n["id"], "title": n.get("title", "")} for n in matches]
+        snippets = "\n\n".join(
+            f"**{n.get('title', 'Note')}**: {(n.get('body') or '')[:200]}" for n in matches
+        ) or "No closely related notes found."
+        answer_text = _ASK_VAULT_FALLBACK.format(snippets=snippets)
+        return JSONResponse({"answer": answer_text, "sources": sources, "mode": "vault_only"})
+
+    @app.post("/api/ui/vault/notes/{note_id}/ask-theseus/save", tags=["theseus-vault"])
+    async def save_as_note(note_id: str, payload: SaveAsNoteRequest) -> JSONResponse:
+        """Save an Ask Theseus answer as a new vault insight note."""
+        source_note = vault_store.read(note_id)  # raises 404 if missing
+        source_title = payload.source_title or source_note.get("title") or "Unknown"
+        body = f"*Source: [[{source_title}]]*\n\n{payload.answer}"
+        new_note = vault_store.create(
+            title=f"Ask Theseus: {source_title[:60]}",
+            body=body,
+            note_type="insight",
+            topic="",
+            source="ask_theseus",
+        )
+        return JSONResponse(new_note, status_code=201)
 
