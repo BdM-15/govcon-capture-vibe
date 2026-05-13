@@ -47,6 +47,7 @@ sys.path.insert(0, str(src_path))
 
 # Import our RAG-Anything server (RAG-Anything is built on top of LightRAG)
 from raganything_server import main
+from server.ollama_startup import manage_ollama_startup  # noqa: E402
 
 
 def check_docker_available():
@@ -239,6 +240,11 @@ if __name__ == "__main__":
         if not manage_neo4j_startup():
             print("\n❌ Neo4j startup failed. Exiting.\n")
             sys.exit(1)
+
+        # Manage Ollama startup (non-fatal)
+        from src.server.vault_routes import set_ollama_available as _set_ollama_available
+        _ollama_ok = manage_ollama_startup(_settings.ollama_host)
+        _set_ollama_available(_ollama_ok)
         
         neo4j_started_by_us = is_neo4j_enabled() and is_neo4j_running()
         

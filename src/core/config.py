@@ -381,6 +381,10 @@ class Settings(BaseSettings):
     # ═══════════════════════════════════════════════════════════════════════════
     # KNOWLEDGE VAULT CONFIGURATION
     # ═══════════════════════════════════════════════════════════════════════════
+    ollama_host: str = Field(
+        default="http://localhost:11434",
+        description="Base URL for the Ollama server (health probe at /api/tags)"
+    )
     vault_path: str = Field(
         default="./knowledge",
         description="Root directory for Knowledge Vault .md files (Obsidian-compatible)"

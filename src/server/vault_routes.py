@@ -5,13 +5,40 @@ import logging
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from src.server.vault_store import VaultStore
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Ollama availability state (set by app.py at startup)
+# ---------------------------------------------------------------------------
+
+_ollama_available: bool = False
+
+
+def set_ollama_available(available: bool) -> None:
+    """Called at startup to record whether Ollama is reachable."""
+    global _ollama_available
+    _ollama_available = available
+
+
+def is_ollama_available() -> bool:
+    """Return current Ollama availability flag."""
+    return _ollama_available
+
+
+def _require_ollama() -> None:
+    """Raise 503 if Ollama is not reachable (for polish-related routes)."""
+    if not _ollama_available:
+        raise HTTPException(
+            status_code=503,
+            detail="Vault curation LLM (Ollama) is not reachable. "
+                   "Start Ollama and restart Theseus to enable polish endpoints.",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -97,3 +124,10 @@ def register_vault_routes(
         """Permanently delete a vault note."""
         vault_store.delete(note_id)
         return JSONResponse({"status": "deleted", "id": note_id})
+
+    @app.post("/api/ui/vault/notes/{note_id}/polish", tags=["theseus-vault"])
+    async def polish_note(note_id: str) -> JSONResponse:
+        """Polish a vault note via the vault_curation LLM (requires Ollama)."""
+        _require_ollama()
+        # Full polish logic lives in a future issue; this stub proves the 503 gate.
+        return JSONResponse({"status": "not_implemented"}, status_code=501)

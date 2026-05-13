@@ -9,6 +9,8 @@ class _Settings:
     reasoning_llm_name = "reason-model"
     llm_max_output_tokens = 12345
     llm_timeout = 600
+    vault_curation_llm_model = "qwen3.5:9b"
+    vault_curation_llm_host = "http://localhost:11434/v1"
 
 
 def test_build_role_llm_routing_prompt_only(monkeypatch) -> None:
@@ -20,7 +22,7 @@ def test_build_role_llm_routing_prompt_only(monkeypatch) -> None:
     )
 
     assert routing.use_strict_schema is False
-    assert set(routing.role_llm_configs.keys()) == {"extract", "query", "keyword", "vlm"}
+    assert set(routing.role_llm_configs.keys()) == {"extract", "query", "keyword", "vlm", "vault_curation"}
     assert routing.role_llm_configs["extract"].kwargs == {"max_tokens": llm_routing.EXTRACT_MAX_TOKENS}
 
 

@@ -17,9 +17,11 @@ logger = logging.getLogger(__name__)
 EXTRACT_MAX_TOKENS = 32000
 KEYWORD_MAX_TOKENS = 4096
 VLM_MAX_TOKENS = 8000
+VAULT_CURATION_MAX_TOKENS = 4096
 QUERY_TIMEOUT = 900
 KEYWORD_TIMEOUT = 60
 VLM_TIMEOUT = 300
+VAULT_CURATION_TIMEOUT = 120
 
 
 @dataclass
@@ -27,6 +29,7 @@ class RoleLLMRouting:
     llm_model_func: Callable[..., Awaitable[Any]]
     vision_model_func: Callable[..., Awaitable[Any]]
     modal_llm_func: Callable[..., Awaitable[Any]]
+    vault_curation_func: Callable[..., Awaitable[Any]]
     role_llm_configs: dict[str, RoleLLMConfig]
     use_strict_schema: bool
 
@@ -201,11 +204,32 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
         KEYWORD_MAX_TOKENS,
         KEYWORD_TIMEOUT,
     )
+    vault_curation_model = settings.vault_curation_llm_model
+    vault_curation_base_url = settings.vault_curation_llm_host
+
+    async def vault_curation_func(prompt, system_prompt=None, history_messages=[], **kwargs):
+        kwargs.setdefault("max_tokens", VAULT_CURATION_MAX_TOKENS)
+        return await openai_complete_if_cache(
+            vault_curation_model,
+            prompt,
+            system_prompt=system_prompt,
+            history_messages=history_messages,
+            api_key="ollama",
+            base_url=vault_curation_base_url,
+            **kwargs,
+        )
+
     logger.info(
         "   vlm      → %s  max_tokens=%6d  timeout=%ss",
         f"{extraction_model:40s}",
         VLM_MAX_TOKENS,
         VLM_TIMEOUT,
+    )
+    logger.info(
+        "   vault_curation → %s  max_tokens=%6d  timeout=%ss",
+        f"{vault_curation_model:40s}",
+        VAULT_CURATION_MAX_TOKENS,
+        VAULT_CURATION_TIMEOUT,
     )
 
     extract_kwargs: dict[str, Any] = {"max_tokens": EXTRACT_MAX_TOKENS}
@@ -246,12 +270,19 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
             timeout=VLM_TIMEOUT,
             metadata={"model": extraction_model, "host": xai_base_url, "binding": "openai"},
         ),
+        "vault_curation": RoleLLMConfig(
+            func=vault_curation_func,
+            kwargs={"max_tokens": VAULT_CURATION_MAX_TOKENS},
+            timeout=VAULT_CURATION_TIMEOUT,
+            metadata={"model": vault_curation_model, "host": vault_curation_base_url, "binding": "ollama"},
+        ),
     }
 
     return RoleLLMRouting(
         llm_model_func=query_llm_func,
         vision_model_func=vlm_llm_func,
         modal_llm_func=modal_llm_func,
+        vault_curation_func=vault_curation_func,
         role_llm_configs=role_llm_configs,
         use_strict_schema=use_strict_schema,
     )
