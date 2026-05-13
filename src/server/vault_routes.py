@@ -54,6 +54,7 @@ class NoteCreate(BaseModel):
     source: str = "manual"
     pursuit: str | None = None
     tags: list[str] = Field(default_factory=list)
+    tier: str | None = None
 
     model_config = {"populate_by_name": True}
 
@@ -71,6 +72,7 @@ class NoteUpdate(BaseModel):
     status: str | None = None
     pursuit: str | None = None
     tags: list[str] | None = None
+    tier: str | None = None
 
     model_config = {"populate_by_name": True}
 
@@ -278,6 +280,7 @@ def register_vault_routes(
         status: str | None = None,
         topic: str | None = None,
         pursuit: str | None = None,
+        tier: str | None = None,
     ) -> JSONResponse:
         """List vault notes with optional search (q) and field filters."""
         notes = vault_store.list_notes()
@@ -296,6 +299,8 @@ def register_vault_routes(
             notes = [n for n in notes if n.get("topic") == topic]
         if pursuit:
             notes = [n for n in notes if n.get("pursuit") == pursuit]
+        if tier:
+            notes = [n for n in notes if n.get("tier") == tier]
         return JSONResponse({"notes": notes})
 
     @app.post("/api/ui/vault/preview", tags=["theseus-vault"])
@@ -332,6 +337,7 @@ def register_vault_routes(
             source=payload.source,
             pursuit=payload.pursuit,
             tags=payload.tags,
+            tier=payload.tier,
         )
         # Auto-polish immediately (background task) if feature is enabled
         if vault_auto_polish and vault_curation_func is not None:

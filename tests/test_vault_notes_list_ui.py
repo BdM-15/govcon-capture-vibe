@@ -41,10 +41,10 @@ def test_vault_notes_state_has_loading_flag() -> None:
 # ── Slice 1: HTML binding ─────────────────────────────────────────────────────
 
 def test_vault_notes_tab_has_x_for_binding() -> None:
-    """Notes tab must iterate with x-for over vaultNotes."""
+    """Notes tab must iterate notes via grouped x-for (vaultGroupedNotes)."""
     html = _INDEX.read_text(encoding="utf-8")
-    assert 'x-for="note in vaultNotes"' in html, (
-        "Notes tab must have x-for=\"note in vaultNotes\" binding"
+    assert 'vaultGroupedNotes()' in html or 'x-for="note in group.notes"' in html, (
+        "Notes tab must iterate notes via vaultGroupedNotes() or x-for=\"note in group.notes\""
     )
 
 

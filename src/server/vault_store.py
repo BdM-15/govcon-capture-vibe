@@ -121,6 +121,7 @@ class VaultStore:
         source: str,
         pursuit: str | None = None,
         tags: list[str] | None = None,
+        tier: str | None = None,
     ) -> dict[str, Any]:
         """Create a new note and return its full dict representation."""
         note_id = self._unique_id(title)
@@ -137,6 +138,8 @@ class VaultStore:
             "created": now,
             "updated": now,
         }
+        if tier:
+            fields["tier"] = tier
         content = _render_note_file(fields, body)
         file_path = self._dir / f"{note_id}.md"
         file_path.write_text(content, encoding="utf-8")

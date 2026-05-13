@@ -164,9 +164,10 @@ def test_html_has_vault_search_input():
     assert 'x-model="vaultSearch"' in html, "left pane search input missing x-model='vaultSearch'"
 
 
-def test_html_has_vault_filter_type_dropdown():
+def test_html_has_vault_tier_tabs():
     html = _INDEX.read_text(encoding="utf-8")
-    assert 'x-model="vaultFilterType"' in html, "type filter dropdown missing x-model='vaultFilterType'"
+    assert 'vaultSetTier' in html, "left pane must have tier tab buttons calling vaultSetTier"
+    assert 'vaultActiveTier' in html, "left pane must reference vaultActiveTier for active tab state"
 
 
 def test_html_has_new_note_button():

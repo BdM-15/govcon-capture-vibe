@@ -3,18 +3,22 @@ window.theseusLoadVaultNotes = async function theseusLoadVaultNotes(app) {
   try {
     const params = new URLSearchParams();
     if (app.vaultSearch) params.set("q", app.vaultSearch);
-    if (app.vaultFilterType) params.set("type", app.vaultFilterType);
     if (app.vaultFilterStatus) params.set("status", app.vaultFilterStatus);
-    if (app.vaultFilterTopic) params.set("topic", app.vaultFilterTopic);
-    if (app.vaultFilterPursuit) params.set("pursuit", app.vaultFilterPursuit);
+    if (app.vaultActiveTier) params.set("tier", app.vaultActiveTier);
     const qs = params.toString() ? "?" + params.toString() : "";
     const data = await app.api("/api/ui/vault/notes" + qs);
     app.vaultNotes = data.notes || [];
+    app.vaultActiveTopic = "";  // reset topic selection on tier reload
   } catch (error) {
     app.toast("Failed to load vault notes: " + error.message, "error");
   } finally {
     app.vaultNotesLoading = false;
   }
+};
+
+window.theseusVaultSetTier = async function theseusVaultSetTier(app, tier) {
+  app.vaultActiveTier = tier;
+  await window.theseusLoadVaultNotes(app);
 };
 
 window.theseusVaultSelectNote = async function theseusVaultSelectNote(app, note) {
@@ -60,6 +64,7 @@ window.theseusVaultSaveNote = async function theseusVaultSaveNote(app) {
         status: app.vaultActiveNote.status || "raw",
         pursuit: app.vaultActiveNote.pursuit || null,
         tags: app.vaultActiveNote.tags || [],
+        tier: app.vaultActiveNote.tier || null,
       }),
     });
     if (!resp.ok) throw new Error("Save failed");

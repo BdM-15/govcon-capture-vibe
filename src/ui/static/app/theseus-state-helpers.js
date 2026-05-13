@@ -277,6 +277,8 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultFilterStatus: "",
     vaultFilterTopic: "",
     vaultFilterPursuit: "",
+    vaultActiveTier: "doctrine",
+    vaultActiveTopic: "",
     vaultAutoSaveTimer: null,
     vaultRightPaneOpen: true,
     vaultAskAnswer: "",
@@ -295,5 +297,18 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     intelBulkPolishing: false,
     intelBulkProgress: {},
     intelDragId: null,
+
+    // Computed: group vaultNotes by topic for sidebar nav
+    vaultGroupedNotes() {
+      const byTopic = {};
+      for (const n of this.vaultNotes) {
+        const t = n.topic || "(no topic)";
+        if (!byTopic[t]) byTopic[t] = [];
+        byTopic[t].push(n);
+      }
+      return Object.entries(byTopic)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([topic, notes]) => ({ topic, notes }));
+    },
   };
 };

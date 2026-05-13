@@ -4641,21 +4641,30 @@
                   </div>
                 </div>
 
-                <!-- Filters -->
-                <div class="p-2 border-b border-edge-strong/30 flex flex-col gap-1.5">
-                  <select
-                    class="w-full text-xs bg-ink-800 border border-edge-subtle rounded px-1.5 py-1 text-text-300 focus:outline-none focus:border-neon-cyan/50"
-                    x-model="vaultFilterType"
-                    @change="loadVaultNotes()"
-                  >
-                    <option value="">All types</option>
-                    <option value="insight">insight</option>
-                    <option value="action">action</option>
-                    <option value="risk">risk</option>
-                    <option value="theme">theme</option>
-                    <option value="question">question</option>
-                    <option value="raw">raw</option>
-                  </select>
+                <!-- Tier tabs -->
+                <div class="flex border-b border-edge-strong/30">
+                  <button
+                    type="button"
+                    class="flex-1 py-1.5 text-xs font-medium transition-colors"
+                    :class="vaultActiveTier === 'doctrine' ? 'text-neon-cyan border-b-2 border-neon-cyan bg-neon-cyan/5' : 'text-text-400 hover:text-text-200'"
+                    @click="vaultSetTier('doctrine')"
+                  >Doctrine</button>
+                  <button
+                    type="button"
+                    class="flex-1 py-1.5 text-xs font-medium transition-colors"
+                    :class="vaultActiveTier === 'intelligence' ? 'text-neon-cyan border-b-2 border-neon-cyan bg-neon-cyan/5' : 'text-text-400 hover:text-text-200'"
+                    @click="vaultSetTier('intelligence')"
+                  >Intel</button>
+                  <button
+                    type="button"
+                    class="flex-1 py-1.5 text-xs font-medium transition-colors"
+                    :class="vaultActiveTier === 'pursuit' ? 'text-neon-cyan border-b-2 border-neon-cyan bg-neon-cyan/5' : 'text-text-400 hover:text-text-200'"
+                    @click="vaultSetTier('pursuit')"
+                  >Pursuits</button>
+                </div>
+
+                <!-- Status filter (compact) -->
+                <div class="px-2 py-1.5 border-b border-edge-strong/30">
                   <select
                     class="w-full text-xs bg-ink-800 border border-edge-subtle rounded px-1.5 py-1 text-text-300 focus:outline-none focus:border-neon-cyan/50"
                     x-model="vaultFilterStatus"
@@ -4668,38 +4677,61 @@
                   </select>
                 </div>
 
-                <!-- Note list -->
+                <!-- Note list (topic-grouped) -->
                 <div class="flex-1 overflow-y-auto">
                   <div x-show="vaultNotesLoading" class="text-xs text-text-500 py-4 text-center">Loading…</div>
                   <div x-show="!vaultNotesLoading && vaultNotes.length === 0" class="text-xs text-text-500 py-4 px-3">
                     No notes.
                   </div>
-                  <ul x-show="!vaultNotesLoading && vaultNotes.length > 0">
-                    <template x-for="note in vaultNotes" :key="note.id">
-                      <li
-                        class="px-3 py-2 cursor-pointer border-b border-edge-strong/20 hover:bg-ink-800 transition-colors"
-                        :class="vaultActiveNote && vaultActiveNote.id === note.id ? 'bg-neon-cyan/10 border-l-2 border-l-neon-cyan' : ''"
-                        @click="vaultSelectNote(note)"
-                      >
-                        <div class="flex items-center gap-1.5 mb-0.5">
-                          <span
-                            class="text-xs font-mono px-1 py-0 rounded border leading-tight"
-                            :class="{
-                              'text-neon-cyan border-neon-cyan/40 bg-neon-cyan/10': note.type === 'insight',
-                              'text-magenta-400 border-magenta-400/40 bg-magenta-400/10': note.type === 'action',
-                              'text-red-400 border-red-400/40 bg-red-400/10': note.type === 'risk',
-                              'text-amber-400 border-amber-400/40 bg-amber-400/10': note.type === 'theme',
-                              'text-lime-400 border-lime-400/40 bg-lime-400/10': note.type === 'question',
-                              'text-text-400 border-edge-subtle bg-ink-800': note.type === 'raw' || !note.type,
-                            }"
-                            x-text="note.type || 'raw'"
-                          ></span>
+                  <template x-if="!vaultNotesLoading && vaultNotes.length > 0">
+                    <div>
+                      <template x-for="group in vaultGroupedNotes()" :key="group.topic">
+                        <div>
+                          <!-- Topic group header -->
+                          <button
+                            type="button"
+                            class="w-full flex items-center justify-between px-2 py-1 text-xs font-semibold text-text-400 hover:text-text-200 hover:bg-ink-800 transition-colors border-b border-edge-strong/20 sticky top-0 bg-ink-900 z-10"
+                            @click="vaultActiveTopic = vaultActiveTopic === group.topic ? '' : group.topic"
+                          >
+                            <span class="truncate" x-text="group.topic"></span>
+                            <span class="ml-1 tabular-nums text-text-500 flex-shrink-0" x-text="group.notes.length"></span>
+                          </button>
+                          <!-- Notes in group (collapse when another topic is active) -->
+                          <template x-if="!vaultActiveTopic || vaultActiveTopic === group.topic">
+                            <ul>
+                              <template x-for="note in group.notes" :key="note.id">
+                                <li
+                                  class="px-3 py-2 cursor-pointer border-b border-edge-strong/20 hover:bg-ink-800 transition-colors"
+                                  :class="vaultActiveNote && vaultActiveNote.id === note.id ? 'bg-neon-cyan/10 border-l-2 border-l-neon-cyan' : ''"
+                                  @click="vaultSelectNote(note)"
+                                >
+                                  <div class="flex items-center gap-1.5 mb-0.5">
+                                    <span
+                                      class="text-xs font-mono px-1 py-0 rounded border leading-tight"
+                                      :class="{
+                                        'text-neon-cyan border-neon-cyan/40 bg-neon-cyan/10': note.type === 'insight',
+                                        'text-magenta-400 border-magenta-400/40 bg-magenta-400/10': note.type === 'action',
+                                        'text-red-400 border-red-400/40 bg-red-400/10': note.type === 'risk',
+                                        'text-amber-400 border-amber-400/40 bg-amber-400/10': note.type === 'theme' || note.type === 'lesson_learned',
+                                        'text-lime-400 border-lime-400/40 bg-lime-400/10': note.type === 'question',
+                                        'text-sky-400 border-sky-400/40 bg-sky-400/10': note.type === 'shipley_ref',
+                                        'text-violet-400 border-violet-400/40 bg-violet-400/10': note.type === 'capability',
+                                        'text-slate-400 border-slate-400/40 bg-slate-400/10': note.type === 'article',
+                                        'text-text-400 border-edge-subtle bg-ink-800': !note.type || note.type === 'raw',
+                                      }"
+                                      x-text="note.type || 'raw'"
+                                    ></span>
+                                  </div>
+                                  <p class="text-xs text-text-200 truncate" x-text="note.title || '(untitled)'"></p>
+                                  <time class="text-xs text-text-500" x-text="note.updated ? new Date(note.updated).toLocaleDateString() : ''"></time>
+                                </li>
+                              </template>
+                            </ul>
+                          </template>
                         </div>
-                        <p class="text-xs text-text-200 truncate" x-text="note.title || '(untitled)'"></p>
-                        <time class="text-xs text-text-500" x-text="note.updated ? new Date(note.updated).toLocaleDateString() : ''"></time>
-                      </li>
-                    </template>
-                  </ul>
+                      </template>
+                    </div>
+                  </template>
                 </div>
               </div>
 
@@ -4743,6 +4775,21 @@
                           <option value="theme">theme</option>
                           <option value="question">question</option>
                           <option value="raw">raw</option>
+                          <option value="article">article</option>
+                          <option value="shipley_ref">shipley_ref</option>
+                          <option value="capability">capability</option>
+                          <option value="lesson_learned">lesson_learned</option>
+                        </select>
+                        <label class="text-text-500 flex items-center">Tier</label>
+                        <select
+                          class="bg-ink-800 border border-edge-subtle rounded px-1 py-0.5 text-text-200 focus:outline-none focus:border-neon-cyan/40"
+                          x-model="vaultActiveNote.tier"
+                          @change="vaultSaveNote()"
+                        >
+                          <option value="">—</option>
+                          <option value="doctrine">doctrine</option>
+                          <option value="intelligence">intelligence</option>
+                          <option value="pursuit">pursuit</option>
                         </select>
                         <label class="text-text-500 flex items-center">Status</label>
                         <select
