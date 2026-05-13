@@ -267,5 +267,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       saving: false,
     },
     vaultTab: "notes",
+    vaultNotes: [],
+    vaultNotesLoading: false,
   };
 };

@@ -844,6 +844,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusLoadIntel(this);
     },
 
+    async loadVaultNotes() {
+      return window.theseusLoadVaultNotes(this);
+    },
+
     filteredLmRows() {
       return window.theseusFilteredLmRows(this);
     },

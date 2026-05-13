@@ -28,6 +28,7 @@ const theseusHandleActiveChange = function theseusHandleActiveChange(app) {
   if (app.active === "skills" && !app.skills.loaded) app.loadSkills();
   if (app.active === "chains" && !app.chains.loaded) app.loadChains();
   if (app.active === "studio" && !app.studio.loaded) app.loadStudio();
+  if (app.active === "vault" && !app.vaultNotesLoading) app.loadVaultNotes();
 };
 
 const theseusWatchAfterRender = function theseusWatchAfterRender(app, paths) {

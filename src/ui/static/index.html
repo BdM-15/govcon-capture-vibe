@@ -4599,10 +4599,33 @@
 
             <!-- notes tab content -->
             <div x-show="vaultTab === 'notes'">
-              <p class="text-sm text-text-400">
-                Capture notes live here. Use the
-                <span class="font-mono text-neon-cyan">+</span> FAB to add one.
-              </p>
+              <div x-show="vaultNotesLoading" class="text-sm text-text-400 py-4 text-center">Loading…</div>
+              <div x-show="!vaultNotesLoading && vaultNotes.length === 0" class="text-sm text-text-400 py-4">
+                No notes yet. Use the <span class="font-mono text-neon-cyan">+</span> FAB to capture one.
+              </div>
+              <ul x-show="!vaultNotesLoading && vaultNotes.length > 0" class="space-y-2">
+                <template x-for="note in vaultNotes" :key="note.id">
+                  <li class="rounded-lg border border-edge-subtle bg-ink-900 px-4 py-3 flex flex-col gap-1">
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="text-xs font-mono px-1.5 py-0.5 rounded border"
+                        :class="{
+                          'text-neon-cyan border-neon-cyan/40 bg-neon-cyan/10': note.type === 'insight',
+                          'text-magenta-400 border-magenta-400/40 bg-magenta-400/10': note.type === 'action',
+                          'text-red-400 border-red-400/40 bg-red-400/10': note.type === 'risk',
+                          'text-amber-400 border-amber-400/40 bg-amber-400/10': note.type === 'theme',
+                          'text-lime-400 border-lime-400/40 bg-lime-400/10': note.type === 'question',
+                          'text-text-400 border-edge-subtle bg-ink-800': note.type === 'raw' || !note.type,
+                        }"
+                        x-text="note.type || 'raw'"
+                      ></span>
+                      <span class="text-sm font-medium text-text-100 truncate" x-text="note.title || '(untitled)'"></span>
+                    </div>
+                    <p class="text-xs text-text-400 line-clamp-2" x-text="note.body"></p>
+                    <time class="text-xs text-text-500" x-text="note.updated ? new Date(note.updated).toLocaleString() : ''"></time>
+                  </li>
+                </template>
+              </ul>
             </div>
 
             <!-- intel feed tab content -->
@@ -7760,6 +7783,7 @@
     <script src="/ui/app/theseus-documents-helpers.js"></script>
     <script src="/ui/app/theseus-graph-helpers.js"></script>
     <script src="/ui/app/theseus-intel-helpers.js"></script>
+    <script src="/ui/app/theseus-vault-helpers.js"></script>
     <script src="/ui/app/theseus-settings-helpers.js"></script>
     <script src="/ui/app/theseus-workspace-helpers.js"></script>
     <script src="/ui/app/theseus-palette-helpers.js"></script>
@@ -8022,6 +8046,7 @@
               .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)))
               .then(() => {
                 toast('Note saved to vault!', 'success');
+                loadVaultNotes();
                 quickCapture.open = false;
                 quickCapture.step = 'dump';
                 quickCapture.body = '';
