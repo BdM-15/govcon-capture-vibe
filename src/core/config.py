@@ -378,6 +378,26 @@ class Settings(BaseSettings):
         description="Filter chunks with rerank score below this threshold (0.0 = no filter)"
     )
 
+    # ═══════════════════════════════════════════════════════════════════════════
+    # KNOWLEDGE VAULT CONFIGURATION
+    # ═══════════════════════════════════════════════════════════════════════════
+    vault_path: str = Field(
+        default="./knowledge",
+        description="Root directory for Knowledge Vault .md files (Obsidian-compatible)"
+    )
+    vault_auto_polish: bool = Field(
+        default=False,
+        description="Automatically polish new notes via vault_curation LLM on create"
+    )
+    vault_curation_llm_host: str = Field(
+        default="http://localhost:11434/v1",
+        description="OpenAI-compatible base URL for local vault curation LLM (Ollama)"
+    )
+    vault_curation_llm_model: str = Field(
+        default="qwen3.5:9b",
+        description="Model name for vault curation (default: Qwen 3.5 9B via Ollama)"
+    )
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

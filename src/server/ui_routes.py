@@ -71,6 +71,7 @@ from src.server.admin_routes import (
 from src.server.document_routes import register_processing_log_routes
 from src.server.prompt_library import register_prompt_library_routes
 from src.server.skill_routes import register_skill_ui_routes
+from src.server.vault_routes import register_vault_routes
 from src.server.workspace_routes import (
     register_entity_chunk_routes,
     register_graph_routes,
@@ -241,6 +242,14 @@ def _register_feature_routes(
         app,
         set_env_var=context.set_env_var,
         schedule_restart=context.schedule_restart,
+    )
+
+    _vault_dir = Path(get_settings().vault_path).resolve()
+    _vault_dir.mkdir(parents=True, exist_ok=True)
+    from src.server.vault_store import VaultStore
+    register_vault_routes(
+        app,
+        vault_store=VaultStore(vault_dir=_vault_dir, now=context.now),
     )
 
 
