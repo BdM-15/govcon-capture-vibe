@@ -296,3 +296,16 @@ def register_vault_routes(
             status="polished",
         )
         return JSONResponse(updated)
+
+    _STATUS_LADDER = {"raw": "polished", "polished": "evergreen", "evergreen": "evergreen"}
+
+    @app.post("/api/ui/vault/notes/{note_id}/promote", tags=["theseus-vault"])
+    async def promote_note(note_id: str) -> JSONResponse:
+        """Advance a note's status: raw→polished→evergreen (idempotent at evergreen)."""
+        note = vault_store.read(note_id)
+        current = note.get("status") or "raw"
+        next_status = _STATUS_LADDER.get(current, "polished")
+        if next_status != current:
+            note = vault_store.update(note_id, status=next_status)
+        return JSONResponse(note)
+

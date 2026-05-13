@@ -872,6 +872,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusPolishVaultNote(this, id);
     },
 
+    async vaultPromoteNote(id) {
+      return window.theseusVaultPromoteNote(this, id);
+    },
+
     filteredLmRows() {
       return window.theseusFilteredLmRows(this);
     },

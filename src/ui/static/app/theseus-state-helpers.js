@@ -278,5 +278,6 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultFilterTopic: "",
     vaultFilterPursuit: "",
     vaultAutoSaveTimer: null,
+    vaultRightPaneOpen: true,
   };
 };

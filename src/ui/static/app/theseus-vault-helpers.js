@@ -102,3 +102,19 @@ window.theseusPolishVaultNote = async function theseusPolishVaultNote(app, id) {
     app.toast("Failed to polish note: " + error.message, "error");
   }
 };
+
+window.theseusVaultPromoteNote = async function theseusVaultPromoteNote(app, id) {
+  try {
+    const resp = await fetch("/api/ui/vault/notes/" + id + "/promote", { method: "POST" });
+    if (!resp.ok) throw new Error("Promote failed");
+    const updated = await resp.json();
+    if (app.vaultActiveNote && app.vaultActiveNote.id === id) {
+      app.vaultActiveNote = { ...updated };
+    }
+    await window.theseusLoadVaultNotes(app);
+    app.toast("Note promoted to " + updated.status, "success");
+  } catch (error) {
+    app.toast("Failed to promote note: " + error.message, "error");
+  }
+};
+
