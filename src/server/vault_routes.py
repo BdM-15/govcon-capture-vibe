@@ -260,5 +260,17 @@ def register_vault_routes(
     async def polish_note(note_id: str) -> JSONResponse:
         """Polish a vault note via the vault_curation LLM (requires Ollama)."""
         _require_ollama()
-        # Full polish logic lives in a future issue; this stub proves the 503 gate.
-        return JSONResponse({"status": "not_implemented"}, status_code=501)
+        if vault_curation_func is None:
+            raise HTTPException(status_code=503, detail="Vault curation LLM not configured")
+        note = vault_store.read(note_id)
+        prompt = _POLISH_PROMPT_TEMPLATE.format(body=note["body"].strip())
+        raw = await vault_curation_func(prompt, system_prompt=_POLISH_SYSTEM)
+        title, note_type, polished_body = _parse_curation_response(raw, fallback_body=note["body"])
+        updated = vault_store.update(
+            note_id,
+            title=title,
+            type=note_type,
+            body=polished_body,
+            status="polished",
+        )
+        return JSONResponse(updated)

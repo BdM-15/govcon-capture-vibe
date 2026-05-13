@@ -19,3 +19,18 @@ window.theseusDeleteVaultNote = async function theseusDeleteVaultNote(app, id) {
     app.toast("Failed to delete note: " + error.message, "error");
   }
 };
+
+window.theseusPolishVaultNote = async function theseusPolishVaultNote(app, id) {
+  try {
+    const resp = await fetch("/api/ui/vault/notes/" + id + "/polish", { method: "POST" });
+    if (resp.status === 503) {
+      app.toast("Polish requires Ollama — start Ollama and restart Theseus.", "error");
+      return;
+    }
+    if (!resp.ok) throw new Error("Polish failed");
+    await window.theseusLoadVaultNotes(app);
+    app.toast("Note polished", "success");
+  } catch (error) {
+    app.toast("Failed to polish note: " + error.message, "error");
+  }
+};

@@ -852,6 +852,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusDeleteVaultNote(this, id);
     },
 
+    async polishVaultNote(id) {
+      return window.theseusPolishVaultNote(this, id);
+    },
+
     filteredLmRows() {
       return window.theseusFilteredLmRows(this);
     },
