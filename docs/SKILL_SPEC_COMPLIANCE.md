@@ -99,6 +99,12 @@ Copy this checklist:
 | `govcon-ontology`                          |        166 | references                                       | `category`, `version`, `authoritative_source` | ⚠️ Extras at top level                                                                                                                         |
 | `huashu-design-govcon`                     |  (removed) | n/a                                              | n/a                                           | ⚠️ Removed in 2.3 — superseded by vendored `huashu-design` (engine) + `proposal-generator` (govcon content + HTML render templates). See §3.5. |
 | `proposal-generator`                       |        200 | references, **assets**, evals                    | none (`metadata:` block)                      | ✅ Yes (2.2)                                                                                                                                   |
+| `knowledge-vault`                          |       ~145 | references, evals                                | none (`metadata:` block)                      | ✅ Yes (2026-05-13, branch `189-knowledge-vault-skill`)                                                                                        |
+| `obsidian-markdown` (vendored/ref)         |        ~50 | —                                                | none (`metadata:` block)                      | ✅ Yes (2026-05-13, branch `189-knowledge-vault-skill`)                                                                                        |
+| `obsidian-bases` (vendored/ref)            |        ~50 | —                                                | none (`metadata:` block)                      | ✅ Yes (2026-05-13, branch `189-knowledge-vault-skill`)                                                                                        |
+| `obsidian-cli` (vendored/ref)              |        ~45 | —                                                | none (`metadata:` block)                      | ✅ Yes (2026-05-13, branch `189-knowledge-vault-skill`)                                                                                        |
+| `json-canvas` (vendored/ref)               |        ~50 | —                                                | none (`metadata:` block)                      | ✅ Yes (2026-05-13, branch `189-knowledge-vault-skill`)                                                                                        |
+| `idea-capturer` (vendored/ref)             |        ~55 | —                                                | none (`metadata:` block)                      | ✅ Yes (2026-05-13, branch `189-knowledge-vault-skill`)                                                                                        |
 
 **All bodies are under the 500-line limit.** ✅
 **All descriptions are third-person and reasonably "pushy."** ✅
@@ -172,6 +178,21 @@ The "design domain" is now cleanly split: `huashu-design` (vendored, format-agno
 | No `evals/evals.json`                                    | Added 3 evals: compliance matrix, win themes, executive summary. Each carries verifiable expectations on tool-call patterns + artifact contents.                                                                | 2.2       | ✅    |
 | Implicit briefing-book dependency                        | Removed — runtime no longer pre-builds briefing book for tools-mode skills (route layer skips it). Skill fetches what it needs via `kg_entities` + `kg_chunks`.                                                 | 2.2       | ✅    |
 | Output persistence                                       | Final draft saved to `<run_dir>/artifacts/proposal_draft.json` via `write_file`; cover note (counts + warnings + chunk_ids) returned as the assistant message.                                                  | 2.2       | ✅    |
+
+---
+
+### 3.7 `knowledge-vault` + vendored reference skills
+
+| Gap | Action | Sub-phase | State |
+|-----|--------|-----------|-------|
+| New skill — Zettelkasten lifecycle (raw → polished → evergreen) | Authored per `skill-creator` workflow: evals BEFORE prose, 6-field frontmatter, body ~145 lines checklist | #148 | ✅ |
+| `evals/evals.json` | 4 test prompts covering polish, entity review, link discovery, triage | #148 | ✅ |
+| `references/vault_ontology.md` | 32-type entity quick-reference with vault note signals and entity proposal format | #148 | ✅ |
+| `references/shipley_vocabulary.md` | Shipley term → ontology type mapping, polishing checklist, evergreen promotion checklist | #148 | ✅ |
+| Vendored kepano skills (obsidian-markdown, obsidian-bases, obsidian-cli, json-canvas) | Minimal spec-compliant stubs; `personas_primary: none`, `capability: meta`, `status: reference` | #148 | ✅ |
+| Vendored idea-capturer (eddiebe147) | Minimal spec-compliant stub; `personas_primary: capture_manager`, `capability: draft`, `shipley_phases: [capture]` | #148 | ✅ |
+| `SkillChainContract` registered | Added to `_DEFAULT_CONTRACTS` in `src/skills/chain_contracts.py`; `accepts={raw_note, polished_note}`, `produces={polished_note, evergreen_doc}`, `downstream_skills={proposal-generator}`, `phase_rank=25`, `role=knowledge_curation` | #148 | ✅ |
+| `proposal-generator` accepts `evergreen_doc` | Updated `accepts` set in existing contract to close the knowledge-vault → proposal chain | #148 | ✅ |
 
 ---
 

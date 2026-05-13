@@ -1,0 +1,89 @@
+{
+  "skill_name": "knowledge-vault",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I captured a fleeting note while reading the AFCAP6 RFP: 'Section L.7 requires a separate Technical Approach volume with a 25-page limit and a staffing plan.' Help me polish this into a proper vault note, identify what entity types it maps to, and surface any related notes already in the vault.",
+      "expected_output": "A polished note with a descriptive title, structured body referencing proposal_instruction and page_limit entities, at least one entity proposal (proposal_instruction or deliverable type), and a list of related notes from kg_chunks. Status promoted from raw to polished.",
+      "assertions": [
+        {
+          "name": "polished_note_has_title",
+          "check": "Output contains a note title distinct from the raw input text"
+        },
+        {
+          "name": "entity_proposal_present",
+          "check": "Output includes at least one entity proposal with a valid VALID_ENTITY_TYPES type (proposal_instruction, deliverable, requirement, or similar)"
+        },
+        {
+          "name": "status_advanced",
+          "check": "Output indicates the note status was advanced to 'polished' or recommends calling the polish endpoint"
+        },
+        {
+          "name": "related_notes_surfaced",
+          "check": "Output attempts to find related vault notes or workspace entities via kg_chunks or kg_entities"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Here is a polished note from my vault: 'Evaluation criteria MIL-SPEC-compliant past performance at similar scale (1,500+ users, 3-year CPFF completion term, CMMC Level 2). Customer hot button: continuity of operations.' Review its entity proposals, accept the ones that are clearly in scope, and promote this note to evergreen status.",
+      "expected_output": "Agent reviews the note's entity proposals against the active workspace KG, accepts entities matching VALID_ENTITY_TYPES, proposes accept-to-KG for verifiable ones, and advances the note status to 'evergreen'. Cites chunk_ids or entity names from the KG to justify acceptance.",
+      "assertions": [
+        {
+          "name": "entity_review_performed",
+          "check": "Output shows evaluation of proposed entities against workspace KG (kg_entities or kg_query call)"
+        },
+        {
+          "name": "evergreen_promotion_recommended",
+          "check": "Output recommends or performs promotion to 'evergreen' status"
+        },
+        {
+          "name": "accepts_valid_entity_types",
+          "check": "Accepted entities use only names from VALID_ENTITY_TYPES (evaluation_factor, requirement, past_performance_reference, customer_priority, etc.)"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I have 4 evergreen notes in my vault about the Technical Approach section. Find conceptual links between them, identify the strongest connection to an active proposal thread in the workspace KG, and recommend which note should anchor the discriminator statement in Volume II Section 3.",
+      "expected_output": "Agent queries the KG for strategic_theme, discriminator, and evaluation_factor entities related to the Technical Approach, maps them to the evergreen notes by semantic overlap, and names the best anchor note with a 1-2 sentence justification citing evidence from the KG.",
+      "assertions": [
+        {
+          "name": "kg_queried_for_links",
+          "check": "Output includes a kg_chunks or kg_query call to find workspace entities connected to the Technical Approach"
+        },
+        {
+          "name": "anchor_note_named",
+          "check": "Output names one specific note as the recommended anchor with a reason"
+        },
+        {
+          "name": "downstream_handoff_mentioned",
+          "check": "Output references proposal-generator or suggests passing the anchor note downstream to the proposal drafter"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "I want to see all my raw notes for the AFCAP6 workspace. Which ones are ready to polish (have enough substance) and which are too thin? Give me a quick triage.",
+      "expected_output": "Agent calls GET /api/ui/vault/notes (or kg_entities for vault notes), groups by status=raw, evaluates body length and keyword density against Shipley vocabulary, and returns a triage list: notes to polish now vs. notes needing more context.",
+      "assertions": [
+        {
+          "name": "raw_notes_retrieved",
+          "check": "Output shows a list of raw notes (uses intelFeedNotes or kg_entities vault slice)"
+        },
+        {
+          "name": "triage_categories_present",
+          "check": "Output has at least two categories: ready-to-polish and needs-more-context (or equivalent)"
+        },
+        {
+          "name": "no_hallucinated_notes",
+          "check": "Output only references notes that could exist in the workspace; does not invent note IDs or titles"
+        }
+      ],
+      "files": []
+    }
+  ]
+}

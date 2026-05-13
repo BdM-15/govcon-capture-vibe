@@ -281,12 +281,32 @@ _DEFAULT_CONTRACTS = [
         renderable=True,
     ),
     SkillChainContract(
+        skill="knowledge-vault",
+        keywords={
+            "note", "notes", "vault", "fleeting", "polish", "polished",
+            "evergreen", "raw", "capture", "captures", "curation", "curate",
+            "zettelkasten", "link", "links", "triage", "promote", "entity",
+            "proposal", "wikilink",
+        },
+        accepts={"raw_note", "polished_note"},
+        produces={"polished_note", "evergreen_doc"},
+        artifact_extensions=("json", "md"),
+        downstream_skills={"proposal-generator"},
+        phase_rank=25,
+        role="knowledge_curation",
+        quality_gate=(
+            "Polished output must contain at least one entity proposal with a "
+            "type from VALID_ENTITY_TYPES and a confidence ≥ 0.7. "
+            "Evergreen output must cite at least one chunk_id or KG entity name."
+        ),
+    ),
+    SkillChainContract(
         skill="proposal-generator",
         keywords={
             "proposal", "respond", "response", "draft", "outline", "volume",
             "executive", "summary", "theme", "themes", "fab", "matrix",
         },
-        accepts={"strategy_handoff", "compliance_findings", "pricing_stack", "workload_handoff", "oci_findings"},
+        accepts={"strategy_handoff", "compliance_findings", "pricing_stack", "workload_handoff", "oci_findings", "evergreen_doc"},
         produces={"proposal_draft", "compliance_matrix"},
         artifact_extensions=("json", "md", "html", "docx", "xlsx"),
         downstream_skills={"renderers", "huashu-design"},
