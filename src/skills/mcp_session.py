@@ -7,14 +7,10 @@ import json
 import logging
 import os
 import shutil
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Optional
 
-from src.skills.mcp_manifest import MCPManifest
-from src.skills.mcp_protocol import (
-    MCPToolDescriptor,
-    extract_text_content,
-    parse_tool_descriptors,
-)
 from src.skills.settings import (
     mcp_handshake_timeout,
     mcp_shutdown_timeout,
@@ -22,6 +18,174 @@ from src.skills.settings import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Protocol helpers (inlined from mcp_protocol)
+# ---------------------------------------------------------------------------
+
+_TOOL_NAME_MAX = 64
+
+
+@dataclass
+class MCPToolDescriptor:
+    """An MCP-discovered tool, ready to be wrapped into a ToolSpec."""
+
+    server: str
+    name: str
+    description: str
+    input_schema: dict[str, Any]
+
+    @property
+    def namespaced_name(self) -> str:
+        candidate = f"mcp__{self.server}__{self.name}"
+        if len(candidate) > _TOOL_NAME_MAX:
+            candidate = candidate[:_TOOL_NAME_MAX]
+        return candidate
+
+
+def parse_tool_descriptors(
+    server_name: str,
+    raw_tools: list[Any],
+) -> list[MCPToolDescriptor]:
+    """Normalize ``tools/list`` payload entries into descriptors."""
+    descriptors: list[MCPToolDescriptor] = []
+    for entry in raw_tools:
+        if not isinstance(entry, dict):
+            continue
+        name = str(entry.get("name") or "").strip()
+        if not name:
+            continue
+        schema = entry.get("inputSchema") or {"type": "object", "properties": {}}
+        if not isinstance(schema, dict):
+            schema = {"type": "object", "properties": {}}
+        descriptors.append(
+            MCPToolDescriptor(
+                server=server_name,
+                name=name,
+                description=str(entry.get("description") or "").strip(),
+                input_schema=schema,
+            )
+        )
+    return descriptors
+
+
+def extract_text_content(content: Any) -> str:
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, list):
+        return json.dumps(content, ensure_ascii=False, default=str)
+    parts: list[str] = []
+    for item in content:
+        if not isinstance(item, dict):
+            parts.append(str(item))
+            continue
+        kind = item.get("type")
+        if kind == "text":
+            parts.append(str(item.get("text") or ""))
+        elif kind == "image":
+            parts.append(f"[image:{item.get('mimeType') or 'unknown'}]")
+        elif kind == "resource":
+            resource = item.get("resource")
+            uri = resource.get("uri") if isinstance(resource, dict) else None
+            parts.append(f"[resource:{uri or 'embedded'}]")
+        else:
+            parts.append(json.dumps(item, ensure_ascii=False, default=str))
+    return "\n".join(part for part in parts if part)
+
+
+# ---------------------------------------------------------------------------
+# Manifest helpers (inlined from mcp_manifest)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class MCPManifest:
+    """Theseus-side description of a vendored MCP server."""
+
+    name: str
+    description: str
+    command: list[str]
+    cwd: Path
+    env_required: list[str] = field(default_factory=list)
+    env_optional: list[str] = field(default_factory=list)
+    vendored_from: str = ""
+    vendored_commit: str = ""
+    vendored_at: str = ""
+    license: str = ""
+
+    def missing_env(self, env: Optional[dict[str, str]] = None) -> list[str]:
+        """Return required env vars absent from env or os.environ."""
+        scope = env if env is not None else os.environ
+        return [key for key in self.env_required if not scope.get(key)]
+
+
+def load_manifest(manifest_path: Path) -> MCPManifest:
+    """Parse tools/mcps/<name>/theseus_manifest.json."""
+    if not manifest_path.is_file():
+        raise FileNotFoundError(f"manifest not found: {manifest_path}")
+    try:
+        raw = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"manifest {manifest_path}: {exc}") from exc
+
+    if not isinstance(raw, dict):
+        raise ValueError(f"manifest {manifest_path}: top-level must be a JSON object")
+    name = str(raw.get("name") or "").strip()
+    if not name:
+        raise ValueError(f"manifest {manifest_path}: missing 'name'")
+    command = raw.get("command")
+    if not isinstance(command, list) or not command or not all(isinstance(entry, str) for entry in command):
+        raise ValueError(
+            f"manifest {manifest_path}: 'command' must be a non-empty list of strings"
+        )
+    return MCPManifest(
+        name=name,
+        description=str(raw.get("description") or ""),
+        command=list(command),
+        cwd=manifest_path.parent.resolve(),
+        env_required=[str(entry) for entry in (raw.get("env_required") or [])],
+        env_optional=[str(entry) for entry in (raw.get("env_optional") or [])],
+        vendored_from=str(raw.get("vendored_from") or ""),
+        vendored_commit=str(raw.get("vendored_commit") or ""),
+        vendored_at=str(raw.get("vendored_at") or ""),
+        license=str(raw.get("license") or ""),
+    )
+
+
+def discover_manifests(mcps_root: Path) -> dict[str, MCPManifest]:
+    """Scan tools/mcps/*/theseus_manifest.json into a name -> manifest map."""
+    found: dict[str, MCPManifest] = {}
+    if not mcps_root.is_dir():
+        logger.debug("MCP root %s does not exist; no manifests loaded", mcps_root)
+        return found
+    for child in sorted(mcps_root.iterdir()):
+        if not child.is_dir():
+            continue
+        manifest_path = child / "theseus_manifest.json"
+        if not manifest_path.is_file():
+            continue
+        try:
+            manifest = load_manifest(manifest_path)
+        except (ValueError, FileNotFoundError) as exc:
+            logger.warning("Skipping MCP at %s: %s", child, exc)
+            continue
+        if manifest.name in found:
+            logger.warning(
+                "Duplicate MCP name %r (second copy at %s) — keeping first",
+                manifest.name,
+                child,
+            )
+            continue
+        found[manifest.name] = manifest
+    return found
+
+
+# ---------------------------------------------------------------------------
+# Session
+# ---------------------------------------------------------------------------
 
 _MCP_PROTOCOL_VERSION = "2025-06-18"
 

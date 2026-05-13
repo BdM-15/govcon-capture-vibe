@@ -1,4 +1,4 @@
-from src.skills.mcp_protocol import extract_text_content, parse_tool_descriptors
+from src.skills.mcp_session import extract_text_content, parse_tool_descriptors
 
 
 def test_parse_tool_descriptors_skips_invalid_entries() -> None:

@@ -39,8 +39,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-from src.skills.mcp_manifest import MCPManifest, discover_manifests, load_manifest
-from src.skills.mcp_session import MCPError, MCPSession
+from src.skills.mcp_session import MCPError, MCPManifest, MCPSession, discover_manifests, load_manifest
 
 logger = logging.getLogger(__name__)
 
