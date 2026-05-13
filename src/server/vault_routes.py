@@ -183,12 +183,36 @@ class SaveAsNoteRequest(BaseModel):
     source_title: str = ""
 
 
+class FeedToWorkspaceRequest(BaseModel):
+    workspace: str
+
+
+def _score_note(note: dict, entity_terms: list[str]) -> float:
+    """Keyword-overlap score between a vault note and a list of entity terms.
+
+    Each entity term contributes its word tokens; the score is the sum of
+    matching token occurrences (case-insensitive) normalised by note length.
+    """
+    text = ((note.get("title") or "") + " " + (note.get("body") or "")).lower()
+    if not text.strip() or not entity_terms:
+        return 0.0
+    tokens: list[str] = []
+    for term in entity_terms:
+        tokens.extend(w for w in term.lower().split() if len(w) > 2)
+    if not tokens:
+        return 0.0
+    hits = sum(text.count(tok) for tok in tokens)
+    doc_len = max(len(text.split()), 1)
+    return round(hits / doc_len, 4)
+
+
 def register_vault_routes(
     app: FastAPI,
     *,
     vault_store: VaultStore,
     vault_curation_func: Callable | None = None,
     query_func: Callable | None = None,
+    entities_func: Callable | None = None,
 ) -> None:
     """Mount /api/ui/vault/* routes onto *app*."""
 
@@ -373,4 +397,62 @@ def register_vault_routes(
             source="ask_theseus",
         )
         return JSONResponse(new_note, status_code=201)
+
+    # ---------------------------------------------------------------------------
+    # Knowledge Linker
+    # ---------------------------------------------------------------------------
+
+    @app.get("/api/ui/vault/recommend", tags=["theseus-vault"])
+    async def recommend_notes(
+        workspace: str | None = None,
+        limit: int = 5,
+    ) -> JSONResponse:
+        """Return vault notes ranked by semantic overlap with workspace entities.
+
+        When *workspace* is not supplied or *entities_func* is not configured,
+        returns an empty list (graceful degradation).
+        """
+        if not workspace or entities_func is None:
+            return JSONResponse({"recommendations": []})
+
+        try:
+            entity_terms: list[str] = await entities_func(workspace)
+        except Exception:
+            logger.exception("entities_func failed for workspace %s", workspace)
+            return JSONResponse({"recommendations": []})
+
+        if not entity_terms:
+            return JSONResponse({"recommendations": []})
+
+        notes = vault_store.list_notes()
+        scored: list[tuple[float, dict]] = []
+        for note in notes:
+            score = _score_note(note, entity_terms)
+            if score > 0:
+                scored.append((score, note))
+
+        scored.sort(key=lambda t: t[0], reverse=True)
+        top = scored[:max(1, limit)]
+
+        recommendations = []
+        for score, note in top:
+            body = note.get("body") or ""
+            excerpt = (body[:120] + "…") if len(body) > 120 else body
+            recommendations.append({
+                "id": note["id"],
+                "title": note.get("title", ""),
+                "type": note.get("type", "raw"),
+                "status": note.get("status", "raw"),
+                "excerpt": excerpt,
+                "score": score,
+            })
+
+        return JSONResponse({"recommendations": recommendations})
+
+    @app.post("/api/ui/vault/notes/{note_id}/feed", tags=["theseus-vault"])
+    async def feed_to_workspace(note_id: str, payload: FeedToWorkspaceRequest) -> JSONResponse:
+        """Associate a vault note with a workspace by setting its pursuit field."""
+        vault_store.read(note_id)  # raises 404 if missing
+        updated = vault_store.update(note_id, pursuit=payload.workspace)
+        return JSONResponse(updated)
 

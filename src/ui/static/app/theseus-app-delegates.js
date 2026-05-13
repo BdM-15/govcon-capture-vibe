@@ -884,6 +884,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusVaultSaveAsNote(this);
     },
 
+    async vaultLoadRecommendations() {
+      return window.theseusVaultLoadRecommendations(this);
+    },
+
+    async vaultFeedToWorkspace(id) {
+      return window.theseusVaultFeedToWorkspace(this, id);
+    },
+
     filteredLmRows() {
       return window.theseusFilteredLmRows(this);
     },

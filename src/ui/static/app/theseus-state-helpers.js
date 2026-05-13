@@ -282,5 +282,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultAskAnswer: "",
     vaultAskLoading: false,
     vaultAskSources: [],
+    vaultRecommendations: [],
+    vaultRecommendLoading: false,
   };
 };

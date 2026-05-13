@@ -162,3 +162,37 @@ window.theseusVaultSaveAsNote = async function theseusVaultSaveAsNote(app) {
   }
 };
 
+window.theseusVaultLoadRecommendations = async function theseusVaultLoadRecommendations(app) {
+  const workspace = app.stats && app.stats.workspace ? app.stats.workspace : null;
+  if (!workspace) {
+    app.vaultRecommendations = [];
+    return;
+  }
+  app.vaultRecommendLoading = true;
+  try {
+    const data = await app.api("/api/ui/vault/recommend?workspace=" + encodeURIComponent(workspace) + "&limit=5");
+    app.vaultRecommendations = data.recommendations || [];
+  } catch (error) {
+    app.toast("Failed to load recommendations: " + error.message, "error");
+    app.vaultRecommendations = [];
+  } finally {
+    app.vaultRecommendLoading = false;
+  }
+};
+
+window.theseusVaultFeedToWorkspace = async function theseusVaultFeedToWorkspace(app, id) {
+  const workspace = app.stats && app.stats.workspace ? app.stats.workspace : null;
+  if (!workspace || !id) return;
+  try {
+    const resp = await fetch("/api/ui/vault/notes/" + id + "/feed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspace }),
+    });
+    if (!resp.ok) throw new Error("Feed failed (" + resp.status + ")");
+    app.toast("Note fed to workspace", "success");
+    await window.theseusVaultLoadRecommendations(app);
+  } catch (error) {
+    app.toast("Feed to workspace error: " + error.message, "error");
+  }
+};

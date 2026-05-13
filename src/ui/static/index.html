@@ -4975,6 +4975,64 @@
                   </button>
                 </div>
 
+                <!-- Relevant in your vault (Knowledge Linker) -->
+                <div
+                  x-show="stats && stats.workspace"
+                  class="border-t border-edge-strong/20 pt-3 mt-1"
+                >
+                  <div class="flex items-center justify-between mb-2">
+                    <p class="text-xs font-medium text-text-400 uppercase tracking-wider">Relevant in your vault</p>
+                    <button
+                      type="button"
+                      class="text-text-500 hover:text-text-300 transition-colors"
+                      @click="vaultLoadRecommendations()"
+                      title="Refresh recommendations"
+                    >
+                      <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                    </button>
+                  </div>
+                  <!-- loading -->
+                  <div x-show="vaultRecommendLoading" class="py-3 text-center text-xs text-text-500">
+                    <i data-lucide="loader" class="inline-block w-3 h-3 animate-spin mr-1"></i>
+                    Scanning…
+                  </div>
+                  <!-- empty state -->
+                  <div
+                    x-show="!vaultRecommendLoading && vaultRecommendations.length === 0"
+                    class="py-2 text-xs text-text-500 italic"
+                  >
+                    No closely related notes found.
+                  </div>
+                  <!-- recommendation cards -->
+                  <template x-for="rec in vaultRecommendations" :key="rec.id">
+                    <div class="mb-2 p-2 rounded bg-ink-800 border border-edge-strong/20 text-xs">
+                      <div class="flex items-start justify-between gap-1 mb-1">
+                        <span class="font-medium text-text-200 truncate" x-text="rec.title"></span>
+                        <span class="shrink-0 px-1 py-0.5 rounded text-[10px] font-semibold bg-ink-700 text-neon-cyan/80 border border-neon-cyan/20" x-text="rec.type"></span>
+                      </div>
+                      <div class="text-text-500 line-clamp-2 mb-1.5" x-text="rec.excerpt"></div>
+                      <div class="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border border-edge-strong/30 text-text-400 hover:text-text-200 hover:bg-ink-700 transition-colors"
+                          @click="vaultPromoteNote(rec.id)"
+                          title="Promote to evergreen"
+                        >
+                          <i data-lucide="arrow-up-circle" class="w-2.5 h-2.5"></i> Promote
+                        </button>
+                        <button
+                          type="button"
+                          class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border border-edge-strong/30 text-text-400 hover:text-text-200 hover:bg-ink-700 transition-colors"
+                          @click="vaultFeedToWorkspace(rec.id)"
+                          title="Feed this note to the active workspace"
+                        >
+                          <i data-lucide="link" class="w-2.5 h-2.5"></i> Feed to workspace
+                        </button>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+
               </div>
 
               <!-- Right pane open button (shown when pane is closed and a note is active) -->
