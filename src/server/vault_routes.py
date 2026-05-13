@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -72,6 +72,43 @@ class NoteUpdate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Background classification
+# ---------------------------------------------------------------------------
+
+_VALID_NOTE_TYPES = frozenset({"insight", "action", "risk", "theme", "question", "raw"})
+
+_CLASSIFY_SYSTEM = (
+    "You are a govcon capture analyst. Classify the note into exactly one type. "
+    "Respond with one word only."
+)
+
+
+async def _classify_and_update(
+    vault_store: VaultStore,
+    note_id: str,
+    title: str,
+    body: str,
+    vault_curation_func: Callable,
+) -> None:
+    """Background task: call vault_curation_func, infer type, patch the note."""
+    prompt = (
+        f"Classify this capture note into exactly one of: "
+        f"insight|action|risk|theme|question|raw\n"
+        f"Title: {title}\nBody: {body}\nRespond with one word only."
+    )
+    try:
+        raw = await vault_curation_func(prompt, system_prompt=_CLASSIFY_SYSTEM)
+        inferred = raw.strip().lower().split()[0] if raw.strip() else "raw"
+        # Strip punctuation in case the model adds it
+        inferred = inferred.rstrip(".!,;:")
+        if inferred not in _VALID_NOTE_TYPES:
+            inferred = "raw"
+        vault_store.update(note_id, type=inferred)
+    except Exception:
+        logger.exception("Vault background classify failed for note %s", note_id)
+
+
+# ---------------------------------------------------------------------------
 # Route registration
 # ---------------------------------------------------------------------------
 
@@ -80,6 +117,7 @@ def register_vault_routes(
     app: FastAPI,
     *,
     vault_store: VaultStore,
+    vault_curation_func: Callable | None = None,
 ) -> None:
     """Mount /api/ui/vault/* routes onto *app*."""
 
@@ -89,8 +127,11 @@ def register_vault_routes(
         return JSONResponse({"notes": vault_store.list_notes()})
 
     @app.post("/api/ui/vault/notes", tags=["theseus-vault"])
-    async def create_note(payload: NoteCreate) -> JSONResponse:
-        """Create a new vault note and return it."""
+    async def create_note(
+        payload: NoteCreate,
+        background_tasks: BackgroundTasks,
+    ) -> JSONResponse:
+        """Create a new vault note. If vault_curation_func is wired, AI classifies type in background."""
         note = vault_store.create(
             title=payload.title,
             body=payload.body,
@@ -100,6 +141,15 @@ def register_vault_routes(
             pursuit=payload.pursuit,
             tags=payload.tags,
         )
+        if vault_curation_func is not None:
+            background_tasks.add_task(
+                _classify_and_update,
+                vault_store,
+                note["id"],
+                payload.title,
+                payload.body,
+                vault_curation_func,
+            )
         return JSONResponse(note, status_code=201)
 
     @app.get("/api/ui/vault/notes/{note_id}", tags=["theseus-vault"])

@@ -4553,6 +4553,66 @@
             </div>
           </section>
 
+          <!-- ============== VAULT ============== -->
+          <section x-show="active === 'vault'" x-cloak>
+            <div class="flex items-end justify-between mb-5 flex-wrap gap-3">
+              <div>
+                <h1 class="text-2xl font-bold tracking-tight">
+                  <span class="h1-gradient">Vault</span>
+                </h1>
+                <p class="text-sm text-slate-500 mt-1">
+                  Your capture notes and Intel Feed — ideas, risks, themes, and
+                  automatically classified intelligence from the workspace.
+                </p>
+              </div>
+            </div>
+
+            <!-- tab bar -->
+            <div class="flex gap-1 mb-4 border-b border-edge-strong/40">
+              <button
+                id="vault-tab-notes"
+                class="px-4 py-2 text-sm font-medium rounded-t-md transition-colors"
+                :class="vaultTab === 'notes'
+                  ? 'bg-ink-800 text-text-100 border border-b-0 border-edge-strong/60'
+                  : 'text-text-400 hover:text-text-200'"
+                @click="vaultTab = 'notes'"
+              >
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                  Notes
+                </span>
+              </button>
+              <button
+                id="vault-tab-intel"
+                class="px-4 py-2 text-sm font-medium rounded-t-md transition-colors"
+                :class="vaultTab === 'intel-feed'
+                  ? 'bg-ink-800 text-text-100 border border-b-0 border-edge-strong/60'
+                  : 'text-text-400 hover:text-text-200'"
+                @click="vaultTab = 'intel-feed'"
+              >
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="inbox" class="w-3.5 h-3.5"></i>
+                  Intel Feed
+                </span>
+              </button>
+            </div>
+
+            <!-- notes tab content -->
+            <div x-show="vaultTab === 'notes'">
+              <p class="text-sm text-text-400">
+                Capture notes live here. Use the
+                <span class="font-mono text-neon-cyan">+</span> FAB to add one.
+              </p>
+            </div>
+
+            <!-- intel feed tab content -->
+            <div x-show="vaultTab === 'intel-feed'">
+              <p class="text-sm text-text-400">
+                Intelligence automatically extracted from workspace documents appears here.
+              </p>
+            </div>
+          </section>
+
           <!-- ============== ACTIVITY LOG ============== -->
           <!--
             Live tail of the per-workspace processing log file
@@ -7938,18 +7998,17 @@
               body: JSON.stringify({
                 title: quickCapture.title.trim(),
                 body: quickCapture.body.trim(),
-                type: quickCapture.type,
+                type: 'raw',
                 status: 'raw',
                 source: 'manual',
               }),
             })
             .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)))
             .then(() => {
-              toast('Note captured.', 'success');
+              toast('Note captured — AI classifying…', 'success');
               quickCapture.open = false;
               quickCapture.title = '';
               quickCapture.body = '';
-              quickCapture.type = 'insight';
             })
             .catch(err => { quickCapture.error = err.detail || err.message || 'Save failed'; })
             .finally(() => { quickCapture.saving = false; })
@@ -7974,21 +8033,10 @@
           <textarea
             class="input-field w-full mb-3 resize-y"
             rows="4"
-            placeholder="Note content…"
+            placeholder="Dump your thoughts — AI will classify the type…"
             x-model="quickCapture.body"
             maxlength="32768"
           ></textarea>
-
-          <!-- type -->
-          <label class="block mb-1 text-xs text-text-300 font-medium">Type</label>
-          <select class="input-field w-full mb-4" x-model="quickCapture.type">
-            <option value="insight">Insight</option>
-            <option value="action">Action</option>
-            <option value="risk">Risk</option>
-            <option value="theme">Theme</option>
-            <option value="question">Question</option>
-            <option value="raw">Raw</option>
-          </select>
 
           <!-- inline error -->
           <p

@@ -29,6 +29,12 @@ window.createTheseusNavGroups = function createTheseusNavGroups() {
           icon: "folder-open",
           accent: "lime",
         },
+        {
+          id: "vault",
+          label: "Vault",
+          icon: "book-open",
+          accent: "lime",
+        },
       ],
     },
     {
@@ -64,25 +70,6 @@ window.createTheseusNavGroups = function createTheseusNavGroups() {
           id: "activity",
           label: "Activity Log",
           icon: "activity",
-          accent: "amber",
-        },
-      ],
-    },
-    {
-      id: "knowledge",
-      label: "KNOWLEDGE",
-      accent: "lime",
-      items: [
-        {
-          id: "vault",
-          label: "Vault",
-          icon: "book-open",
-          accent: "lime",
-        },
-        {
-          id: "intel-feed",
-          label: "Intel Feed",
-          icon: "inbox",
           accent: "amber",
         },
       ],

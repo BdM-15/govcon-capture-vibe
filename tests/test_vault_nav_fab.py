@@ -1,4 +1,12 @@
-"""Tests for #138 — KNOWLEDGE nav group + Quick-Capture FAB."""
+"""Tests for vault nav + Quick-Capture FAB design (redesign from #138).
+
+Design decisions encoded here:
+- Vault lives under CAPTURE nav group (same mental mode as Studio)
+- No standalone KNOWLEDGE nav group
+- Intel Feed is a tab inside the Vault page, not a separate nav destination
+- FAB modal = brain-dump only (title + body); AI infers type in background
+- quickCapture state has no user-facing type field
+"""
 from __future__ import annotations
 
 import json
@@ -12,11 +20,10 @@ _INDEX = _ROOT / "src" / "ui" / "static" / "index.html"
 _CSS = _ROOT / "src" / "ui" / "static" / "styles" / "theseus.css"
 
 
-# ── nav group helpers ──────────────────────────────────────────────────────────
+# ── nav group parser ───────────────────────────────────────────────────────────
 
 def _parse_nav_groups(js: str) -> list[dict]:
     """Extract the returned array literal from createTheseusNavGroups()."""
-    # Pull the return [...] block by balanced-bracket walking
     match = re.search(r"return\s*(\[)", js)
     assert match, "No return [...] found in createTheseusNavGroups"
     start = match.start(1)
@@ -29,100 +36,142 @@ def _parse_nav_groups(js: str) -> list[dict]:
             if depth == 0:
                 raw = js[start : i + 1]
                 break
-    # Normalise JS object literals to JSON by quoting bare keys, removing
-    # trailing commas, and stripping single-line comments.
-    raw = re.sub(r"//[^\n]*", "", raw)                  # strip // comments
-    raw = re.sub(r",\s*([}\]])", r"\1", raw)             # trailing commas
-    raw = re.sub(r"([{,]\s*)(\w+)(\s*:)", r'\1"\2"\3', raw)  # bare keys → "key"
+    raw = re.sub(r"//[^\n]*", "", raw)
+    raw = re.sub(r",\s*([}\]])", r"\1", raw)
+    raw = re.sub(r"([{,]\s*)(\w+)(\s*:)", r'\1"\2"\3', raw)
     return json.loads(raw)
 
 
-# ── Tracer bullet ─────────────────────────────────────────────────────────────
+def _all_item_ids(groups: list[dict]) -> list[str]:
+    return [item["id"] for g in groups for item in g.get("items", [])]
 
-def test_knowledge_nav_group_exists() -> None:
-    """KNOWLEDGE group must be present in createTheseusNavGroups()."""
+
+# ── Tracer bullet: vault in CAPTURE ──────────────────────────────────────────
+
+def test_vault_item_exists_in_capture_group() -> None:
+    """Vault must be a nav item inside the CAPTURE group."""
     js = _CONSTANTS.read_text(encoding="utf-8")
     groups = _parse_nav_groups(js)
-    ids = [g["id"] for g in groups]
-    assert "knowledge" in ids, f"No 'knowledge' group found; groups: {ids}"
+    capture = next((g for g in groups if g["id"] == "capture"), None)
+    assert capture is not None, "No 'capture' group found"
+    item_ids = [i["id"] for i in capture["items"]]
+    assert "vault" in item_ids, f"'vault' not in CAPTURE items: {item_ids}"
 
 
 # ── Nav group structure ───────────────────────────────────────────────────────
 
-def test_knowledge_group_has_vault_and_intel_feed_items() -> None:
+def test_no_knowledge_nav_group() -> None:
+    """KNOWLEDGE group must not exist — vault belongs to CAPTURE."""
     js = _CONSTANTS.read_text(encoding="utf-8")
     groups = _parse_nav_groups(js)
-    kg = next(g for g in groups if g["id"] == "knowledge")
-    item_ids = [i["id"] for i in kg["items"]]
-    assert "vault" in item_ids
-    assert "intel-feed" in item_ids
+    ids = [g["id"] for g in groups]
+    assert "knowledge" not in ids, (
+        "Found unexpected 'knowledge' nav group — vault should live under CAPTURE"
+    )
 
 
-def test_knowledge_group_vault_item_spec() -> None:
+def test_no_intel_feed_nav_item() -> None:
+    """intel-feed must not be a top-level nav item — it's a tab inside Vault."""
     js = _CONSTANTS.read_text(encoding="utf-8")
     groups = _parse_nav_groups(js)
-    kg = next(g for g in groups if g["id"] == "knowledge")
-    vault = next(i for i in kg["items"] if i["id"] == "vault")
+    all_ids = _all_item_ids(groups)
+    assert "intel-feed" not in all_ids, (
+        "'intel-feed' should be a tab inside the Vault panel, not a nav item"
+    )
+
+
+def test_vault_item_spec() -> None:
+    """Vault nav item must use book-open icon and lime accent."""
+    js = _CONSTANTS.read_text(encoding="utf-8")
+    groups = _parse_nav_groups(js)
+    capture = next(g for g in groups if g["id"] == "capture")
+    vault = next(i for i in capture["items"] if i["id"] == "vault")
     assert vault["icon"] == "book-open"
     assert vault["accent"] == "lime"
 
 
-def test_knowledge_group_intel_feed_item_spec() -> None:
+def test_vault_after_studio_in_capture() -> None:
+    """Vault must appear after Studio in CAPTURE — same capture workflow order."""
     js = _CONSTANTS.read_text(encoding="utf-8")
     groups = _parse_nav_groups(js)
-    kg = next(g for g in groups if g["id"] == "knowledge")
-    feed = next(i for i in kg["items"] if i["id"] == "intel-feed")
-    assert feed["icon"] == "inbox"
-    assert feed["accent"] == "amber"
-
-
-def test_knowledge_group_between_tools_and_system() -> None:
-    js = _CONSTANTS.read_text(encoding="utf-8")
-    groups = _parse_nav_groups(js)
-    ids = [g["id"] for g in groups]
-    assert "tools" in ids and "knowledge" in ids and "system" in ids
-    tools_idx = ids.index("tools")
-    knowledge_idx = ids.index("knowledge")
-    system_idx = ids.index("system")
-    assert tools_idx < knowledge_idx < system_idx, (
-        f"Expected tools({tools_idx}) < knowledge({knowledge_idx}) < system({system_idx})"
+    capture = next(g for g in groups if g["id"] == "capture")
+    item_ids = [i["id"] for i in capture["items"]]
+    assert "studio" in item_ids and "vault" in item_ids
+    assert item_ids.index("studio") < item_ids.index("vault"), (
+        f"vault({item_ids.index('vault')}) should come after studio({item_ids.index('studio')})"
     )
 
 
-# ── Quick-Capture FAB — markup ────────────────────────────────────────────────
+# ── FAB — brain-dump UX (no type dropdown for user) ──────────────────────────
 
 def test_fab_element_present_in_index_html() -> None:
     html = _INDEX.read_text(encoding="utf-8")
-    assert "quick-capture-fab" in html, "FAB element with class 'quick-capture-fab' not found in index.html"
+    assert "quick-capture-fab" in html
 
 
 def test_fab_opens_quick_capture_modal() -> None:
     html = _INDEX.read_text(encoding="utf-8")
-    # The FAB button must trigger quickCapture.open = true (or equivalent)
-    assert "quickCapture" in html, "No quickCapture Alpine binding found in index.html"
+    assert "quickCapture.open" in html
 
 
-def test_fab_modal_has_title_body_type_fields() -> None:
+def test_fab_modal_has_title_field() -> None:
     html = _INDEX.read_text(encoding="utf-8")
-    assert "quickCapture.title" in html, "Missing title field binding"
-    assert "quickCapture.body" in html, "Missing body field binding"
-    assert "quickCapture.type" in html, "Missing type field binding"
+    assert "quickCapture.title" in html
 
 
-# ── Quick-Capture FAB — state ─────────────────────────────────────────────────
+def test_fab_modal_has_body_field() -> None:
+    html = _INDEX.read_text(encoding="utf-8")
+    assert "quickCapture.body" in html
 
-def test_quick_capture_state_initialized_in_state_helpers() -> None:
+
+def test_fab_modal_has_no_type_dropdown() -> None:
+    """User should not see a type selector — AI infers it in the background."""
+    html = _INDEX.read_text(encoding="utf-8")
+    # There must be no <select> for type inside the quick-capture-modal.
+    # We test for the absence of the explicit type-select binding from #138.
+    assert 'x-model="quickCapture.type"' not in html, (
+        "FAB modal must not expose a type dropdown — AI classifies automatically"
+    )
+
+
+# ── FAB — Alpine state ────────────────────────────────────────────────────────
+
+def test_quick_capture_state_initialized() -> None:
     js = _STATE.read_text(encoding="utf-8")
-    assert "quickCapture" in js, "quickCapture state not initialized in theseus-state-helpers.js"
+    assert "quickCapture" in js
+
+
+def test_quick_capture_state_has_no_user_type_field() -> None:
+    """quickCapture state has no user-facing 'type' property (AI sets it)."""
+    js = _STATE.read_text(encoding="utf-8")
+    # Locate the quickCapture object block and assert 'type:' is absent within it
+    match = re.search(r"quickCapture\s*:\s*\{([^}]+)\}", js, re.DOTALL)
+    assert match, "quickCapture state block not found in theseus-state-helpers.js"
+    block = match.group(1)
+    assert "type:" not in block, (
+        "quickCapture state must not expose a 'type' field — AI handles classification"
+    )
+
+
+# ── Vault panel — tabbed layout ───────────────────────────────────────────────
+
+def test_vault_panel_has_notes_tab() -> None:
+    html = _INDEX.read_text(encoding="utf-8")
+    assert "vault-tab-notes" in html, "Vault panel must have a Notes tab (id/ref vault-tab-notes)"
+
+
+def test_vault_panel_has_intel_feed_tab() -> None:
+    html = _INDEX.read_text(encoding="utf-8")
+    assert "vault-tab-intel" in html, "Vault panel must have an Intel Feed tab (id/ref vault-tab-intel)"
 
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
 
 def test_fab_css_class_defined() -> None:
     css = _CSS.read_text(encoding="utf-8")
-    assert ".quick-capture-fab" in css, ".quick-capture-fab CSS class not defined"
+    assert ".quick-capture-fab" in css
 
 
 def test_fab_modal_css_class_defined() -> None:
     css = _CSS.read_text(encoding="utf-8")
-    assert ".quick-capture-modal" in css, ".quick-capture-modal CSS class not defined"
+    assert ".quick-capture-modal" in css

@@ -259,9 +259,9 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       open: false,
       title: "",
       body: "",
-      type: "insight",
       error: null,
       saving: false,
     },
+    vaultTab: "notes",
   };
 };
