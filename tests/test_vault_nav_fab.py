@@ -4,8 +4,8 @@ Design decisions encoded here:
 - Vault lives under CAPTURE nav group (same mental mode as Studio)
 - No standalone KNOWLEDGE nav group
 - Intel Feed is a tab inside the Vault page, not a separate nav destination
-- FAB modal = brain-dump only (title + body); AI infers type in background
-- quickCapture state has no user-facing type field
+- FAB modal = brain-dump textarea only (no title, no type); AI infers both
+- quickCapture state has no user-facing title or type field
 """
 from __future__ import annotations
 
@@ -114,9 +114,12 @@ def test_fab_opens_quick_capture_modal() -> None:
     assert "quickCapture.open" in html
 
 
-def test_fab_modal_has_title_field() -> None:
+def test_fab_modal_has_no_title_field() -> None:
+    """Title field must be gone — user just dumps text; AI generates the title."""
     html = _INDEX.read_text(encoding="utf-8")
-    assert "quickCapture.title" in html
+    assert 'x-model="quickCapture.title"' not in html, (
+        "FAB modal must not expose a title input — AI generates the title"
+    )
 
 
 def test_fab_modal_has_body_field() -> None:
@@ -150,6 +153,33 @@ def test_quick_capture_state_has_no_user_type_field() -> None:
     block = match.group(1)
     assert "type:" not in block, (
         "quickCapture state must not expose a 'type' field — AI handles classification"
+    )
+
+
+def test_quick_capture_state_has_no_title_field() -> None:
+    """quickCapture state has no 'title' property — AI generates the title."""
+    js = _STATE.read_text(encoding="utf-8")
+    match = re.search(r"quickCapture\s*:\s*\{([^}]+)\}", js, re.DOTALL)
+    assert match, "quickCapture state block not found in theseus-state-helpers.js"
+    block = match.group(1)
+    assert "title:" not in block, (
+        "quickCapture state must not have a 'title' field — AI generates the title"
+    )
+
+
+def test_fab_modal_has_review_step() -> None:
+    """Modal must reference quickCapture.step for two-step flow."""
+    html = _INDEX.read_text(encoding="utf-8")
+    assert "quickCapture.step" in html, (
+        "FAB modal must use quickCapture.step to drive dump→review flow"
+    )
+
+
+def test_fab_modal_review_has_ai_type_selector() -> None:
+    """Review step must expose AI-suggested type as an editable select."""
+    html = _INDEX.read_text(encoding="utf-8")
+    assert 'x-model="quickCapture.aiNoteType"' in html, (
+        "Review step must have a type select bound to quickCapture.aiNoteType"
     )
 
 

@@ -257,9 +257,13 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     },
     quickCapture: {
       open: false,
-      title: "",
+      step: "dump",        // "dump" | "review"
       body: "",
+      aiTitle: "",
+      aiNoteType: "raw",
+      aiBody: "",
       error: null,
+      previewing: false,
       saving: false,
     },
     vaultTab: "notes",

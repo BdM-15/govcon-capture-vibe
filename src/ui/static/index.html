@@ -7968,8 +7968,8 @@
       class="quick-capture-modal-backdrop"
       x-show="quickCapture.open"
       x-cloak
-      @click.self="quickCapture.open = false"
-      @keydown.escape.window="quickCapture.open = false"
+      @click.self="quickCapture.open = false; quickCapture.step = 'dump'"
+      @keydown.escape.window="quickCapture.open = false; quickCapture.step = 'dump'"
       x-effect="if (quickCapture.open) $nextTick(() => lucide.createIcons())"
     >
       <div class="quick-capture-modal" role="dialog" aria-modal="true" aria-labelledby="qc-title">
@@ -7979,7 +7979,7 @@
             Quick Capture
           </h2>
           <button
-            @click="quickCapture.open = false"
+            @click="quickCapture.open = false; quickCapture.step = 'dump'"
             class="text-text-400 hover:text-text-100 transition-colors"
             aria-label="Close"
           >
@@ -7987,56 +7987,100 @@
           </button>
         </div>
 
-        <!-- form -->
+        <!-- two-step form: dump → AI preview → review & approve -->
         <form
           @submit.prevent="
             quickCapture.error = null;
-            quickCapture.saving = true;
-            fetch('/api/ui/vault/notes', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                title: quickCapture.title.trim(),
-                body: quickCapture.body.trim(),
-                type: 'raw',
-                status: 'raw',
-                source: 'manual',
-              }),
-            })
-            .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)))
-            .then(() => {
-              toast('Note captured — AI classifying…', 'success');
-              quickCapture.open = false;
-              quickCapture.title = '';
-              quickCapture.body = '';
-            })
-            .catch(err => { quickCapture.error = err.detail || err.message || 'Save failed'; })
-            .finally(() => { quickCapture.saving = false; })
+            if (quickCapture.step === 'dump') {
+              quickCapture.previewing = true;
+              fetch('/api/ui/vault/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ body: quickCapture.body.trim() })
+              })
+              .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)))
+              .then(data => {
+                quickCapture.aiTitle = data.title;
+                quickCapture.aiNoteType = data.type;
+                quickCapture.aiBody = data.body;
+                quickCapture.step = 'review';
+              })
+              .catch(err => { quickCapture.error = err.detail || err.message || 'Preview failed'; })
+              .finally(() => { quickCapture.previewing = false; })
+            } else {
+              quickCapture.saving = true;
+              fetch('/api/ui/vault/notes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: quickCapture.aiTitle.trim(),
+                  body: quickCapture.aiBody.trim(),
+                  type: quickCapture.aiNoteType,
+                  source: 'manual',
+                })
+              })
+              .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)))
+              .then(() => {
+                toast('Note saved to vault!', 'success');
+                quickCapture.open = false;
+                quickCapture.step = 'dump';
+                quickCapture.body = '';
+                quickCapture.aiTitle = '';
+                quickCapture.aiNoteType = 'raw';
+                quickCapture.aiBody = '';
+              })
+              .catch(err => { quickCapture.error = err.detail || err.message || 'Save failed'; })
+              .finally(() => { quickCapture.saving = false; })
+            }
           "
         >
-          <!-- title (required) -->
-          <label class="block mb-1 text-xs text-text-300 font-medium">
-            Title <span class="text-magenta-400">*</span>
-          </label>
-          <input
-            type="text"
-            class="input-field w-full mb-3"
-            placeholder="Note title…"
-            x-model="quickCapture.title"
-            required
-            maxlength="512"
-            autofocus
-          />
+          <!-- ── Step: dump ── -->
+          <div x-show="quickCapture.step === 'dump'">
+            <label class="block mb-1 text-xs text-text-300 font-medium">Brain dump</label>
+            <textarea
+              class="input-field w-full mb-3 resize-y"
+              rows="5"
+              placeholder="Dump your thoughts — AI will title, type, and polish before you approve…"
+              x-model="quickCapture.body"
+              maxlength="32768"
+              autofocus
+            ></textarea>
+          </div>
 
-          <!-- body -->
-          <label class="block mb-1 text-xs text-text-300 font-medium">Body</label>
-          <textarea
-            class="input-field w-full mb-3 resize-y"
-            rows="4"
-            placeholder="Dump your thoughts — AI will classify the type…"
-            x-model="quickCapture.body"
-            maxlength="32768"
-          ></textarea>
+          <!-- ── Step: review ── -->
+          <div x-show="quickCapture.step === 'review'">
+            <p class="text-xs text-text-400 mb-3">AI suggestions — review and edit before saving.</p>
+
+            <label class="block mb-1 text-xs text-text-300 font-medium">
+              Title <span class="text-text-400 font-normal">(edit freely)</span>
+            </label>
+            <input
+              type="text"
+              class="input-field w-full mb-3"
+              x-model="quickCapture.aiTitle"
+              maxlength="512"
+            />
+
+            <label class="block mb-1 text-xs text-text-300 font-medium">Type</label>
+            <select class="input-field w-full mb-3" x-model="quickCapture.aiNoteType">
+              <option value="insight">Insight</option>
+              <option value="action">Action</option>
+              <option value="risk">Risk</option>
+              <option value="theme">Theme</option>
+              <option value="question">Question</option>
+              <option value="raw">Raw</option>
+            </select>
+
+            <label class="block mb-1 text-xs text-text-300 font-medium">
+              Body <span class="text-text-400 font-normal">(edit freely)</span>
+            </label>
+            <textarea
+              class="input-field w-full mb-3 resize-y"
+              rows="4"
+              x-model="quickCapture.aiBody"
+              maxlength="32768"
+            ></textarea>
+          </div>
 
           <!-- inline error -->
           <p
@@ -8050,17 +8094,27 @@
             <button
               type="button"
               class="btn-ghost px-3 py-1.5 rounded-lg text-sm"
+              x-show="quickCapture.step === 'dump'"
               @click="quickCapture.open = false"
             >
               Cancel
             </button>
             <button
+              type="button"
+              class="btn-ghost px-3 py-1.5 rounded-lg text-sm"
+              x-show="quickCapture.step === 'review'"
+              @click="quickCapture.step = 'dump'"
+            >
+              ← Back
+            </button>
+            <button
               type="submit"
               class="btn-hero-magenta inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-bold text-ink-950"
-              :disabled="!quickCapture.title.trim() || quickCapture.saving"
+              :disabled="quickCapture.step === 'dump' ? (!quickCapture.body.trim() || quickCapture.previewing) : quickCapture.saving"
             >
-              <span x-text="quickCapture.saving ? 'Saving…' : 'Capture'"></span>
-              <i data-lucide="bookmark-plus" class="w-4 h-4"></i>
+              <span x-text="quickCapture.step === 'dump' ? (quickCapture.previewing ? 'Thinking\u2026' : 'Preview') : (quickCapture.saving ? 'Saving\u2026' : 'Save to Vault')"></span>
+              <i data-lucide="sparkles" class="w-4 h-4" x-show="quickCapture.step === 'dump'"></i>
+              <i data-lucide="bookmark-plus" class="w-4 h-4" x-show="quickCapture.step === 'review'"></i>
             </button>
           </div>
         </form>
