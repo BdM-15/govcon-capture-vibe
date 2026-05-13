@@ -288,5 +288,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultDiffOpen: false,
     vaultPolishModel: "qwen",
     vaultPolishLoading: false,
+    vaultEntityProposals: [],
+    vaultEntityLoading: false,
   };
 };

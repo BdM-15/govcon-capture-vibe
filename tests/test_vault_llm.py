@@ -119,11 +119,15 @@ class TestVaultLlmModule:
         found = any(et in full_text for et in VALID_ENTITY_TYPES)
         assert found, f"No entity type found in prompt. Sample types: {list(VALID_ENTITY_TYPES)[:5]}"
 
-    def test_extract_entities_stub_returns_list(self):
+    def test_extract_entities_with_llm_func_returns_list(self):
         from src.server.vault_llm import extract_entities_from_note
+        from unittest.mock import AsyncMock
 
         async def _run():
-            return await extract_entities_from_note("some note body")
+            mock_llm = AsyncMock(
+                return_value="ENTITY: CMMC Level 3 | TYPE: requirement | CONFIDENCE: 0.9\n"
+            )
+            return await extract_entities_from_note("some govcon note body", llm_func=mock_llm)
 
         result = asyncio.run(_run())
         assert isinstance(result, list)

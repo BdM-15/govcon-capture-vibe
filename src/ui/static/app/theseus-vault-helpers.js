@@ -248,3 +248,64 @@ window.theseusVaultAcceptPolish = async function theseusVaultAcceptPolish(app, i
     app.vaultPolishLoading = false;
   }
 };
+
+/**
+ * Extract govcon entities from the active vault note.
+ * Results are stored in app.vaultEntityProposals (each proposal has a _selected flag).
+ */
+window.theseusVaultExtractEntities = async function theseusVaultExtractEntities(app, id) {
+  if (!id) return;
+  app.vaultEntityLoading = true;
+  app.vaultEntityProposals = [];
+  try {
+    const body = app.stats && app.stats.workspace
+      ? JSON.stringify({ workspace: app.stats.workspace })
+      : "{}";
+    const resp = await fetch("/api/ui/vault/notes/" + id + "/extract-entities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+    if (!resp.ok) throw new Error("Entity extraction failed (" + resp.status + ")");
+    const data = await resp.json();
+    app.vaultEntityProposals = (data.proposals || []).map(p => ({ ...p, _selected: !p.already_in_kg }));
+  } catch (error) {
+    app.toast("Entity extraction error: " + error.message, "error");
+  } finally {
+    app.vaultEntityLoading = false;
+  }
+};
+
+/**
+ * Commit selected entity proposals to the active workspace KG.
+ * Requires an active workspace; disabled in UI if none is set.
+ */
+window.theseusVaultAcceptEntities = async function theseusVaultAcceptEntities(app, id) {
+  if (!id) return;
+  const workspace = app.stats && app.stats.workspace;
+  if (!workspace) {
+    app.toast("Select a workspace to commit entities", "warning");
+    return;
+  }
+  const selected = (app.vaultEntityProposals || []).filter(p => p._selected);
+  if (!selected.length) {
+    app.toast("No entities selected", "warning");
+    return;
+  }
+  try {
+    const resp = await fetch("/api/ui/vault/notes/" + id + "/accept-entities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workspace,
+        proposals: selected.map(({ _selected, ...rest }) => rest),
+      }),
+    });
+    if (!resp.ok) throw new Error("Accept entities failed (" + resp.status + ")");
+    const data = await resp.json();
+    app.toast(`${data.accepted} entit${data.accepted === 1 ? "y" : "ies"} committed to KG`, "success");
+    app.vaultEntityProposals = [];
+  } catch (error) {
+    app.toast("Accept entities error: " + error.message, "error");
+  }
+};

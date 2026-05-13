@@ -880,6 +880,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusVaultAcceptPolish(this, id);
     },
 
+    async vaultExtractEntities(id) {
+      return window.theseusVaultExtractEntities(this, id);
+    },
+
+    async vaultAcceptEntities(id, proposals) {
+      return window.theseusVaultAcceptEntities(this, id);
+    },
+
     async vaultPromoteNote(id) {
       return window.theseusVaultPromoteNote(this, id);
     },

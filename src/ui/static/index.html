@@ -4814,6 +4814,15 @@
                       </button>
                       <button
                         type="button"
+                        class="text-xs text-text-500 hover:text-neon-cyan transition-colors flex items-center gap-1"
+                        :disabled="vaultEntityLoading || !vaultActiveNote"
+                        :aria-label="'Extract entities from ' + (vaultActiveNote ? vaultActiveNote.title : '')"
+                        @click="vaultActiveNote && vaultExtractEntities(vaultActiveNote.id)"
+                      >
+                        <i data-lucide="scan-search" class="w-3 h-3"></i>
+                      </button>
+                      <button
+                        type="button"
                         class="text-xs text-text-500 hover:text-red-400 transition-colors flex items-center gap-1"
                         :aria-label="'Delete note ' + (vaultActiveNote ? vaultActiveNote.title : '')"
                         @click="vaultActiveNote && deleteVaultNote(vaultActiveNote.id)"
@@ -5097,6 +5106,66 @@
                       </div>
                     </div>
                   </template>
+                </div>
+
+                <!-- Extract Entities -->
+                <div class="border-t border-edge-strong/20 pt-3 mt-1 px-3 pb-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <p class="text-xs font-medium text-text-400 uppercase tracking-wider">Extract Entities</p>
+                    <button
+                      type="button"
+                      class="text-text-500 hover:text-neon-cyan transition-colors disabled:opacity-40"
+                      :disabled="vaultEntityLoading || !vaultActiveNote"
+                      @click="vaultActiveNote && vaultExtractEntities(vaultActiveNote.id)"
+                      title="Scan note for govcon entities"
+                    >
+                      <i data-lucide="scan-search" class="w-3 h-3" x-show="!vaultEntityLoading"></i>
+                      <i data-lucide="loader" class="w-3 h-3 animate-spin" x-show="vaultEntityLoading"></i>
+                    </button>
+                  </div>
+
+                  <!-- Empty state -->
+                  <div
+                    x-show="!vaultEntityLoading && vaultEntityProposals.length === 0"
+                    class="text-xs text-text-500 italic"
+                  >
+                    Click scan to extract entities.
+                  </div>
+
+                  <!-- Proposal checklist -->
+                  <template x-for="(proposal, idx) in vaultEntityProposals" :key="idx">
+                    <label class="flex items-start gap-1.5 py-1 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        class="mt-0.5 accent-neon-cyan"
+                        x-model="proposal._selected"
+                      />
+                      <div class="flex-1 min-w-0">
+                        <span class="text-xs text-text-200 break-words" x-text="proposal.entity_text"></span>
+                        <div class="flex items-center gap-1 mt-0.5">
+                          <span class="text-[10px] px-1 py-0.5 rounded bg-ink-700 text-neon-cyan/80 border border-neon-cyan/20" x-text="proposal.entity_type"></span>
+                          <span x-show="proposal.already_in_kg" class="text-[10px] text-text-500 italic">in KG</span>
+                          <span class="text-[10px] text-text-500" x-text="'(' + Math.round(proposal.confidence * 100) + '%)'"></span>
+                        </div>
+                      </div>
+                    </label>
+                  </template>
+
+                  <!-- Accept Selected button -->
+                  <button
+                    x-show="vaultEntityProposals.length > 0"
+                    type="button"
+                    class="mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium border transition-colors"
+                    :class="stats && stats.workspace
+                      ? 'border-neon-cyan/40 text-neon-cyan bg-neon-cyan/10 hover:bg-neon-cyan/20'
+                      : 'border-edge-subtle text-text-500 cursor-not-allowed opacity-50'"
+                    :disabled="!(stats && stats.workspace)"
+                    :title="stats && stats.workspace ? 'Commit selected entities to KG' : 'Select a workspace to commit entities'"
+                    @click="stats && stats.workspace && vaultActiveNote && vaultAcceptEntities(vaultActiveNote.id, vaultEntityProposals)"
+                  >
+                    <i data-lucide="check-circle" class="w-3 h-3"></i>
+                    <span>Accept Selected</span>
+                  </button>
                 </div>
 
               </div>

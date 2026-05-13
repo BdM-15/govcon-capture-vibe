@@ -224,6 +224,22 @@ class FeedToWorkspaceRequest(BaseModel):
     workspace: str
 
 
+class EntityProposalItem(BaseModel):
+    entity_text: str
+    entity_type: str
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    already_in_kg: bool = False
+
+
+class ExtractEntitiesRequest(BaseModel):
+    workspace: str | None = None
+
+
+class AcceptEntitiesRequest(BaseModel):
+    workspace: str | None = None
+    proposals: list[EntityProposalItem] = Field(default_factory=list)
+
+
 def _score_note(note: dict, entity_terms: list[str]) -> float:
     """Keyword-overlap score between a vault note and a list of entity terms.
 
@@ -250,6 +266,7 @@ def register_vault_routes(
     vault_curation_func: Callable | None = None,
     query_func: Callable | None = None,
     entities_func: Callable | None = None,
+    kg_insert_func: Callable | None = None,
     vault_auto_polish: bool = False,
 ) -> None:
     """Mount /api/ui/vault/* routes onto *app*."""
@@ -539,4 +556,74 @@ def register_vault_routes(
         vault_store.read(note_id)  # raises 404 if missing
         updated = vault_store.update(note_id, pursuit=payload.workspace)
         return JSONResponse(updated)
+
+    @app.post("/api/ui/vault/notes/{note_id}/extract-entities", tags=["theseus-vault"])
+    async def extract_entities(
+        note_id: str,
+        payload: ExtractEntitiesRequest = None,
+    ) -> JSONResponse:
+        """Extract govcon entities from a vault note body.
+
+        Returns a list of EntityProposal with entity_text, entity_type,
+        confidence, and already_in_kg (checked against active workspace KG
+        when workspace is provided).
+        """
+        if vault_curation_func is None:
+            raise HTTPException(status_code=503, detail="Entity extraction LLM not configured")
+
+        note = vault_store.read(note_id)  # raises 404 if missing
+        body = note.get("body", "")
+
+        from src.server.vault_llm import extract_entities_from_note
+
+        proposals = await extract_entities_from_note(body, llm_func=vault_curation_func)
+
+        workspace = (payload.workspace if payload else None) or None
+        known_entities: set[str] = set()
+        if workspace and entities_func is not None:
+            try:
+                terms: list[str] = await entities_func(workspace)
+                known_entities = {t.lower() for t in terms}
+            except Exception:
+                logger.exception("entities_func failed for workspace %s", workspace)
+
+        result = []
+        for p in proposals:
+            result.append({
+                "entity_text": p.entity_text,
+                "entity_type": p.entity_type,
+                "confidence": p.confidence,
+                "already_in_kg": p.entity_text.lower() in known_entities,
+            })
+
+        return JSONResponse({"proposals": result})
+
+    @app.post("/api/ui/vault/notes/{note_id}/accept-entities", tags=["theseus-vault"])
+    async def accept_entities(
+        note_id: str,
+        payload: AcceptEntitiesRequest,
+    ) -> JSONResponse:
+        """Commit accepted entity proposals to the active workspace KG.
+
+        Returns 400 if no workspace is provided.
+        Returns 503 if no KG insert function is configured.
+        """
+        if not payload.workspace:
+            raise HTTPException(status_code=400, detail="workspace is required to commit entities to KG")
+        if kg_insert_func is None:
+            raise HTTPException(status_code=503, detail="KG insert function not configured")
+
+        vault_store.read(note_id)  # raises 404 if missing
+
+        entities_payload = [
+            {
+                "entity_text": p.entity_text,
+                "entity_type": p.entity_type,
+                "confidence": p.confidence,
+            }
+            for p in payload.proposals
+        ]
+        await kg_insert_func(payload.workspace, entities_payload)
+
+        return JSONResponse({"accepted": len(payload.proposals), "workspace": payload.workspace})
 

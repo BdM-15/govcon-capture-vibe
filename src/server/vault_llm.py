@@ -28,9 +28,11 @@ class PolishResult:
 
 @dataclass
 class EntityProposal:
-    """Structured entity proposal extracted from a note (stub for #146)."""
-    name: str
+    """Structured entity proposal extracted from a govcon vault note."""
+    entity_text: str
     entity_type: str
+    confidence: float = field(default=1.0)
+    already_in_kg: bool = field(default=False)
 
 
 # ---------------------------------------------------------------------------
@@ -193,13 +195,83 @@ async def polish_note(
     )
 
 
-async def extract_entities_from_note(body: str) -> list[EntityProposal]:
-    """Extract govcon entities from a note body (stub — wired fully in #146).
+def _build_entity_extraction_system_prompt() -> str:
+    """Build a system prompt for govcon entity extraction from a vault note."""
+    from src.ontology.schema import VALID_ENTITY_TYPES
+
+    entity_list = ", ".join(sorted(VALID_ENTITY_TYPES))
+    return (
+        "You are a govcon capture analyst. Extract named entities from the note below.\n\n"
+        f"Valid entity types: {entity_list}\n\n"
+        "For each entity output one line in this EXACT format:\n"
+        "ENTITY: <entity text> | TYPE: <entity type> | CONFIDENCE: <0.0-1.0>\n\n"
+        "Rules:\n"
+        "- Only use entity types from the valid list above.\n"
+        "- entity text must be the exact phrase from the note.\n"
+        "- confidence is your certainty the phrase is a govcon entity of that type.\n"
+        "- Output ONLY the ENTITY lines, nothing else."
+    )
+
+
+def _parse_entity_extraction_response(
+    raw: str,
+) -> list[EntityProposal]:
+    """Parse ENTITY:/TYPE:/CONFIDENCE: lines into EntityProposal list.
+
+    Only proposals whose entity_type is in VALID_ENTITY_TYPES are kept.
+    """
+    from src.ontology.schema import VALID_ENTITY_TYPES
+
+    proposals: list[EntityProposal] = []
+    for line in raw.strip().splitlines():
+        line = line.strip()
+        if not line.upper().startswith("ENTITY:"):
+            continue
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 3:
+            continue
+        entity_text = parts[0][len("ENTITY:"):].strip()
+        entity_type = ""
+        confidence = 1.0
+        for part in parts[1:]:
+            if part.upper().startswith("TYPE:"):
+                entity_type = part[5:].strip().lower()
+            elif part.upper().startswith("CONFIDENCE:"):
+                try:
+                    confidence = float(part[11:].strip())
+                except ValueError:
+                    confidence = 1.0
+        if entity_text and entity_type in VALID_ENTITY_TYPES:
+            proposals.append(
+                EntityProposal(
+                    entity_text=entity_text,
+                    entity_type=entity_type,
+                    confidence=min(max(confidence, 0.0), 1.0),
+                )
+            )
+    return proposals
+
+
+async def extract_entities_from_note(
+    body: str,
+    llm_func: Callable[..., Any],
+) -> list[EntityProposal]:
+    """Extract govcon entities from a vault note body using an LLM.
+
+    Args:
+        body: Raw note body text.
+        llm_func: Async callable ``(prompt, system_prompt=...) -> str``.
 
     Returns:
-        Empty list until #146 is implemented.
+        List of EntityProposal with entity_text, entity_type, confidence.
+        already_in_kg is always False here — callers set it based on KG state.
     """
-    return []
+    system_prompt = _build_entity_extraction_system_prompt()
+    raw_response = await llm_func(
+        f"Extract govcon entities from this note:\n\n{body.strip()}",
+        system_prompt=system_prompt,
+    )
+    return _parse_entity_extraction_response(raw_response)
 
 
 async def ask_theseus_about_note(note_body: str, workspace: str) -> str:
