@@ -118,6 +118,7 @@ def build_startup_banner_items(
     relationship_count: int,
     colors: Any,
     version_resolver: Callable[[str], str] = resolve_package_version,
+    ollama_available: bool = False,
 ) -> list[tuple[str, str]]:
     """Build the startup banner rows for log_banner()."""
     mineru_version = version_resolver("mineru")
@@ -136,6 +137,20 @@ def build_startup_banner_items(
         ("VLM      (LightRAG)", f"{colors.CYAN}{settings.vlm_llm_name}{colors.RESET}"),
         ("Query    (LightRAG)", f"{colors.MAGENTA}{settings.reasoning_llm_name}{colors.RESET}"),
         ("Post-Process", f"{colors.YELLOW}{settings.post_processing_llm_name}{colors.RESET}"),
+        (
+            "Vault Curation",
+            (
+                f"{colors.CYAN}{settings.vault_curation_llm_model}{colors.RESET}"
+                f"  {colors.DIM}({settings.vault_curation_llm_host}){colors.RESET}"
+                f"  {colors.GREEN}▸ online{colors.RESET}"
+            )
+            if ollama_available
+            else (
+                f"{colors.CYAN}{settings.vault_curation_llm_model}{colors.RESET}"
+                f"  {colors.DIM}({settings.vault_curation_llm_host}){colors.RESET}"
+                f"  {colors.YELLOW}▸ offline — polish disabled{colors.RESET}"
+            ),
+        ),
         (
             "Embeddings",
             f"{colors.CYAN}{settings.embedding_model}{colors.RESET}  {colors.DIM}({settings.embedding_dim}D){colors.RESET}",
@@ -329,6 +344,13 @@ def build_server_runtime(
     if entity_types is None or relationship_types is None:
         from src.ontology.schema import VALID_ENTITY_TYPES, VALID_RELATIONSHIP_TYPES
 
+    def _ollama_available_at_banner() -> bool:
+        try:
+            from src.server.vault_routes import is_ollama_available
+            return is_ollama_available()
+        except Exception:
+            return False
+
         entity_types = VALID_ENTITY_TYPES
         relationship_types = VALID_RELATIONSHIP_TYPES
 
@@ -361,6 +383,7 @@ def build_server_runtime(
         entity_count=len(entity_types),
         relationship_count=len(relationship_types),
         colors=colors,
+        ollama_available=_ollama_available_at_banner(),
     )
     log_banner_fn(
         f"{colors.BOLD}✅ PROJECT THESEUS — READY{colors.RESET}",

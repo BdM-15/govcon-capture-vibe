@@ -270,12 +270,6 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
             timeout=VLM_TIMEOUT,
             metadata={"model": extraction_model, "host": xai_base_url, "binding": "openai"},
         ),
-        "vault_curation": RoleLLMConfig(
-            func=vault_curation_func,
-            kwargs={"max_tokens": VAULT_CURATION_MAX_TOKENS},
-            timeout=VAULT_CURATION_TIMEOUT,
-            metadata={"model": vault_curation_model, "host": vault_curation_base_url, "binding": "ollama"},
-        ),
     }
 
     return RoleLLMRouting(

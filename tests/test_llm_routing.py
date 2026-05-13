@@ -22,8 +22,11 @@ def test_build_role_llm_routing_prompt_only(monkeypatch) -> None:
     )
 
     assert routing.use_strict_schema is False
-    assert set(routing.role_llm_configs.keys()) == {"extract", "query", "keyword", "vlm", "vault_curation"}
+    # vault_curation is NOT a LightRAG role — must not appear in role_llm_configs
+    assert set(routing.role_llm_configs.keys()) == {"extract", "query", "keyword", "vlm"}
     assert routing.role_llm_configs["extract"].kwargs == {"max_tokens": llm_routing.EXTRACT_MAX_TOKENS}
+    # vault_curation_func lives as a standalone callable on RoleLLMRouting
+    assert callable(routing.vault_curation_func)
 
 
 def test_extract_role_overrides_response_format_in_strict_mode(monkeypatch) -> None:

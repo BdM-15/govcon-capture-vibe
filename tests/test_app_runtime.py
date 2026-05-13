@@ -94,6 +94,7 @@ def test_build_server_runtime_wires_app_routes_ui_and_banner() -> None:
                 "entity_count": 3,
                 "relationship_count": 2,
                 "colors": colors,
+                "ollama_available": False,
             },
         ),
         (
