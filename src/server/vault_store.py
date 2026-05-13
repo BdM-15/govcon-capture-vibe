@@ -43,6 +43,7 @@ def _slugify(text: str) -> str:
 
 def _parse_note_file(path: Path, note_id: str) -> dict[str, Any]:
     """Parse ``<id>.md`` into a dict with ``id`` and ``body`` keys."""
+    import datetime as _dt
     raw = path.read_text(encoding="utf-8")
     if raw.startswith("---"):
         # Split on the closing ---
@@ -56,6 +57,11 @@ def _parse_note_file(path: Path, note_id: str) -> dict[str, Any]:
     else:
         fm = {}
         body = raw
+    # PyYAML parses unquoted ISO strings as datetime objects; coerce back to str
+    # so all frontmatter values are JSON-serialisable.
+    for k, v in list(fm.items()):
+        if isinstance(v, (_dt.datetime, _dt.date)):
+            fm[k] = v.isoformat()
     fm["id"] = note_id
     fm["body"] = body
     return fm
@@ -169,7 +175,7 @@ class VaultStore:
                 notes.append(_parse_note_file(md_file, note_id))
             except Exception:
                 logger.warning("Skipping unreadable vault note: %s", md_file)
-        notes.sort(key=lambda n: n.get("updated", ""), reverse=True)
+        notes.sort(key=lambda n: str(n.get("updated") or ""), reverse=True)
         return notes
 
     # ------------------------------------------------------------------
