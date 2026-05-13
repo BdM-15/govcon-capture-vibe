@@ -1,4 +1,4 @@
-from src.inference.relationship_payloads import (
+from src.inference.neo4j_graph_io import (
     group_retype_updates,
     partition_relationships_by_type,
 )
