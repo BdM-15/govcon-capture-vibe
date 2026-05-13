@@ -153,6 +153,35 @@ window.theseusUploadFiles = async function theseusUploadFiles(app, fileList) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
 
+  // ── Vault-only path: store as knowledge notes, skip KG extraction ──
+  if (app.vaultOnly) {
+    for (const file of files) {
+      const id = Math.random().toString(36).slice(2);
+      app.uploads.unshift({ id, name: file.name, status: "uploading" });
+      const formData = new FormData();
+      formData.append("file", file);
+      const ws = app.stats && app.stats.workspace ? `&workspace=${encodeURIComponent(app.stats.workspace)}` : "";
+      try {
+        const response = await fetch(`/documents/upload?vault_only=true${ws}`, {
+          method: "POST",
+          body: formData,
+        });
+        const payload = await response.json();
+        theseusUpdateUploadCollection(app, "uploads", id, {
+          status: response.ok ? "done" : "error",
+          msg: response.ok ? "saved to vault" : payload.message || "failed",
+        });
+        if (response.ok) app.toast(`${file.name} saved to vault`);
+        else app.toast(`Vault save failed: ${file.name}`, "error");
+      } catch {
+        theseusUpdateUploadCollection(app, "uploads", id, { status: "error", msg: "network" });
+        app.toast(`Vault save failed: ${file.name}`, "error");
+      }
+    }
+    window.theseusAfterRender(app);
+    return;
+  }
+
   const tasks = files.map((file) =>
     theseusStageOnlyUpload(app, file, {
       collectionKey: "uploads",

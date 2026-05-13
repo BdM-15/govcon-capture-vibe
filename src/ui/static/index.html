@@ -920,6 +920,15 @@
                   enqueued — extraction runs in the background.
                 </p>
 
+                <label class="flex items-center gap-2 mb-3 cursor-pointer select-none text-xs">
+                  <input
+                    type="checkbox"
+                    x-model="vaultOnly"
+                    class="accent-neon-cyan w-3.5 h-3.5"
+                  />
+                  <span class="text-slate-400">Save to vault only <span class="text-slate-600">(skip KG extraction)</span></span>
+                </label>
+
                 <label
                   class="block border-2 border-dashed border-edge-strong rounded-xl p-7 text-center cursor-pointer hover:border-neon-cyan/60 hover:bg-neon-cyan/5 transition"
                   @dragover.prevent="$event.currentTarget.classList.add('border-neon-cyan/60','bg-neon-cyan/5')"

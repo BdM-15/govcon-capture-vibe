@@ -7,6 +7,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     documents: [],
     uploads: [],
     stagedUploads: [],
+    vaultOnly: false,
     docStats: {
       counts: {},
       pipeline: { busy: false, latest_message: "", job_name: "" },

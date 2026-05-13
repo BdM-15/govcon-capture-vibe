@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import traceback
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import File, Query, UploadFile
@@ -75,8 +76,12 @@ def create_documents_upload_endpoint(
     *,
     process_document_func,
     callback,
+    vault_store=None,
 ):
     """Override LightRAG's WebUI /documents/upload endpoint to use RAG-Anything."""
+
+    def _now() -> str:
+        return datetime.now(timezone.utc).isoformat()
 
     async def documents_upload_with_raganything(
         file: UploadFile = File(...),
@@ -88,12 +93,56 @@ def create_documents_upload_endpoint(
             False,
             description="If true, save the file to inputs/<workspace>/ without triggering extraction. Use Folder Watcher → Scan now to process later.",
         ),
+        vault_only: bool = Query(
+            False,
+            description="If true, store uploaded file as a vault note; skip KG extraction entirely.",
+        ),
     ):
         logger.info(
-            "🔔 ENDPOINT CALLED: /documents/upload with file: %s (stage_only=%s)",
+            "🔔 ENDPOINT CALLED: /documents/upload with file: %s (stage_only=%s, vault_only=%s)",
             file.filename,
             stage_only,
+            vault_only,
         )
+
+        # ------------------------------------------------------------------
+        # Vault-only path: create a knowledge note, skip KG extraction
+        # ------------------------------------------------------------------
+        if vault_only:
+            from pathlib import Path
+            from src.server.vault_store import VaultStore
+
+            store = vault_store
+            if store is None:
+                from src.core.config import get_settings
+                _vault_dir = Path(get_settings().vault_path).resolve()
+                _vault_dir.mkdir(parents=True, exist_ok=True)
+                store = VaultStore(vault_dir=_vault_dir, now=_now)
+
+            try:
+                content = (await file.read()).decode("utf-8", errors="replace")
+            except Exception:
+                content = ""
+
+            create_kwargs = dict(
+                title=file.filename or "Uploaded document",
+                body=content,
+                note_type="article",
+                topic="",
+                source=file.filename or "upload",
+            )
+            if workspace:
+                create_kwargs["pursuit"] = workspace
+
+            note = store.create(**create_kwargs)
+            logger.info("📝 Vault note created for %s (id=%s)", file.filename, note["id"])
+            return JSONResponse(
+                {
+                    "status": "vault",
+                    "vault_note_id": note["id"],
+                    "message": f"{file.filename} saved to vault",
+                }
+            )
 
         if not stage_only:
             await callback.register_request_start(file.filename)
