@@ -211,6 +211,14 @@ window.theseusRenderGraph = function theseusRenderGraph(app, nodes, edges) {
   app.cy.on("tap", "node", (evt) =>
     window.theseusSelectGraphNode(app, evt.target),
   );
+  app.cy.on("dbltap", "node", (evt) => {
+    const label = evt.target.data("label");
+    if (label) {
+      app.graph.label = label;
+      app.graph.labelQuery = label;
+      window.theseusLoadGraph(app);
+    }
+  });
   app.cy.on("tap", (evt) => {
     if (evt.target === app.cy) {
       app.graph.selected = null;
@@ -222,13 +230,12 @@ window.theseusRenderGraph = function theseusRenderGraph(app, nodes, edges) {
 
 window.theseusGraphLayoutOptions = function theseusGraphLayoutOptions(app) {
   const base = { animate: false, fit: true, padding: 30 };
-  if (app.graph.layout === "fcose") {
+  if (app.graph.layout === "dagre") {
     return {
-      name: "fcose",
-      quality: "default",
-      randomize: true,
-      nodeRepulsion: 4500,
-      idealEdgeLength: 80,
+      name: "dagre",
+      rankDir: "LR",
+      nodeSep: 50,
+      rankSep: 100,
       ...base,
     };
   }

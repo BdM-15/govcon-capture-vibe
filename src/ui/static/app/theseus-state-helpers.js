@@ -230,7 +230,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       maxNodes: 2000,
       maxDepth: 2,
       minConfidence: 0,
-      layout: "fcose",
+      layout: "dagre",
       loading: false,
       stats: {
         nodes: 0,
