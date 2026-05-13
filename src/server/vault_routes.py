@@ -75,6 +75,12 @@ class NoteUpdate(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class PolishRequest(BaseModel):
+    """Body for POST /notes/{id}/polish."""
+    model: str = "qwen"  # "qwen" (Ollama vault_curation) or "grok" (Grok query)
+    accept: bool = False  # False = preview only; True = persist to store
+
+
 # ---------------------------------------------------------------------------
 # Background classification
 # ---------------------------------------------------------------------------
@@ -145,6 +151,37 @@ def _parse_curation_response(raw: str, fallback_body: str) -> tuple[str, str, st
     return title, note_type, body
 
 
+async def _auto_polish_note(
+    vault_store: VaultStore,
+    note_id: str,
+    body: str,
+    vault_curation_func: Callable,
+) -> None:
+    """Background task: polish a newly created note and persist the result."""
+    from src.server.vault_llm import polish_note as _llm_polish
+
+    try:
+        vault_index: dict[str, str] = {
+            n["title"]: n["id"] for n in vault_store.list_notes() if n.get("title")
+        }
+        result = await _llm_polish(
+            raw_body=body,
+            note_type="raw",
+            model_role="vault_curation",
+            vault_index=vault_index,
+            llm_func=vault_curation_func,
+        )
+        vault_store.update(
+            note_id,
+            title=result.title or body[:60],
+            type=result.note_type,
+            body=result.rewritten,
+            status="polished",
+        )
+    except Exception:
+        logger.exception("Vault auto-polish failed for note %s", note_id)
+
+
 async def _classify_and_update(
     vault_store: VaultStore,
     note_id: str,
@@ -213,6 +250,7 @@ def register_vault_routes(
     vault_curation_func: Callable | None = None,
     query_func: Callable | None = None,
     entities_func: Callable | None = None,
+    vault_auto_polish: bool = False,
 ) -> None:
     """Mount /api/ui/vault/* routes onto *app*."""
 
@@ -278,8 +316,17 @@ def register_vault_routes(
             pursuit=payload.pursuit,
             tags=payload.tags,
         )
-        # Only classify in background when no title was provided (no AI preview used)
-        if vault_curation_func is not None and not payload.title.strip():
+        # Auto-polish immediately (background task) if feature is enabled
+        if vault_auto_polish and vault_curation_func is not None:
+            background_tasks.add_task(
+                _auto_polish_note,
+                vault_store,
+                note["id"],
+                payload.body,
+                vault_curation_func,
+            )
+        elif vault_curation_func is not None and not payload.title.strip():
+            # Only classify in background when no title was provided (no AI preview used)
             background_tasks.add_task(
                 _classify_and_update,
                 vault_store,
@@ -313,20 +360,57 @@ def register_vault_routes(
         return JSONResponse({"status": "deleted", "id": note_id})
 
     @app.post("/api/ui/vault/notes/{note_id}/polish", tags=["theseus-vault"])
-    async def polish_note(note_id: str) -> JSONResponse:
-        """Polish a vault note via the vault_curation LLM (requires Ollama)."""
-        _require_ollama()
-        if vault_curation_func is None:
-            raise HTTPException(status_code=503, detail="Vault curation LLM not configured")
+    async def polish_note(
+        note_id: str,
+        payload: PolishRequest = PolishRequest(),
+    ) -> JSONResponse:
+        """Polish a vault note and return a diff preview or persist changes.
+
+        - ``accept=False`` (default): runs the LLM, returns PolishResult (diff
+          preview). Note is NOT modified — safe for UI preview.
+        - ``accept=True``: rewrites the note body and sets status=polished.
+        - ``model="qwen"`` (default): uses vault_curation_func (Ollama).
+        - ``model="grok"``: uses query_func (Grok cloud); Ollama not required.
+        """
+        from src.server.vault_llm import polish_note as _llm_polish
+
+        # Select LLM func and guard availability
+        if payload.model == "grok":
+            if query_func is None:
+                raise HTTPException(status_code=503, detail="Grok query LLM not configured")
+            llm_func = query_func
+        else:
+            _require_ollama()
+            if vault_curation_func is None:
+                raise HTTPException(status_code=503, detail="Vault curation LLM not configured")
+            llm_func = vault_curation_func
+
         note = vault_store.read(note_id)
-        prompt = _POLISH_PROMPT_TEMPLATE.format(body=note["body"].strip())
-        raw = await vault_curation_func(prompt, system_prompt=_POLISH_SYSTEM)
-        title, note_type, polished_body = _parse_curation_response(raw, fallback_body=note["body"])
+        vault_index = {n["title"]: n["id"] for n in vault_store.list_notes() if n.get("title")}
+
+        result = await _llm_polish(
+            raw_body=note["body"],
+            note_type=note.get("type", "raw"),
+            model_role=payload.model,
+            vault_index=vault_index,
+            llm_func=llm_func,
+        )
+
+        if not payload.accept:
+            # Preview mode — return diff, do not persist
+            return JSONResponse({
+                "original": result.original,
+                "rewritten": result.rewritten,
+                "diff_hunks": result.diff_hunks,
+                "wikilink_suggestions": result.wikilink_suggestions,
+            })
+
+        # Accept mode — persist the polished body and metadata
         updated = vault_store.update(
             note_id,
-            title=title,
-            type=note_type,
-            body=polished_body,
+            title=result.title or note.get("title", ""),
+            type=result.note_type,
+            body=result.rewritten,
             status="polished",
         )
         return JSONResponse(updated)

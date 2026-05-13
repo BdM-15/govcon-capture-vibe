@@ -39,6 +39,7 @@ def test_polish_endpoint_not_stub() -> None:
         "id": "test-note", "title": "Polished title", "body": "clean body",
         "type": "insight", "status": "polished", "updated": "2026-01-02T00:00:00Z",
     }
+    store.list_notes.return_value = []
 
     curation_mock = AsyncMock(return_value="TYPE: insight\nTITLE: Polished title\nBODY: clean body")
 
@@ -71,6 +72,7 @@ def test_polish_endpoint_calls_curation_and_updates_store() -> None:
         "id": "note-1", "title": "Clean title", "body": "polished",
         "type": "insight", "status": "polished", "updated": "2026-01-02T00:00:00Z",
     }
+    store.list_notes.return_value = []
 
     curation_mock = AsyncMock(return_value="TYPE: insight\nTITLE: Clean title\nBODY: polished")
 
@@ -81,7 +83,7 @@ def test_polish_endpoint_calls_curation_and_updates_store() -> None:
         app = FastAPI()
         register_vault_routes(app, vault_store=store, vault_curation_func=curation_mock)
         client = TestClient(app)
-        resp = client.post("/api/ui/vault/notes/note-1/polish")
+        resp = client.post("/api/ui/vault/notes/note-1/polish", json={"model": "qwen", "accept": True})
         assert resp.status_code == 200
         curation_mock.assert_awaited_once()
         store.update.assert_called_once()

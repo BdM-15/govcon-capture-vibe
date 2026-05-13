@@ -196,3 +196,55 @@ window.theseusVaultFeedToWorkspace = async function theseusVaultFeedToWorkspace(
     app.toast("Feed to workspace error: " + error.message, "error");
   }
 };
+
+/**
+ * Preview polish for a vault note. Calls POST /polish without accept=true,
+ * stores the diff result and opens the diff overlay.
+ */
+window.theseusVaultPreviewPolish = async function theseusVaultPreviewPolish(app, id) {
+  if (!id) return;
+  app.vaultPolishLoading = true;
+  app.vaultDiffOpen = false;
+  app.vaultDiffResult = null;
+  try {
+    const resp = await fetch("/api/ui/vault/notes/" + id + "/polish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: app.vaultPolishModel || "qwen", accept: false }),
+    });
+    if (!resp.ok) throw new Error("Polish preview failed (" + resp.status + ")");
+    app.vaultDiffResult = await resp.json();
+    app.vaultDiffOpen = true;
+  } catch (error) {
+    app.toast("Polish preview error: " + error.message, "error");
+  } finally {
+    app.vaultPolishLoading = false;
+  }
+};
+
+/**
+ * Accept the current polish diff and persist the rewritten body to the store.
+ * Closes the diff overlay and refreshes the active note.
+ */
+window.theseusVaultAcceptPolish = async function theseusVaultAcceptPolish(app, id) {
+  if (!id) return;
+  app.vaultPolishLoading = true;
+  try {
+    const resp = await fetch("/api/ui/vault/notes/" + id + "/polish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: app.vaultPolishModel || "qwen", accept: true }),
+    });
+    if (!resp.ok) throw new Error("Accept polish failed (" + resp.status + ")");
+    const updated = await resp.json();
+    app.vaultDiffOpen = false;
+    app.vaultDiffResult = null;
+    app.vaultActiveNote = updated;
+    app.toast("Note polished and saved", "success");
+    if (window.theseusLoadVaultNotes) await window.theseusLoadVaultNotes(app);
+  } catch (error) {
+    app.toast("Accept polish error: " + error.message, "error");
+  } finally {
+    app.vaultPolishLoading = false;
+  }
+};

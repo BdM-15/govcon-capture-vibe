@@ -4851,6 +4851,72 @@
                 </div>
               </div>
 
+              <!-- ── Diff overlay: polish preview ───────────────────────────── -->
+              <div
+                id="vault-diff-overlay"
+                x-show="vaultDiffOpen && vaultActiveNote"
+                x-transition.opacity
+                class="absolute inset-0 z-30 bg-ink-950/95 flex flex-col gap-3 p-4 overflow-y-auto"
+              >
+                <!-- Header -->
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-semibold text-neon-cyan">Polish Preview</span>
+                  <div class="flex items-center gap-2">
+                    <!-- Model toggle -->
+                    <select
+                      x-model="vaultPolishModel"
+                      class="text-xs bg-ink-900 border border-edge-strong/40 rounded px-2 py-1 text-text-300"
+                    >
+                      <option value="qwen">Qwen (local)</option>
+                      <option value="grok">Grok (cloud)</option>
+                    </select>
+                    <button
+                      type="button"
+                      class="text-xs text-text-500 hover:text-red-400 transition-colors"
+                      @click="vaultDiffOpen = false; vaultDiffResult = null"
+                    >Reject</button>
+                    <button
+                      type="button"
+                      class="text-xs bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30 border border-neon-cyan/40 rounded px-2 py-1 transition-colors"
+                      @click="vaultAcceptPolish(vaultActiveNote && vaultActiveNote.id)"
+                      :disabled="vaultPolishLoading"
+                    >Accept</button>
+                  </div>
+                </div>
+                <!-- Diff hunks -->
+                <template x-if="vaultDiffResult && vaultDiffResult.diff_hunks && vaultDiffResult.diff_hunks.length">
+                  <div class="bg-ink-900 border border-edge-strong/30 rounded p-3 overflow-x-auto">
+                    <p class="text-xs text-text-500 mb-2">Changes</p>
+                    <template x-for="(line, idx) in vaultDiffResult.diff_hunks" :key="idx">
+                      <div
+                        class="text-xs font-mono whitespace-pre-wrap"
+                        :class="{
+                          'text-green-400': line.startsWith('+') && !line.startsWith('+++'),
+                          'text-red-400': line.startsWith('-') && !line.startsWith('---'),
+                          'text-text-500': line.startsWith('@') || line.startsWith('---') || line.startsWith('+++'),
+                          'text-text-300': !line.startsWith('+') && !line.startsWith('-') && !line.startsWith('@')
+                        }"
+                        x-text="line"
+                      ></div>
+                    </template>
+                  </div>
+                </template>
+                <!-- Wikilink suggestions -->
+                <template x-if="vaultDiffResult && vaultDiffResult.wikilink_suggestions && vaultDiffResult.wikilink_suggestions.length">
+                  <div>
+                    <p class="text-xs text-text-500 mb-1">Suggested wikilinks</p>
+                    <div class="flex flex-wrap gap-1">
+                      <template x-for="(link, idx) in vaultDiffResult.wikilink_suggestions" :key="idx">
+                        <span
+                          class="text-xs bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 rounded px-2 py-0.5"
+                          x-text="link"
+                        ></span>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
               <!-- ── Right pane: metadata + promote ─────────────────────────── -->
               <div
                 id="vault-right-pane"

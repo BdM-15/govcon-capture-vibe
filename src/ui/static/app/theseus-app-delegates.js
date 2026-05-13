@@ -869,7 +869,15 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
     },
 
     async polishVaultNote(id) {
-      return window.theseusPolishVaultNote(this, id);
+      return window.theseusVaultPreviewPolish(this, id);
+    },
+
+    async vaultPreviewPolish(id) {
+      return window.theseusVaultPreviewPolish(this, id);
+    },
+
+    async vaultAcceptPolish(id) {
+      return window.theseusVaultAcceptPolish(this, id);
     },
 
     async vaultPromoteNote(id) {

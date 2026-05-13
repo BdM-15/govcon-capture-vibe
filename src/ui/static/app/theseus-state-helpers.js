@@ -284,5 +284,9 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultAskSources: [],
     vaultRecommendations: [],
     vaultRecommendLoading: false,
+    vaultDiffResult: null,
+    vaultDiffOpen: false,
+    vaultPolishModel: "qwen",
+    vaultPolishLoading: false,
   };
 };
