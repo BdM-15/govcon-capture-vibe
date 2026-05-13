@@ -5,11 +5,13 @@ from __future__ import annotations
 import logging
 import traceback
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 from fastapi import File, Query, UploadFile
 from fastapi.responses import JSONResponse
 
+from src.server.evergreen_bootstrap import is_new_workspace, seed_evergreen_docs
 from src.server.upload_staging import save_upload_to_workspace
 
 logger = logging.getLogger(__name__)
@@ -77,6 +79,7 @@ def create_documents_upload_endpoint(
     process_document_func,
     callback,
     vault_store=None,
+    evergreen_dir: Path | None = None,
 ):
     """Override LightRAG's WebUI /documents/upload endpoint to use RAG-Anything."""
 
@@ -166,12 +169,26 @@ def create_documents_upload_endpoint(
                 file_path.name,
                 file_path.parent,
             )
+            # Detect new workspace BEFORE processing so the check is unambiguous.
+            _new_ws = await is_new_workspace(rag_instance)
+
             processing_result = await process_document_func(
                 str(file_path),
                 file_path.name,
                 rag_instance,
                 rag_instance.llm_model_func,
             )
+
+            # Evergreen bootstrap — seed on first upload only.
+            if _new_ws:
+                from src.core.config import get_settings
+                _ev_dir = evergreen_dir or Path(get_settings().working_dir) / "_platform" / "evergreen"
+                _ws_name = workspace or get_settings().workspace
+                _ev_count = await seed_evergreen_docs(
+                    rag_instance, _ev_dir, process_document_func, callback, workspace=_ws_name
+                )
+                if _ev_count:
+                    logger.info("🌿 Seeded workspace '%s' with %d evergreen doc(s)", _ws_name, _ev_count)
 
             logger.info("✅ Processing complete for %s", file_path.name)
             return JSONResponse(
