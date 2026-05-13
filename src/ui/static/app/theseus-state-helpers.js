@@ -255,5 +255,13 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       showGaps: true,
       traceFilter: "",
     },
+    quickCapture: {
+      open: false,
+      title: "",
+      body: "",
+      type: "insight",
+      error: null,
+      saving: false,
+    },
   };
 };

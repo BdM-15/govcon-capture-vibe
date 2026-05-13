@@ -3367,3 +3367,62 @@ details.acc .summary-actions {
   overflow-y: auto;
   line-height: 1.4;
 }
+
+
+/* ==========================================================================
+   Quick-Capture FAB + Modal (issue #138)
+   ========================================================================== */
+.quick-capture-fab {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--neon-magenta);
+  color: var(--ink-950);
+  border: none;
+  cursor: pointer;
+  box-shadow:
+    0 0 12px rgba(var(--neon-magenta-rgb), 0.55),
+    0 0 32px rgba(var(--neon-magenta-rgb), 0.25);
+  transition:
+    box-shadow 150ms ease,
+    transform 120ms ease;
+}
+.quick-capture-fab:hover {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 18px rgba(var(--neon-magenta-rgb), 0.75),
+    0 0 48px rgba(var(--neon-magenta-rgb), 0.35);
+}
+.quick-capture-fab:active {
+  transform: scale(0.95);
+}
+
+.quick-capture-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--ink-950-rgb, 2 6 23), 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.quick-capture-modal {
+  background: var(--ink-900);
+  border: 1px solid var(--edge-strong);
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  width: 100%;
+  max-width: 32rem;
+  box-shadow:
+    0 0 0 1px rgba(var(--neon-magenta-rgb), 0.18),
+    0 8px 32px rgba(0 0 0 / 0.6);
+}

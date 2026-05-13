@@ -69,6 +69,25 @@ window.createTheseusNavGroups = function createTheseusNavGroups() {
       ],
     },
     {
+      id: "knowledge",
+      label: "KNOWLEDGE",
+      accent: "lime",
+      items: [
+        {
+          id: "vault",
+          label: "Vault",
+          icon: "book-open",
+          accent: "lime",
+        },
+        {
+          id: "intel-feed",
+          label: "Intel Feed",
+          icon: "inbox",
+          accent: "amber",
+        },
+      ],
+    },
+    {
       id: "system",
       label: "SYSTEM",
       accent: "lime",

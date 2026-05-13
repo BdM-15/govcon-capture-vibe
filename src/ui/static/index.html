@@ -7892,5 +7892,131 @@
         </div>
       </div>
     </template>
+
+    <!-- ── Quick-Capture FAB ──────────────────────────────────────────── -->
+    <button
+      class="quick-capture-fab"
+      @click="quickCapture.open = true"
+      title="Quick Capture"
+      aria-label="Open quick capture"
+    >
+      <i data-lucide="plus" class="w-5 h-5"></i>
+    </button>
+
+    <!-- ── Quick-Capture Modal ───────────────────────────────────────── -->
+    <div
+      class="quick-capture-modal-backdrop"
+      x-show="quickCapture.open"
+      x-cloak
+      @click.self="quickCapture.open = false"
+      @keydown.escape.window="quickCapture.open = false"
+      x-effect="if (quickCapture.open) $nextTick(() => lucide.createIcons())"
+    >
+      <div class="quick-capture-modal" role="dialog" aria-modal="true" aria-labelledby="qc-title">
+        <!-- header -->
+        <div class="flex items-center justify-between mb-3">
+          <h2 id="qc-title" class="text-sm font-bold text-text-100 uppercase tracking-widest">
+            Quick Capture
+          </h2>
+          <button
+            @click="quickCapture.open = false"
+            class="text-text-400 hover:text-text-100 transition-colors"
+            aria-label="Close"
+          >
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- form -->
+        <form
+          @submit.prevent="
+            quickCapture.error = null;
+            quickCapture.saving = true;
+            fetch('/api/ui/vault/notes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: quickCapture.title.trim(),
+                body: quickCapture.body.trim(),
+                type: quickCapture.type,
+                status: 'raw',
+                source: 'manual',
+              }),
+            })
+            .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)))
+            .then(() => {
+              toast('Note captured.', 'success');
+              quickCapture.open = false;
+              quickCapture.title = '';
+              quickCapture.body = '';
+              quickCapture.type = 'insight';
+            })
+            .catch(err => { quickCapture.error = err.detail || err.message || 'Save failed'; })
+            .finally(() => { quickCapture.saving = false; })
+          "
+        >
+          <!-- title (required) -->
+          <label class="block mb-1 text-xs text-text-300 font-medium">
+            Title <span class="text-magenta-400">*</span>
+          </label>
+          <input
+            type="text"
+            class="input-field w-full mb-3"
+            placeholder="Note title…"
+            x-model="quickCapture.title"
+            required
+            maxlength="512"
+            autofocus
+          />
+
+          <!-- body -->
+          <label class="block mb-1 text-xs text-text-300 font-medium">Body</label>
+          <textarea
+            class="input-field w-full mb-3 resize-y"
+            rows="4"
+            placeholder="Note content…"
+            x-model="quickCapture.body"
+            maxlength="32768"
+          ></textarea>
+
+          <!-- type -->
+          <label class="block mb-1 text-xs text-text-300 font-medium">Type</label>
+          <select class="input-field w-full mb-4" x-model="quickCapture.type">
+            <option value="insight">Insight</option>
+            <option value="action">Action</option>
+            <option value="risk">Risk</option>
+            <option value="theme">Theme</option>
+            <option value="question">Question</option>
+            <option value="raw">Raw</option>
+          </select>
+
+          <!-- inline error -->
+          <p
+            class="text-xs text-red-400 mb-3"
+            x-show="quickCapture.error"
+            x-text="quickCapture.error"
+          ></p>
+
+          <!-- actions -->
+          <div class="flex justify-end gap-2">
+            <button
+              type="button"
+              class="btn-ghost px-3 py-1.5 rounded-lg text-sm"
+              @click="quickCapture.open = false"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn-hero-magenta inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-bold text-ink-950"
+              :disabled="!quickCapture.title.trim() || quickCapture.saving"
+            >
+              <span x-text="quickCapture.saving ? 'Saving…' : 'Capture'"></span>
+              <i data-lucide="bookmark-plus" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </body>
 </html>
