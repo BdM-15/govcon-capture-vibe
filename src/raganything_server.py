@@ -344,15 +344,15 @@ def build_server_runtime(
     if entity_types is None or relationship_types is None:
         from src.ontology.schema import VALID_ENTITY_TYPES, VALID_RELATIONSHIP_TYPES
 
+        entity_types = VALID_ENTITY_TYPES
+        relationship_types = VALID_RELATIONSHIP_TYPES
+
     def _ollama_available_at_banner() -> bool:
         try:
             from src.server.vault_routes import is_ollama_available
             return is_ollama_available()
         except Exception:
             return False
-
-        entity_types = VALID_ENTITY_TYPES
-        relationship_types = VALID_RELATIONSHIP_TYPES
 
     host = global_args_obj.host
     port = global_args_obj.port
