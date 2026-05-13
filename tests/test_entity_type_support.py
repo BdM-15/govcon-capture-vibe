@@ -1,4 +1,4 @@
-from src.inference.entity_type_support import (
+from src.inference.entity_operations import (
     count_types,
     create_retyping_prompt,
     identify_forbidden_entities,
