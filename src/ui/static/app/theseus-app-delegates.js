@@ -848,6 +848,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusLoadVaultNotes(this);
     },
 
+    async deleteVaultNote(id) {
+      return window.theseusDeleteVaultNote(this, id);
+    },
+
     filteredLmRows() {
       return window.theseusFilteredLmRows(this);
     },

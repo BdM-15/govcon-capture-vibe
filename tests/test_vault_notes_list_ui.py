@@ -119,3 +119,47 @@ def test_vault_notes_reload_after_hitl_save() -> None:
     assert "loadVaultNotes" in html, (
         "HITL save success handler must call loadVaultNotes() to refresh the notes list"
     )
+
+
+# ── Slice 3: delete button ────────────────────────────────────────────────────
+
+def test_vault_notes_delete_fn_in_helpers() -> None:
+    """vault-helpers.js must define window.theseusDeleteVaultNote."""
+    js = _VAULT_HELPERS.read_text(encoding="utf-8")
+    assert "theseusDeleteVaultNote" in js, (
+        "theseus-vault-helpers.js must define window.theseusDeleteVaultNote"
+    )
+
+
+def test_vault_notes_delete_calls_endpoint() -> None:
+    """theseusDeleteVaultNote must call the DELETE endpoint."""
+    js = _VAULT_HELPERS.read_text(encoding="utf-8")
+    assert "DELETE" in js and "/api/ui/vault/notes/" in js, (
+        "theseusDeleteVaultNote must call DELETE /api/ui/vault/notes/{id}"
+    )
+
+
+def test_vault_notes_delete_refreshes_list() -> None:
+    """theseusDeleteVaultNote must reload the notes list after deletion."""
+    js = _VAULT_HELPERS.read_text(encoding="utf-8")
+    fn_marker = "async function theseusDeleteVaultNote"
+    idx = js.find(fn_marker)
+    assert idx != -1, "theseusDeleteVaultNote function not found"
+    body = js[idx:]
+    assert "theseusLoadVaultNotes" in body, (
+        "theseusDeleteVaultNote must call theseusLoadVaultNotes to refresh"
+    )
+
+
+def test_vault_notes_delegates_has_delete_method() -> None:
+    """theseus-app-delegates.js must expose a deleteVaultNote() method."""
+    js = _DELEGATES.read_text(encoding="utf-8")
+    assert "deleteVaultNote" in js, "app-delegates must have deleteVaultNote method"
+
+
+def test_vault_notes_card_has_delete_button() -> None:
+    """Each note card must have a delete button calling deleteVaultNote."""
+    html = _INDEX.read_text(encoding="utf-8")
+    assert "deleteVaultNote" in html, (
+        "Note card must have a delete button that calls deleteVaultNote"
+    )

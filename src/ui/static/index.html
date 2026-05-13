@@ -4619,7 +4619,15 @@
                         }"
                         x-text="note.type || 'raw'"
                       ></span>
-                      <span class="text-sm font-medium text-text-100 truncate" x-text="note.title || '(untitled)'"></span>
+                      <span class="text-sm font-medium text-text-100 truncate flex-1" x-text="note.title || '(untitled)'"></span>
+                      <button
+                        type="button"
+                        class="ml-auto text-text-500 hover:text-red-400 transition-colors"
+                        :aria-label="'Delete note ' + (note.title || note.id)"
+                        @click="deleteVaultNote(note.id)"
+                      >
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
                     </div>
                     <p class="text-xs text-text-400 line-clamp-2" x-text="note.body"></p>
                     <time class="text-xs text-text-500" x-text="note.updated ? new Date(note.updated).toLocaleString() : ''"></time>

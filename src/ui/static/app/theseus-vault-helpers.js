@@ -9,3 +9,13 @@ window.theseusLoadVaultNotes = async function theseusLoadVaultNotes(app) {
     app.vaultNotesLoading = false;
   }
 };
+
+window.theseusDeleteVaultNote = async function theseusDeleteVaultNote(app, id) {
+  try {
+    const resp = await fetch("/api/ui/vault/notes/" + id, { method: "DELETE" });
+    if (!resp.ok) throw new Error("Delete failed");
+    await window.theseusLoadVaultNotes(app);
+  } catch (error) {
+    app.toast("Failed to delete note: " + error.message, "error");
+  }
+};
