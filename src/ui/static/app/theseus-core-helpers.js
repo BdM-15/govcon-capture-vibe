@@ -43,8 +43,11 @@ window.theseusInit = async function theseusInit(app) {
   );
 
   app.$watch("vaultTab", (tab) => {
-    if (tab === "intel-feed" && !app.intel.data && !app.intel.loading) {
-      app.loadIntel();
+    if (tab === "intel-feed") {
+      if (!app.intel.data && !app.intel.loading) {
+        app.loadIntel();
+      }
+      app.intelFeedLoad();
     }
   });
 

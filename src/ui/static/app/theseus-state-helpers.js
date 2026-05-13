@@ -290,5 +290,10 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultPolishLoading: false,
     vaultEntityProposals: [],
     vaultEntityLoading: false,
+    intelFeedNotes: [],
+    intelFeedLoading: false,
+    intelBulkPolishing: false,
+    intelBulkProgress: {},
+    intelDragId: null,
   };
 };

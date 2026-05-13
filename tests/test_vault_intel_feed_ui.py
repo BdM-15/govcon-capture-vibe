@@ -54,10 +54,10 @@ def test_vault_intel_tab_uses_intel_data() -> None:
 
 
 def test_vault_intel_tab_shows_gaps() -> None:
-    """Intel-feed tab must surface gap information from intel.data.gaps."""
+    """Intel-feed tab now shows Zettelkasten swimlanes (Fleeting/Developing/Connected) — #147."""
     html = _INDEX.read_text(encoding="utf-8")
-    assert "intel.data?.gaps" in html or "intel.data.gaps" in html, (
-        "Intel-feed tab must display gap data from intel.data.gaps"
+    assert "Fleeting" in html and "Developing" in html and "Connected" in html, (
+        "Intel-feed tab must show Zettelkasten swimlane headings (Fleeting, Developing, Connected)"
     )
 
 

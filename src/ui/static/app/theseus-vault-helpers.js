@@ -309,3 +309,80 @@ window.theseusVaultAcceptEntities = async function theseusVaultAcceptEntities(ap
     app.toast("Accept entities error: " + error.message, "error");
   }
 };
+
+// ---------------------------------------------------------------------------
+// Intel Feed — Zettelkasten swimlanes
+// ---------------------------------------------------------------------------
+
+/**
+ * Load all vault notes into app.intelFeedNotes for the Intel Feed kanban.
+ */
+window.theseusIntelFeedLoad = async function theseusIntelFeedLoad(app) {
+  app.intelFeedLoading = true;
+  try {
+    const resp = await fetch("/api/ui/vault/notes");
+    if (!resp.ok) throw new Error("Failed to load notes (" + resp.status + ")");
+    const data = await resp.json();
+    app.intelFeedNotes = data.notes || [];
+  } catch (e) {
+    console.error("intel feed load failed", e);
+    app.intelFeedNotes = [];
+  } finally {
+    app.intelFeedLoading = false;
+  }
+};
+
+/**
+ * Move a note to a new swimlane status (optimistic update + PUT persist).
+ */
+window.theseusIntelDrop = async function theseusIntelDrop(app, noteId, newStatus) {
+  if (!noteId) return;
+  const note = app.intelFeedNotes.find(n => n.id === noteId);
+  if (!note || note.status === newStatus) return;
+  // Optimistic update
+  note.status = newStatus;
+  try {
+    const resp = await fetch("/api/ui/vault/notes/" + noteId, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    if (!resp.ok) throw new Error("status update failed (" + resp.status + ")");
+    const updated = await resp.json();
+    const idx = app.intelFeedNotes.findIndex(n => n.id === noteId);
+    if (idx !== -1) app.intelFeedNotes[idx] = updated;
+  } catch (e) {
+    app.toast("Failed to move note: " + e.message, "error");
+    await window.theseusIntelFeedLoad(app); // revert
+  }
+};
+
+/**
+ * Bulk-polish all fleeting (raw) notes in sequence.
+ * Sets per-note progress in intelBulkProgress: 'polishing' | 'done' | 'error'.
+ */
+window.theseusIntelBulkPolish = async function theseusIntelBulkPolish(app) {
+  const rawNotes = app.intelFeedNotes.filter(n => (n.status || "raw") === "raw");
+  if (!rawNotes.length) return;
+  app.intelBulkPolishing = true;
+  app.intelBulkProgress = {};
+  for (const note of rawNotes) {
+    app.intelBulkProgress = { ...app.intelBulkProgress, [note.id]: "polishing" };
+    try {
+      const resp = await fetch("/api/ui/vault/notes/" + note.id + "/polish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accept: true }),
+      });
+      if (!resp.ok) throw new Error("polish failed (" + resp.status + ")");
+      const updated = await resp.json();
+      const idx = app.intelFeedNotes.findIndex(n => n.id === note.id);
+      if (idx !== -1) app.intelFeedNotes[idx] = updated;
+      app.intelBulkProgress = { ...app.intelBulkProgress, [note.id]: "done" };
+    } catch (e) {
+      app.intelBulkProgress = { ...app.intelBulkProgress, [note.id]: "error" };
+    }
+  }
+  app.intelBulkPolishing = false;
+};
+

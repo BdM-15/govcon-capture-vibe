@@ -5187,55 +5187,147 @@
 
             </div>
 
-            <!-- intel feed tab content -->
+            <!-- intel feed tab content — Zettelkasten swimlanes -->
             <div x-show="vaultTab === 'intel-feed'">
               <!-- loading -->
-              <div x-show="intel.loading" class="py-6 text-center text-sm text-text-400">
+              <div x-show="intelFeedLoading" class="py-6 text-center text-sm text-text-400">
                 <i data-lucide="loader" class="inline-block w-4 h-4 animate-spin mr-1"></i>
-                Computing intelligence…
+                Loading notes…
               </div>
 
+              <!-- kanban — three swimlane columns -->
+              <div x-show="!intelFeedLoading" class="flex gap-3 overflow-x-auto pb-2 min-h-0">
 
-              <!-- empty state -->
-              <div x-show="!intel.loading && !intel.data" class="py-6 text-sm text-text-400">
-                Process workspace documents to populate the intelligence feed.
-              </div>
-
-              <!-- data -->
-              <div x-show="!intel.loading && intel.data" class="space-y-4">
-                <!-- uncovered instructions count -->
-                <div class="flex items-center gap-3 p-3 rounded border border-edge-subtle bg-ink-800">
-                  <div class="text-2xl font-bold text-neon-cyan"
-                    x-text="(intel.data?.lm_matrix?.instructions || []).filter(r => !r.covered).length">
+                <!-- ── Fleeting (raw) ── -->
+                <div class="flex-1 min-w-[180px] flex flex-col"
+                  @dragover.prevent
+                  @drop="intelDrop(intelDragId, 'raw'); intelDragId = null">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-[11px] font-semibold text-text-400 uppercase tracking-wider">Fleeting</span>
+                      <span class="text-[10px] bg-ink-800 border border-edge-subtle rounded-full px-2 text-text-400"
+                        x-text="intelFeedNotes.filter(n => (n.status || 'raw') === 'raw').length"></span>
+                    </div>
+                    <button
+                      @click.stop="intelBulkPolish()"
+                      :disabled="intelBulkPolishing || intelFeedNotes.filter(n => (n.status||'raw')==='raw').length === 0"
+                      class="text-[10px] px-2 py-0.5 rounded border border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Polish all fleeting notes">
+                      <i data-lucide="sparkles" class="inline-block w-3 h-3 mr-0.5"></i>
+                      Bulk Polish All
+                    </button>
                   </div>
-                  <div class="text-sm text-text-300">uncovered proposal instructions (L↔M gaps)</div>
-                </div>
 
-                <!-- top gaps list -->
-                <div x-show="(intel.data?.gaps?.requirements_no_satisfaction || []).length > 0">
-                  <p class="text-xs font-semibold text-text-400 uppercase tracking-wider mb-2">
-                    Requirements without satisfaction
-                  </p>
-                  <ul class="space-y-1">
-                    <template
-                      x-for="(req, i) in (intel.data?.gaps?.requirements_no_satisfaction || []).slice(0, 5)"
-                      :key="i"
-                    >
-                      <li class="text-xs text-text-300 px-2 py-1 rounded bg-ink-900 border border-edge-subtle truncate"
-                        x-text="req">
-                      </li>
+                  <!-- empty state -->
+                  <div x-show="intelFeedNotes.filter(n => (n.status||'raw')==='raw').length === 0"
+                    class="text-xs text-text-400 py-4 text-center border border-dashed border-edge-subtle rounded-lg">
+                    No fleeting notes
+                  </div>
+
+                  <div class="flex flex-col gap-2">
+                    <template x-for="note in intelFeedNotes.filter(n => (n.status||'raw')==='raw')" :key="note.id">
+                      <div
+                        draggable="true"
+                        @dragstart="intelDragId = note.id"
+                        @dragend="intelDragId = null"
+                        @click="active='vault'; vaultTab='notes'; $nextTick(() => vaultSelectNote(note))"
+                        class="cursor-pointer rounded-lg border border-edge-subtle bg-ink-800 p-2.5 hover:border-neon-cyan/40 transition-colors select-none"
+                        :class="{
+                          'animate-pulse border-neon-cyan/50': intelBulkProgress[note.id] === 'polishing',
+                          'border-neon-lime/40': intelBulkProgress[note.id] === 'done',
+                          'border-neon-red/40': intelBulkProgress[note.id] === 'error'
+                        }">
+                        <div class="flex items-start justify-between gap-1.5 mb-1">
+                          <span class="text-xs font-medium text-text-200 truncate" x-text="note.title || '(untitled)'"></span>
+                          <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20"
+                            x-text="note.type || 'raw'"></span>
+                        </div>
+                        <p class="text-[11px] text-text-400 truncate"
+                          x-text="(note.body || '').slice(0, 100)"></p>
+                        <div class="text-[10px] text-text-500 mt-1"
+                          x-text="note.updated_at ? note.updated_at.slice(0, 10) : ''"></div>
+                      </div>
                     </template>
-                  </ul>
+                  </div>
                 </div>
 
-                <!-- drill-through -->
-                <button
-                  @click="active='intel'"
-                  class="w-full text-xs text-neon-cyan border border-neon-cyan/30 rounded py-1.5 hover:bg-neon-cyan/10 transition-colors"
-                >
-                  View full analysis →
-                </button>
-              </div>
+                <!-- ── Developing (polished) ── -->
+                <div class="flex-1 min-w-[180px] flex flex-col"
+                  @dragover.prevent
+                  @drop="intelDrop(intelDragId, 'polished'); intelDragId = null">
+                  <div class="flex items-center gap-1.5 mb-2">
+                    <span class="text-[11px] font-semibold text-text-400 uppercase tracking-wider">Developing</span>
+                    <span class="text-[10px] bg-ink-800 border border-edge-subtle rounded-full px-2 text-text-400"
+                      x-text="intelFeedNotes.filter(n => n.status === 'polished').length"></span>
+                  </div>
+
+                  <!-- empty state -->
+                  <div x-show="intelFeedNotes.filter(n => n.status === 'polished').length === 0"
+                    class="text-xs text-text-400 py-4 text-center border border-dashed border-edge-subtle rounded-lg">
+                    No developing notes
+                  </div>
+
+                  <div class="flex flex-col gap-2">
+                    <template x-for="note in intelFeedNotes.filter(n => n.status === 'polished')" :key="note.id">
+                      <div
+                        draggable="true"
+                        @dragstart="intelDragId = note.id"
+                        @dragend="intelDragId = null"
+                        @click="active='vault'; vaultTab='notes'; $nextTick(() => vaultSelectNote(note))"
+                        class="cursor-pointer rounded-lg border border-edge-subtle bg-ink-800 p-2.5 hover:border-neon-cyan/40 transition-colors select-none">
+                        <div class="flex items-start justify-between gap-1.5 mb-1">
+                          <span class="text-xs font-medium text-text-200 truncate" x-text="note.title || '(untitled)'"></span>
+                          <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20"
+                            x-text="note.type || 'raw'"></span>
+                        </div>
+                        <p class="text-[11px] text-text-400 truncate"
+                          x-text="(note.body || '').slice(0, 100)"></p>
+                        <div class="text-[10px] text-text-500 mt-1"
+                          x-text="note.updated_at ? note.updated_at.slice(0, 10) : ''"></div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- ── Connected (evergreen) ── -->
+                <div class="flex-1 min-w-[180px] flex flex-col"
+                  @dragover.prevent
+                  @drop="intelDrop(intelDragId, 'evergreen'); intelDragId = null">
+                  <div class="flex items-center gap-1.5 mb-2">
+                    <span class="text-[11px] font-semibold text-text-400 uppercase tracking-wider">Connected</span>
+                    <span class="text-[10px] bg-ink-800 border border-edge-subtle rounded-full px-2 text-text-400"
+                      x-text="intelFeedNotes.filter(n => n.status === 'evergreen').length"></span>
+                  </div>
+
+                  <!-- empty state -->
+                  <div x-show="intelFeedNotes.filter(n => n.status === 'evergreen').length === 0"
+                    class="text-xs text-text-400 py-4 text-center border border-dashed border-edge-subtle rounded-lg">
+                    No connected notes
+                  </div>
+
+                  <div class="flex flex-col gap-2">
+                    <template x-for="note in intelFeedNotes.filter(n => n.status === 'evergreen')" :key="note.id">
+                      <div
+                        draggable="true"
+                        @dragstart="intelDragId = note.id"
+                        @dragend="intelDragId = null"
+                        @click="active='vault'; vaultTab='notes'; $nextTick(() => vaultSelectNote(note))"
+                        class="cursor-pointer rounded-lg border border-edge-subtle bg-ink-800 p-2.5 hover:border-neon-lime/40 transition-colors select-none">
+                        <div class="flex items-start justify-between gap-1.5 mb-1">
+                          <span class="text-xs font-medium text-text-200 truncate" x-text="note.title || '(untitled)'"></span>
+                          <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-neon-lime/10 text-neon-lime border border-neon-lime/20"
+                            x-text="note.type || 'raw'"></span>
+                        </div>
+                        <p class="text-[11px] text-text-400 truncate"
+                          x-text="(note.body || '').slice(0, 100)"></p>
+                        <div class="text-[10px] text-text-500 mt-1"
+                          x-text="note.updated_at ? note.updated_at.slice(0, 10) : ''"></div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+              </div><!-- /kanban -->
             </div>
           </section>
 

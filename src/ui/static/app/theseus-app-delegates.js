@@ -908,6 +908,18 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusVaultFeedToWorkspace(this, id);
     },
 
+    async intelFeedLoad() {
+      return window.theseusIntelFeedLoad(this);
+    },
+
+    async intelDrop(noteId, newStatus) {
+      return window.theseusIntelDrop(this, noteId, newStatus);
+    },
+
+    async intelBulkPolish() {
+      return window.theseusIntelBulkPolish(this);
+    },
+
     filteredLmRows() {
       return window.theseusFilteredLmRows(this);
     },
