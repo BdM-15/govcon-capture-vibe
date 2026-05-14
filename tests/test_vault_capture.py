@@ -122,3 +122,33 @@ def test_capture_falls_back_to_raw_when_llm_raises(tmp_path):
     assert captured.raw_body == raw
     assert captured.path.exists()
     assert "lost the recompete" in captured.title.lower()
+
+
+def test_capture_skips_llm_when_auto_polish_false(tmp_path):
+    """auto_polish=False persists raw note without invoking the LLM."""
+    vault_store = VaultStore(tmp_path, now=lambda: "2026-05-14T12:00:00")
+    called = []
+
+    async def llm(prompt, system_prompt=""):
+        called.append(prompt)
+        return "TYPE: insight\nTITLE: x\nBODY: x"
+
+    raw = "quick capture, no polish wanted"
+
+    async def _run():
+        return await capture(
+            raw_body=raw,
+            llm_func=llm,
+            vault_store=vault_store,
+            vault_index={"Anything": "anything"},
+            auto_polish=False,
+        )
+
+    captured = asyncio.run(_run())
+
+    assert called == [], "LLM must not be invoked when auto_polish=False"
+    assert captured.note_type == "raw"
+    assert captured.auto_polished is False
+    assert captured.polished_body == raw
+    assert captured.wikilink_suggestions == []
+    assert captured.path.exists()
