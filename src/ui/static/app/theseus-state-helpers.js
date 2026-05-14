@@ -258,7 +258,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     },
     quickCapture: {
       open: false,
-      step: "dump",        // "dump" | "review"
+      step: "dump", // "dump" | "review"
       body: "",
       aiTitle: "",
       aiNoteType: "raw",

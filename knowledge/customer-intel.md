@@ -7,8 +7,8 @@ tier: intelligence
 source: manual
 pursuit: null
 tags: []
-created: '2025-01-01'
-updated: '2025-01-01'
+created: "2025-01-01"
+updated: "2025-01-01"
 ---
 
 # Customer Intel

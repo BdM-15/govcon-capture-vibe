@@ -6,11 +6,11 @@ source: project-ariadne
 status: polished
 tags:
 - concept
+tier: doctrine
 title: Capture Plan Development
 topic: Capture Management
-type: article
-updated: '2026-04-22T23:01:17'
-tier: doctrine
+type: shipley_ref
+updated: '2026-05-13T21:59:26-05:00'
 ---
 
 > **Entity type:** `concept`

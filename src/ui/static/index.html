@@ -923,13 +923,20 @@
                   enqueued — extraction runs in the background.
                 </p>
 
-                <label class="flex items-center gap-2 mb-3 cursor-pointer select-none text-xs">
+                <label
+                  class="flex items-center gap-2 mb-3 cursor-pointer select-none text-xs"
+                >
                   <input
                     type="checkbox"
                     x-model="vaultOnly"
                     class="accent-neon-cyan w-3.5 h-3.5"
                   />
-                  <span class="text-slate-400">Save to vault only <span class="text-slate-600">(skip KG extraction)</span></span>
+                  <span class="text-slate-400"
+                    >Save to vault only
+                    <span class="text-slate-600"
+                      >(skip KG extraction)</span
+                    ></span
+                  >
                 </label>
 
                 <label
@@ -4623,11 +4630,14 @@
             </div>
 
             <!-- notes tab content — 3-pane layout -->
-            <div x-show="vaultTab === 'notes'" class="card flex gap-0 min-h-[600px] overflow-hidden">
-
+            <div
+              x-show="vaultTab === 'notes'"
+              class="card flex gap-0 min-h-[600px] overflow-hidden"
+            >
               <!-- ── Left pane: search, filters, note list ─────────────────── -->
-              <div class="w-56 flex-shrink-0 border-r border-edge-strong/40 bg-ink-900 flex flex-col">
-
+              <div
+                class="w-56 flex-shrink-0 border-r border-edge-strong/40 bg-ink-900 flex flex-col"
+              >
                 <!-- New Note button -->
                 <div class="p-2 border-b border-edge-strong/30">
                   <button
@@ -4643,7 +4653,10 @@
                 <!-- Search -->
                 <div class="p-2 border-b border-edge-strong/30">
                   <div class="relative">
-                    <i data-lucide="search" class="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-text-500 pointer-events-none"></i>
+                    <i
+                      data-lucide="search"
+                      class="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-text-500 pointer-events-none"
+                    ></i>
                     <input
                       type="search"
                       placeholder="Search…"
@@ -4661,19 +4674,25 @@
                     class="flex-1 py-1.5 text-xs font-medium transition-colors"
                     :class="vaultActiveTier === 'doctrine' ? 'text-neon-cyan border-b-2 border-neon-cyan bg-neon-cyan/5' : 'text-text-400 hover:text-text-200'"
                     @click="vaultSetTier('doctrine')"
-                  >Doctrine</button>
+                  >
+                    Doctrine
+                  </button>
                   <button
                     type="button"
                     class="flex-1 py-1.5 text-xs font-medium transition-colors"
                     :class="vaultActiveTier === 'intelligence' ? 'text-neon-cyan border-b-2 border-neon-cyan bg-neon-cyan/5' : 'text-text-400 hover:text-text-200'"
                     @click="vaultSetTier('intelligence')"
-                  >Intel</button>
+                  >
+                    Intel
+                  </button>
                   <button
                     type="button"
                     class="flex-1 py-1.5 text-xs font-medium transition-colors"
                     :class="vaultActiveTier === 'pursuit' ? 'text-neon-cyan border-b-2 border-neon-cyan bg-neon-cyan/5' : 'text-text-400 hover:text-text-200'"
                     @click="vaultSetTier('pursuit')"
-                  >Pursuits</button>
+                  >
+                    Pursuits
+                  </button>
                 </div>
 
                 <!-- Status filter (compact) -->
@@ -4692,13 +4711,24 @@
 
                 <!-- Note list (topic-grouped) -->
                 <div class="flex-1 overflow-y-auto">
-                  <div x-show="vaultNotesLoading" class="text-xs text-text-500 py-4 text-center">Loading…</div>
-                  <div x-show="!vaultNotesLoading && vaultNotes.length === 0" class="text-xs text-text-500 py-4 px-3">
+                  <div
+                    x-show="vaultNotesLoading"
+                    class="text-xs text-text-500 py-4 text-center"
+                  >
+                    Loading…
+                  </div>
+                  <div
+                    x-show="!vaultNotesLoading && vaultNotes.length === 0"
+                    class="text-xs text-text-500 py-4 px-3"
+                  >
                     No notes.
                   </div>
                   <template x-if="!vaultNotesLoading && vaultNotes.length > 0">
                     <div>
-                      <template x-for="group in vaultGroupedNotes()" :key="group.topic">
+                      <template
+                        x-for="group in vaultGroupedNotes()"
+                        :key="group.topic"
+                      >
                         <div>
                           <!-- Topic group header -->
                           <button
@@ -4707,12 +4737,20 @@
                             @click="vaultActiveTopic = vaultActiveTopic === group.topic ? '' : group.topic"
                           >
                             <span class="truncate" x-text="group.topic"></span>
-                            <span class="ml-1 tabular-nums text-text-500 flex-shrink-0" x-text="group.notes.length"></span>
+                            <span
+                              class="ml-1 tabular-nums text-text-500 flex-shrink-0"
+                              x-text="group.notes.length"
+                            ></span>
                           </button>
                           <!-- Notes in group (collapse when another topic is active) -->
-                          <template x-if="!vaultActiveTopic || vaultActiveTopic === group.topic">
+                          <template
+                            x-if="!vaultActiveTopic || vaultActiveTopic === group.topic"
+                          >
                             <ul>
-                              <template x-for="note in group.notes" :key="note.id">
+                              <template
+                                x-for="note in group.notes"
+                                :key="note.id"
+                              >
                                 <li
                                   class="px-3 py-2 cursor-pointer border-b border-edge-strong/20 hover:bg-ink-800 transition-colors"
                                   :class="vaultActiveNote && vaultActiveNote.id === note.id ? 'bg-neon-cyan/10 border-l-2 border-l-neon-cyan' : ''"
@@ -4735,8 +4773,14 @@
                                       x-text="note.type || 'raw'"
                                     ></span>
                                   </div>
-                                  <p class="text-xs text-text-200 truncate" x-text="note.title || '(untitled)'"></p>
-                                  <time class="text-xs text-text-500" x-text="note.updated ? new Date(note.updated).toLocaleDateString() : ''"></time>
+                                  <p
+                                    class="text-xs text-text-200 truncate"
+                                    x-text="note.title || '(untitled)'"
+                                  ></p>
+                                  <time
+                                    class="text-xs text-text-500"
+                                    x-text="note.updated ? new Date(note.updated).toLocaleDateString() : ''"
+                                  ></time>
                                 </li>
                               </template>
                             </ul>
@@ -4750,18 +4794,25 @@
 
               <!-- ── Center pane: editor / preview / mind map ───────────────── -->
               <div class="flex-1 flex flex-col bg-ink-950 min-w-0">
-
                 <!-- Empty state -->
-                <div x-show="!vaultActiveNote" class="flex-1 flex items-center justify-center text-text-500 text-sm">
+                <div
+                  x-show="!vaultActiveNote"
+                  class="flex-1 flex items-center justify-center text-text-500 text-sm"
+                >
                   <div class="text-center">
-                    <i data-lucide="file-text" class="w-8 h-8 mb-2 mx-auto opacity-30"></i>
+                    <i
+                      data-lucide="file-text"
+                      class="w-8 h-8 mb-2 mx-auto opacity-30"
+                    ></i>
                     <p>Select a note or create a new one</p>
                   </div>
                 </div>
 
                 <!-- Active note editor -->
-                <div x-show="vaultActiveNote" class="flex-1 flex flex-col min-h-0 p-4 gap-3">
-
+                <div
+                  x-show="vaultActiveNote"
+                  class="flex-1 flex flex-col min-h-0 p-4 gap-3"
+                >
                   <!-- Title -->
                   <input
                     type="text"
@@ -4773,10 +4824,14 @@
                   />
 
                   <!-- Frontmatter property grid -->
-                  <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs border border-edge-strong/20 rounded px-3 py-2 bg-ink-900">
+                  <div
+                    class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs border border-edge-strong/20 rounded px-3 py-2 bg-ink-900"
+                  >
                     <template x-if="vaultActiveNote">
                       <div class="contents">
-                        <label class="text-text-500 flex items-center">Type</label>
+                        <label class="text-text-500 flex items-center"
+                          >Type</label
+                        >
                         <select
                           class="bg-ink-800 border border-edge-subtle rounded px-1 py-0.5 text-text-200 focus:outline-none focus:border-neon-cyan/40"
                           x-model="vaultActiveNote.type"
@@ -4793,7 +4848,9 @@
                           <option value="capability">capability</option>
                           <option value="lesson_learned">lesson_learned</option>
                         </select>
-                        <label class="text-text-500 flex items-center">Tier</label>
+                        <label class="text-text-500 flex items-center"
+                          >Tier</label
+                        >
                         <select
                           class="bg-ink-800 border border-edge-subtle rounded px-1 py-0.5 text-text-200 focus:outline-none focus:border-neon-cyan/40"
                           x-model="vaultActiveNote.tier"
@@ -4804,7 +4861,9 @@
                           <option value="intelligence">intelligence</option>
                           <option value="pursuit">pursuit</option>
                         </select>
-                        <label class="text-text-500 flex items-center">Status</label>
+                        <label class="text-text-500 flex items-center"
+                          >Status</label
+                        >
                         <select
                           class="bg-ink-800 border border-edge-subtle rounded px-1 py-0.5 text-text-200 focus:outline-none focus:border-neon-cyan/40"
                           x-model="vaultActiveNote.status"
@@ -4814,14 +4873,18 @@
                           <option value="polished">polished</option>
                           <option value="evergreen">evergreen</option>
                         </select>
-                        <label class="text-text-500 flex items-center">Topic</label>
+                        <label class="text-text-500 flex items-center"
+                          >Topic</label
+                        >
                         <input
                           type="text"
                           class="bg-ink-800 border border-edge-subtle rounded px-1 py-0.5 text-text-200 focus:outline-none focus:border-neon-cyan/40"
                           x-model="vaultActiveNote.topic"
                           @blur="vaultSaveNote()"
                         />
-                        <label class="text-text-500 flex items-center">Pursuit</label>
+                        <label class="text-text-500 flex items-center"
+                          >Pursuit</label
+                        >
                         <input
                           type="text"
                           class="bg-ink-800 border border-edge-subtle rounded px-1 py-0.5 text-text-200 focus:outline-none focus:border-neon-cyan/40"
@@ -4834,25 +4897,33 @@
 
                   <!-- Editor toolbar -->
                   <div class="flex items-center gap-1">
-                    <div class="flex rounded border border-edge-strong/40 overflow-hidden text-xs">
+                    <div
+                      class="flex rounded border border-edge-strong/40 overflow-hidden text-xs"
+                    >
                       <button
                         type="button"
                         class="px-3 py-1 transition-colors"
                         :class="vaultEditorMode === 'editor' ? 'bg-neon-cyan/20 text-neon-cyan' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
                         @click="vaultEditorMode = 'editor'"
-                      >Editor</button>
+                      >
+                        Editor
+                      </button>
                       <button
                         type="button"
                         class="px-3 py-1 border-l border-edge-strong/40 transition-colors"
                         :class="vaultEditorMode === 'preview' ? 'bg-neon-cyan/20 text-neon-cyan' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
                         @click="vaultEditorMode = 'preview'"
-                      >Preview</button>
+                      >
+                        Preview
+                      </button>
                       <button
                         type="button"
                         class="px-3 py-1 border-l border-edge-strong/40 transition-colors"
                         :class="vaultEditorMode === 'mindmap' ? 'bg-neon-cyan/20 text-neon-cyan' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
                         @click="vaultEditorMode = 'mindmap'"
-                      >Mind Map</button>
+                      >
+                        Mind Map
+                      </button>
                     </div>
                     <div class="ml-auto flex items-center gap-1">
                       <button
@@ -4872,7 +4943,10 @@
                         @click="vaultActiveNote && polishVaultNote(vaultActiveNote.id)"
                         title="Polish note (AI)"
                       >
-                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-neon-cyan"></i>
+                        <i
+                          data-lucide="sparkles"
+                          class="w-3.5 h-3.5 text-neon-cyan"
+                        ></i>
                       </button>
                       <button
                         type="button"
@@ -4882,7 +4956,10 @@
                         @click="vaultActiveNote && vaultExtractEntities(vaultActiveNote.id)"
                         title="Extract entities"
                       >
-                        <i data-lucide="scan-search" class="w-3.5 h-3.5 text-neon-magenta"></i>
+                        <i
+                          data-lucide="scan-search"
+                          class="w-3.5 h-3.5 text-neon-magenta"
+                        ></i>
                       </button>
                       <button
                         type="button"
@@ -4920,7 +4997,6 @@
                   >
                     <svg id="vault-mindmap-svg" class="w-full h-full"></svg>
                   </div>
-
                 </div>
               </div>
 
@@ -4933,7 +5009,9 @@
               >
                 <!-- Header -->
                 <div class="flex items-center justify-between">
-                  <span class="text-sm font-semibold text-neon-cyan">Polish Preview</span>
+                  <span class="text-sm font-semibold text-neon-cyan"
+                    >Polish Preview</span
+                  >
                   <div class="flex items-center gap-2">
                     <!-- Model toggle -->
                     <select
@@ -4947,20 +5025,31 @@
                       type="button"
                       class="text-xs text-text-500 hover:text-red-400 transition-colors"
                       @click="vaultDiffOpen = false; vaultDiffResult = null"
-                    >Reject</button>
+                    >
+                      Reject
+                    </button>
                     <button
                       type="button"
                       class="text-xs bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30 border border-neon-cyan/40 rounded px-2 py-1 transition-colors"
                       @click="vaultAcceptPolish(vaultActiveNote && vaultActiveNote.id)"
                       :disabled="vaultPolishLoading"
-                    >Accept</button>
+                    >
+                      Accept
+                    </button>
                   </div>
                 </div>
                 <!-- Diff hunks -->
-                <template x-if="vaultDiffResult && vaultDiffResult.diff_hunks && vaultDiffResult.diff_hunks.length">
-                  <div class="bg-ink-900 border border-edge-strong/30 rounded p-3 overflow-x-auto">
+                <template
+                  x-if="vaultDiffResult && vaultDiffResult.diff_hunks && vaultDiffResult.diff_hunks.length"
+                >
+                  <div
+                    class="bg-ink-900 border border-edge-strong/30 rounded p-3 overflow-x-auto"
+                  >
                     <p class="text-xs text-text-500 mb-2">Changes</p>
-                    <template x-for="(line, idx) in vaultDiffResult.diff_hunks" :key="idx">
+                    <template
+                      x-for="(line, idx) in vaultDiffResult.diff_hunks"
+                      :key="idx"
+                    >
                       <div
                         class="text-xs font-mono whitespace-pre-wrap"
                         :class="{
@@ -4975,11 +5064,18 @@
                   </div>
                 </template>
                 <!-- Wikilink suggestions -->
-                <template x-if="vaultDiffResult && vaultDiffResult.wikilink_suggestions && vaultDiffResult.wikilink_suggestions.length">
+                <template
+                  x-if="vaultDiffResult && vaultDiffResult.wikilink_suggestions && vaultDiffResult.wikilink_suggestions.length"
+                >
                   <div>
-                    <p class="text-xs text-text-500 mb-1">Suggested wikilinks</p>
+                    <p class="text-xs text-text-500 mb-1">
+                      Suggested wikilinks
+                    </p>
                     <div class="flex flex-wrap gap-1">
-                      <template x-for="(link, idx) in vaultDiffResult.wikilink_suggestions" :key="idx">
+                      <template
+                        x-for="(link, idx) in vaultDiffResult.wikilink_suggestions"
+                        :key="idx"
+                      >
                         <span
                           class="text-xs bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 rounded px-2 py-0.5"
                           x-text="link"
@@ -4997,8 +5093,13 @@
                 class="w-52 flex-shrink-0 border-l border-edge-strong/40 bg-ink-900 flex flex-col overflow-y-auto"
               >
                 <!-- Pane header -->
-                <div class="px-3 py-2 border-b border-edge-strong/30 flex items-center justify-between">
-                  <span class="text-xs font-medium text-text-400 uppercase tracking-wider">Details</span>
+                <div
+                  class="px-3 py-2 border-b border-edge-strong/30 flex items-center justify-between"
+                >
+                  <span
+                    class="text-xs font-medium text-text-400 uppercase tracking-wider"
+                    >Details</span
+                  >
                   <button
                     type="button"
                     class="text-text-500 hover:text-text-300 transition-colors"
@@ -5023,7 +5124,9 @@
                     :disabled="vaultActiveNote && vaultActiveNote.status === 'evergreen'"
                   >
                     <i data-lucide="arrow-up-circle" class="w-3 h-3"></i>
-                    <span x-text="vaultActiveNote && vaultActiveNote.status === 'evergreen' ? 'Evergreen' : 'Promote'"></span>
+                    <span
+                      x-text="vaultActiveNote && vaultActiveNote.status === 'evergreen' ? 'Evergreen' : 'Promote'"
+                    ></span>
                   </button>
 
                   <!-- Status badge -->
@@ -5042,57 +5145,105 @@
 
                 <!-- Metadata -->
                 <div class="px-3 py-3 flex flex-col gap-3 text-xs">
-
                   <!-- Source -->
                   <div>
-                    <p class="text-text-500 uppercase tracking-wider mb-0.5">Source</p>
-                    <p class="text-text-300 break-all" x-text="vaultActiveNote ? (vaultActiveNote.source || '—') : ''"></p>
+                    <p class="text-text-500 uppercase tracking-wider mb-0.5">
+                      Source
+                    </p>
+                    <p
+                      class="text-text-300 break-all"
+                      x-text="vaultActiveNote ? (vaultActiveNote.source || '—') : ''"
+                    ></p>
                   </div>
 
                   <!-- Topic -->
                   <div>
-                    <p class="text-text-500 uppercase tracking-wider mb-0.5">Topic</p>
-                    <p class="text-text-300" x-text="vaultActiveNote ? (vaultActiveNote.topic || '—') : ''"></p>
+                    <p class="text-text-500 uppercase tracking-wider mb-0.5">
+                      Topic
+                    </p>
+                    <p
+                      class="text-text-300"
+                      x-text="vaultActiveNote ? (vaultActiveNote.topic || '—') : ''"
+                    ></p>
                   </div>
 
                   <!-- Tags -->
                   <div>
-                    <p class="text-text-500 uppercase tracking-wider mb-1">Tags</p>
+                    <p class="text-text-500 uppercase tracking-wider mb-1">
+                      Tags
+                    </p>
                     <div class="flex flex-wrap gap-1">
-                      <template x-if="vaultActiveNote && vaultActiveNote.tags && vaultActiveNote.tags.length">
-                        <template x-for="tag in vaultActiveNote.tags" :key="tag">
-                          <span class="px-1.5 py-0.5 rounded text-xs bg-ink-800 text-text-400 border border-edge-subtle" x-text="tag"></span>
+                      <template
+                        x-if="vaultActiveNote && vaultActiveNote.tags && vaultActiveNote.tags.length"
+                      >
+                        <template
+                          x-for="tag in vaultActiveNote.tags"
+                          :key="tag"
+                        >
+                          <span
+                            class="px-1.5 py-0.5 rounded text-xs bg-ink-800 text-text-400 border border-edge-subtle"
+                            x-text="tag"
+                          ></span>
                         </template>
                       </template>
-                      <span x-show="!vaultActiveNote || !vaultActiveNote.tags || vaultActiveNote.tags.length === 0" class="text-text-500">—</span>
+                      <span
+                        x-show="!vaultActiveNote || !vaultActiveNote.tags || vaultActiveNote.tags.length === 0"
+                        class="text-text-500"
+                        >—</span
+                      >
                     </div>
                   </div>
 
                   <!-- Created / Updated -->
                   <div>
-                    <p class="text-text-500 uppercase tracking-wider mb-0.5">Created</p>
-                    <time class="text-text-300" x-text="vaultActiveNote && vaultActiveNote.created ? new Date(vaultActiveNote.created).toLocaleDateString() : '—'"></time>
+                    <p class="text-text-500 uppercase tracking-wider mb-0.5">
+                      Created
+                    </p>
+                    <time
+                      class="text-text-300"
+                      x-text="vaultActiveNote && vaultActiveNote.created ? new Date(vaultActiveNote.created).toLocaleDateString() : '—'"
+                    ></time>
                   </div>
 
                   <div>
-                    <p class="text-text-500 uppercase tracking-wider mb-0.5">Updated</p>
-                    <time class="text-text-300" x-text="vaultActiveNote && vaultActiveNote.updated ? new Date(vaultActiveNote.updated).toLocaleDateString() : '—'"></time>
+                    <p class="text-text-500 uppercase tracking-wider mb-0.5">
+                      Updated
+                    </p>
+                    <time
+                      class="text-text-300"
+                      x-text="vaultActiveNote && vaultActiveNote.updated ? new Date(vaultActiveNote.updated).toLocaleDateString() : '—'"
+                    ></time>
                   </div>
-
                 </div>
 
                 <!-- Ask Theseus -->
-                <div class="px-3 py-3 border-t border-edge-strong/30 flex flex-col gap-2">
-                  <p class="text-xs font-medium text-text-400 uppercase tracking-wider">Ask Theseus</p>
+                <div
+                  class="px-3 py-3 border-t border-edge-strong/30 flex flex-col gap-2"
+                >
+                  <p
+                    class="text-xs font-medium text-text-400 uppercase tracking-wider"
+                  >
+                    Ask Theseus
+                  </p>
                   <button
                     type="button"
                     class="w-full flex items-center justify-center gap-1.5 px-2 py-2 rounded text-xs font-medium border border-neon-cyan/40 text-neon-cyan bg-neon-cyan/10 hover:bg-neon-cyan/20 transition-colors disabled:opacity-50"
                     :disabled="vaultAskLoading || !vaultActiveNote"
                     @click="vaultActiveNote && vaultAskTheseus(vaultActiveNote.id)"
                   >
-                    <i data-lucide="sparkles" class="w-3 h-3" x-show="!vaultAskLoading"></i>
-                    <i data-lucide="loader" class="w-3 h-3 animate-spin" x-show="vaultAskLoading"></i>
-                    <span x-text="vaultAskLoading ? 'Thinking…' : 'Ask Theseus'"></span>
+                    <i
+                      data-lucide="sparkles"
+                      class="w-3 h-3"
+                      x-show="!vaultAskLoading"
+                    ></i>
+                    <i
+                      data-lucide="loader"
+                      class="w-3 h-3 animate-spin"
+                      x-show="vaultAskLoading"
+                    ></i>
+                    <span
+                      x-text="vaultAskLoading ? 'Thinking…' : 'Ask Theseus'"
+                    ></span>
                   </button>
 
                   <!-- Answer display -->
@@ -5120,7 +5271,11 @@
                   class="border-t border-edge-strong/20 pt-3 mt-1"
                 >
                   <div class="flex items-center justify-between mb-2">
-                    <p class="text-xs font-medium text-text-400 uppercase tracking-wider">Relevant in your vault</p>
+                    <p
+                      class="text-xs font-medium text-text-400 uppercase tracking-wider"
+                    >
+                      Relevant in your vault
+                    </p>
                     <button
                       type="button"
                       class="text-text-500 hover:text-text-300 transition-colors"
@@ -5131,8 +5286,14 @@
                     </button>
                   </div>
                   <!-- loading -->
-                  <div x-show="vaultRecommendLoading" class="py-3 text-center text-xs text-text-500">
-                    <i data-lucide="loader" class="inline-block w-3 h-3 animate-spin mr-1"></i>
+                  <div
+                    x-show="vaultRecommendLoading"
+                    class="py-3 text-center text-xs text-text-500"
+                  >
+                    <i
+                      data-lucide="loader"
+                      class="inline-block w-3 h-3 animate-spin mr-1"
+                    ></i>
                     Scanning…
                   </div>
                   <!-- empty state -->
@@ -5144,12 +5305,23 @@
                   </div>
                   <!-- recommendation cards -->
                   <template x-for="rec in vaultRecommendations" :key="rec.id">
-                    <div class="mb-2 p-2 rounded bg-ink-800 border border-edge-strong/20 text-xs">
+                    <div
+                      class="mb-2 p-2 rounded bg-ink-800 border border-edge-strong/20 text-xs"
+                    >
                       <div class="flex items-start justify-between gap-1 mb-1">
-                        <span class="font-medium text-text-200 truncate" x-text="rec.title"></span>
-                        <span class="shrink-0 px-1 py-0.5 rounded text-[10px] font-semibold bg-ink-700 text-neon-cyan/80 border border-neon-cyan/20" x-text="rec.type"></span>
+                        <span
+                          class="font-medium text-text-200 truncate"
+                          x-text="rec.title"
+                        ></span>
+                        <span
+                          class="shrink-0 px-1 py-0.5 rounded text-[10px] font-semibold bg-ink-700 text-neon-cyan/80 border border-neon-cyan/20"
+                          x-text="rec.type"
+                        ></span>
                       </div>
-                      <div class="text-text-500 line-clamp-2 mb-1.5" x-text="rec.excerpt"></div>
+                      <div
+                        class="text-text-500 line-clamp-2 mb-1.5"
+                        x-text="rec.excerpt"
+                      ></div>
                       <div class="flex items-center gap-1.5">
                         <button
                           type="button"
@@ -5157,7 +5329,11 @@
                           @click="vaultPromoteNote(rec.id)"
                           title="Promote to evergreen"
                         >
-                          <i data-lucide="arrow-up-circle" class="w-2.5 h-2.5"></i> Promote
+                          <i
+                            data-lucide="arrow-up-circle"
+                            class="w-2.5 h-2.5"
+                          ></i>
+                          Promote
                         </button>
                         <button
                           type="button"
@@ -5165,7 +5341,8 @@
                           @click="vaultFeedToWorkspace(rec.id)"
                           title="Feed this note to the active workspace"
                         >
-                          <i data-lucide="link" class="w-2.5 h-2.5"></i> Feed to workspace
+                          <i data-lucide="link" class="w-2.5 h-2.5"></i> Feed to
+                          workspace
                         </button>
                       </div>
                     </div>
@@ -5175,7 +5352,11 @@
                 <!-- Extract Entities -->
                 <div class="border-t border-edge-strong/20 pt-3 mt-1 px-3 pb-3">
                   <div class="flex items-center justify-between mb-2">
-                    <p class="text-xs font-medium text-text-400 uppercase tracking-wider">Extract Entities</p>
+                    <p
+                      class="text-xs font-medium text-text-400 uppercase tracking-wider"
+                    >
+                      Extract Entities
+                    </p>
                     <button
                       type="button"
                       class="text-text-500 hover:text-neon-cyan transition-colors disabled:opacity-40"
@@ -5183,8 +5364,16 @@
                       @click="vaultActiveNote && vaultExtractEntities(vaultActiveNote.id)"
                       title="Scan note for govcon entities"
                     >
-                      <i data-lucide="scan-search" class="w-3 h-3" x-show="!vaultEntityLoading"></i>
-                      <i data-lucide="loader" class="w-3 h-3 animate-spin" x-show="vaultEntityLoading"></i>
+                      <i
+                        data-lucide="scan-search"
+                        class="w-3 h-3"
+                        x-show="!vaultEntityLoading"
+                      ></i>
+                      <i
+                        data-lucide="loader"
+                        class="w-3 h-3 animate-spin"
+                        x-show="vaultEntityLoading"
+                      ></i>
                     </button>
                   </div>
 
@@ -5197,19 +5386,37 @@
                   </div>
 
                   <!-- Proposal checklist -->
-                  <template x-for="(proposal, idx) in vaultEntityProposals" :key="idx">
-                    <label class="flex items-start gap-1.5 py-1 cursor-pointer group">
+                  <template
+                    x-for="(proposal, idx) in vaultEntityProposals"
+                    :key="idx"
+                  >
+                    <label
+                      class="flex items-start gap-1.5 py-1 cursor-pointer group"
+                    >
                       <input
                         type="checkbox"
                         class="mt-0.5 accent-neon-cyan"
                         x-model="proposal._selected"
                       />
                       <div class="flex-1 min-w-0">
-                        <span class="text-xs text-text-200 break-words" x-text="proposal.entity_text"></span>
+                        <span
+                          class="text-xs text-text-200 break-words"
+                          x-text="proposal.entity_text"
+                        ></span>
                         <div class="flex items-center gap-1 mt-0.5">
-                          <span class="text-[10px] px-1 py-0.5 rounded bg-ink-700 text-neon-cyan/80 border border-neon-cyan/20" x-text="proposal.entity_type"></span>
-                          <span x-show="proposal.already_in_kg" class="text-[10px] text-text-500 italic">in KG</span>
-                          <span class="text-[10px] text-text-500" x-text="'(' + Math.round(proposal.confidence * 100) + '%)'"></span>
+                          <span
+                            class="text-[10px] px-1 py-0.5 rounded bg-ink-700 text-neon-cyan/80 border border-neon-cyan/20"
+                            x-text="proposal.entity_type"
+                          ></span>
+                          <span
+                            x-show="proposal.already_in_kg"
+                            class="text-[10px] text-text-500 italic"
+                            >in KG</span
+                          >
+                          <span
+                            class="text-[10px] text-text-500"
+                            x-text="'(' + Math.round(proposal.confidence * 100) + '%)'"
+                          ></span>
                         </div>
                       </div>
                     </label>
@@ -5231,7 +5438,6 @@
                     <span>Accept Selected</span>
                   </button>
                 </div>
-
               </div>
 
               <!-- Right pane open button (shown when pane is closed and a note is active) -->
@@ -5248,48 +5454,71 @@
                   <i data-lucide="panel-right" class="w-4 h-4"></i>
                 </button>
               </div>
-
             </div>
 
             <!-- intel feed tab content — Zettelkasten swimlanes -->
             <div x-show="vaultTab === 'intel-feed'">
               <!-- loading -->
-              <div x-show="intelFeedLoading" class="py-6 text-center text-sm text-text-400">
-                <i data-lucide="loader" class="inline-block w-4 h-4 animate-spin mr-1"></i>
+              <div
+                x-show="intelFeedLoading"
+                class="py-6 text-center text-sm text-text-400"
+              >
+                <i
+                  data-lucide="loader"
+                  class="inline-block w-4 h-4 animate-spin mr-1"
+                ></i>
                 Loading notes…
               </div>
 
               <!-- kanban — three swimlane columns -->
-              <div x-show="!intelFeedLoading" class="flex gap-3 overflow-x-auto pb-2 min-h-0">
-
+              <div
+                x-show="!intelFeedLoading"
+                class="flex gap-3 overflow-x-auto pb-2 min-h-0"
+              >
                 <!-- ── Fleeting (raw) ── -->
-                <div class="flex-1 min-w-[180px] flex flex-col"
+                <div
+                  class="flex-1 min-w-[180px] flex flex-col"
                   @dragover.prevent
-                  @drop="intelDrop(intelDragId, 'raw'); intelDragId = null">
+                  @drop="intelDrop(intelDragId, 'raw'); intelDragId = null"
+                >
                   <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center gap-1.5">
-                      <span class="text-[11px] font-semibold text-text-400 uppercase tracking-wider">Fleeting</span>
-                      <span class="text-[10px] bg-ink-800 border border-edge-subtle rounded-full px-2 text-text-400"
-                        x-text="intelFeedNotes.filter(n => (n.status || 'raw') === 'raw').length"></span>
+                      <span
+                        class="text-[11px] font-semibold text-text-400 uppercase tracking-wider"
+                        >Fleeting</span
+                      >
+                      <span
+                        class="text-[10px] bg-ink-800 border border-edge-subtle rounded-full px-2 text-text-400"
+                        x-text="intelFeedNotes.filter(n => (n.status || 'raw') === 'raw').length"
+                      ></span>
                     </div>
                     <button
                       @click.stop="intelBulkPolish()"
                       :disabled="intelBulkPolishing || intelFeedNotes.filter(n => (n.status||'raw')==='raw').length === 0"
                       class="text-[10px] px-2 py-0.5 rounded border border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      title="Polish all fleeting notes">
-                      <i data-lucide="sparkles" class="inline-block w-3 h-3 mr-0.5"></i>
+                      title="Polish all fleeting notes"
+                    >
+                      <i
+                        data-lucide="sparkles"
+                        class="inline-block w-3 h-3 mr-0.5"
+                      ></i>
                       Bulk Polish All
                     </button>
                   </div>
 
                   <!-- empty state -->
-                  <div x-show="intelFeedNotes.filter(n => (n.status||'raw')==='raw').length === 0"
-                    class="text-xs text-text-400 py-4 text-center border border-dashed border-edge-subtle rounded-lg">
+                  <div
+                    x-show="intelFeedNotes.filter(n => (n.status||'raw')==='raw').length === 0"
+                    class="text-xs text-text-400 py-4 text-center border border-dashed border-edge-subtle rounded-lg"
+                  >
                     No fleeting notes
                   </div>
 
                   <div class="flex flex-col gap-2">
-                    <template x-for="note in intelFeedNotes.filter(n => (n.status||'raw')==='raw')" :key="note.id">
+                    <template
+                      x-for="note in intelFeedNotes.filter(n => (n.status||'raw')==='raw')"
+                      :key="note.id"
+                    >
                       <div
                         draggable="true"
                         @dragstart="intelDragId = note.id"
@@ -5300,157 +5529,277 @@
                           'animate-pulse border-neon-cyan/50': intelBulkProgress[note.id] === 'polishing',
                           'border-neon-lime/40': intelBulkProgress[note.id] === 'done',
                           'border-neon-red/40': intelBulkProgress[note.id] === 'error'
-                        }">
-                        <div class="flex items-start justify-between gap-1.5 mb-1">
-                          <span class="text-xs font-medium text-text-200 truncate" x-text="note.title || '(untitled)'"></span>
-                          <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20"
-                            x-text="note.type || 'raw'"></span>
+                        }"
+                      >
+                        <div
+                          class="flex items-start justify-between gap-1.5 mb-1"
+                        >
+                          <span
+                            class="text-xs font-medium text-text-200 truncate"
+                            x-text="note.title || '(untitled)'"
+                          ></span>
+                          <span
+                            class="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20"
+                            x-text="note.type || 'raw'"
+                          ></span>
                         </div>
-                        <p class="text-[11px] text-text-400 truncate"
-                          x-text="(note.body || '').slice(0, 100)"></p>
-                        <div class="text-[10px] text-text-500 mt-1"
-                          x-text="note.updated_at ? note.updated_at.slice(0, 10) : ''"></div>
+                        <p
+                          class="text-[11px] text-text-400 truncate"
+                          x-text="(note.body || '').slice(0, 100)"
+                        ></p>
+                        <div
+                          class="text-[10px] text-text-500 mt-1"
+                          x-text="note.updated_at ? note.updated_at.slice(0, 10) : ''"
+                        ></div>
                       </div>
                     </template>
                   </div>
                 </div>
 
                 <!-- ── Developing (polished) ── -->
-                <div class="flex-1 min-w-[180px] flex flex-col"
+                <div
+                  class="flex-1 min-w-[180px] flex flex-col"
                   @dragover.prevent
-                  @drop="intelDrop(intelDragId, 'polished'); intelDragId = null">
+                  @drop="intelDrop(intelDragId, 'polished'); intelDragId = null"
+                >
                   <div class="flex items-center gap-1.5 mb-2">
-                    <span class="text-[11px] font-semibold text-text-400 uppercase tracking-wider">Developing</span>
-                    <span class="text-[10px] bg-ink-800 border border-edge-subtle rounded-full px-2 text-text-400"
-                      x-text="intelFeedNotes.filter(n => n.status === 'polished').length"></span>
+                    <span
+                      class="text-[11px] font-semibold text-text-400 uppercase tracking-wider"
+                      >Developing</span
+                    >
+                    <span
+                      class="text-[10px] bg-ink-800 border border-edge-subtle rounded-full px-2 text-text-400"
+                      x-text="intelFeedNotes.filter(n => n.status === 'polished').length"
+                    ></span>
                   </div>
 
                   <!-- empty state -->
-                  <div x-show="intelFeedNotes.filter(n => n.status === 'polished').length === 0"
-                    class="text-xs text-text-400 py-4 text-center border border-dashed border-edge-subtle rounded-lg">
+                  <div
+                    x-show="intelFeedNotes.filter(n => n.status === 'polished').length === 0"
+                    class="text-xs text-text-400 py-4 text-center border border-dashed border-edge-subtle rounded-lg"
+                  >
                     No developing notes
                   </div>
 
                   <div class="flex flex-col gap-2">
-                    <template x-for="note in intelFeedNotes.filter(n => n.status === 'polished')" :key="note.id">
+                    <template
+                      x-for="note in intelFeedNotes.filter(n => n.status === 'polished')"
+                      :key="note.id"
+                    >
                       <div
                         draggable="true"
                         @dragstart="intelDragId = note.id"
                         @dragend="intelDragId = null"
                         @click="active='vault'; vaultTab='notes'; $nextTick(() => vaultSelectNote(note))"
-                        class="cursor-pointer rounded-lg border border-edge-subtle bg-ink-800 p-2.5 hover:border-neon-cyan/40 transition-colors select-none">
-                        <div class="flex items-start justify-between gap-1.5 mb-1">
-                          <span class="text-xs font-medium text-text-200 truncate" x-text="note.title || '(untitled)'"></span>
-                          <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20"
-                            x-text="note.type || 'raw'"></span>
+                        class="cursor-pointer rounded-lg border border-edge-subtle bg-ink-800 p-2.5 hover:border-neon-cyan/40 transition-colors select-none"
+                      >
+                        <div
+                          class="flex items-start justify-between gap-1.5 mb-1"
+                        >
+                          <span
+                            class="text-xs font-medium text-text-200 truncate"
+                            x-text="note.title || '(untitled)'"
+                          ></span>
+                          <span
+                            class="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20"
+                            x-text="note.type || 'raw'"
+                          ></span>
                         </div>
-                        <p class="text-[11px] text-text-400 truncate"
-                          x-text="(note.body || '').slice(0, 100)"></p>
-                        <div class="text-[10px] text-text-500 mt-1"
-                          x-text="note.updated_at ? note.updated_at.slice(0, 10) : ''"></div>
+                        <p
+                          class="text-[11px] text-text-400 truncate"
+                          x-text="(note.body || '').slice(0, 100)"
+                        ></p>
+                        <div
+                          class="text-[10px] text-text-500 mt-1"
+                          x-text="note.updated_at ? note.updated_at.slice(0, 10) : ''"
+                        ></div>
                       </div>
                     </template>
                   </div>
                 </div>
 
                 <!-- ── Connected (evergreen) ── -->
-                <div class="flex-1 min-w-[180px] flex flex-col"
+                <div
+                  class="flex-1 min-w-[180px] flex flex-col"
                   @dragover.prevent
-                  @drop="intelDrop(intelDragId, 'evergreen'); intelDragId = null">
+                  @drop="intelDrop(intelDragId, 'evergreen'); intelDragId = null"
+                >
                   <div class="flex items-center gap-1.5 mb-2">
-                    <span class="text-[11px] font-semibold text-text-400 uppercase tracking-wider">Connected</span>
-                    <span class="text-[10px] bg-ink-800 border border-edge-subtle rounded-full px-2 text-text-400"
-                      x-text="intelFeedNotes.filter(n => n.status === 'evergreen').length"></span>
+                    <span
+                      class="text-[11px] font-semibold text-text-400 uppercase tracking-wider"
+                      >Connected</span
+                    >
+                    <span
+                      class="text-[10px] bg-ink-800 border border-edge-subtle rounded-full px-2 text-text-400"
+                      x-text="intelFeedNotes.filter(n => n.status === 'evergreen').length"
+                    ></span>
                   </div>
 
                   <!-- empty state -->
-                  <div x-show="intelFeedNotes.filter(n => n.status === 'evergreen').length === 0"
-                    class="text-xs text-text-400 py-4 text-center border border-dashed border-edge-subtle rounded-lg">
+                  <div
+                    x-show="intelFeedNotes.filter(n => n.status === 'evergreen').length === 0"
+                    class="text-xs text-text-400 py-4 text-center border border-dashed border-edge-subtle rounded-lg"
+                  >
                     No connected notes
                   </div>
 
                   <div class="flex flex-col gap-2">
-                    <template x-for="note in intelFeedNotes.filter(n => n.status === 'evergreen')" :key="note.id">
+                    <template
+                      x-for="note in intelFeedNotes.filter(n => n.status === 'evergreen')"
+                      :key="note.id"
+                    >
                       <div
                         draggable="true"
                         @dragstart="intelDragId = note.id"
                         @dragend="intelDragId = null"
                         @click="active='vault'; vaultTab='notes'; $nextTick(() => vaultSelectNote(note))"
-                        class="cursor-pointer rounded-lg border border-edge-subtle bg-ink-800 p-2.5 hover:border-neon-lime/40 transition-colors select-none">
-                        <div class="flex items-start justify-between gap-1.5 mb-1">
-                          <span class="text-xs font-medium text-text-200 truncate" x-text="note.title || '(untitled)'"></span>
-                          <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-neon-lime/10 text-neon-lime border border-neon-lime/20"
-                            x-text="note.type || 'raw'"></span>
+                        class="cursor-pointer rounded-lg border border-edge-subtle bg-ink-800 p-2.5 hover:border-neon-lime/40 transition-colors select-none"
+                      >
+                        <div
+                          class="flex items-start justify-between gap-1.5 mb-1"
+                        >
+                          <span
+                            class="text-xs font-medium text-text-200 truncate"
+                            x-text="note.title || '(untitled)'"
+                          ></span>
+                          <span
+                            class="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-neon-lime/10 text-neon-lime border border-neon-lime/20"
+                            x-text="note.type || 'raw'"
+                          ></span>
                         </div>
-                        <p class="text-[11px] text-text-400 truncate"
-                          x-text="(note.body || '').slice(0, 100)"></p>
-                        <div class="text-[10px] text-text-500 mt-1"
-                          x-text="note.updated_at ? note.updated_at.slice(0, 10) : ''"></div>
+                        <p
+                          class="text-[11px] text-text-400 truncate"
+                          x-text="(note.body || '').slice(0, 100)"
+                        ></p>
+                        <div
+                          class="text-[10px] text-text-500 mt-1"
+                          x-text="note.updated_at ? note.updated_at.slice(0, 10) : ''"
+                        ></div>
                       </div>
                     </template>
                   </div>
                 </div>
-
-              </div><!-- /kanban -->
+              </div>
+              <!-- /kanban -->
             </div>
 
             <!-- graph tab content — D3 force-directed vault graph -->
-            <div x-show="vaultTab === 'graph'" class="card relative min-h-[540px] flex flex-col overflow-hidden">
+            <div
+              x-show="vaultTab === 'graph'"
+              class="card relative min-h-[540px] flex flex-col overflow-hidden"
+            >
               <!-- Header bar -->
-              <div class="flex items-center justify-between px-4 py-2 border-b border-edge-strong/30 bg-ink-900/60 flex-shrink-0">
-                <div class="flex items-center gap-2 text-xs font-mono text-text-500">
-                  <i data-lucide="git-fork" class="w-3.5 h-3.5 text-neon-cyan"></i>
+              <div
+                class="flex items-center justify-between px-4 py-2 border-b border-edge-strong/30 bg-ink-900/60 flex-shrink-0"
+              >
+                <div
+                  class="flex items-center gap-2 text-xs font-mono text-text-500"
+                >
+                  <i
+                    data-lucide="git-fork"
+                    class="w-3.5 h-3.5 text-neon-cyan"
+                  ></i>
                   <span>Vault Knowledge Graph</span>
                 </div>
                 <div class="flex items-center gap-2">
                   <!-- Tier filter -->
-                  <div class="flex rounded border border-edge-strong/40 overflow-hidden text-xs">
-                    <button type="button"
+                  <div
+                    class="flex rounded border border-edge-strong/40 overflow-hidden text-xs"
+                  >
+                    <button
+                      type="button"
                       class="px-2 py-1 transition-colors"
                       :class="vaultActiveTier === 'doctrine' ? 'bg-neon-cyan/20 text-neon-cyan' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
                       @click="vaultActiveTier = 'doctrine'; theseusVaultLoadGraph('doctrine')"
-                    >Doctrine</button>
-                    <button type="button"
+                    >
+                      Doctrine
+                    </button>
+                    <button
+                      type="button"
                       class="px-2 py-1 border-l border-edge-strong/40 transition-colors"
                       :class="vaultActiveTier === 'intelligence' ? 'bg-neon-magenta/20 text-neon-magenta' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
                       @click="vaultActiveTier = 'intelligence'; theseusVaultLoadGraph('intelligence')"
-                    >Intel</button>
-                    <button type="button"
+                    >
+                      Intel
+                    </button>
+                    <button
+                      type="button"
                       class="px-2 py-1 border-l border-edge-strong/40 transition-colors"
                       :class="vaultActiveTier === 'pursuit' ? 'bg-neon-amber/20 text-neon-amber' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
                       @click="vaultActiveTier = 'pursuit'; theseusVaultLoadGraph('pursuit')"
-                    >Pursuits</button>
-                    <button type="button"
+                    >
+                      Pursuits
+                    </button>
+                    <button
+                      type="button"
                       class="px-2 py-1 border-l border-edge-strong/40 transition-colors"
                       :class="!vaultActiveTier || vaultActiveTier === 'all' ? 'bg-ink-700 text-text-200' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
                       @click="theseusVaultLoadGraph('')"
-                    >All</button>
+                    >
+                      All
+                    </button>
                   </div>
-                  <button type="button"
+                  <button
+                    type="button"
                     class="btn btn-ghost text-xs flex items-center gap-1 px-2 py-1"
                     :disabled="vaultGraphLoading"
                     @click="theseusVaultLoadGraph(vaultActiveTier)"
                   >
-                    <i data-lucide="refresh-cw" class="w-3 h-3" :class="vaultGraphLoading ? 'animate-spin' : ''"></i>
+                    <i
+                      data-lucide="refresh-cw"
+                      class="w-3 h-3"
+                      :class="vaultGraphLoading ? 'animate-spin' : ''"
+                    ></i>
                     Reload
                   </button>
                 </div>
               </div>
 
               <!-- Legend -->
-              <div class="flex items-center gap-4 px-4 py-1.5 border-b border-edge-strong/20 bg-ink-950/40 text-xs text-text-500 flex-shrink-0">
-                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-neon-cyan inline-block"></span>Doctrine</span>
-                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-neon-magenta inline-block"></span>Intelligence</span>
-                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-neon-amber inline-block"></span>Pursuits</span>
-                <span class="flex items-center gap-1.5"><span class="w-2 h-px bg-neon-cyan/60 inline-block"></span>wikilink</span>
-                <span class="flex items-center gap-1.5"><span class="w-2 h-px border-t border-neon-amber/50 border-dashed inline-block"></span>topic cluster</span>
+              <div
+                class="flex items-center gap-4 px-4 py-1.5 border-b border-edge-strong/20 bg-ink-950/40 text-xs text-text-500 flex-shrink-0"
+              >
+                <span class="flex items-center gap-1.5"
+                  ><span
+                    class="w-2 h-2 rounded-full bg-neon-cyan inline-block"
+                  ></span
+                  >Doctrine</span
+                >
+                <span class="flex items-center gap-1.5"
+                  ><span
+                    class="w-2 h-2 rounded-full bg-neon-magenta inline-block"
+                  ></span
+                  >Intelligence</span
+                >
+                <span class="flex items-center gap-1.5"
+                  ><span
+                    class="w-2 h-2 rounded-full bg-neon-amber inline-block"
+                  ></span
+                  >Pursuits</span
+                >
+                <span class="flex items-center gap-1.5"
+                  ><span class="w-2 h-px bg-neon-cyan/60 inline-block"></span
+                  >wikilink</span
+                >
+                <span class="flex items-center gap-1.5"
+                  ><span
+                    class="w-2 h-px border-t border-neon-amber/50 border-dashed inline-block"
+                  ></span
+                  >topic cluster</span
+                >
               </div>
 
               <!-- SVG canvas -->
-              <div class="flex-1 relative" style="min-height:460px;">
-                <svg id="vault-graph-svg" class="absolute inset-0 w-full h-full"></svg>
+              <div class="flex-1 relative" style="min-height: 460px">
+                <svg
+                  id="vault-graph-svg"
+                  class="absolute inset-0 w-full h-full"
+                ></svg>
                 <!-- Loading overlay -->
-                <div x-show="vaultGraphLoading" class="absolute inset-0 flex items-center justify-center bg-ink-950/70 z-10">
+                <div
+                  x-show="vaultGraphLoading"
+                  class="absolute inset-0 flex items-center justify-center bg-ink-950/70 z-10"
+                >
                   <span class="text-sm text-neon-cyan flex items-center gap-2">
                     <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
                     Building graph…
@@ -5460,17 +5809,31 @@
 
               <!-- Hover tooltip / node details -->
               <template x-if="vaultGraphHovered">
-                <div class="absolute bottom-4 right-4 z-20 card p-3 w-64 text-xs pointer-events-none">
-                  <p class="text-text-100 font-semibold truncate" x-text="vaultGraphHovered.title"></p>
+                <div
+                  class="absolute bottom-4 right-4 z-20 card p-3 w-64 text-xs pointer-events-none"
+                >
+                  <p
+                    class="text-text-100 font-semibold truncate"
+                    x-text="vaultGraphHovered.title"
+                  ></p>
                   <div class="flex gap-2 mt-1">
-                    <span class="pill" x-text="vaultGraphHovered.type || 'raw'"></span>
-                    <span class="pill" x-text="vaultGraphHovered.status || 'raw'"></span>
+                    <span
+                      class="pill"
+                      x-text="vaultGraphHovered.type || 'raw'"
+                    ></span>
+                    <span
+                      class="pill"
+                      x-text="vaultGraphHovered.status || 'raw'"
+                    ></span>
                   </div>
-                  <p class="text-text-500 mt-1" x-text="vaultGraphHovered.topic || ''" x-show="vaultGraphHovered.topic"></p>
+                  <p
+                    class="text-text-500 mt-1"
+                    x-text="vaultGraphHovered.topic || ''"
+                    x-show="vaultGraphHovered.topic"
+                  ></p>
                 </div>
               </template>
             </div>
-
           </section>
 
           <!-- ============== ACTIVITY LOG ============== -->
@@ -8833,10 +9196,18 @@
       @keydown.escape.window="quickCapture.open = false; quickCapture.step = 'dump'"
       x-effect="if (quickCapture.open) $nextTick(() => lucide.createIcons())"
     >
-      <div class="quick-capture-modal" role="dialog" aria-modal="true" aria-labelledby="qc-title">
+      <div
+        class="quick-capture-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="qc-title"
+      >
         <!-- header -->
         <div class="flex items-center justify-between mb-3">
-          <h2 id="qc-title" class="text-sm font-bold text-text-100 uppercase tracking-widest">
+          <h2
+            id="qc-title"
+            class="text-sm font-bold text-text-100 uppercase tracking-widest"
+          >
             Quick Capture
           </h2>
           <button
@@ -8898,7 +9269,9 @@
         >
           <!-- ── Step: dump ── -->
           <div x-show="quickCapture.step === 'dump'">
-            <label class="block mb-1 text-xs text-text-300 font-medium">Brain dump</label>
+            <label class="block mb-1 text-xs text-text-300 font-medium"
+              >Brain dump</label
+            >
             <textarea
               class="input-field w-full mb-3 resize-y"
               rows="5"
@@ -8911,7 +9284,9 @@
 
           <!-- ── Step: review ── -->
           <div x-show="quickCapture.step === 'review'">
-            <p class="text-xs text-text-400 mb-3">AI suggestions — review and edit before saving.</p>
+            <p class="text-xs text-text-400 mb-3">
+              AI suggestions — review and edit before saving.
+            </p>
 
             <label class="block mb-1 text-xs text-text-300 font-medium">
               Title <span class="text-text-400 font-normal">(edit freely)</span>
@@ -8923,8 +9298,13 @@
               maxlength="512"
             />
 
-            <label class="block mb-1 text-xs text-text-300 font-medium">Type</label>
-            <select class="input-field w-full mb-3" x-model="quickCapture.aiNoteType">
+            <label class="block mb-1 text-xs text-text-300 font-medium"
+              >Type</label
+            >
+            <select
+              class="input-field w-full mb-3"
+              x-model="quickCapture.aiNoteType"
+            >
               <option value="insight">Insight</option>
               <option value="action">Action</option>
               <option value="risk">Risk</option>
@@ -8974,9 +9354,19 @@
               class="btn-hero-magenta inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-bold text-ink-950"
               :disabled="quickCapture.step === 'dump' ? (!quickCapture.body.trim() || quickCapture.previewing) : quickCapture.saving"
             >
-              <span x-text="quickCapture.step === 'dump' ? (quickCapture.previewing ? 'Thinking\u2026' : 'Preview') : (quickCapture.saving ? 'Saving\u2026' : 'Save to Vault')"></span>
-              <i data-lucide="sparkles" class="w-4 h-4" x-show="quickCapture.step === 'dump'"></i>
-              <i data-lucide="bookmark-plus" class="w-4 h-4" x-show="quickCapture.step === 'review'"></i>
+              <span
+                x-text="quickCapture.step === 'dump' ? (quickCapture.previewing ? 'Thinking\u2026' : 'Preview') : (quickCapture.saving ? 'Saving\u2026' : 'Save to Vault')"
+              ></span>
+              <i
+                data-lucide="sparkles"
+                class="w-4 h-4"
+                x-show="quickCapture.step === 'dump'"
+              ></i>
+              <i
+                data-lucide="bookmark-plus"
+                class="w-4 h-4"
+                x-show="quickCapture.step === 'review'"
+              ></i>
             </button>
           </div>
         </form>
