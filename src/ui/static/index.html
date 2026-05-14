@@ -4659,8 +4659,13 @@
                   rows="3"
                   placeholder="Type a raw thought — the LLM classifies and polishes on submit."
                   class="bg-ink-900 border border-edge-strong/60 rounded-md px-3 py-2 text-sm text-text-100 focus:outline-none focus:border-neon-cyan/60 resize-y"
+                  @keydown.ctrl.enter.prevent="!vaultCapturing && vaultCaptureBody.trim() && vaultCaptureSubmit()"
+                  @keydown.meta.enter.prevent="!vaultCapturing && vaultCaptureBody.trim() && vaultCaptureSubmit()"
                 ></textarea>
-                <div class="flex justify-end">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-[11px] text-text-500 font-mono">
+                    Ctrl+Enter to capture
+                  </span>
                   <button
                     id="vault-capture-submit"
                     type="button"

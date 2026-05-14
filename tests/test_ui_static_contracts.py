@@ -371,3 +371,23 @@ def test_capture_card_renders_wikilink_suggestion_chips() -> None:
     reject_fn_end = capture_helpers.index("\n};", capture_helpers.index("theseusVaultRejectWikilink"))
     chip_helpers_slice = capture_helpers[accept_fn_start:reject_fn_end]
     assert "fetch(" not in chip_helpers_slice
+
+def test_capture_input_supports_ctrl_enter_submit_with_visible_hint() -> None:
+    """#159: Ctrl+Enter / Cmd+Enter on capture input submits. Hint visible. Disabled while in flight."""
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+
+    capture_input_start = source.index('id="vault-capture-input"')
+    # Look at the surrounding ~1500 chars (form region)
+    region = source[max(0, capture_input_start - 200):capture_input_start + 1500]
+
+    # Ctrl/Cmd+Enter handlers bound on the input
+    assert "@keydown.ctrl.enter" in region
+    assert "@keydown.meta.enter" in region
+    # Both handlers route to vaultCaptureSubmit
+    assert "vaultCaptureSubmit" in region
+
+    # Hint text visible underneath input
+    assert "Ctrl+Enter" in region
+
+    # Submit guard already exists via vaultCapturing — handler must respect it
+    # (state guard is enforced inside theseusVaultCaptureSubmit, asserted in earlier test)
