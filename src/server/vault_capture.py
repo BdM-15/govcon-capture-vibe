@@ -29,6 +29,7 @@ class CapturedNote:
     raw_body: str
     polished_body: str
     auto_polished: bool
+    status: str  # "raw" | "polished" | "evergreen" — lifecycle tier
     wikilink_suggestions: list[str]
     path: Path
 
@@ -95,6 +96,11 @@ async def capture(
         source="capture",
     )
 
+    # Lifecycle status: only successful auto-polish promotes past "raw".
+    status = "polished" if polished else "raw"
+    if status != persisted.get("status"):
+        vault_store.update(persisted["id"], status=status)
+
     return CapturedNote(
         note_id=persisted["id"],
         note_type=note_type,
@@ -102,6 +108,7 @@ async def capture(
         raw_body=raw_body,
         polished_body=body,
         auto_polished=polished,
+        status=status,
         wikilink_suggestions=suggestions,
         path=vault_store.path(persisted["id"]),
     )

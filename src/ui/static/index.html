@@ -4692,11 +4692,22 @@
                       : 'border-edge-strong/40 hover:border-neon-cyan/40'"
                   >
                     <header class="flex items-center justify-between gap-2 mb-1">
-                      <h3
-                        class="text-sm font-semibold text-text-100"
-                        x-text="note.title"
-                      ></h3>
-                      <div class="flex items-center gap-1.5">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span
+                          class="capture-status-dot"
+                          :class="{
+                            'capture-status-raw': note.status === 'raw',
+                            'capture-status-polished': note.status === 'polished',
+                            'capture-status-evergreen': note.status === 'evergreen',
+                          }"
+                          :title="'Status: ' + (note.status || 'raw')"
+                        ></span>
+                        <h3
+                          class="text-sm font-semibold text-text-100 truncate"
+                          x-text="note.title"
+                        ></h3>
+                      </div>
+                      <div class="flex items-center gap-1.5 flex-shrink-0">
                         <span
                           x-show="note._degraded"
                           class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/40 text-amber-300 flex items-center gap-1"

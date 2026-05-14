@@ -224,6 +224,34 @@ def test_capture_stream_surfaces_degraded_polish_state() -> None:
     assert "note._degraded" in capture_markup
 
 
+def test_capture_card_renders_three_state_status_dot() -> None:
+    """#153: each card shows a status dot driven by note.status with three
+    visual states (raw=pulsing, polished=solid, evergreen=ringed). Pulse
+    must respect prefers-reduced-motion."""
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+    css_path = _ROOT / "src" / "ui" / "static" / "styles" / "theseus.css"
+    css = css_path.read_text(encoding="utf-8")
+
+    capture_section_start = source.index('id="vault-capture-stream"')
+    capture_section_end = source.index("<!-- notes tab content", capture_section_start)
+    capture_markup = source[capture_section_start:capture_section_end]
+
+    # Dot element is bound to note.status with all three lifecycle classes
+    assert "capture-status-dot" in capture_markup
+    assert "note.status" in capture_markup
+    assert "capture-status-raw" in capture_markup
+    assert "capture-status-polished" in capture_markup
+    assert "capture-status-evergreen" in capture_markup
+
+    # CSS defines the three states + a reduced-motion guard for the raw pulse
+    assert ".capture-status-dot" in css
+    assert ".capture-status-raw" in css
+    assert ".capture-status-polished" in css
+    assert ".capture-status-evergreen" in css
+    assert "prefers-reduced-motion" in css
+    assert "capture-status-raw" in css.split("prefers-reduced-motion", 1)[1]
+
+
 def test_studio_chain_trace_exposes_resume_action_for_resumeable_chain() -> None:
     source = _INDEX_HTML.read_text(encoding="utf-8")
     helpers = _CHAIN_HELPERS.read_text(encoding="utf-8")

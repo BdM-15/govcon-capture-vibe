@@ -152,3 +152,40 @@ def test_capture_skips_llm_when_auto_polish_false(tmp_path):
     assert captured.polished_body == raw
     assert captured.wikilink_suggestions == []
     assert captured.path.exists()
+
+
+def test_capture_status_reflects_polish_outcome(tmp_path):
+    """#153: status='polished' on success+auto_polish, 'raw' otherwise."""
+
+    async def good_llm(prompt, system_prompt=""):
+        return "TYPE: insight\nTITLE: t\nBODY: b"
+
+    async def bad_llm(prompt, system_prompt=""):
+        raise RuntimeError("down")
+
+    def _store(name):
+        d = tmp_path / name
+        d.mkdir()
+        return VaultStore(d, now=lambda: "2026-05-14T12:00:00")
+
+    async def _do(llm, auto, name):
+        return await capture(
+            raw_body="something to capture",
+            llm_func=llm,
+            vault_store=_store(name),
+            vault_index={},
+            auto_polish=auto,
+        )
+
+    polished = asyncio.run(_do(good_llm, True, "a"))
+    raw_by_choice = asyncio.run(_do(good_llm, False, "b"))
+    raw_by_failure = asyncio.run(_do(bad_llm, True, "c"))
+
+    assert polished.status == "polished"
+    assert raw_by_choice.status == "raw"
+    assert raw_by_failure.status == "raw"
+
+    # persisted on disk
+    assert "status: polished" in polished.path.read_text(encoding="utf-8")
+    assert "status: raw" in raw_by_choice.path.read_text(encoding="utf-8")
+    assert "status: raw" in raw_by_failure.path.read_text(encoding="utf-8")

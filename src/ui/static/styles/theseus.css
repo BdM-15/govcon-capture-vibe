@@ -3368,6 +3368,41 @@ details.acc .summary-actions {
   line-height: 1.4;
 }
 
+/* Capture Stream — lifecycle status dot (#153) */
+.capture-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  background: rgba(var(--text-500-rgb, 110, 130, 160), 0.5);
+  transition: background 0.2s ease;
+}
+.capture-status-raw {
+  background: rgba(var(--neon-cyan-rgb), 0.45);
+  animation: capture-status-pulse 1.6s ease-in-out infinite;
+}
+.capture-status-polished {
+  background: var(--neon-cyan);
+  box-shadow: 0 0 4px rgba(var(--neon-cyan-rgb), 0.6);
+}
+.capture-status-evergreen {
+  background: var(--neon-cyan);
+  box-shadow:
+    0 0 0 2px rgba(var(--neon-cyan-rgb), 0.25),
+    0 0 8px rgba(var(--neon-cyan-rgb), 0.6);
+}
+@keyframes capture-status-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .capture-status-raw {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
 
 /* ==========================================================================
    Quick-Capture FAB + Modal (issue #138)
