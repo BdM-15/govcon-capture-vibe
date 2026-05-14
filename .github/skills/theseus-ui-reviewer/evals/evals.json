@@ -1,0 +1,38 @@
+{
+  "skill_name": "theseus-ui-reviewer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Review this capture button for token + a11y violations:\n\n<button class=\"bg-[#00ffff] text-white px-3 py-1 rounded\" @click=\"capture()\">Capture</button>",
+      "expected_output": "Audit envelope flagging the raw hex `#00ffff` (rule: raw-hex-vs-token, severity: critical) and the missing focus ring (rule: missing-focus-ring, severity: critical). Fix should reference `var(--neon-cyan)` or `bg-neon-cyan`.",
+      "expectations": [
+        "Output is JSON matching the audit envelope shape (skill, summary, top_three, findings)",
+        "At least one finding has rule == 'raw-hex-vs-token' and severity == 'critical'",
+        "The excerpt of the raw-hex finding contains the literal '#00ffff'",
+        "The fix string for the raw-hex finding mentions either 'var(--neon-cyan)' or 'bg-neon-cyan'",
+        "At least one finding has rule == 'missing-focus-ring'"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Audit this CSS rule from theseus.css:\n\n.glow-card { @apply bg-neon-cyan text-ink-900 rounded-md; }",
+      "expected_output": "Audit envelope flagging the `@apply` usage as critical (rule: apply-leak-in-external-css). Fix should rewrite using raw CSS with `var(--*)` tokens.",
+      "expectations": [
+        "Output is JSON matching the audit envelope shape",
+        "At least one finding has rule == 'apply-leak-in-external-css' and severity == 'critical'",
+        "The excerpt contains the literal '@apply'",
+        "The fix references `var(--neon-cyan)` or `var(--ink-900)`"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Review this Alpine state slice for shallowness:\n\n{\n  drawerOpen: false,\n  drawerLoading: false,\n  drawerError: null,\n  drawerData: null,\n}",
+      "expected_output": "Audit envelope flagging the four-var cluster as a depth opportunity (rule: shallow-alpine-state, severity: minor). Fix should suggest collapsing to `drawer: { open, loading, error, data }`.",
+      "expectations": [
+        "Output is JSON matching the audit envelope shape",
+        "At least one finding has rule == 'shallow-alpine-state'",
+        "The fix references a nested object shape (e.g. `drawer: { open` or `{ open, loading`)"
+      ]
+    }
+  ]
+}
