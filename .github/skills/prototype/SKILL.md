@@ -1,6 +1,16 @@
 ---
 name: prototype
 description: Build a throwaway prototype to flush out a design before committing to it. Routes between two branches — a runnable terminal app for state/business-logic questions, or several radically different UI variations toggleable from one route. Use when the user wants to prototype, sanity-check a data model or state machine, mock up a UI, explore design options, or says "prototype this", "let me play with it", "try a few designs".
+license: Apache-2.0
+metadata:
+  personas_primary: none
+  personas_secondary: []
+  shipley_phases: []
+  capability: draft
+  category: engineering
+  version: 1.0.0
+  status: active
+  runtime: legacy
 ---
 
 # Prototype

@@ -1,6 +1,16 @@
 ---
 name: to-prd
 description: Turn the current conversation context into a PRD and publish it to the project issue tracker. Use when user wants to create a PRD from the current context.
+license: Apache-2.0
+metadata:
+  personas_primary: none
+  personas_secondary: []
+  shipley_phases: []
+  capability: draft
+  category: planning
+  version: 1.0.0
+  status: active
+  runtime: legacy
 ---
 
 This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know.

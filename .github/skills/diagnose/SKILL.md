@@ -1,6 +1,16 @@
 ---
 name: diagnose
 description: Disciplined diagnosis loop for hard bugs and performance regressions. Reproduce → minimise → hypothesise → instrument → fix → regression-test. Use when user says "diagnose this" / "debug this", reports a bug, says something is broken/throwing/failing, or describes a performance regression.
+license: Apache-2.0
+metadata:
+  personas_primary: none
+  personas_secondary: []
+  shipley_phases: []
+  capability: analyze
+  category: engineering
+  version: 1.0.0
+  status: active
+  runtime: legacy
 ---
 
 # Diagnose

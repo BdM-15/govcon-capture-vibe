@@ -1,6 +1,16 @@
 ---
 name: tdd
 description: Test-driven development with red-green-refactor loop. Use when user wants to build features or fix bugs using TDD, mentions "red-green-refactor", wants integration tests, or asks for test-first development.
+license: Apache-2.0
+metadata:
+  personas_primary: none
+  personas_secondary: []
+  shipley_phases: []
+  capability: meta
+  category: engineering
+  version: 1.0.0
+  status: active
+  runtime: legacy
 ---
 
 # Test-Driven Development

@@ -110,6 +110,22 @@ Copy this checklist:
 **All descriptions are third-person and reasonably "pushy."** ✅
 **Naming convention:** all use noun phrases (acceptable, not gerund).
 
+**2026-05-14 release-gate update:** `tests/skills/test_skill_taxonomy.py`
+now passes across the full local skill catalog after adding metadata-only
+taxonomy blocks to legacy workflow skills (`caveman`, `diagnose`,
+`git-guardrails-claude-code`, `grill-me`, `grill-with-docs`, `handoff`,
+`improve-codebase-architecture`, `prototype`, `setup-matt-pocock-skills`,
+`setup-pre-commit`, `tdd`, `to-issues`, `to-prd`, `triage`, `write-a-skill`,
+`zoom-out`). The same sweep moved the legacy `argument-hint` and
+`disable-model-invocation` fields under `metadata:` so every `SKILL.md`
+frontmatter uses only the six open-spec top-level fields.
+
+Remaining non-blocking audit gaps observed during the release gate: several
+legacy/reference skills still lack `evals/evals.json`, and three vendored
+reference skills exceed the 500-line body guidance. Those gaps are unchanged by
+this metadata-only cleanup and should be handled in a dedicated skill-compliance
+pass, not as part of the v1.13.0 release merge.
+
 ---
 
 ## 3. Gaps and required changes (per skill)

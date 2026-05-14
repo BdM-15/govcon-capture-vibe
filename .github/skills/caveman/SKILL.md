@@ -5,6 +5,16 @@ description: >
   filler, articles, and pleasantries while keeping full technical accuracy.
   Use when user says "caveman mode", "talk like caveman", "use caveman",
   "less tokens", "be brief", or invokes /caveman.
+license: Apache-2.0
+metadata:
+  personas_primary: none
+  personas_secondary: []
+  shipley_phases: []
+  capability: meta
+  category: meta
+  version: 1.0.0
+  status: active
+  runtime: legacy
 ---
 
 Respond terse like smart caveman. All technical substance stay. Only fluff die.
