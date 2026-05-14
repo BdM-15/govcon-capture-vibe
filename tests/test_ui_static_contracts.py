@@ -306,3 +306,37 @@ def test_chain_helpers_support_partial_status_and_chain_grouping() -> None:
     assert 'if (mode === "chain")' in preview_helpers
     assert 'metaPrefix: "Chain · " + (chain.status || "unknown")' in preview_helpers
     assert 'metaPrefix: "Single run · " + skill' in preview_helpers
+def test_capture_stream_renders_tier_rail_and_status_chip_strip() -> None:
+    """#155: tier rail + status chip strip above the stream, wired to filters."""
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+    state = (_ROOT / "src" / "ui" / "static" / "app" / "theseus-state-helpers.js").read_text(encoding="utf-8")
+    delegates = (_ROOT / "src" / "ui" / "static" / "app" / "theseus-app-delegates.js").read_text(encoding="utf-8")
+    capture_helpers = (_ROOT / "src" / "ui" / "static" / "app" / "theseus-capture-helpers.js").read_text(encoding="utf-8")
+
+    # Markup IDs for the rail + chip strip
+    assert 'id="vault-capture-tier-rail"' in source
+    assert 'id="vault-capture-status-strip"' in source
+
+    # Each tier label appears in markup
+    for label in ("Doctrine", "Intelligence", "Pursuits", "All"):
+        assert label in source
+
+    # Each status label appears in markup
+    for label in ("raw", "polished", "evergreen"):
+        assert f">{label}<" in source or f'"{label}"' in source
+
+    # Alpine state for selected filters
+    assert "vaultCaptureTier:" in state
+    assert "vaultCaptureStatus:" in state
+
+    # Delegate hook for filter changes -> reload stream
+    assert "vaultCaptureSetFilter" in delegates
+    assert "window.theseusVaultCaptureSetFilter" in delegates
+
+    # Helper hits the new /stream endpoint with query params
+    assert "/api/ui/vault/stream" in capture_helpers
+    assert "window.theseusVaultCaptureSetFilter" in capture_helpers
+    assert "window.theseusVaultCaptureLoadStream" in capture_helpers
+
+    # Empty-state copy when filters yield zero notes
+    assert "no notes match this filter" in source.lower()

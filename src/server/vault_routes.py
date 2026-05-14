@@ -314,6 +314,34 @@ def register_vault_routes(
             notes = [n for n in notes if n.get("tier") == tier]
         return JSONResponse({"notes": notes})
 
+    @app.get("/api/ui/vault/stream", tags=["theseus-vault"])
+    async def stream_notes(
+        tier: str | None = None,
+        status: str | None = None,
+        limit: int | None = None,
+    ) -> JSONResponse:
+        """Capture-Stream feed: filter by tier/status, cap with limit. Newest first."""
+        valid_tiers = {"doctrine", "intelligence", "pursuit"}
+        valid_statuses = {"raw", "polished", "evergreen"}
+        if tier and tier not in valid_tiers:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid tier '{tier}'. Allowed: {sorted(valid_tiers)}",
+            )
+        if status and status not in valid_statuses:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid status '{status}'. Allowed: {sorted(valid_statuses)}",
+            )
+        notes = vault_store.list_notes()
+        if tier:
+            notes = [n for n in notes if n.get("tier") == tier]
+        if status:
+            notes = [n for n in notes if n.get("status") == status]
+        if limit is not None and limit >= 0:
+            notes = notes[:limit]
+        return JSONResponse({"notes": notes})
+
     @app.post("/api/ui/vault/preview", tags=["theseus-vault"])
     async def preview_note(payload: NotePreviewRequest) -> JSONResponse:
         """Polish a raw brain-dump and return AI-suggested title, type, and body.

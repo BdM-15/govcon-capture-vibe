@@ -4675,15 +4675,61 @@
               </div>
 
               <div
+                id="vault-capture-tier-rail"
+                class="flex items-center gap-1 border-t border-edge-strong/30 pt-3 mt-1"
+                role="tablist"
+                aria-label="Filter capture stream by tier"
+                x-init="vaultCaptureLoadStream()"
+              >
+                <template x-for="opt in [
+                  {value: '', label: 'All', color: 'text-text-300'},
+                  {value: 'doctrine', label: 'Doctrine', color: 'text-neon-cyan'},
+                  {value: 'intelligence', label: 'Intelligence', color: 'text-neon-magenta'},
+                  {value: 'pursuit', label: 'Pursuits', color: 'text-amber-400'},
+                ]" :key="opt.value">
+                  <button
+                    type="button"
+                    role="tab"
+                    class="px-3 py-1 text-xs uppercase tracking-wider rounded border transition-colors"
+                    :class="vaultCaptureTier === opt.value
+                      ? 'border-edge-strong/70 bg-ink-800 ' + opt.color
+                      : 'border-edge-strong/30 text-text-500 hover:text-text-200'"
+                    @click="vaultCaptureSetFilter('tier', opt.value)"
+                    x-text="opt.label"
+                  ></button>
+                </template>
+              </div>
+
+              <div
+                id="vault-capture-status-strip"
+                class="flex items-center gap-1.5 flex-wrap"
+                role="group"
+                aria-label="Filter capture stream by status"
+              >
+                <template x-for="opt in ['all', 'raw', 'polished', 'evergreen']" :key="opt">
+                  <button
+                    type="button"
+                    class="px-2 py-0.5 text-[11px] rounded-full border transition-colors"
+                    :class="(vaultCaptureStatus || 'all') === opt
+                      ? 'border-neon-cyan/60 bg-neon-cyan/10 text-neon-cyan'
+                      : 'border-edge-strong/30 text-text-500 hover:text-text-200'"
+                    @click="vaultCaptureSetFilter('status', opt === 'all' ? '' : opt)"
+                    x-text="opt"
+                  ></button>
+                </template>
+              </div>
+
+              <div
                 id="vault-capture-stream"
                 class="flex flex-col gap-3 border-t border-edge-strong/30 pt-4"
               >
                 <p
                   x-show="vaultCaptureStream.length === 0"
                   class="text-sm text-text-500 italic"
-                >
-                  Stream is empty. Capture a thought to see it materialize here.
-                </p>
+                  x-text="(vaultCaptureTier || vaultCaptureStatus)
+                    ? 'No notes match this filter.'
+                    : 'Stream is empty. Capture a thought to see it materialize here.'"
+                ></p>
                 <template x-for="note in vaultCaptureStream" :key="note.note_id">
                   <article
                     class="bg-ink-800 border rounded-md p-3 transition-colors"

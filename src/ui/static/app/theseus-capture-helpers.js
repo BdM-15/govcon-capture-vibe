@@ -42,3 +42,35 @@ window.theseusVaultCaptureSubmit = async function theseusVaultCaptureSubmit(app)
     app.vaultCapturing = false;
   }
 };
+
+// #155: tier rail + status chip strip — set filter then reload stream from /api/ui/vault/stream.
+window.theseusVaultCaptureSetFilter = async function theseusVaultCaptureSetFilter(app, kind, value) {
+  if (kind === "tier") {
+    app.vaultCaptureTier = value || "";
+  } else if (kind === "status") {
+    app.vaultCaptureStatus = value || "";
+  } else {
+    return;
+  }
+  return window.theseusVaultCaptureLoadStream(app);
+};
+
+window.theseusVaultCaptureLoadStream = async function theseusVaultCaptureLoadStream(app) {
+  const params = new URLSearchParams();
+  if (app.vaultCaptureTier) params.set("tier", app.vaultCaptureTier);
+  if (app.vaultCaptureStatus) params.set("status", app.vaultCaptureStatus);
+  const qs = params.toString();
+  const url = "/api/ui/vault/stream" + (qs ? "?" + qs : "");
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      const detail = await resp.text();
+      app.toast("Stream load failed: " + (detail || resp.status), "error");
+      return;
+    }
+    const data = await resp.json();
+    app.vaultCaptureStream = data.notes || [];
+  } catch (error) {
+    app.toast("Stream load failed: " + error.message, "error");
+  }
+};
