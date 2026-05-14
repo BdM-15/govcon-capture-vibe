@@ -4607,10 +4607,23 @@
                   Intel Feed
                 </span>
               </button>
+              <button
+                id="vault-tab-graph"
+                class="px-4 py-2 text-sm font-medium rounded-t-md transition-colors"
+                :class="vaultTab === 'graph'
+                  ? 'bg-ink-800 text-text-100 border border-b-0 border-edge-strong/60'
+                  : 'text-text-400 hover:text-text-200'"
+                @click="vaultTab = 'graph'; $nextTick(() => theseusVaultLoadGraph(vaultActiveTier))"
+              >
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="git-fork" class="w-3.5 h-3.5"></i>
+                  Graph
+                </span>
+              </button>
             </div>
 
             <!-- notes tab content — 3-pane layout -->
-            <div x-show="vaultTab === 'notes'" class="flex gap-0 min-h-[600px] border border-edge-strong/40 rounded-lg overflow-hidden">
+            <div x-show="vaultTab === 'notes'" class="card flex gap-0 min-h-[600px] overflow-hidden">
 
               <!-- ── Left pane: search, filters, note list ─────────────────── -->
               <div class="w-56 flex-shrink-0 border-r border-edge-strong/40 bg-ink-900 flex flex-col">
@@ -4619,7 +4632,7 @@
                 <div class="p-2 border-b border-edge-strong/30">
                   <button
                     type="button"
-                    class="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 hover:bg-neon-cyan/20 transition-colors"
+                    class="btn btn-primary w-full text-xs px-2 py-1.5"
                     @click="vaultNewNote()"
                   >
                     <i data-lucide="plus" class="w-3 h-3"></i>
@@ -4841,40 +4854,44 @@
                         @click="vaultEditorMode = 'mindmap'"
                       >Mind Map</button>
                     </div>
-                    <div class="ml-auto flex items-center gap-1.5">
+                    <div class="ml-auto flex items-center gap-1">
                       <button
                         type="button"
-                        class="text-xs text-text-500 hover:text-text-300 transition-colors"
+                        class="btn btn-ghost px-2 py-1 text-xs"
                         :class="vaultRightPaneOpen ? 'text-neon-cyan' : ''"
                         @click="vaultRightPaneOpen = !vaultRightPaneOpen"
                         aria-label="Toggle details pane"
                       >
-                        <i data-lucide="panel-right" class="w-3 h-3"></i>
+                        <i data-lucide="panel-right" class="w-3.5 h-3.5"></i>
                       </button>
                       <button
                         type="button"
-                        class="text-xs text-text-500 hover:text-neon-cyan transition-colors flex items-center gap-1"
+                        class="btn btn-ghost px-2 py-1 text-xs"
+                        :class="vaultPolishLoading ? 'opacity-50 cursor-wait' : ''"
                         :aria-label="'Polish note ' + (vaultActiveNote ? vaultActiveNote.title : '')"
                         @click="vaultActiveNote && polishVaultNote(vaultActiveNote.id)"
+                        title="Polish note (AI)"
                       >
-                        <i data-lucide="sparkles" class="w-3 h-3"></i>
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-neon-cyan"></i>
                       </button>
                       <button
                         type="button"
-                        class="text-xs text-text-500 hover:text-neon-cyan transition-colors flex items-center gap-1"
+                        class="btn btn-ghost px-2 py-1 text-xs"
                         :disabled="vaultEntityLoading || !vaultActiveNote"
                         :aria-label="'Extract entities from ' + (vaultActiveNote ? vaultActiveNote.title : '')"
                         @click="vaultActiveNote && vaultExtractEntities(vaultActiveNote.id)"
+                        title="Extract entities"
                       >
-                        <i data-lucide="scan-search" class="w-3 h-3"></i>
+                        <i data-lucide="scan-search" class="w-3.5 h-3.5 text-neon-magenta"></i>
                       </button>
                       <button
                         type="button"
-                        class="text-xs text-text-500 hover:text-red-400 transition-colors flex items-center gap-1"
+                        class="btn btn-danger px-2 py-1 text-xs"
                         :aria-label="'Delete note ' + (vaultActiveNote ? vaultActiveNote.title : '')"
                         @click="vaultActiveNote && deleteVaultNote(vaultActiveNote.id)"
+                        title="Delete note"
                       >
-                        <i data-lucide="trash-2" class="w-3 h-3"></i>
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                       </button>
                     </div>
                   </div>
@@ -5376,6 +5393,84 @@
 
               </div><!-- /kanban -->
             </div>
+
+            <!-- graph tab content — D3 force-directed vault graph -->
+            <div x-show="vaultTab === 'graph'" class="card relative min-h-[540px] flex flex-col overflow-hidden">
+              <!-- Header bar -->
+              <div class="flex items-center justify-between px-4 py-2 border-b border-edge-strong/30 bg-ink-900/60 flex-shrink-0">
+                <div class="flex items-center gap-2 text-xs font-mono text-text-500">
+                  <i data-lucide="git-fork" class="w-3.5 h-3.5 text-neon-cyan"></i>
+                  <span>Vault Knowledge Graph</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <!-- Tier filter -->
+                  <div class="flex rounded border border-edge-strong/40 overflow-hidden text-xs">
+                    <button type="button"
+                      class="px-2 py-1 transition-colors"
+                      :class="vaultActiveTier === 'doctrine' ? 'bg-neon-cyan/20 text-neon-cyan' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
+                      @click="vaultActiveTier = 'doctrine'; theseusVaultLoadGraph('doctrine')"
+                    >Doctrine</button>
+                    <button type="button"
+                      class="px-2 py-1 border-l border-edge-strong/40 transition-colors"
+                      :class="vaultActiveTier === 'intelligence' ? 'bg-neon-magenta/20 text-neon-magenta' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
+                      @click="vaultActiveTier = 'intelligence'; theseusVaultLoadGraph('intelligence')"
+                    >Intel</button>
+                    <button type="button"
+                      class="px-2 py-1 border-l border-edge-strong/40 transition-colors"
+                      :class="vaultActiveTier === 'pursuit' ? 'bg-neon-amber/20 text-neon-amber' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
+                      @click="vaultActiveTier = 'pursuit'; theseusVaultLoadGraph('pursuit')"
+                    >Pursuits</button>
+                    <button type="button"
+                      class="px-2 py-1 border-l border-edge-strong/40 transition-colors"
+                      :class="!vaultActiveTier || vaultActiveTier === 'all' ? 'bg-ink-700 text-text-200' : 'text-text-400 hover:text-text-200 hover:bg-ink-800'"
+                      @click="theseusVaultLoadGraph('')"
+                    >All</button>
+                  </div>
+                  <button type="button"
+                    class="btn btn-ghost text-xs flex items-center gap-1 px-2 py-1"
+                    :disabled="vaultGraphLoading"
+                    @click="theseusVaultLoadGraph(vaultActiveTier)"
+                  >
+                    <i data-lucide="refresh-cw" class="w-3 h-3" :class="vaultGraphLoading ? 'animate-spin' : ''"></i>
+                    Reload
+                  </button>
+                </div>
+              </div>
+
+              <!-- Legend -->
+              <div class="flex items-center gap-4 px-4 py-1.5 border-b border-edge-strong/20 bg-ink-950/40 text-xs text-text-500 flex-shrink-0">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-neon-cyan inline-block"></span>Doctrine</span>
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-neon-magenta inline-block"></span>Intelligence</span>
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-neon-amber inline-block"></span>Pursuits</span>
+                <span class="flex items-center gap-1.5"><span class="w-2 h-px bg-neon-cyan/60 inline-block"></span>wikilink</span>
+                <span class="flex items-center gap-1.5"><span class="w-2 h-px border-t border-neon-amber/50 border-dashed inline-block"></span>topic cluster</span>
+              </div>
+
+              <!-- SVG canvas -->
+              <div class="flex-1 relative" style="min-height:460px;">
+                <svg id="vault-graph-svg" class="absolute inset-0 w-full h-full"></svg>
+                <!-- Loading overlay -->
+                <div x-show="vaultGraphLoading" class="absolute inset-0 flex items-center justify-center bg-ink-950/70 z-10">
+                  <span class="text-sm text-neon-cyan flex items-center gap-2">
+                    <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+                    Building graph…
+                  </span>
+                </div>
+              </div>
+
+              <!-- Hover tooltip / node details -->
+              <template x-if="vaultGraphHovered">
+                <div class="absolute bottom-4 right-4 z-20 card p-3 w-64 text-xs pointer-events-none">
+                  <p class="text-text-100 font-semibold truncate" x-text="vaultGraphHovered.title"></p>
+                  <div class="flex gap-2 mt-1">
+                    <span class="pill" x-text="vaultGraphHovered.type || 'raw'"></span>
+                    <span class="pill" x-text="vaultGraphHovered.status || 'raw'"></span>
+                  </div>
+                  <p class="text-text-500 mt-1" x-text="vaultGraphHovered.topic || ''" x-show="vaultGraphHovered.topic"></p>
+                </div>
+              </template>
+            </div>
+
           </section>
 
           <!-- ============== ACTIVITY LOG ============== -->

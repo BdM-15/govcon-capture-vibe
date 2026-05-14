@@ -87,17 +87,22 @@ class PolishRequest(BaseModel):
 # Background classification
 # ---------------------------------------------------------------------------
 
-_VALID_NOTE_TYPES = frozenset({"insight", "action", "risk", "theme", "question", "raw"})
+_VALID_NOTE_TYPES = frozenset({
+    "insight", "action", "risk", "theme", "question", "raw",
+    "article", "shipley_ref", "capability", "lesson_learned",
+})
+
+_TYPE_LIST = "insight|action|risk|theme|question|raw|article|shipley_ref|capability|lesson_learned"
 
 _CLASSIFY_SYSTEM = (
     "You are a govcon capture analyst. Classify and title the note. "
-    "Return EXACTLY:\nTYPE: <insight|action|risk|theme|question|raw>\n"
+    f"Return EXACTLY:\nTYPE: <{_TYPE_LIST}>\n"
     "TITLE: <concise title max 80 chars>\nNo extra text."
 )
 
 _POLISH_SYSTEM = (
     "You are a govcon capture analyst. Polish the note and return EXACTLY:\n"
-    "TYPE: <insight|action|risk|theme|question|raw>\n"
+    f"TYPE: <{_TYPE_LIST}>\n"
     "TITLE: <concise title under 80 chars>\n"
     "BODY: <polished note text>\n"
     "No extra text before TYPE: or after the BODY content."
@@ -193,7 +198,7 @@ async def _classify_and_update(
     """Background task: infer type + title from body; patch the note."""
     prompt = (
         f"Classify and title this govcon capture note.\n"
-        f"TYPE: <insight|action|risk|theme|question|raw>\n"
+        f"TYPE: <{_TYPE_LIST}>\n"
         f"TITLE: <concise title max 80 chars>\n\n"
         f"Note:\n{body}"
     )
@@ -632,4 +637,72 @@ def register_vault_routes(
         await kg_insert_func(payload.workspace, entities_payload)
 
         return JSONResponse({"accepted": len(payload.proposals), "workspace": payload.workspace})
+
+    # ---------------------------------------------------------------------------
+    # Graph view — nodes + edges for force-directed visualization
+    # ---------------------------------------------------------------------------
+
+    import re as _re
+
+    _WIKILINK_RE = _re.compile(r"\[\[([^\]|#]+?)(?:[|#][^\]]*)?\]\]")
+
+    @app.get("/api/ui/vault/graph", tags=["theseus-vault"])
+    async def vault_graph(tier: str | None = None) -> JSONResponse:
+        """Return all notes as nodes + wikilink/topic edges for graph visualization.
+
+        Each node: {id, title, type, status, tier, topic, group}
+        Each link: {source, target, kind}  (kind: wikilink | topic | pursuit)
+        """
+        all_notes = vault_store.list_notes()
+        if tier:
+            scoped = [n for n in all_notes if n.get("tier") == tier]
+        else:
+            scoped = all_notes
+
+        id_set = {n["id"] for n in all_notes}
+        slug_by_title: dict[str, str] = {
+            (n.get("title") or "").lower(): n["id"]
+            for n in all_notes if n.get("title")
+        }
+
+        nodes = []
+        links = []
+        topic_leaders: dict[str, str] = {}
+
+        for n in scoped:
+            nid = n["id"]
+            topic = n.get("topic") or ""
+            nodes.append({
+                "id": nid,
+                "title": n.get("title") or nid,
+                "type": n.get("type") or "raw",
+                "status": n.get("status") or "raw",
+                "tier": n.get("tier") or "",
+                "topic": topic,
+                "pursuit": n.get("pursuit") or "",
+            })
+            # Wikilink edges from body
+            body = n.get("body") or ""
+            for match in _WIKILINK_RE.finditer(body):
+                target_title = match.group(1).strip().lower()
+                target_id = slug_by_title.get(target_title)
+                if target_id and target_id != nid and target_id in id_set:
+                    links.append({"source": nid, "target": target_id, "kind": "wikilink"})
+            # Topic-cluster edges (connect to first note in same topic)
+            if topic:
+                if topic not in topic_leaders:
+                    topic_leaders[topic] = nid
+                elif topic_leaders[topic] != nid:
+                    links.append({"source": topic_leaders[topic], "target": nid, "kind": "topic"})
+
+        # Deduplicate links
+        seen: set[tuple] = set()
+        unique_links = []
+        for lnk in links:
+            key = (lnk["source"], lnk["target"], lnk["kind"])
+            if key not in seen:
+                seen.add(key)
+                unique_links.append(lnk)
+
+        return JSONResponse({"nodes": nodes, "links": unique_links})
 

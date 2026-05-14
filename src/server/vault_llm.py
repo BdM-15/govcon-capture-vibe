@@ -63,7 +63,7 @@ def _build_polish_system_prompt() -> str:
         f"Govcon entity types to recognise: {entity_list}\n\n"
         f"Canonical relationship types: {rel_list}\n\n"
         "Return EXACTLY:\n"
-        "TYPE: <insight|action|risk|theme|question|raw>\n"
+        "TYPE: <insight|action|risk|theme|question|raw|article|shipley_ref|capability|lesson_learned>\n"
         "TITLE: <concise title max 80 chars>\n"
         "BODY: <polished Markdown body>\n"
         "No extra text before TYPE: or after the BODY content."
@@ -72,7 +72,10 @@ def _build_polish_system_prompt() -> str:
 
 _POLISH_PROMPT_TEMPLATE = "Polish this govcon capture note:\n\n{body}"
 
-_VALID_NOTE_TYPES = frozenset({"insight", "action", "risk", "theme", "question", "raw"})
+_VALID_NOTE_TYPES = frozenset({
+    "insight", "action", "risk", "theme", "question", "raw",
+    "article", "shipley_ref", "capability", "lesson_learned",
+})
 
 
 def _parse_llm_response(raw: str, fallback_body: str) -> tuple[str, str, str]:

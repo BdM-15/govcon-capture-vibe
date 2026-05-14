@@ -924,6 +924,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusIntelBulkPolish(this);
     },
 
+    async theseusVaultLoadGraph(tier) {
+      return window.theseusVaultLoadGraph(this, tier);
+    },
+
     filteredLmRows() {
       return window.theseusFilteredLmRows(this);
     },

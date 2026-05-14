@@ -244,12 +244,44 @@ def _register_feature_routes(
         schedule_restart=context.schedule_restart,
     )
 
-    _vault_dir = Path(get_settings().vault_path).resolve()
+    _settings = get_settings()
+    _vault_dir = Path(_settings.vault_path).resolve()
     _vault_dir.mkdir(parents=True, exist_ok=True)
     from src.server.vault_store import VaultStore
+    from lightrag.llm.openai import openai_complete_if_cache as _oai_complete
+
+    async def _vault_curation_func(prompt, system_prompt=None, **kwargs):
+        """Ollama-backed qwen vault curation (primary fast path)."""
+        kwargs.setdefault("max_tokens", 4096)
+        return await _oai_complete(
+            _settings.vault_curation_llm_model,
+            prompt,
+            system_prompt=system_prompt,
+            history_messages=[],
+            api_key="ollama",
+            base_url=_settings.vault_curation_llm_host,
+            **kwargs,
+        )
+
+    async def _grok_query_func(prompt, system_prompt=None, **kwargs):
+        """xAI reasoning model — vault reasoning toggle (model='grok')."""
+        kwargs.setdefault("max_tokens", 8192)
+        return await _oai_complete(
+            _settings.reasoning_llm_name,
+            prompt,
+            system_prompt=system_prompt,
+            history_messages=[],
+            api_key=_settings.llm_binding_api_key or "",
+            base_url=_settings.llm_binding_host,
+            **kwargs,
+        )
+
     register_vault_routes(
         app,
         vault_store=VaultStore(vault_dir=_vault_dir, now=context.now),
+        vault_curation_func=_vault_curation_func,
+        query_func=_grok_query_func,
+        vault_auto_polish=_settings.vault_auto_polish,
     )
 
 

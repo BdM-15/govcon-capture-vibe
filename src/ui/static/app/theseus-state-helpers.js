@@ -292,6 +292,8 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultPolishLoading: false,
     vaultEntityProposals: [],
     vaultEntityLoading: false,
+    vaultGraphLoading: false,
+    vaultGraphHovered: null,
     intelFeedNotes: [],
     intelFeedLoading: false,
     intelBulkPolishing: false,
