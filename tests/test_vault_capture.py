@@ -1,0 +1,68 @@
+"""Tracer-bullet test for src/server/vault_capture.py::capture.
+
+Exercises the full classify -> polish -> wikilink-suggest -> persist round-trip
+through the public ``capture`` interface.  Mocks the LLM via an injected
+async callable that mirrors the contract of vault_llm.polish_note's llm_func
+(``(prompt, system_prompt=...) -> str`` returning TYPE/TITLE/BODY).
+"""
+from __future__ import annotations
+
+import asyncio
+from pathlib import Path
+
+from src.server.vault_capture import CapturedNote, capture
+from src.server.vault_store import VaultStore
+
+
+def test_capture_returns_classified_polished_note_persisted_to_vault(
+    tmp_path: Path,
+):
+    # arrange ----------------------------------------------------------------
+    raw = "competitor X just won an idiq for cleared workforce work, big deal"
+
+    async def fake_llm(prompt, system_prompt=""):
+        # Simulate vault-curation LLM: classify + polish in one TYPE/TITLE/BODY response
+        return (
+            "TYPE: insight\n"
+            "TITLE: Competitor X wins cleared workforce IDIQ\n"
+            "BODY: Competitor X recently won an [[Cleared Workforce]] IDIQ. "
+            "This is a significant competitive signal worth tracking."
+        )
+
+    vault_store = VaultStore(tmp_path, now=lambda: "2026-05-14T12:00:00")
+    vault_index = {
+        "Cleared Workforce": "cleared-workforce",
+        "Capture Plan Development": "capture-plan-development",
+    }
+
+    # act --------------------------------------------------------------------
+    async def _run():
+        return await capture(
+            raw_body=raw,
+            llm_func=fake_llm,
+            vault_store=vault_store,
+            vault_index=vault_index,
+            auto_polish=True,
+        )
+
+    captured = asyncio.run(_run())
+
+    # assert -----------------------------------------------------------------
+    assert isinstance(captured, CapturedNote)
+    assert captured.note_type == "insight"
+    assert captured.title == "Competitor X wins cleared workforce IDIQ"
+    assert captured.auto_polished is True
+    assert captured.raw_body == raw
+    assert "Competitor X" in captured.polished_body
+    assert captured.polished_body != raw  # actual rewrite happened
+    assert "[[Cleared Workforce]]" in captured.wikilink_suggestions
+
+    # persisted to disk
+    assert captured.path.exists()
+    assert captured.path.parent == tmp_path
+
+    # readable back through VaultStore public interface
+    persisted = vault_store.read(captured.note_id)
+    assert persisted["type"] == "insight"
+    assert persisted["title"] == captured.title
+    assert "Competitor X" in persisted["body"]
