@@ -138,22 +138,55 @@ def _compute_diff_hunks(original: str, rewritten: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def _suggest_wikilinks(polished_body: str, vault_index: dict[str, str]) -> list[str]:
-    """Return ``[[Title]]`` strings for vault notes whose titles appear in the body.
+def _suggest_wikilinks(
+    polished_body: str,
+    vault_index: dict[str, str],
+    max_suggestions: int = 15,
+) -> list[str]:
+    """Return ``[[Title]]`` strings for vault notes whose titles are strongly
+    implied by the polished body.
 
-    A title is considered a match when at least half of its significant words
-    (len > 3) appear in the polished body (case-insensitive).
+    Scoring (title must clear a *high bar* to avoid shotgun suggestions):
+
+    1. **Phrase match** (score 3): the full title appears as a contiguous
+       case-insensitive substring — strongest signal.
+    2. **All significant words** (score 2): every word >3 chars in the title
+       appears in the body — tight multi-word co-occurrence.
+    3. **Majority significant words** (score 1): ≥ ⌈2/3⌉ of significant words
+       match AND there are at least 2 significant words — avoids single-word
+       false positives.
+
+    Titles with only one significant word are matched only by phrase match (rule
+    1), preventing trivially common words from matching everything.
+
+    Results are returned ordered by descending score, capped at ``max_suggestions``.
     """
+    import math as _math
+
     body_lower = polished_body.lower()
-    suggestions: list[str] = []
+    scored: list[tuple[int, str]] = []
+
     for title in vault_index:
-        words = [w for w in title.lower().split() if len(w) > 3]
-        if not words:
+        # Rule 1: phrase match
+        if title.lower() in body_lower:
+            scored.append((3, title))
             continue
-        matches = sum(1 for w in words if w in body_lower)
-        if matches >= max(1, len(words) // 2):
-            suggestions.append(f"[[{title}]]")
-    return suggestions
+
+        sig_words = [w for w in title.lower().split() if len(w) > 3]
+        if not sig_words:
+            continue
+
+        matches = sum(1 for w in sig_words if w in body_lower)
+
+        # Rule 2: all significant words present
+        if matches == len(sig_words) and len(sig_words) >= 2:
+            scored.append((2, title))
+        # Rule 3: ≥ 2/3 significant words, minimum 2 sig words
+        elif len(sig_words) >= 3 and matches >= _math.ceil(len(sig_words) * 2 / 3):
+            scored.append((1, title))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [f"[[{title}]]" for _, title in scored[:max_suggestions]]
 
 
 # ---------------------------------------------------------------------------
