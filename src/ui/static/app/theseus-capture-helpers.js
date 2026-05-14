@@ -74,3 +74,19 @@ window.theseusVaultCaptureLoadStream = async function theseusVaultCaptureLoadStr
     app.toast("Stream load failed: " + error.message, "error");
   }
 };
+
+// #154: wikilink chip accept/reject — pure in-memory mutators on the captured note.
+// No fetch/POST. Writeback to the .md file is explicitly out of scope per #149.
+window.theseusVaultAcceptWikilink = function theseusVaultAcceptWikilink(note, suggestion) {
+  if (!note._wikilinkAccepted) note._wikilinkAccepted = {};
+  if (!note._wikilinkRejected) note._wikilinkRejected = {};
+  note._wikilinkAccepted[suggestion] = true;
+  delete note._wikilinkRejected[suggestion];
+};
+
+window.theseusVaultRejectWikilink = function theseusVaultRejectWikilink(note, suggestion) {
+  if (!note._wikilinkAccepted) note._wikilinkAccepted = {};
+  if (!note._wikilinkRejected) note._wikilinkRejected = {};
+  note._wikilinkRejected[suggestion] = true;
+  delete note._wikilinkAccepted[suggestion];
+};

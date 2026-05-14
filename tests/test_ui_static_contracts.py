@@ -340,3 +340,34 @@ def test_capture_stream_renders_tier_rail_and_status_chip_strip() -> None:
 
     # Empty-state copy when filters yield zero notes
     assert "no notes match this filter" in source.lower()
+
+def test_capture_card_renders_wikilink_suggestion_chips() -> None:
+    """#154: each suggestion in note.wikilink_suggestions renders as accept/reject chip.
+    Empty list -> no chip group. >3 suggestions -> collapsed behind a toggle.
+    Accept/reject only mutates Alpine state — no fetch/POST."""
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+    capture_helpers = (_ROOT / "src" / "ui" / "static" / "app" / "theseus-capture-helpers.js").read_text(encoding="utf-8")
+
+    capture_section_start = source.index('id="vault-capture-stream"')
+    capture_section_end = source.index("<!-- notes tab content", capture_section_start)
+    capture_markup = source[capture_section_start:capture_section_end]
+
+    # Chip group bound to the suggestions array
+    assert "wikilink_suggestions" in capture_markup
+    assert "capture-wikilink-chips" in capture_markup
+
+    # Accept / reject glyphs
+    assert "check" in capture_markup  # lucide check icon
+    assert '"x"' in capture_markup or "data-lucide=\"x\"" in capture_markup
+
+    # Collapse toggle when >3 suggestions
+    assert "show " in capture_markup.lower() or "show all" in capture_markup.lower()
+    assert "_chipsExpanded" in capture_markup or "chipsExpanded" in capture_markup
+
+    # Helpers expose accept/reject — pure in-memory mutators, no fetch
+    assert "window.theseusVaultAcceptWikilink" in capture_helpers
+    assert "window.theseusVaultRejectWikilink" in capture_helpers
+    accept_fn_start = capture_helpers.index("theseusVaultAcceptWikilink")
+    reject_fn_end = capture_helpers.index("\n};", capture_helpers.index("theseusVaultRejectWikilink"))
+    chip_helpers_slice = capture_helpers[accept_fn_start:reject_fn_end]
+    assert "fetch(" not in chip_helpers_slice
