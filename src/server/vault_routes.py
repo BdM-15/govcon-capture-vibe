@@ -63,6 +63,12 @@ class NotePreviewRequest(BaseModel):
     body: str
 
 
+class CaptureRequest(BaseModel):
+    """Body for POST /api/ui/vault/capture."""
+    body: str
+    auto_polish: bool | None = None  # None = use server default (vault_auto_polish)
+
+
 class NoteUpdate(BaseModel):
     title: str | None = None
     body: str | None = None
@@ -323,6 +329,42 @@ def register_vault_routes(
         raw = await vault_curation_func(prompt, system_prompt=_POLISH_SYSTEM)
         title, note_type, body = _parse_curation_response(raw, fallback_body=payload.body)
         return JSONResponse({"type": note_type, "title": title, "body": body})
+
+    @app.post("/api/ui/vault/capture", tags=["theseus-vault"])
+    async def capture_note(payload: CaptureRequest) -> JSONResponse:
+        """Single-shot capture: classify + polish (optional) + persist.
+
+        Wraps `vault_capture.capture(...)`.  Returns 503 when auto_polish is
+        on but no vault_curation_func is configured.
+        """
+        from src.server.vault_capture import capture as _capture
+        from dataclasses import asdict
+
+        do_polish = (
+            vault_auto_polish if payload.auto_polish is None else payload.auto_polish
+        )
+        if do_polish and vault_curation_func is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Vault curation LLM not configured",
+            )
+
+        # Build title -> slug index from existing notes for wikilink scoring
+        vault_index = {
+            (n.get("title") or n["id"]): n["id"]
+            for n in vault_store.list_notes()
+        }
+        captured = await _capture(
+            raw_body=payload.body,
+            llm_func=vault_curation_func,  # type: ignore[arg-type]
+            vault_store=vault_store,
+            vault_index=vault_index,
+            auto_polish=do_polish,
+        )
+        result = asdict(captured)
+        result["path"] = str(result["path"])
+        return JSONResponse(result)
+
 
     @app.post("/api/ui/vault/notes", tags=["theseus-vault"])
     async def create_note(
