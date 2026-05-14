@@ -860,6 +860,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusVaultNewNote(this);
     },
 
+    async vaultCaptureSubmit() {
+      return window.theseusVaultCaptureSubmit(this);
+    },
+
     async vaultSaveNote() {
       return window.theseusVaultSaveNote(this);
     },

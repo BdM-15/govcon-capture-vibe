@@ -170,6 +170,36 @@ def test_skill_run_missing_input_panel_reuses_chat_like_composer_language() -> N
     assert source.count("Reply to continue this skill") == 1
 
 
+def test_capture_stream_surface_is_wired_end_to_end() -> None:
+    """Tracer-bullet UI for #151: a capture tab + input + submit + stream container,
+    bound to Alpine state and a helper that POSTs to /api/ui/vault/capture."""
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+    state = (_ROOT / "src" / "ui" / "static" / "app" / "theseus-state-helpers.js").read_text(encoding="utf-8")
+    delegates = (_ROOT / "src" / "ui" / "static" / "app" / "theseus-app-delegates.js").read_text(encoding="utf-8")
+    capture_helpers_path = _ROOT / "src" / "ui" / "static" / "app" / "theseus-capture-helpers.js"
+
+    # Markup: tab + surface elements live in the vault section
+    assert 'id="vault-tab-capture"' in source
+    assert "vaultTab = 'capture'" in source
+    assert 'id="vault-capture-input"' in source
+    assert 'id="vault-capture-submit"' in source
+    assert 'id="vault-capture-stream"' in source
+
+    # Alpine state holds the input body, submit-in-flight flag, and stream array
+    assert "vaultCaptureBody:" in state
+    assert "vaultCaptureStream:" in state
+    assert "vaultCapturing:" in state
+
+    # Delegate hook + helper file + script tag wire the click to the helper
+    assert "vaultCaptureSubmit()" in delegates
+    assert "window.theseusVaultCaptureSubmit" in delegates
+    assert capture_helpers_path.exists(), "Missing theseus-capture-helpers.js"
+    helpers = capture_helpers_path.read_text(encoding="utf-8")
+    assert "/api/ui/vault/capture" in helpers
+    assert "window.theseusVaultCaptureSubmit" in helpers
+    assert '<script src="/ui/app/theseus-capture-helpers.js"></script>' in source
+
+
 def test_studio_chain_trace_exposes_resume_action_for_resumeable_chain() -> None:
     source = _INDEX_HTML.read_text(encoding="utf-8")
     helpers = _CHAIN_HELPERS.read_text(encoding="utf-8")

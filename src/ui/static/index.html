@@ -4589,6 +4589,19 @@
             <!-- tab bar -->
             <div class="flex gap-1 mb-4 border-b border-edge-strong/40">
               <button
+                id="vault-tab-capture"
+                class="px-4 py-2 text-sm font-medium rounded-t-md transition-colors"
+                :class="vaultTab === 'capture'
+                  ? 'bg-ink-800 text-text-100 border border-b-0 border-edge-strong/60'
+                  : 'text-text-400 hover:text-text-200'"
+                @click="vaultTab = 'capture'"
+              >
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                  Capture
+                </span>
+              </button>
+              <button
                 id="vault-tab-notes"
                 class="px-4 py-2 text-sm font-medium rounded-t-md transition-colors"
                 :class="vaultTab === 'notes'
@@ -4627,6 +4640,71 @@
                   Graph
                 </span>
               </button>
+            </div>
+
+            <!-- capture tab content — minimal Stream tracer-bullet (#151) -->
+            <div
+              x-show="vaultTab === 'capture'"
+              class="card flex flex-col gap-4 p-5 min-h-[600px]"
+            >
+              <div class="flex flex-col gap-2">
+                <label
+                  for="vault-capture-input"
+                  class="text-xs uppercase tracking-wider text-text-400"
+                  >Capture a thought</label
+                >
+                <textarea
+                  id="vault-capture-input"
+                  x-model="vaultCaptureBody"
+                  rows="3"
+                  placeholder="Type a raw thought — the LLM classifies and polishes on submit."
+                  class="bg-ink-900 border border-edge-strong/60 rounded-md px-3 py-2 text-sm text-text-100 focus:outline-none focus:border-neon-cyan/60 resize-y"
+                ></textarea>
+                <div class="flex justify-end">
+                  <button
+                    id="vault-capture-submit"
+                    type="button"
+                    @click="vaultCaptureSubmit()"
+                    :disabled="vaultCapturing || !vaultCaptureBody.trim()"
+                    class="px-4 py-2 text-sm font-medium rounded-md bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <span x-show="!vaultCapturing">Capture</span>
+                    <span x-show="vaultCapturing">Capturing…</span>
+                  </button>
+                </div>
+              </div>
+
+              <div
+                id="vault-capture-stream"
+                class="flex flex-col gap-3 border-t border-edge-strong/30 pt-4"
+              >
+                <p
+                  x-show="vaultCaptureStream.length === 0"
+                  class="text-sm text-text-500 italic"
+                >
+                  Stream is empty. Capture a thought to see it materialize here.
+                </p>
+                <template x-for="note in vaultCaptureStream" :key="note.note_id">
+                  <article
+                    class="bg-ink-800 border border-edge-strong/40 rounded-md p-3 hover:border-neon-cyan/40 transition-colors"
+                  >
+                    <header class="flex items-center justify-between gap-2 mb-1">
+                      <h3
+                        class="text-sm font-semibold text-text-100"
+                        x-text="note.title"
+                      ></h3>
+                      <span
+                        class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan"
+                        x-text="note.note_type"
+                      ></span>
+                    </header>
+                    <p
+                      class="text-sm text-text-300 whitespace-pre-wrap"
+                      x-text="note.polished_body"
+                    ></p>
+                  </article>
+                </template>
+              </div>
             </div>
 
             <!-- notes tab content — 3-pane layout -->
@@ -8984,6 +9062,7 @@
     <script src="/ui/app/theseus-graph-helpers.js"></script>
     <script src="/ui/app/theseus-intel-helpers.js"></script>
     <script src="/ui/app/theseus-vault-helpers.js"></script>
+    <script src="/ui/app/theseus-capture-helpers.js"></script>
     <script src="/ui/app/theseus-settings-helpers.js"></script>
     <script src="/ui/app/theseus-workspace-helpers.js"></script>
     <script src="/ui/app/theseus-palette-helpers.js"></script>
