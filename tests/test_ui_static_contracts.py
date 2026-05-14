@@ -200,6 +200,30 @@ def test_capture_stream_surface_is_wired_end_to_end() -> None:
     assert '<script src="/ui/app/theseus-capture-helpers.js"></script>' in source
 
 
+def test_capture_stream_surfaces_degraded_polish_state() -> None:
+    """#157 UI half: when polish was requested but the orchestrator fell back to raw,
+    the user must see a distinct indicator on the resulting card AND a 503 from the
+    route must surface a polish-specific toast (not a generic 'capture failed')."""
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+    capture_helpers = (_ROOT / "src" / "ui" / "static" / "app" / "theseus-capture-helpers.js").read_text(encoding="utf-8")
+
+    # Helper sends auto_polish explicitly so the orchestrator knows intent
+    assert '"auto_polish"' in capture_helpers or "auto_polish:" in capture_helpers
+
+    # Helper distinguishes 503 (polish unavailable) from generic failures
+    assert "503" in capture_helpers
+    assert "Polish" in capture_helpers  # polish-specific copy
+
+    # Helper marks the card when polish was requested but the response came back unpolished
+    assert "_degraded" in capture_helpers
+
+    # Card markup renders the degraded indicator conditionally
+    capture_section_start = source.index('id="vault-capture-stream"')
+    capture_section_end = source.index("<!-- notes tab content", capture_section_start)
+    capture_markup = source[capture_section_start:capture_section_end]
+    assert "note._degraded" in capture_markup
+
+
 def test_studio_chain_trace_exposes_resume_action_for_resumeable_chain() -> None:
     source = _INDEX_HTML.read_text(encoding="utf-8")
     helpers = _CHAIN_HELPERS.read_text(encoding="utf-8")

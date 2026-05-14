@@ -4686,17 +4686,30 @@
                 </p>
                 <template x-for="note in vaultCaptureStream" :key="note.note_id">
                   <article
-                    class="bg-ink-800 border border-edge-strong/40 rounded-md p-3 hover:border-neon-cyan/40 transition-colors"
+                    class="bg-ink-800 border rounded-md p-3 transition-colors"
+                    :class="note._degraded
+                      ? 'border-amber-500/50 hover:border-amber-400/70'
+                      : 'border-edge-strong/40 hover:border-neon-cyan/40'"
                   >
                     <header class="flex items-center justify-between gap-2 mb-1">
                       <h3
                         class="text-sm font-semibold text-text-100"
                         x-text="note.title"
                       ></h3>
-                      <span
-                        class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan"
-                        x-text="note.note_type"
-                      ></span>
+                      <div class="flex items-center gap-1.5">
+                        <span
+                          x-show="note._degraded"
+                          class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/40 text-amber-300 flex items-center gap-1"
+                          title="Polish was requested but failed; note saved as raw"
+                        >
+                          <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                          polish failed
+                        </span>
+                        <span
+                          class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan"
+                          x-text="note.note_type"
+                        ></span>
+                      </div>
                     </header>
                     <p
                       class="text-sm text-text-300 whitespace-pre-wrap"

@@ -71,6 +71,7 @@ window.theseusInit = async function theseusInit(app) {
     "studioPreview.sheetIdx",
     "chains.current",
     "chains.items",
+    "vaultCaptureStream",
   ]);
 
   app.$watch("currentChat", () =>
