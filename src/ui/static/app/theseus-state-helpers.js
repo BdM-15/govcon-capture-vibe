@@ -273,6 +273,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultCapturing: false,
     vaultCaptureTier: "",
     vaultCaptureStatus: "",
+    vaultCaptureExpandedId: null,
     vaultNotes: [],
     vaultNotesLoading: false,
     vaultActiveNote: null,

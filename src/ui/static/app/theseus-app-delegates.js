@@ -872,6 +872,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusVaultCaptureLoadStream(this);
     },
 
+    vaultCaptureToggleExpand(note) {
+      return window.theseusVaultCaptureToggleExpand(this, note);
+    },
+
     async vaultSaveNote() {
       return window.theseusVaultSaveNote(this);
     },

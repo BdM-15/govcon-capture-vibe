@@ -391,3 +391,36 @@ def test_capture_input_supports_ctrl_enter_submit_with_visible_hint() -> None:
 
     # Submit guard already exists via vaultCapturing — handler must respect it
     # (state guard is enforced inside theseusVaultCaptureSubmit, asserted in earlier test)
+
+def test_capture_card_supports_click_to_expand_inline() -> None:
+    """#156: card header click expands inline → polished MD + raw + diff. Esc collapses. Single source vaultCaptureExpandedId."""
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+
+    stream_start = source.index('id="vault-capture-stream"')
+    region = source[stream_start:stream_start + 12000]
+
+    # Header click toggles expansion via single-source state
+    assert "vaultCaptureToggleExpand" in region
+    assert "vaultCaptureExpandedId" in region
+
+    # Esc closes (window-level keydown)
+    assert "@keydown.escape.window" in source
+    assert "vaultCaptureExpandedId = null" in source
+
+    # Expanded panel shows polished MD render via marked + DOMPurify, raw text, diff
+    assert "capture-expanded" in region
+    assert "DOMPurify.sanitize(marked.parse" in region
+    assert "capture-raw" in region
+    assert "capture-diff" in region
+
+    # State variable declared in Alpine component
+    state_src = (_UI_STATIC_ROOT / "app" / "theseus-state-helpers.js").read_text(encoding="utf-8")
+    assert "vaultCaptureExpandedId:" in state_src
+
+    # Helper exposed
+    helpers = (_UI_STATIC_ROOT / "app" / "theseus-capture-helpers.js").read_text(encoding="utf-8")
+    assert "theseusVaultCaptureToggleExpand" in helpers
+    assert "theseusVaultCaptureLineDiff" in helpers
+
+    # Reduced-motion respected
+    assert "prefers-reduced-motion" in (_UI_STATIC_ROOT / "styles" / "theseus.css").read_text(encoding="utf-8")

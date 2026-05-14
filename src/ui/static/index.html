@@ -4727,6 +4727,7 @@
               <div
                 id="vault-capture-stream"
                 class="flex flex-col gap-3 border-t border-edge-strong/30 pt-4"
+                @keydown.escape.window="vaultCaptureExpandedId = null"
               >
                 <p
                   x-show="vaultCaptureStream.length === 0"
@@ -4742,7 +4743,14 @@
                       ? 'border-amber-500/50 hover:border-amber-400/70'
                       : 'border-edge-strong/40 hover:border-neon-cyan/40'"
                   >
-                    <header class="flex items-center justify-between gap-2 mb-1">
+                    <header
+                      class="flex items-center justify-between gap-2 mb-1 cursor-pointer select-none"
+                      role="button"
+                      tabindex="0"
+                      :aria-expanded="vaultCaptureExpandedId === note.note_id"
+                      @click="vaultCaptureToggleExpand(note)"
+                      @keydown.enter.prevent="vaultCaptureToggleExpand(note)"
+                    >
                       <div class="flex items-center gap-2 min-w-0">
                         <span
                           class="capture-status-dot"
@@ -4819,6 +4827,46 @@
                           ? 'show fewer'
                           : ('show all ' + note.wikilink_suggestions.length + ' suggestions')"
                       ></button>
+                    </div>
+
+                    <!-- #156: inline expanded view -->
+                    <div
+                      class="capture-expanded mt-3 pt-3 border-t border-edge-strong/40 grid gap-3 md:grid-cols-3"
+                      x-show="vaultCaptureExpandedId === note.note_id"
+                      x-transition.opacity
+                      @click.stop
+                    >
+                      <div>
+                        <div class="text-[10px] uppercase tracking-wider text-neon-cyan mb-1">Polished</div>
+                        <div
+                          class="markdown text-sm text-text-200"
+                          x-html="DOMPurify.sanitize(marked.parse(note.polished_body || note.body || ''))"
+                        ></div>
+                      </div>
+                      <div>
+                        <div class="text-[10px] uppercase tracking-wider text-text-400 mb-1">Raw</div>
+                        <pre
+                          class="capture-raw text-xs text-text-300 whitespace-pre-wrap font-mono bg-ink-900/60 rounded p-2"
+                          x-text="note.raw_body || note.body || ''"
+                        ></pre>
+                      </div>
+                      <div>
+                        <div class="text-[10px] uppercase tracking-wider text-text-400 mb-1">Diff</div>
+                        <div class="capture-diff text-xs font-mono bg-ink-900/60 rounded p-2 space-y-0.5">
+                          <template
+                            x-for="(op, idx) in theseusVaultCaptureLineDiff(note.raw_body || note.body || '', note.polished_body || note.body || '')"
+                            :key="idx"
+                          >
+                            <div
+                              :class="op.type === 'add'
+                                ? 'text-neon-cyan'
+                                : (op.type === 'del' ? 'text-amber-400 line-through opacity-70' : 'text-text-400')"
+                            >
+                              <span x-text="op.type === 'add' ? '+ ' : (op.type === 'del' ? '- ' : '  ')"></span><span x-text="op.text"></span>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
                     </div>
                   </article>
                 </template>
