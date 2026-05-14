@@ -4685,6 +4685,7 @@
                     type="button"
                     @click="vaultCaptureSubmit()"
                     :disabled="vaultCapturing || !vaultCaptureBody.trim()"
+                    :class="vaultCapturing ? 'capture-submit-pulse' : ''"
                     class="px-4 py-2 text-sm font-medium rounded-md bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     <span x-show="!vaultCapturing">Capture</span>
@@ -4754,6 +4755,7 @@
                   <article
                     class="bg-ink-800 border rounded-md p-3 transition-colors"
                     :data-note-id="note.note_id"
+                    :data-tier="note.tier"
                     :class="note._degraded
                       ? 'border-amber-500/50 hover:border-amber-400/70'
                       : 'border-edge-strong/40 hover:border-neon-cyan/40'"

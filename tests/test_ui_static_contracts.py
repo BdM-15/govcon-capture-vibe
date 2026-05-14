@@ -476,3 +476,50 @@ def test_graph_node_click_closes_drawer_and_glows_matching_card() -> None:
 
     css = (_UI_STATIC_ROOT / "styles" / "theseus.css").read_text(encoding="utf-8")
     assert ".capture-card-glow" in css
+
+def test_capture_surface_wears_cyberpunk_polish():
+    """#158: caret-color/mono placeholder/focus glow on input, tier-driven left border on cards,
+    pulse on submit while in flight (reduced-motion respected). All token-driven, no raw hex."""
+    html_src = _INDEX_HTML.read_text(encoding="utf-8")
+    css_src = (_UI_STATIC_ROOT / "styles" / "theseus.css").read_text(encoding="utf-8")
+
+    # Input: id-anchored CSS rule applies caret-color, monospace placeholder, focus glow.
+    assert "#vault-capture-input" in css_src, "input must be styled by id in theseus.css"
+    input_block = css_src[css_src.index("#vault-capture-input"):css_src.index("#vault-capture-input") + 800]
+    assert "caret-color: var(--neon-cyan)" in input_block, "input needs neon-cyan caret"
+    assert "::placeholder" in input_block and "monospace" in input_block.lower(), \
+        "placeholder must be monospace"
+    assert "var(--shadow-glow)" in input_block, "focus state must use --shadow-glow token"
+
+    # Cards: tier-driven left border via data-tier attribute on article.
+    capture_card_start = html_src.index('id="vault-capture-stream"')
+    article_region = html_src[capture_card_start:capture_card_start + 4000]
+    assert ':data-tier="note.tier"' in article_region, \
+        "article must expose note.tier as data-tier for CSS selectors"
+    assert '#vault-capture-stream article[data-tier="doctrine"]' in css_src, \
+        "doctrine tier needs scoped left-border rule"
+    assert '#vault-capture-stream article[data-tier="intelligence"]' in css_src
+    assert '#vault-capture-stream article[data-tier="pursuit"]' in css_src
+    # Each tier rule must reference its corresponding token (no hex).
+    for token in ("--neon-cyan", "--neon-magenta", "--neon-amber"):
+        assert token in css_src, f"tier border colors must use {token}"
+
+    # Submit button: pulse class toggled while in flight, with reduced-motion override.
+    submit_region = html_src[html_src.index('id="vault-capture-submit"'):
+                             html_src.index('id="vault-capture-submit"') + 600]
+    assert "capture-submit-pulse" in submit_region, \
+        "submit button must toggle .capture-submit-pulse while vaultCapturing"
+    assert "vaultCapturing" in submit_region
+    assert ".capture-submit-pulse" in css_src, "pulse rule must exist in theseus.css"
+    pulse_block_start = css_src.index(".capture-submit-pulse")
+    pulse_block = css_src[pulse_block_start:pulse_block_start + 1200]
+    assert "@keyframes" in css_src[pulse_block_start - 200:pulse_block_start + 1500] or \
+        "animation" in pulse_block, "pulse needs an animation"
+    assert "prefers-reduced-motion" in css_src, "must honor prefers-reduced-motion"
+
+    # No raw hex in the new vault polish rules.
+    import re
+    polish_section_start = css_src.index("#vault-capture-input")
+    polish_section = css_src[polish_section_start:]
+    hex_in_polish = re.findall(r"#[0-9a-fA-F]{3,8}\b", polish_section)
+    assert hex_in_polish == [], f"no raw hex allowed in vault polish CSS, found: {hex_in_polish}"
