@@ -424,3 +424,55 @@ def test_capture_card_supports_click_to_expand_inline() -> None:
 
     # Reduced-motion respected
     assert "prefers-reduced-motion" in (_UI_STATIC_ROOT / "styles" / "theseus.css").read_text(encoding="utf-8")
+
+def test_capture_stream_has_graph_drawer_with_outside_click_and_esc() -> None:
+    """#157: <git-fork> button in capture header opens 70vw right-side drawer hosting vault-graph-svg. Esc + outside-click close. Single source captureStream.graphOpen → vaultGraphDrawerOpen."""
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+
+    # State variable
+    state_src = (_UI_STATIC_ROOT / "app" / "theseus-state-helpers.js").read_text(encoding="utf-8")
+    assert "vaultGraphDrawerOpen:" in state_src
+
+    # Capture stream header has git-fork button toggling drawer
+    capture_card_start = source.index('id="vault-capture-input"')
+    header_region = source[max(0, capture_card_start - 4000):capture_card_start]
+    assert 'data-lucide="git-fork"' in header_region
+    assert "vaultGraphDrawerOpen = true" in header_region
+
+    # Drawer markup exists
+    assert 'id="vault-graph-drawer"' in source
+    drawer_start = source.index('id="vault-graph-drawer"')
+    drawer_region = source[drawer_start:drawer_start + 2500]
+
+    # 70vw width hint
+    assert "70vw" in drawer_region or "w-[70vw]" in drawer_region
+
+    # Esc + outside-click dismiss
+    assert "@keydown.escape.window" in drawer_region or "vaultGraphDrawerOpen = false" in source
+    assert "vaultGraphDrawerOpen = false" in source
+
+    # Drawer hosts the existing svg id
+    assert 'id="vault-graph-svg"' in drawer_region
+
+    # theseusVaultLoadGraph called when opened
+    assert "theseusVaultLoadGraph" in header_region or "theseusVaultLoadGraph" in drawer_region
+
+    # Reduced-motion in CSS
+    css = (_UI_STATIC_ROOT / "styles" / "theseus.css").read_text(encoding="utf-8")
+    assert "prefers-reduced-motion" in css
+
+
+def test_graph_node_click_closes_drawer_and_glows_matching_card() -> None:
+    """#157: clicking a graph node closes drawer + scrolls to card + 1s cyan glow."""
+    helpers = (_UI_STATIC_ROOT / "app" / "theseus-vault-helpers.js").read_text(encoding="utf-8")
+    # Node-click handler uses the new bridge fn that closes drawer + scrolls + glows
+    assert "theseusVaultFocusCaptureCard" in helpers
+
+    capture_helpers = (_UI_STATIC_ROOT / "app" / "theseus-capture-helpers.js").read_text(encoding="utf-8")
+    assert "theseusVaultFocusCaptureCard" in capture_helpers
+    # Glow class applied for ~1s
+    assert "capture-card-glow" in capture_helpers
+    assert "scrollIntoView" in capture_helpers
+
+    css = (_UI_STATIC_ROOT / "styles" / "theseus.css").read_text(encoding="utf-8")
+    assert ".capture-card-glow" in css

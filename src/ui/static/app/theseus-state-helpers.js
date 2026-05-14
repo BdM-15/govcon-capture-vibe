@@ -274,6 +274,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultCaptureTier: "",
     vaultCaptureStatus: "",
     vaultCaptureExpandedId: null,
+    vaultGraphDrawerOpen: false,
     vaultNotes: [],
     vaultNotesLoading: false,
     vaultActiveNote: null,

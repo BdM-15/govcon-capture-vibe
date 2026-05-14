@@ -4647,6 +4647,20 @@
               x-show="vaultTab === 'capture'"
               class="card flex flex-col gap-4 p-5 min-h-[600px]"
             >
+              <div class="flex items-center justify-between">
+                <h2 class="text-sm font-semibold text-text-200 uppercase tracking-wider">
+                  Capture Stream
+                </h2>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md border border-edge-strong/40 text-text-300 hover:text-neon-cyan hover:border-neon-cyan/50 transition-colors"
+                  title="Open knowledge graph"
+                  @click="vaultGraphDrawerOpen = true; $nextTick(() => theseusVaultLoadGraph(''))"
+                >
+                  <i data-lucide="git-fork" class="w-3.5 h-3.5"></i>
+                  Graph
+                </button>
+              </div>
               <div class="flex flex-col gap-2">
                 <label
                   for="vault-capture-input"
@@ -4739,6 +4753,7 @@
                 <template x-for="note in vaultCaptureStream" :key="note.note_id">
                   <article
                     class="bg-ink-800 border rounded-md p-3 transition-colors"
+                    :data-note-id="note.note_id"
                     :class="note._degraded
                       ? 'border-amber-500/50 hover:border-amber-400/70'
                       : 'border-edge-strong/40 hover:border-neon-cyan/40'"
@@ -4872,6 +4887,59 @@
                 </template>
               </div>
             </div>
+
+            <!-- #157: graph drawer (slides in from right, ~70vw) -->
+            <div
+              x-show="vaultGraphDrawerOpen"
+              x-transition.opacity
+              @click="vaultGraphDrawerOpen = false"
+              @keydown.escape.window="vaultGraphDrawerOpen = false"
+              class="fixed inset-0 z-40 bg-ink-950/60"
+            ></div>
+            <aside
+              id="vault-graph-drawer"
+              x-show="vaultGraphDrawerOpen"
+              x-transition:enter="transition transform ease-out duration-200"
+              x-transition:enter-start="translate-x-full"
+              x-transition:enter-end="translate-x-0"
+              x-transition:leave="transition transform ease-in duration-150"
+              x-transition:leave-start="translate-x-0"
+              x-transition:leave-end="translate-x-full"
+              class="vault-graph-drawer fixed top-0 right-0 h-screen z-50 bg-ink-900 border-l border-edge-strong/60 flex flex-col"
+              style="width: 70vw"
+              @click.stop
+              @keydown.escape.window="vaultGraphDrawerOpen = false"
+            >
+              <header class="flex items-center justify-between px-4 py-3 border-b border-edge-strong/40">
+                <div class="flex items-center gap-2 text-text-100">
+                  <i data-lucide="git-fork" class="w-4 h-4 text-neon-cyan"></i>
+                  <span class="text-sm font-semibold uppercase tracking-wider">Knowledge Graph</span>
+                </div>
+                <button
+                  type="button"
+                  class="text-text-400 hover:text-neon-cyan p-1"
+                  title="Close"
+                  @click="vaultGraphDrawerOpen = false"
+                >
+                  <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+              </header>
+              <div class="flex-1 relative">
+                <svg
+                  id="vault-graph-svg"
+                  class="absolute inset-0 w-full h-full"
+                ></svg>
+                <div
+                  x-show="vaultGraphLoading"
+                  class="absolute inset-0 flex items-center justify-center bg-ink-950/70 z-10"
+                >
+                  <span class="text-sm text-neon-cyan flex items-center gap-2">
+                    <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+                    Building graph…
+                  </span>
+                </div>
+              </div>
+            </aside>
 
             <!-- notes tab content — 3-pane layout -->
             <div
@@ -6036,7 +6104,7 @@
               <!-- SVG canvas -->
               <div class="flex-1 relative" style="min-height: 460px">
                 <svg
-                  id="vault-graph-svg"
+                  id="vault-graph-svg-legacy"
                   class="absolute inset-0 w-full h-full"
                 ></svg>
                 <!-- Loading overlay -->

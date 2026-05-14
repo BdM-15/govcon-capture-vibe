@@ -596,6 +596,10 @@ window.theseusVaultLoadGraph = async function theseusVaultLoadGraph(app, tier) {
       .on("click", (event, d) => {
         event.stopPropagation();
         app.vaultGraphHovered = d;
+        // #157: when drawer is the host, focus the matching capture card.
+        if (app.vaultGraphDrawerOpen && typeof window.theseusVaultFocusCaptureCard === "function") {
+          window.theseusVaultFocusCaptureCard(app, d);
+        }
       });
 
     nodeG

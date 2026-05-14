@@ -133,3 +133,22 @@ window.theseusVaultCaptureLineDiff = function theseusVaultCaptureLineDiff(rawTex
   while (j > 0) { ops.push({ type: "add", text: b[--j] }); }
   return ops.reverse();
 };
+
+// #157: graph node click → close drawer + scroll capture card into view + 1s cyan glow.
+window.theseusVaultFocusCaptureCard = function theseusVaultFocusCaptureCard(app, node) {
+  app.vaultGraphDrawerOpen = false;
+  if (!node) return;
+  const noteId = node.id || node.note_id;
+  if (!noteId) return;
+  // Defer until drawer transition completes so scroll lands on visible target.
+  setTimeout(() => {
+    const stream = document.getElementById("vault-capture-stream");
+    if (!stream) return;
+    // Find article whose Alpine-bound note matches by data-note-id attribute.
+    const card = stream.querySelector('[data-note-id="' + CSS.escape(noteId) + '"]');
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.classList.add("capture-card-glow");
+    setTimeout(() => card.classList.remove("capture-card-glow"), 1100);
+  }, 180);
+};

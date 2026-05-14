@@ -3461,3 +3461,17 @@ details.acc .summary-actions {
     0 0 0 1px rgba(var(--neon-magenta-rgb), 0.18),
     0 8px 32px rgba(0 0 0 / 0.6);
 }
+
+/* #157: 1-second cyan glow when a capture card is focused from the graph drawer. */
+.capture-card-glow {
+  animation: capture-card-glow-anim 1s ease-out;
+  border-color: var(--neon-cyan) !important;
+}
+@keyframes capture-card-glow-anim {
+  0%   { box-shadow: 0 0 0 0 rgba(var(--neon-cyan-rgb), 0.55); }
+  60%  { box-shadow: 0 0 0 8px rgba(var(--neon-cyan-rgb), 0.18); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--neon-cyan-rgb), 0);    }
+}
+@media (prefers-reduced-motion: reduce) {
+  .capture-card-glow { animation: none; }
+}
