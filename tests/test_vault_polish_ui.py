@@ -139,9 +139,3 @@ def test_polish_delegate_defined() -> None:
     """polishVaultNote must exist in app-delegates."""
     js = _APP_DELEGATES.read_text(encoding="utf-8")
     assert "polishVaultNote" in js
-
-
-def test_note_card_has_polish_button() -> None:
-    """Each note card must have a polish action button."""
-    html = _INDEX.read_text(encoding="utf-8")
-    assert "polishVaultNote" in html

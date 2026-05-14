@@ -178,9 +178,8 @@ def test_capture_stream_surface_is_wired_end_to_end() -> None:
     delegates = (_ROOT / "src" / "ui" / "static" / "app" / "theseus-app-delegates.js").read_text(encoding="utf-8")
     capture_helpers_path = _ROOT / "src" / "ui" / "static" / "app" / "theseus-capture-helpers.js"
 
-    # Markup: tab + surface elements live in the vault section
-    assert 'id="vault-tab-capture"' in source
-    assert "vaultTab = 'capture'" in source
+    # Markup: capture surface elements live in the vault section
+    # (#160: legacy tab strip removed — capture is the only vault surface)
     assert 'id="vault-capture-input"' in source
     assert 'id="vault-capture-submit"' in source
     assert 'id="vault-capture-stream"' in source
@@ -219,7 +218,7 @@ def test_capture_stream_surfaces_degraded_polish_state() -> None:
 
     # Card markup renders the degraded indicator conditionally
     capture_section_start = source.index('id="vault-capture-stream"')
-    capture_section_end = source.index("<!-- notes tab content", capture_section_start)
+    capture_section_end = source.index("</section>", capture_section_start)
     capture_markup = source[capture_section_start:capture_section_end]
     assert "note._degraded" in capture_markup
 
@@ -233,7 +232,7 @@ def test_capture_card_renders_three_state_status_dot() -> None:
     css = css_path.read_text(encoding="utf-8")
 
     capture_section_start = source.index('id="vault-capture-stream"')
-    capture_section_end = source.index("<!-- notes tab content", capture_section_start)
+    capture_section_end = source.index("</section>", capture_section_start)
     capture_markup = source[capture_section_start:capture_section_end]
 
     # Dot element is bound to note.status with all three lifecycle classes
@@ -323,7 +322,11 @@ def test_capture_stream_renders_tier_rail_and_status_chip_strip() -> None:
 
     # Each status label appears in markup
     for label in ("raw", "polished", "evergreen"):
-        assert f">{label}<" in source or f'"{label}"' in source
+        assert (
+            f">{label}<" in source
+            or f'"{label}"' in source
+            or f"'{label}'" in source
+        )
 
     # Alpine state for selected filters
     assert "vaultCaptureTier:" in state
@@ -349,7 +352,7 @@ def test_capture_card_renders_wikilink_suggestion_chips() -> None:
     capture_helpers = (_ROOT / "src" / "ui" / "static" / "app" / "theseus-capture-helpers.js").read_text(encoding="utf-8")
 
     capture_section_start = source.index('id="vault-capture-stream"')
-    capture_section_end = source.index("<!-- notes tab content", capture_section_start)
+    capture_section_end = source.index("</section>", capture_section_start)
     capture_markup = source[capture_section_start:capture_section_end]
 
     # Chip group bound to the suggestions array

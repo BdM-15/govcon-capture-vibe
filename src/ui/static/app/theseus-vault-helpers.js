@@ -21,77 +21,9 @@ window.theseusVaultSetTier = async function theseusVaultSetTier(app, tier) {
   await window.theseusLoadVaultNotes(app);
 };
 
-window.theseusVaultSelectNote = async function theseusVaultSelectNote(
-  app,
-  note,
-) {
-  try {
-    // Fetch full note (includes body)
-    const full = await app.api("/api/ui/vault/notes/" + note.id);
-    app.vaultActiveNote = { ...full };
-    app.vaultEditorMode = "editor";
-  } catch (error) {
-    app.toast("Failed to load note: " + error.message, "error");
-  }
-};
 
-window.theseusVaultNewNote = async function theseusVaultNewNote(app) {
-  try {
-    const resp = await fetch("/api/ui/vault/notes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: "New Note",
-        body: "",
-        note_type: "raw",
-        topic: "",
-        source: "manual",
-      }),
-    });
-    if (!resp.ok) throw new Error("Create failed");
-    const note = await resp.json();
-    app.vaultActiveNote = { ...note };
-    app.vaultEditorMode = "editor";
-    await window.theseusLoadVaultNotes(app);
-  } catch (error) {
-    app.toast("Failed to create note: " + error.message, "error");
-  }
-};
 
-window.theseusVaultSaveNote = async function theseusVaultSaveNote(app) {
-  if (!app.vaultActiveNote) return;
-  try {
-    const resp = await fetch("/api/ui/vault/notes/" + app.vaultActiveNote.id, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: app.vaultActiveNote.title,
-        body: app.vaultActiveNote.body,
-        note_type: app.vaultActiveNote.type,
-        topic: app.vaultActiveNote.topic || "",
-        source: app.vaultActiveNote.source || "manual",
-        status: app.vaultActiveNote.status || "raw",
-        pursuit: app.vaultActiveNote.pursuit || null,
-        tags: app.vaultActiveNote.tags || [],
-        tier: app.vaultActiveNote.tier || null,
-      }),
-    });
-    if (!resp.ok) throw new Error("Save failed");
-    const updated = await resp.json();
-    app.vaultActiveNote = { ...updated };
-    await window.theseusLoadVaultNotes(app);
-  } catch (error) {
-    app.toast("Auto-save failed: " + error.message, "error");
-  }
-};
 
-window.theseusVaultScheduleSave = function theseusVaultScheduleSave(app) {
-  if (app.vaultAutoSaveTimer) clearTimeout(app.vaultAutoSaveTimer);
-  app.vaultAutoSaveTimer = setTimeout(
-    () => window.theseusVaultSaveNote(app),
-    2000,
-  );
-};
 
 window.theseusDeleteVaultNote = async function theseusDeleteVaultNote(app, id) {
   try {
@@ -123,71 +55,8 @@ window.theseusPolishVaultNote = async function theseusPolishVaultNote(app, id) {
   }
 };
 
-window.theseusVaultPromoteNote = async function theseusVaultPromoteNote(
-  app,
-  id,
-) {
-  try {
-    const resp = await fetch("/api/ui/vault/notes/" + id + "/promote", {
-      method: "POST",
-    });
-    if (!resp.ok) throw new Error("Promote failed");
-    const updated = await resp.json();
-    if (app.vaultActiveNote && app.vaultActiveNote.id === id) {
-      app.vaultActiveNote = { ...updated };
-    }
-    await window.theseusLoadVaultNotes(app);
-    app.toast("Note promoted to " + updated.status, "success");
-  } catch (error) {
-    app.toast("Failed to promote note: " + error.message, "error");
-  }
-};
 
-window.theseusVaultAskTheseus = async function theseusVaultAskTheseus(app, id) {
-  if (!id) return;
-  app.vaultAskLoading = true;
-  app.vaultAskAnswer = "";
-  app.vaultAskSources = [];
-  try {
-    const resp = await fetch("/api/ui/vault/notes/" + id + "/ask-theseus", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        workspace: app.stats ? app.stats.workspace : null,
-      }),
-    });
-    if (!resp.ok) throw new Error("Ask Theseus failed (" + resp.status + ")");
-    const data = await resp.json();
-    app.vaultAskAnswer = data.answer || "";
-    app.vaultAskSources = data.sources || [];
-  } catch (error) {
-    app.toast("Ask Theseus error: " + error.message, "error");
-  } finally {
-    app.vaultAskLoading = false;
-  }
-};
 
-window.theseusVaultSaveAsNote = async function theseusVaultSaveAsNote(app) {
-  if (!app.vaultAskAnswer || !app.vaultActiveNote) return;
-  try {
-    const resp = await fetch(
-      "/api/ui/vault/notes/" + app.vaultActiveNote.id + "/ask-theseus/save",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          answer: app.vaultAskAnswer,
-          source_title: app.vaultActiveNote.title || "",
-        }),
-      },
-    );
-    if (!resp.ok) throw new Error("Save as Note failed (" + resp.status + ")");
-    await window.theseusLoadVaultNotes(app);
-    app.toast("Insight saved to vault", "success");
-  } catch (error) {
-    app.toast("Save as Note error: " + error.message, "error");
-  }
-};
 
 window.theseusVaultLoadRecommendations =
   async function theseusVaultLoadRecommendations(app) {
@@ -234,239 +103,13 @@ window.theseusVaultFeedToWorkspace = async function theseusVaultFeedToWorkspace(
   }
 };
 
-/**
- * Preview polish for a vault note. Calls POST /polish without accept=true,
- * stores the diff result and opens the diff overlay.
- */
-window.theseusVaultPreviewPolish = async function theseusVaultPreviewPolish(
-  app,
-  id,
-) {
-  if (!id) return;
-  app.vaultPolishLoading = true;
-  app.vaultDiffOpen = false;
-  app.vaultDiffResult = null;
-  try {
-    const resp = await fetch("/api/ui/vault/notes/" + id + "/polish", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: app.vaultPolishModel || "qwen",
-        accept: false,
-      }),
-    });
-    if (!resp.ok)
-      throw new Error("Polish preview failed (" + resp.status + ")");
-    app.vaultDiffResult = await resp.json();
-    app.vaultDiffOpen = true;
-  } catch (error) {
-    app.toast("Polish preview error: " + error.message, "error");
-  } finally {
-    app.vaultPolishLoading = false;
-  }
-};
 
-/**
- * Accept the current polish diff and persist the rewritten body to the store.
- * Closes the diff overlay and refreshes the active note.
- */
-window.theseusVaultAcceptPolish = async function theseusVaultAcceptPolish(
-  app,
-  id,
-) {
-  if (!id) return;
-  app.vaultPolishLoading = true;
-  try {
-    const resp = await fetch("/api/ui/vault/notes/" + id + "/polish", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: app.vaultPolishModel || "qwen",
-        accept: true,
-      }),
-    });
-    if (!resp.ok) throw new Error("Accept polish failed (" + resp.status + ")");
-    const updated = await resp.json();
-    app.vaultDiffOpen = false;
-    app.vaultDiffResult = null;
-    app.vaultActiveNote = updated;
-    app.toast("Note polished and saved", "success");
-    if (window.theseusLoadVaultNotes) await window.theseusLoadVaultNotes(app);
-  } catch (error) {
-    app.toast("Accept polish error: " + error.message, "error");
-  } finally {
-    app.vaultPolishLoading = false;
-  }
-};
 
-/**
- * Extract govcon entities from the active vault note.
- * Results are stored in app.vaultEntityProposals (each proposal has a _selected flag).
- */
-window.theseusVaultExtractEntities = async function theseusVaultExtractEntities(
-  app,
-  id,
-) {
-  if (!id) return;
-  app.vaultEntityLoading = true;
-  app.vaultEntityProposals = [];
-  try {
-    const body =
-      app.stats && app.stats.workspace
-        ? JSON.stringify({ workspace: app.stats.workspace })
-        : "{}";
-    const resp = await fetch(
-      "/api/ui/vault/notes/" + id + "/extract-entities",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-      },
-    );
-    if (!resp.ok)
-      throw new Error("Entity extraction failed (" + resp.status + ")");
-    const data = await resp.json();
-    app.vaultEntityProposals = (data.proposals || []).map((p) => ({
-      ...p,
-      _selected: !p.already_in_kg,
-    }));
-  } catch (error) {
-    app.toast("Entity extraction error: " + error.message, "error");
-  } finally {
-    app.vaultEntityLoading = false;
-  }
-};
 
-/**
- * Commit selected entity proposals to the active workspace KG.
- * Requires an active workspace; disabled in UI if none is set.
- */
-window.theseusVaultAcceptEntities = async function theseusVaultAcceptEntities(
-  app,
-  id,
-) {
-  if (!id) return;
-  const workspace = app.stats && app.stats.workspace;
-  if (!workspace) {
-    app.toast("Select a workspace to commit entities", "warning");
-    return;
-  }
-  const selected = (app.vaultEntityProposals || []).filter((p) => p._selected);
-  if (!selected.length) {
-    app.toast("No entities selected", "warning");
-    return;
-  }
-  try {
-    const resp = await fetch("/api/ui/vault/notes/" + id + "/accept-entities", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        workspace,
-        proposals: selected.map(({ _selected, ...rest }) => rest),
-      }),
-    });
-    if (!resp.ok)
-      throw new Error("Accept entities failed (" + resp.status + ")");
-    const data = await resp.json();
-    app.toast(
-      `${data.accepted} entit${data.accepted === 1 ? "y" : "ies"} committed to KG`,
-      "success",
-    );
-    app.vaultEntityProposals = [];
-  } catch (error) {
-    app.toast("Accept entities error: " + error.message, "error");
-  }
-};
 
-// ---------------------------------------------------------------------------
-// Intel Feed — Zettelkasten swimlanes
-// ---------------------------------------------------------------------------
 
-/**
- * Load all vault notes into app.intelFeedNotes for the Intel Feed kanban.
- */
-window.theseusIntelFeedLoad = async function theseusIntelFeedLoad(app) {
-  app.intelFeedLoading = true;
-  try {
-    const resp = await fetch("/api/ui/vault/notes");
-    if (!resp.ok) throw new Error("Failed to load notes (" + resp.status + ")");
-    const data = await resp.json();
-    app.intelFeedNotes = data.notes || [];
-  } catch (e) {
-    console.error("intel feed load failed", e);
-    app.intelFeedNotes = [];
-  } finally {
-    app.intelFeedLoading = false;
-  }
-};
 
-/**
- * Move a note to a new swimlane status (optimistic update + PUT persist).
- */
-window.theseusIntelDrop = async function theseusIntelDrop(
-  app,
-  noteId,
-  newStatus,
-) {
-  if (!noteId) return;
-  const note = app.intelFeedNotes.find((n) => n.id === noteId);
-  if (!note || note.status === newStatus) return;
-  // Optimistic update
-  note.status = newStatus;
-  try {
-    const resp = await fetch("/api/ui/vault/notes/" + noteId, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
-    });
-    if (!resp.ok) throw new Error("status update failed (" + resp.status + ")");
-    const updated = await resp.json();
-    const idx = app.intelFeedNotes.findIndex((n) => n.id === noteId);
-    if (idx !== -1) app.intelFeedNotes[idx] = updated;
-  } catch (e) {
-    app.toast("Failed to move note: " + e.message, "error");
-    await window.theseusIntelFeedLoad(app); // revert
-  }
-};
-
-/**
- * Bulk-polish all fleeting (raw) notes in sequence.
- * Sets per-note progress in intelBulkProgress: 'polishing' | 'done' | 'error'.
- */
-window.theseusIntelBulkPolish = async function theseusIntelBulkPolish(app) {
-  const rawNotes = app.intelFeedNotes.filter(
-    (n) => (n.status || "raw") === "raw",
-  );
-  if (!rawNotes.length) return;
-  app.intelBulkPolishing = true;
-  app.intelBulkProgress = {};
-  for (const note of rawNotes) {
-    app.intelBulkProgress = {
-      ...app.intelBulkProgress,
-      [note.id]: "polishing",
-    };
-    try {
-      const resp = await fetch("/api/ui/vault/notes/" + note.id + "/polish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accept: true }),
-      });
-      if (!resp.ok) throw new Error("polish failed (" + resp.status + ")");
-      const updated = await resp.json();
-      const idx = app.intelFeedNotes.findIndex((n) => n.id === note.id);
-      if (idx !== -1) app.intelFeedNotes[idx] = updated;
-      app.intelBulkProgress = { ...app.intelBulkProgress, [note.id]: "done" };
-    } catch (e) {
-      app.intelBulkProgress = { ...app.intelBulkProgress, [note.id]: "error" };
-    }
-  }
-  app.intelBulkPolishing = false;
-};
-
-// ---------------------------------------------------------------------------
 // Vault KG Graph — D3 force-directed note relationship view
-// ---------------------------------------------------------------------------
-
 const _VAULT_TIER_COLOR = {
   doctrine: "#00f0ff", // neon-cyan
   intelligence: "#ff2bd6", // neon-magenta
@@ -595,7 +238,6 @@ window.theseusVaultLoadGraph = async function theseusVaultLoadGraph(app, tier) {
       )
       .on("click", (event, d) => {
         event.stopPropagation();
-        app.vaultGraphHovered = d;
         // #157: when drawer is the host, focus the matching capture card.
         if (app.vaultGraphDrawerOpen && typeof window.theseusVaultFocusCaptureCard === "function") {
           window.theseusVaultFocusCaptureCard(app, d);
@@ -629,10 +271,6 @@ window.theseusVaultLoadGraph = async function theseusVaultLoadGraph(app, tier) {
       nodeG.attr("transform", (d) => `translate(${d.x},${d.y})`);
     });
 
-    // Click canvas to deselect
-    svg.on("click", () => {
-      app.vaultGraphHovered = null;
-    });
   } catch (err) {
     app.toast("Graph load failed: " + err.message, "error");
   } finally {

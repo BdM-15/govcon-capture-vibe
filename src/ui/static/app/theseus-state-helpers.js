@@ -267,7 +267,6 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       previewing: false,
       saving: false,
     },
-    vaultTab: "notes",
     vaultCaptureBody: "",
     vaultCaptureStream: [],
     vaultCapturing: false,
@@ -277,7 +276,6 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultGraphDrawerOpen: false,
     vaultNotes: [],
     vaultNotesLoading: false,
-    vaultActiveNote: null,
     vaultEditorMode: "editor",
     vaultSearch: "",
     vaultFilterType: "",
@@ -287,7 +285,6 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultActiveTier: "doctrine",
     vaultActiveTopic: "",
     vaultAutoSaveTimer: null,
-    vaultRightPaneOpen: true,
     vaultAskAnswer: "",
     vaultAskLoading: false,
     vaultAskSources: [],
@@ -300,12 +297,6 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     vaultEntityProposals: [],
     vaultEntityLoading: false,
     vaultGraphLoading: false,
-    vaultGraphHovered: null,
-    intelFeedNotes: [],
-    intelFeedLoading: false,
-    intelBulkPolishing: false,
-    intelBulkProgress: {},
-    intelDragId: null,
 
     // Computed: group vaultNotes by topic for sidebar nav
     vaultGroupedNotes() {

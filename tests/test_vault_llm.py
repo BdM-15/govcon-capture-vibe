@@ -352,19 +352,6 @@ class TestVaultDiffState:
 # Frontend: helpers
 # ---------------------------------------------------------------------------
 
-
-class TestVaultDiffHelpers:
-    def test_vault_diff_helpers_exported(self):
-        src_text = Path("src/ui/static/app/theseus-vault-helpers.js").read_text(encoding="utf-8")
-        assert "theseusVaultPreviewPolish" in src_text
-        assert "theseusVaultAcceptPolish" in src_text
-
-
-# ---------------------------------------------------------------------------
-# Frontend: delegates
-# ---------------------------------------------------------------------------
-
-
 class TestVaultDiffDelegates:
     def test_vault_diff_delegates_wired(self):
         src_text = Path("src/ui/static/app/theseus-app-delegates.js").read_text(encoding="utf-8")
@@ -375,17 +362,3 @@ class TestVaultDiffDelegates:
 # ---------------------------------------------------------------------------
 # Frontend: HTML
 # ---------------------------------------------------------------------------
-
-
-class TestVaultDiffHtml:
-    def test_diff_overlay_present(self):
-        html = Path("src/ui/static/index.html").read_text(encoding="utf-8")
-        assert "vaultDiffOpen" in html
-
-    def test_diff_hunks_rendered(self):
-        html = Path("src/ui/static/index.html").read_text(encoding="utf-8")
-        assert "diff_hunks" in html or "diffHunks" in html or "vaultDiffResult" in html
-
-    def test_accept_reject_buttons_in_html(self):
-        html = Path("src/ui/static/index.html").read_text(encoding="utf-8")
-        assert "vaultAcceptPolish" in html

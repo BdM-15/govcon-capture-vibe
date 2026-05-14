@@ -224,17 +224,3 @@ class TestVaultLinkerDelegates:
 # ---------------------------------------------------------------------------
 # Frontend: HTML panel
 # ---------------------------------------------------------------------------
-
-
-class TestVaultLinkerHtml:
-    def test_relevant_vault_section_in_right_pane(self):
-        html = Path("src/ui/static/index.html").read_text(encoding="utf-8")
-        assert "Relevant in your vault" in html
-
-    def test_feed_to_workspace_button_in_html(self):
-        html = Path("src/ui/static/index.html").read_text(encoding="utf-8")
-        assert "vaultFeedToWorkspace" in html
-
-    def test_vault_recommendations_loop_in_html(self):
-        html = Path("src/ui/static/index.html").read_text(encoding="utf-8")
-        assert "vaultRecommendations" in html

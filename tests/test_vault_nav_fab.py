@@ -185,18 +185,6 @@ def test_fab_modal_review_has_ai_type_selector() -> None:
 
 # ── Vault panel — tabbed layout ───────────────────────────────────────────────
 
-def test_vault_panel_has_notes_tab() -> None:
-    html = _INDEX.read_text(encoding="utf-8")
-    assert "vault-tab-notes" in html, "Vault panel must have a Notes tab (id/ref vault-tab-notes)"
-
-
-def test_vault_panel_has_intel_feed_tab() -> None:
-    html = _INDEX.read_text(encoding="utf-8")
-    assert "vault-tab-intel" in html, "Vault panel must have an Intel Feed tab (id/ref vault-tab-intel)"
-
-
-# ── CSS ───────────────────────────────────────────────────────────────────────
-
 def test_fab_css_class_defined() -> None:
     css = _CSS.read_text(encoding="utf-8")
     assert ".quick-capture-fab" in css

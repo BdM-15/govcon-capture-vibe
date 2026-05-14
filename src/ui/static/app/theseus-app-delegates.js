@@ -852,14 +852,6 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusVaultSetTier(this, tier);
     },
 
-    async vaultSelectNote(note) {
-      return window.theseusVaultSelectNote(this, note);
-    },
-
-    async vaultNewNote() {
-      return window.theseusVaultNewNote(this);
-    },
-
     async vaultCaptureSubmit() {
       return window.theseusVaultCaptureSubmit(this);
     },
@@ -874,14 +866,6 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
 
     vaultCaptureToggleExpand(note) {
       return window.theseusVaultCaptureToggleExpand(this, note);
-    },
-
-    async vaultSaveNote() {
-      return window.theseusVaultSaveNote(this);
-    },
-
-    vaultScheduleSave() {
-      return window.theseusVaultScheduleSave(this);
     },
 
     async deleteVaultNote(id) {
@@ -908,36 +892,12 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusVaultAcceptEntities(this, id);
     },
 
-    async vaultPromoteNote(id) {
-      return window.theseusVaultPromoteNote(this, id);
-    },
-
-    async vaultAskTheseus(id) {
-      return window.theseusVaultAskTheseus(this, id);
-    },
-
-    async vaultSaveAsNote() {
-      return window.theseusVaultSaveAsNote(this);
-    },
-
     async vaultLoadRecommendations() {
       return window.theseusVaultLoadRecommendations(this);
     },
 
     async vaultFeedToWorkspace(id) {
       return window.theseusVaultFeedToWorkspace(this, id);
-    },
-
-    async intelFeedLoad() {
-      return window.theseusIntelFeedLoad(this);
-    },
-
-    async intelDrop(noteId, newStatus) {
-      return window.theseusIntelDrop(this, noteId, newStatus);
-    },
-
-    async intelBulkPolish() {
-      return window.theseusIntelBulkPolish(this);
     },
 
     async theseusVaultLoadGraph(tier) {
