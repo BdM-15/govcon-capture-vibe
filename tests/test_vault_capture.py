@@ -10,6 +10,8 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+import pytest
+
 from src.server.vault_capture import CapturedNote, capture
 from src.server.vault_store import VaultStore
 
@@ -66,3 +68,57 @@ def test_capture_returns_classified_polished_note_persisted_to_vault(
     assert persisted["type"] == "insight"
     assert persisted["title"] == captured.title
     assert "Competitor X" in persisted["body"]
+
+
+def test_capture_rejects_empty_body(tmp_path):
+    """Whitespace-only / empty body must raise ValueError before any LLM call."""
+    vault_store = VaultStore(tmp_path, now=lambda: "2026-05-14T12:00:00")
+    called = []
+
+    async def boom_llm(prompt, system_prompt=""):
+        called.append(prompt)
+        return "TYPE: raw\nTITLE: x\nBODY: x"
+
+    async def _run(body):
+        await capture(
+            raw_body=body,
+            llm_func=boom_llm,
+            vault_store=vault_store,
+            vault_index={},
+            auto_polish=True,
+        )
+
+    for empty in ("", "   ", "\n\n\t"):
+        with pytest.raises(ValueError, match="empty"):
+            asyncio.run(_run(empty))
+
+    assert called == [], "LLM must not be called for empty body"
+    assert list(tmp_path.glob("*.md")) == [], "no file should be persisted"
+
+
+def test_capture_falls_back_to_raw_when_llm_raises(tmp_path):
+    """LLM failure during auto_polish must NOT crash; persist as raw note."""
+    vault_store = VaultStore(tmp_path, now=lambda: "2026-05-14T12:00:00")
+
+    async def bad_llm(prompt, system_prompt=""):
+        raise RuntimeError("ollama is down")
+
+    raw = "lost the recompete on AFCAP because BAFO too high"
+
+    async def _run():
+        return await capture(
+            raw_body=raw,
+            llm_func=bad_llm,
+            vault_store=vault_store,
+            vault_index={},
+            auto_polish=True,
+        )
+
+    captured = asyncio.run(_run())
+
+    assert captured.note_type == "raw"
+    assert captured.auto_polished is False  # degraded
+    assert captured.polished_body == raw
+    assert captured.raw_body == raw
+    assert captured.path.exists()
+    assert "lost the recompete" in captured.title.lower()

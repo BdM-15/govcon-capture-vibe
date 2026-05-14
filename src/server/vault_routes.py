@@ -354,13 +354,16 @@ def register_vault_routes(
             (n.get("title") or n["id"]): n["id"]
             for n in vault_store.list_notes()
         }
-        captured = await _capture(
-            raw_body=payload.body,
-            llm_func=vault_curation_func,  # type: ignore[arg-type]
-            vault_store=vault_store,
-            vault_index=vault_index,
-            auto_polish=do_polish,
-        )
+        try:
+            captured = await _capture(
+                raw_body=payload.body,
+                llm_func=vault_curation_func,  # type: ignore[arg-type]
+                vault_store=vault_store,
+                vault_index=vault_index,
+                auto_polish=do_polish,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
         result = asdict(captured)
         result["path"] = str(result["path"])
         return JSONResponse(result)

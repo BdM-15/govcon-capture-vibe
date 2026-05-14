@@ -59,3 +59,25 @@ def test_capture_route_happy_path_returns_classified_polished_note(vault_capture
     assert len(listed) == 1
     assert listed[0]["id"] == data["note_id"]
     assert listed[0]["type"] == "insight"
+
+
+def test_capture_route_rejects_empty_body(vault_capture_client):
+    client, store, fake_llm = vault_capture_client
+
+    resp = client.post("/api/ui/vault/capture", json={"body": "   "})
+    assert resp.status_code == 400
+    assert "empty" in resp.text.lower()
+    fake_llm.assert_not_awaited()
+    assert store.list_notes() == []
+
+
+def test_capture_route_503_when_polish_requested_without_llm(tmp_path):
+    """auto_polish=True but no vault_curation_func configured -> 503."""
+    store = VaultStore(vault_dir=tmp_path, now=_now)
+    app = FastAPI()
+    register_vault_routes(app, vault_store=store, vault_auto_polish=True)
+    client = TestClient(app)
+
+    resp = client.post("/api/ui/vault/capture", json={"body": "valid body"})
+    assert resp.status_code == 503
+    assert "not configured" in resp.text.lower()
