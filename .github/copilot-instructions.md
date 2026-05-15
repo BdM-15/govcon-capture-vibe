@@ -351,7 +351,9 @@ ALL development happens on feature branches. `main` is updated only via fast-for
 **Active integration branches:**
 
 - No active integration epic currently.
-- Most recent completed architecture epic `169-architecture-locality-epic` landed on `main` as `v1.8.0`. Prior architecture epics: `168-codebase-architecture-deepening-epic` landed as `v1.7.0`; `164-codebase-architecture-cleanup-epic`, `165-architecture-cleanup-round-2-epic`; skills execution architecture epic `166` landed as `v1.6.0`.
+- Most recent stable release: `173-skill-chaining-production-artifacts` landed on `main` as `v1.12.0` at `43623c5`. Current `main` HEAD = `v1.12.0`.
+- `177-knowledge-vault-epic` was merged briefly as `v1.13.0` then force-reverted (2026-05-15) — treated as failed epic, archived as `177-knowledge-vault-epic-failed`. Tag `v1.13.0` is deleted.
+- Prior architecture epics: `169-architecture-locality-epic` → `v1.8.0`; `168-codebase-architecture-deepening-epic` → `v1.7.0`; skills execution architecture epic `166` → `v1.6.0`.
 
 **Standard fast-forward sequence** (after the user says "merge it" / "ship it" / "continue"):
 
