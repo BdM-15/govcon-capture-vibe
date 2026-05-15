@@ -1,6 +1,16 @@
 ---
 name: diagnose
 description: Disciplined diagnosis loop for hard bugs and performance regressions. Reproduce → minimise → hypothesise → instrument → fix → regression-test. Use when user says "diagnose this" / "debug this", reports a bug, says something is broken/throwing/failing, or describes a performance regression.
+metadata:
+  personas_primary: none
+  personas_secondary: []
+  shipley_phases: []
+  capability: meta
+  category: debugging
+  version: 1.0.0
+  status: active
+  runtime: legacy
+  upstream: https://github.com/mattpocock/agent-skills
 ---
 
 # Diagnose

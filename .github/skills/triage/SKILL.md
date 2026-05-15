@@ -1,6 +1,16 @@
 ---
 name: triage
 description: Triage issues through a state machine driven by triage roles. Use when user wants to create an issue, triage issues, review incoming bugs or feature requests, prepare issues for an AFK agent, or manage issue workflow.
+metadata:
+   personas_primary: none
+   personas_secondary: []
+   shipley_phases: []
+   capability: meta
+   category: issue-management
+   version: 1.0.0
+   status: active
+   runtime: legacy
+   upstream: https://github.com/mattpocock/agent-skills
 ---
 
 # Triage

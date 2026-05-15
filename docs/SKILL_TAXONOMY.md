@@ -133,8 +133,7 @@ Notes:
 
 ## 6. Backfill matrix (current state)
 
-All 11 in-tree skills (10 pre-existing + new `oci-sweeper`) at branch
-`135-phase-4j-skill-taxonomy`:
+Core GovCon/platform skills use the closed taxonomy axes directly:
 
 | Skill                       | `personas_primary` | `personas_secondary`                  | `shipley_phases`                                   | `capability` |
 | --------------------------- | ------------------ | ------------------------------------- | -------------------------------------------------- | ------------ |
@@ -152,16 +151,26 @@ All 11 in-tree skills (10 pre-existing + new `oci-sweeper`) at branch
 | `skill-creator`             | none               | []                                    | []                                                 | meta         |
 | `subcontractor-sow-builder` | contracts_manager  | [program_manager, capture_manager]    | [strategy, proposal_development, post_award]       | draft        |
 
-**Developer-tool skills** (not govcon platform skills — not shown in Theseus UI, no KG queries):
+**Developer-tool skills** (not govcon platform skills — no KG queries; classified as `personas_primary: none`, `shipley_phases: []`, and `capability: meta`):
 
-| Skill                           | `capability` | Note                                                                                                  |
-| ------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------- |
-| `improve-codebase-architecture` | meta         | Vendored from mattpocock/skills (Apache-2.0); graphify-backed                                         |
-| `caveman`                       | meta         | Vendored from mattpocock/skills (Apache-2.0); communication mode modifier                             |
-| `grill-me`                      | meta         | Vendored from mattpocock/skills (Apache-2.0); developer plan stress-tester; route govcon work to domain skills |
-| `to-prd`                        | meta         | Vendored from mattpocock/skills (Apache-2.0); PRD publisher to GitHub Issues                          |
-| `to-issues`                     | meta         | Vendored from mattpocock/skills (Apache-2.0); vertical-slice issue creator                            |
-| `tdd`                           | meta         | Vendored from mattpocock/skills (Apache-2.0); red-green-refactor loop                                 |
+| Skill                           | Note                                                                                                  |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `caveman`                       | Communication mode modifier                                                                          |
+| `diagnose`                      | Disciplined debugging / performance-regression loop                                                   |
+| `git-guardrails-claude-code`    | Claude Code hook setup for dangerous git command blocking                                             |
+| `grill-me`                      | Developer plan stress-tester; route govcon work to domain skills                                      |
+| `grill-with-docs`               | Plan stress-testing against repo domain language and documentation                                    |
+| `handoff`                       | Conversation handoff document writer                                                                 |
+| `improve-codebase-architecture` | Architecture deepening / refactoring analysis                                                         |
+| `prototype`                     | Throwaway prototype workflow                                                                          |
+| `setup-matt-pocock-skills`      | Repository setup for the Matt Pocock engineering skill family                                         |
+| `setup-pre-commit`              | Husky / lint-staged / test hook setup                                                                 |
+| `tdd`                           | Red-green-refactor loop                                                                               |
+| `to-issues`                     | Vertical-slice issue creator                                                                          |
+| `to-prd`                        | PRD publisher                                                                                         |
+| `triage`                        | Issue triage workflow                                                                                 |
+| `write-a-skill`                 | Generic skill authoring workflow                                                                      |
+| `zoom-out`                      | Higher-level codebase context request                                                                 |
 
 ---
 

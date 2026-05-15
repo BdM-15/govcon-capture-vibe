@@ -1,6 +1,16 @@
 ---
 name: tdd
 description: Test-driven development with red-green-refactor loop. Use when user wants to build features or fix bugs using TDD, mentions "red-green-refactor", wants integration tests, or asks for test-first development.
+metadata:
+  personas_primary: none
+  personas_secondary: []
+  shipley_phases: []
+  capability: meta
+  category: testing
+  version: 1.0.0
+  status: active
+  runtime: legacy
+  upstream: https://github.com/mattpocock/agent-skills
 ---
 
 # Test-Driven Development

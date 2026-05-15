@@ -1,6 +1,16 @@
 ---
 name: grill-with-docs
 description: Grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates documentation (CONTEXT.md, ADRs) inline as decisions crystallise. Use when user wants to stress-test a plan against their project's language and documented decisions.
+metadata:
+  personas_primary: none
+  personas_secondary: []
+  shipley_phases: []
+  capability: meta
+  category: planning
+  version: 1.0.0
+  status: active
+  runtime: legacy
+  upstream: https://github.com/mattpocock/agent-skills
 ---
 
 <what-to-do>

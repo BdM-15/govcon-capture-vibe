@@ -1,6 +1,16 @@
 ---
 name: setup-pre-commit
 description: Set up Husky pre-commit hooks with lint-staged (Prettier), type checking, and tests in the current repo. Use when user wants to add pre-commit hooks, set up Husky, configure lint-staged, or add commit-time formatting/typechecking/testing.
+metadata:
+  personas_primary: none
+  personas_secondary: []
+  shipley_phases: []
+  capability: meta
+  category: setup
+  version: 1.0.0
+  status: active
+  runtime: legacy
+  upstream: https://github.com/mattpocock/agent-skills
 ---
 
 # Setup Pre-Commit Hooks
