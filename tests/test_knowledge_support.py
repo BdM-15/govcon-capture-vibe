@@ -67,13 +67,15 @@ def test_all_knowledge_bundles_match_module_exports() -> None:
         assert chunks == module.CHUNKS
 
 
-def test_build_govcon_ontology_kg_includes_all_bundle_content() -> None:
+def test_build_govcon_ontology_kg_excludes_reference_only_capture_content() -> None:
     kg = build_govcon_ontology_kg()
     expected_entities = set()
     expected_relationships = 0
     expected_chunks = 0
 
     for bundle_name, module_meta in KNOWLEDGE_MODULES.items():
+        if bundle_name == "capture":
+            continue
         bundle = load_knowledge_bundle(bundle_name)
         expected_entities.add(module_meta["entity_name"])
         expected_relationships += len(bundle["relationships"])
@@ -82,5 +84,6 @@ def test_build_govcon_ontology_kg_includes_all_bundle_content() -> None:
     entity_names = {entity["entity_name"] for entity in kg["entities"]}
 
     assert expected_entities <= entity_names
+    assert KNOWLEDGE_MODULES["capture"]["entity_name"] not in entity_names
     assert len(kg["relationships"]) == expected_relationships
     assert len(kg["chunks"]) == expected_chunks

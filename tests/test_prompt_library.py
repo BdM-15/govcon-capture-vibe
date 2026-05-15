@@ -7,11 +7,11 @@ from src.server.prompt_library import PROMPT_LIBRARY, register_prompt_library_ro
 def test_prompt_library_shape_and_phase_coverage() -> None:
     assert PROMPT_LIBRARY
     phases = {prompt["phase"] for prompt in PROMPT_LIBRARY}
-    assert {"3", "4", "5", "6"}.issubset(phases)
+    assert phases == {"4", "5", "6"}
 
     for prompt in PROMPT_LIBRARY:
         assert set(prompt) == {"phase", "category", "title", "prompt"}
-        assert prompt["phase"] in {"3", "4", "5", "6"}
+        assert prompt["phase"] in {"4", "5", "6"}
         assert prompt["category"].strip()
         assert prompt["title"].strip()
         assert prompt["prompt"].strip()

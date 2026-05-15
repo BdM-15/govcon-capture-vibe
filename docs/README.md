@@ -13,14 +13,14 @@ Living documentation index for Project Theseus.
 
 ## Current docs
 
-| Document | Description |
-| --- | --- |
-| [README.md](../README.md) | Repo overview, setup, backlog, and current runtime guidance |
-| [STYLE_GUIDE.md](STYLE_GUIDE.md) | Capture Workbench UI constraints and token system |
-| [SKILLS.md](SKILLS.md) | Dual-use skills platform, authoring contract, install flow |
-| [SKILL_SPEC_COMPLIANCE.md](SKILL_SPEC_COMPLIANCE.md) | Open Agent Skills compliance audit and migration notes |
-| [SKILL_TAXONOMY.md](SKILL_TAXONOMY.md) | Persona, Shipley phase, and capability vocabularies |
-| [../.github/copilot-instructions.md](../.github/copilot-instructions.md) | Repo-specific coding rules and cross-cutting checklists |
+| Document                                                                 | Description                                                 |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| [README.md](../README.md)                                                | Repo overview, setup, backlog, and current runtime guidance |
+| [STYLE_GUIDE.md](STYLE_GUIDE.md)                                         | Capture Workbench UI constraints and token system           |
+| [SKILLS.md](SKILLS.md)                                                   | Dual-use skills platform, authoring contract, install flow  |
+| [SKILL_SPEC_COMPLIANCE.md](SKILL_SPEC_COMPLIANCE.md)                     | Open Agent Skills compliance audit and migration notes      |
+| [SKILL_TAXONOMY.md](SKILL_TAXONOMY.md)                                   | Persona, Shipley phase, and capability vocabularies         |
+| [../.github/copilot-instructions.md](../.github/copilot-instructions.md) | Repo-specific coding rules and cross-cutting checklists     |
 
 ## Notes
 

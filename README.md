@@ -1,6 +1,6 @@
 # Project Theseus — Capture Workbench
 
-**Ontology-Based RAG for Federal RFP Capture & Proposal Intelligence**
+**Ontology-Based RAG for Final RFP Capture & Proposal Intelligence**
 
 [![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/BdM-15/proj-theseus)
 [![Python](https://img.shields.io/badge/python-3.13+-green.svg)](https://www.python.org/)
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Project Theseus is a **capture workbench** for federal RFP analysis. It pairs a domain-specific government contracting ontology with **RAG-Anything** (multimodal ingestion via MinerU) + **LightRAG** (knowledge graph + hybrid retrieval) and **xAI Grok** cloud LLMs, then surfaces the result through a custom **Capture Workbench UI** (Capture Chat + Intel Panels) backed by a Shipley-mentor query persona.
+Project Theseus is a **capture workbench** for final federal solicitation packages. It pairs a domain-specific government contracting ontology with **RAG-Anything** (multimodal ingestion via MinerU) + **LightRAG** (knowledge graph + hybrid retrieval) and **xAI Grok** cloud LLMs, then surfaces the result through a custom **Capture Workbench UI** (Capture Chat + Intel Panels) backed by a Shipley-mentor query persona focused on Shipley phases 4-6.
 
 ### Core Innovation
 
@@ -33,11 +33,11 @@ Project Theseus is a **capture workbench** for federal RFP analysis. It pairs a 
 | **Structured Output** | [Instructor](https://github.com/jxnl/instructor) + Pydantic          | Schema-enforced LLM responses with retry                                               |
 | **Frontend**          | Alpine.js + Tailwind (Play CDN) + Cytoscape, zero-build              | Capture Workbench UI served from `src/ui/static/`                                      |
 
-**Why generic RAG fails for federal capture work:**
+**Why generic RAG fails for federal capture work after final RFP:**
 
 Vanilla LightRAG can't tell a CLIN from a generic line item, doesn't recognize the Section L ↔ M golden thread, can't trace deliverables back to requirements and evaluation factors, and gives no Shipley-style strategic framing on top of retrieved evidence.
 
-**Our solution**: a curated **33-entity / 35-relationship-type** ontology, **3 inference algorithms** that enrich the graph after extraction, and a **Shipley-mentor query persona** that turns hybrid retrieval into capture-ready answers.
+**Our solution**: a curated **33-entity / 35-relationship-type** ontology, **3 inference algorithms** that enrich the graph after extraction, and a **Shipley-mentor query persona** that turns hybrid retrieval into capture-ready, proposal-supporting answers.
 
 ---
 
@@ -88,7 +88,7 @@ python app.py
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                    8-Step Capture Pipeline                               │
+│                    8-Step RFP Processing Pipeline                        │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  1. DOCUMENT INGEST                                                      │
@@ -115,8 +115,7 @@ python app.py
 │     ├─ Phase 2  Entity normalization                                     │
 │     ├─ Phase 3  Relationship retyping (entity-pair aware)                │
 │     ├─ Phase 4  Inference algorithms (L↔M, doc structure, orphans)       │
-│     ├─ Phase 5  Workload enrichment (BOE category tagging, optional)     │
-│     └─ Phase 6  VDB synchronization                                      │
+│     └─ Phase 5  VDB synchronization                                      │
 │                                                                          │
 │  8. QUERY (Shipley mentor persona)                                       │
 │     └─ Hybrid retrieval → answer with discriminators, hot buttons,       │

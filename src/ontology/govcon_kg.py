@@ -11,11 +11,11 @@ constants, regardless of whether the payload is backed by Python or a content
 bundle on disk:
 
   src/ontology/knowledge/
-    ├── shipley.py         # Shipley BD Lifecycle, Color Teams
+    ├── shipley.py         # Shipley proposal lifecycle, Color Teams
     ├── regulations.py     # FAR/DFARS compliance patterns
     ├── evaluation.py      # Rating scales, evaluation factors
     ├── workload.py        # BOE formulas, staffing ratios
-    ├── capture.py         # Bid/No-Bid, Win Themes, Discriminators
+    ├── capture.py         # Reference-only Phase 0-3 capture doctrine
     ├── lessons_learned.py # 20+ years domain expertise
     └── company_capabilities.py # Company-specific platforms, past performance, discriminators
 
@@ -49,8 +49,10 @@ Why This Architecture?
 5. **Clarity**: content-heavy slices can live as data while consolidation logic stays in code
 6. **Reusability**: modules can be cherry-picked for different applications
 
-The consolidator runs at bootstrap time, merging into ONE knowledge graph
-that gets injected into the workspace's LightRAG instance.
+The consolidator runs at bootstrap time, merging final-RFP proposal support
+modules into ONE knowledge graph that gets injected into the workspace's
+LightRAG instance. Phase 0-3 capture doctrine stays in its bundle for reference
+but is not part of the default workspace bootstrap.
 """
 
 import logging
@@ -72,8 +74,6 @@ from src.ontology.knowledge import (
     EVALUATION_ENTITIES, EVALUATION_RELATIONSHIPS, EVALUATION_CHUNKS,
     # Workload
     WORKLOAD_ENTITIES, WORKLOAD_RELATIONSHIPS, WORKLOAD_CHUNKS,
-    # Capture
-    CAPTURE_ENTITIES, CAPTURE_RELATIONSHIPS, CAPTURE_CHUNKS,
     # Lessons Learned
     LESSONS_ENTITIES, LESSONS_RELATIONSHIPS, LESSONS_CHUNKS,
     # Company Capabilities
@@ -134,11 +134,10 @@ def build_govcon_ontology_kg() -> CustomKnowledgeGraph:
     """
     Consolidate all knowledge modules into single custom_kg dictionary.
     
-    This function merges:
-    - 6 knowledge modules
-    - ~70 entities
-    - ~50 relationships  
-    - ~20 chunks
+    This function merges proposal-support knowledge modules for final-RFP
+    workspaces. Phase 0-3 capture doctrine is intentionally excluded from the
+    default bootstrap so bid/no-bid, PWin, and gate-review concepts do not become
+    active workspace retrieval noise.
     
     Returns:
         CustomKnowledgeGraph: Combined knowledge graph ready for insert_custom_kg()
@@ -153,7 +152,6 @@ def build_govcon_ontology_kg() -> CustomKnowledgeGraph:
             (REGULATION_ENTITIES, REGULATION_RELATIONSHIPS, REGULATION_CHUNKS),
             (EVALUATION_ENTITIES, EVALUATION_RELATIONSHIPS, EVALUATION_CHUNKS),
             (WORKLOAD_ENTITIES, WORKLOAD_RELATIONSHIPS, WORKLOAD_CHUNKS),
-            (CAPTURE_ENTITIES, CAPTURE_RELATIONSHIPS, CAPTURE_CHUNKS),
             (LESSONS_ENTITIES, LESSONS_RELATIONSHIPS, LESSONS_CHUNKS),
             (COMPANY_ENTITIES, COMPANY_RELATIONSHIPS, COMPANY_CHUNKS),
         ]
@@ -184,7 +182,6 @@ def get_ontology_stats() -> dict:
             "regulations": (REGULATION_ENTITIES, REGULATION_RELATIONSHIPS, REGULATION_CHUNKS),
             "evaluation": (EVALUATION_ENTITIES, EVALUATION_RELATIONSHIPS, EVALUATION_CHUNKS),
             "workload": (WORKLOAD_ENTITIES, WORKLOAD_RELATIONSHIPS, WORKLOAD_CHUNKS),
-            "capture": (CAPTURE_ENTITIES, CAPTURE_RELATIONSHIPS, CAPTURE_CHUNKS),
             "lessons_learned": (LESSONS_ENTITIES, LESSONS_RELATIONSHIPS, LESSONS_CHUNKS),
             "company_capabilities": (COMPANY_ENTITIES, COMPANY_RELATIONSHIPS, COMPANY_CHUNKS),
         }
