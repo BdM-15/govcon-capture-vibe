@@ -129,7 +129,7 @@ new-package = ">=1.0.0"
 ### Files to Update
 
 - [ ] `README.md` - [What to add]
-- [ ] docs/ARCHITECTURE.md - [What to add]
+- [ ] `docs/README.md` - [What to add]
 - [ ] `.github/copilot-instructions.md` - [What to add]
 
 ### New Documentation

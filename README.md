@@ -278,7 +278,7 @@ Project Theseus implements the open [Agent Skills specification](https://agentsk
 
 **MCP integration** (see `tools/mcps/`): 8 federal-data MCPs vendored via `uvx` (USAspending, eCFR, GSA CALC+, GSA Per Diem, Federal Register, SAM.gov, BLS OEWS, regulations.gov) provide live regulatory + procurement data to the relevant skills. MCP credentials are configured per-user in the Settings panel.
 
-**12 production skills:**
+**14 govcon platform skills:**
 
 | Skill                       | Stance / Capability                                                       | MCPs                                  |
 | --------------------------- | ------------------------------------------------------------------------- | ------------------------------------- |
@@ -290,10 +290,14 @@ Project Theseus implements the open [Agent Skills specification](https://agentsk
 | `subcontractor-sow-builder` | Prime-side SOW/PWS for subs (FAR 37.102(d)/37.602/16.601(c)(2)/16.306(d)) | —                                     |
 | `rfp-reverse-engineer`      | Reverse the CO's hidden 3+6 decision tree from a received RFP             | —                                     |
 | `ot-prototype-strategist`   | 10 USC 4021 / 4022 / 4022(d) / 4022(f) prototype bid strategist           | `bls_oews`, `gsa_calc`, `gsa_perdiem` |
+| `workload-analyzer`         | Section J workload attachment analysis: demand trends, pricing risks      | —                                     |
+| `data-analyzer`             | Statistical analysis, pattern detection, and insight generation           | —                                     |
 | `huashu-design`             | HTML → PPTX / PDF / MP4 / GIF design engine (Personal Use License)        | —                                     |
 | `renderers`                 | Universal artifact renderers (DOCX via Pandoc, XLSX via openpyxl)         | —                                     |
 | `govcon-ontology`           | Authoritative reference for the 33-entity / 35-relationship schema        | —                                     |
 | `skill-creator`             | Foundational meta-skill for authoring / refining / evaluating skills      | —                                     |
+
+**16 developer workflow skills** (Copilot Chat only, not shown in the Theseus UI): `caveman`, `diagnose`, `grill-me`, `grill-with-docs`, `handoff`, `improve-codebase-architecture`, `prototype`, `setup-matt-pocock-skills`, `setup-pre-commit`, `tdd`, `to-issues`, `to-prd`, `triage`, `write-a-skill`, `zoom-out`, `git-guardrails-claude-code`. See [theseus-skills/README.md](theseus-skills/README.md) for the full index.
 
 **Studio cross-skill artifact library** (`/ui` → Studio tab): single index of every deliverable produced by any skill across all runs. Filters by skill / format / free-text. Per-row actions: anchor pin (sticks to top, persisted to localStorage), inline preview (PDF / DOCX via Mammoth.js / XLSX via SheetJS / video / image / MD / JSON / CSV / TXT), "Why this artifact?" reasoning view (deterministic transcript-to-prose renderer over `transcript.json`), download, open originating run. JSON envelopes are parsed for `chunk-<hex>` ids and rendered as clickable chips that open the chunk-preview modal — closes the **artifact → chunk → entity** audit chain in two clicks. Studio is **read-only by design**: every artifact has full provenance via an audited `SkillManager.invoke(...)` run, so the namespace is append-only. User-uploaded inputs live in a separate (planned) Library lane (#123) to preserve the audit chain.
 
@@ -409,14 +413,14 @@ Served under `/api/ui/` by `src/server/ui_routes.py` — feeds the Capture Workb
 
 The full backlog is tracked in [GitHub Issues #87 – #114](https://github.com/BdM-15/proj-theseus/issues). High-level groupings:
 
-| Group                          | Examples                                                                                                                                                                                                                                               |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **v1.4.0 — JSON extraction**   | [Issue #124 roadmap](docs/LIGHTRAG_JSON_EXTRACTION_ROADMAP.md): strict LightRAG JSON extraction is the foundation; Phase 2 targets recall recovery for scoring criteria, document hierarchy, strategic signals, workload metrics, and clause breadth.  |
-| **Tier 1 — graph quality**     | #88 confidence + provenance on edges, #93 orphan candidate links                                                                                                                                                                                       |
-| **Tier 2 — Intel Panels**      | #87 Past Performance, #99 Tech Inventory, #100 Innovation Signals, #96 Glossary, #97 Hot Buttons, #101 Deliverable Catalog                                                                                                                             |
-| **Tier 3 — quality of life**   | #109 "Ask Theseus" pre-filled chat buttons, #103 CSV/XLSX export, #110 diff vs prior run                                                                                                                                                               |
-| **UI / UX polish**             | #98 documents drawer, #92 KG presets, #91 search explorer, #94 .env knobs, #95 no-active-ws state, #90 chat latency, #89 bypass UX                                                                                                                     |
-| **Future panels & dashboards** | #108 activity feed, #113 health card, #102 notification center, #111 full Compliance Matrix, #106 Requirements Browser, #105 Win-Strategy view, #107 Risk Register, #112 Doc Structure tree, #104 section deep-dive drawer, #114 saved chats + pinning |
+| Group                          | Examples                                                                                                                                                                                                                                                       |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **v1.4.0 — JSON extraction**   | [Issue #124 roadmap](https://github.com/BdM-15/proj-theseus/issues/124): strict LightRAG JSON extraction is the foundation; Phase 2 targets recall recovery for scoring criteria, document hierarchy, strategic signals, workload metrics, and clause breadth. |
+| **Tier 1 — graph quality**     | #88 confidence + provenance on edges, #93 orphan candidate links                                                                                                                                                                                               |
+| **Tier 2 — Intel Panels**      | #87 Past Performance, #99 Tech Inventory, #100 Innovation Signals, #96 Glossary, #97 Hot Buttons, #101 Deliverable Catalog                                                                                                                                     |
+| **Tier 3 — quality of life**   | #109 "Ask Theseus" pre-filled chat buttons, #103 CSV/XLSX export, #110 diff vs prior run                                                                                                                                                                       |
+| **UI / UX polish**             | #98 documents drawer, #92 KG presets, #91 search explorer, #94 .env knobs, #95 no-active-ws state, #90 chat latency, #89 bypass UX                                                                                                                             |
+| **Future panels & dashboards** | #108 activity feed, #113 health card, #102 notification center, #111 full Compliance Matrix, #106 Requirements Browser, #105 Win-Strategy view, #107 Risk Register, #112 Doc Structure tree, #104 section deep-dive drawer, #114 saved chats + pinning         |
 
 Three silent-failure surfaces have already been plugged on `main`: extraction-time exceptions (#115), local-timezone timestamps (#116), and tabular-only document invisibility in `doc_status` (#117).
 
@@ -473,18 +477,14 @@ dependencies = [
 
 ## Documentation
 
-| Document                                                                                                                               | Description                                              |
-| -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)                                                                                           | System architecture, ADRs, performance metrics           |
-| [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md)                                                                                             | Capture Workbench UI conventions (read before UI work)   |
-| [docs/PROJECT_THESEUS_USE_CASE.md](docs/PROJECT_THESEUS_USE_CASE.md)                                                                   | End-to-end capture-team use case                         |
-| [docs/ENHANCEMENT_FRAMEWORK.md](docs/ENHANCEMENT_FRAMEWORK.md)                                                                         | Upstream library enhancement mapping                     |
-| [docs/MINERU_3X_INTEGRATION_ASSESSMENT.md](docs/MINERU_3X_INTEGRATION_ASSESSMENT.md)                                                   | MinerU 3.0 upgrade notes                                 |
-| [docs/Ontology-Based-RAG-for-Government-Contracting-White-Paper.md](docs/Ontology-Based-RAG-for-Government-Contracting-White-Paper.md) | Technical white paper                                    |
-| [docs/Why-General-Purpose-AI-Fails-Specialized-Domains.md](docs/Why-General-Purpose-AI-Fails-Specialized-Domains.md)                   | Domain-specialization argument                           |
-| [docs/SKILL_TAXONOMY.md](docs/SKILL_TAXONOMY.md)                                                                                       | Three-axis skill taxonomy (persona / phase / capability) |
-| [docs/SKILL_SPEC_COMPLIANCE.md](docs/SKILL_SPEC_COMPLIANCE.md)                                                                         | Open Agent Skills spec audit + migration plan            |
-| [.github/copilot-instructions.md](.github/copilot-instructions.md)                                                                     | Agent rules + cross-cutting prompt change checklist      |
+| Document                                                           | Description                                              |
+| ------------------------------------------------------------------ | -------------------------------------------------------- |
+| [docs/README.md](docs/README.md)                                   | Living documentation index                               |
+| [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md)                         | Capture Workbench UI conventions (read before UI work)   |
+| [docs/SKILLS.md](docs/SKILLS.md)                                   | Dual-use Agent Skills platform                           |
+| [docs/SKILL_TAXONOMY.md](docs/SKILL_TAXONOMY.md)                   | Three-axis skill taxonomy (persona / phase / capability) |
+| [docs/SKILL_SPEC_COMPLIANCE.md](docs/SKILL_SPEC_COMPLIANCE.md)     | Open Agent Skills spec audit + migration plan            |
+| [.github/copilot-instructions.md](.github/copilot-instructions.md) | Agent rules + cross-cutting prompt change checklist      |
 
 ---
 

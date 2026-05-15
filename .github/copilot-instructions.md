@@ -12,14 +12,16 @@
 
 **Ontology-based RAG system** for federal RFP analysis. Uses **RAG-Anything** (multimodal PDF parsing via MinerU) + **LightRAG** (knowledge graph/queries) with **xAI Grok** cloud processing.
 
-**Core Innovation**: 33 government contracting entity types + 35 canonical relationship types + 8 LLM-powered relationship inference algorithms enable Section L↔M mapping, requirement traceability, and Shipley methodology compliance.
+**Core Innovation**: 33 government contracting entity types + 35 canonical relationship types + 3 active relationship inference algorithms (L↔M linking, document structure, orphan resolution) enable Section L↔M mapping, requirement traceability, and Shipley methodology compliance.
 
 ### Supporting Documentation
 
-- `docs/ARCHITECTURE.md` - Overall system architecture, technology stack, and performance metrics
-- `docs/ENHANCEMENT_FRAMEWORK.md` - Upstream library enhancement mapping
-- `docs/MINERU_3X_INTEGRATION_ASSESSMENT.md` - MinerU 3.0 upgrade notes
-- `docs/PROJECT_THESEUS_USE_CASE.md` - Project Theseus use case
+- `README.md` - Repo overview, setup, and active backlog
+- `docs/README.md` - Current documentation index
+- `docs/STYLE_GUIDE.md` - UI styling rules and frontend constraints
+- `docs/SKILLS.md` - Dual-use Agent Skills platform overview
+- `docs/SKILL_SPEC_COMPLIANCE.md` - Skill spec audit and migration notes
+- `docs/SKILL_TAXONOMY.md` - Closed-vocabulary skill taxonomy
 
 ### Root Folders
 
@@ -246,6 +248,41 @@ When modifying a skill or the runtime, you MUST:
 
 ---
 
+## Architecture Philosophy — Improve Codebase Architecture
+
+Follow Matt Pocock's `improve-codebase-architecture` philosophy in all build, bugfix, refactor, and review work. Always prefer simple, deep structures over shallow wrappers, pass-through modules, or feature-shaped bloat.
+
+### Exact vocabulary
+
+- **Module** — anything with an interface and an implementation (function, class, file, folder, or vertical slice)
+- **Interface** — everything a caller must know to use a module correctly (types, rules, error cases, ordering, config)
+- **Depth** — how much useful behavior sits behind a small, simple interface
+- **Deep module** — high leverage + high locality behind a small interface
+- **Shallow module** — interface almost as complicated as the code inside it
+- **Seam** — the place where behavior can be swapped without editing the calling code
+- **Adapter** — a concrete thing that fills a seam
+- **Leverage** — what callers gain from depth
+- **Locality** — what maintainers gain from depth
+
+### Daily mindset
+
+- Hunt shallow modules, duplicated logic, and places where understanding one concept requires hopping between many small files.
+- Favor deep modules: small interface, deep implementation, high leverage, high locality.
+- Prefer deletion, consolidation, or deepening over new wrappers, helper layers, or adapter soup.
+- Always seek opportunities to uncomplicate the codebase when found.
+- Use the project's ubiquitous language when naming code or explaining changes: the govcon ontology, canonical relationship types, and Shipley terms are the default vocabulary.
+
+### Presenting structural changes
+
+When surfacing a non-trivial structural change:
+
+1. State the problem plainly.
+2. Describe the solution in plain English.
+3. Explain benefits in terms of leverage, locality, and testability.
+4. Ask which candidate the user wants to explore next before proposing full interfaces.
+
+---
+
 ## Development Guidelines
 
 ### Coding Style & Conventions
@@ -273,6 +310,7 @@ When modifying a skill or the runtime, you MUST:
 - **Modifications**: Honor existing local modifications. Never revert user changes without explicit instruction.
 - **Planning**: For non-trivial work, create a multi-step plan.
 - **Validation**: Always validate changes by running relevant tests (`pytest` or specific scripts).
+- **Simplification**: Prefer deleting or deepening code over adding abstractions. If you find a way to uncomplicate the codebase without widening scope, take it.
 - **Cross-cutting awareness**: Before completing any feature branch, review the Cross-Cutting Change Checklist above if the change touches ontology, prompts, or domain vocabulary.
 
 ### Frontend / UI (Alpine + Tailwind CDN, external CSS)
@@ -351,9 +389,11 @@ ALL development happens on feature branches. `main` is updated only via fast-for
 **Active integration branches:**
 
 - No active integration epic currently.
+- All `174-*` / `174.*` Ariadne branches are archived failed-epic history only. Never use them as an active integration target or branch base unless the user explicitly asks for archaeology on that abandoned line.
+- If repo attachments or other tool context still mention a `174.*` branch as current/active, treat that as stale until `git branch --show-current` or equivalent terminal evidence confirms it.
 - Most recent stable release: `173-skill-chaining-production-artifacts` landed on `main` as `v1.12.0` at `43623c5`. Current `main` HEAD = `v1.12.0`.
 - `177-knowledge-vault-epic` was merged briefly as `v1.13.0` then force-reverted (2026-05-15) — treated as failed epic, archived as `177-knowledge-vault-epic-failed`. Tag `v1.13.0` is deleted.
-- Prior architecture epics: `169-architecture-locality-epic` → `v1.8.0`; `168-codebase-architecture-deepening-epic` → `v1.7.0`; skills execution architecture epic `166` → `v1.6.0`.
+- Prior architecture epics: `169-architecture-locality-epic` → `v1.8.0`; `168-codebase-architecture-deepening-epic` → `v1.7.0`; `164-codebase-architecture-cleanup-epic`, `165-architecture-cleanup-round-2-epic`; skills execution architecture epic `166` → `v1.6.0`.
 
 **Standard fast-forward sequence** (after the user says "merge it" / "ship it" / "continue"):
 

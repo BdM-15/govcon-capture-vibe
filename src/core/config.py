@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     # Per-role LLM models. Env var names match LightRAG 1.5.0's native role registry
     # (lightrag/api/config.py reads EXTRACT_LLM_MODEL / QUERY_LLM_MODEL / KEYWORD_LLM_MODEL
     # / VLM_LLM_MODEL at import time). POST_PROCESS_LLM_MODEL is our addition for the
-    # src/inference/ pipeline (not a LightRAG role, but kept in the same naming scheme).
+    # src/inference/ semantic post-processor (not a LightRAG role, but kept in the same naming scheme).
     # Python attribute names retain the legacy `*_llm_name` suffix to keep call-site
     # churn minimal; only the .env variable names changed.
     extraction_llm_name: str = Field(

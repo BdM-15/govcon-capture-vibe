@@ -78,11 +78,6 @@ _PRODUCT_PROFILES: dict[str, dict[str, object]] = {
         "label": "Data Analysis",
         "xlsx_sources": ["data_analysis.json"],
     },
-    "grill-me-govcon": {"base": "govcon_grill", "label": "GovCon Grill"},
-    "grill-me-bid-strategy": {"base": "bid_strategy_grill", "label": "Bid Strategy Grill"},
-    "grill-me-capture": {"base": "capture_grill", "label": "Capture Grill"},
-    "grill-me-proposal": {"base": "proposal_grill", "label": "Proposal Grill"},
-    "grill-me-ptw": {"base": "ptw_grill", "label": "PTW Grill"},
 }
 
 

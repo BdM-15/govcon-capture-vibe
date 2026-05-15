@@ -5,9 +5,11 @@ This directory contains [Agent Skills](https://agentskills.io) packaged for **du
 1. **VS Code / GitHub Copilot** — auto-discovered by tools that scan `.github/skills/` (the official location).
 2. **Theseus Capture Workbench** — surfaced in the web UI under **Tools → Skills** and invokable against the active workspace's RFP knowledge graph.
 
-Each skill is a self-contained folder with a `SKILL.md` file (YAML frontmatter + imperative instructions) plus optional `scripts/`, `references/`, `assets/`, `templates/`, and `evals/` subdirectories.
+Each skill is a self-contained folder with a `SKILL.md` file (YAML frontmatter + imperative instructions) plus optional `scripts/`, `references/`, `assets/`, and `evals/` subdirectories.
 
-## Available Skills
+## Representative Skills
+
+See the directory listing for the full live inventory. This table highlights the main skill families.
 
 | Skill                                             | Category   | Purpose                                                                                                                                                                 |
 | ------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -35,7 +37,7 @@ Skills in this repo follow the `skill-creator` best-practices:
 - **Progressive disclosure** — `SKILL.md` stays under ~500 lines; deep references live in `references/*.md` and are loaded only when needed.
 - **Imperative voice** — "Extract the CLINs", not "You may want to extract the CLINs".
 - **Why, not just what** — every non-obvious step explains the GovCon rationale (the proposal_instruction ↔ evaluation_factor golden thread — UCF Section L↔M or non-UCF equivalent — Shipley discriminator framing, etc.).
-- **Output templates** — every skill that produces an artifact ships a template under `templates/`.
+- **Output assets** — every skill that produces an artifact ships an asset under `assets/`.
 - **Examples** — at least one worked example per skill (typically under `references/examples.md`).
 
 ## Adding a New Skill
@@ -43,7 +45,7 @@ Skills in this repo follow the `skill-creator` best-practices:
 1. Copy `competitive-intel/` as a starter (smallest, most generic shape).
 2. Edit `SKILL.md` frontmatter (`name`, `description`, `category`, `version`).
 3. Place imperative instructions in `SKILL.md` (target ≤500 lines).
-4. Offload reference material to `references/`, scripts to `scripts/`, output templates to `templates/`.
+4. Offload reference material to `references/`, scripts to `scripts/`, output assets to `assets/`.
 5. Restart the Theseus server — the skill auto-registers. Copilot picks it up on next workspace re-index.
 
 See [docs/SKILLS.md](../../docs/SKILLS.md) for end-to-end usage in both contexts.
