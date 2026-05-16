@@ -44,9 +44,9 @@ def prepare_custom_kg(custom_kg: dict[str, list[dict]], *, source_label: str) ->
         {
             "content": (
                 "GovCon Domain Ontology: Curated knowledge base for federal government "
-                "contracting covering Shipley BD Lifecycle, FAR/DFARS compliance, "
-                "evaluation methodology, BOE and staffing patterns, capture management, "
-                "and lessons learned from 20+ years of federal contracting experience. "
+                "contracting covering Shipley proposal methodology, FAR/DFARS compliance, "
+                "evaluation methodology, BOE and staffing patterns, and lessons learned "
+                "from 20+ years of federal contracting experience. "
                 "This ontology provides evergreen domain context that enhances "
                 "RFP-specific entity extraction and query intelligence."
             ),

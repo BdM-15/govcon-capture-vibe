@@ -8,11 +8,11 @@ Modular architecture for evergreen domain knowledge:
 - bootstrap.py injects consolidated KG into LightRAG via insert_custom_kg()
 
 Module Categories:
-- shipley.py: Shipley BD Lifecycle, Color Teams, Capture Tools
+- shipley.py: Shipley proposal lifecycle, Color Teams, proposal tools
 - regulations.py: FAR/DFARS compliance patterns
 - evaluation.py: Rating methodologies, scoring approaches
 - workload.py: BOE formulas, staffing ratios
-- capture.py: Bid/No-Bid, Win Themes, Discriminators
+- capture.py: Reference-only Phase 0-3 capture doctrine; not default-bootstrapped
 - lessons_learned.py: 20+ years domain expertise
 - company_capabilities.py: Company-specific service lines, platforms, past performance, discriminators
 

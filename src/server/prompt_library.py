@@ -7,28 +7,6 @@ from fastapi.responses import JSONResponse
 
 
 PROMPT_LIBRARY: list[dict[str, str]] = [
-    # ═════════════════ Phase 3 — Capture / RFP Discovery ═════════════════
-    {"phase": "3", "category": "Discovery", "title": "Acquisition snapshot",
-     "prompt": "Summarize this acquisition in one page: customer, mission need, contract vehicle, NAICS, set-aside, period of performance, estimated value, place of performance, and incumbent (if known). Cite the clauses you used."},
-    {"phase": "3", "category": "Discovery", "title": "Customer priorities & pain points",
-     "prompt": "Identify and describe the customer's top priorities and pain points based on the indexed scope/PWS/SOO. For each priority, quote the source language, classify it (modernization, integration, security, schedule, cost, mission readiness, workforce, etc.), and explain why it matters to the customer's mission outcome."},
-    {"phase": "3", "category": "Discovery", "title": "Mission objectives & end-state",
-     "prompt": "Extract the customer's stated mission objectives and the end-state they want to reach by end of period of performance. Distinguish 'must-achieve' from 'aspirational' language. Cite source paragraphs."},
-    {"phase": "3", "category": "Discovery", "title": "Hot buttons (stated + implied)",
-     "prompt": "Extract every hot button — stated and implied. For each: quote the source, classify it (cost / schedule / performance / risk / mission / workforce / security / sustainability), score how strongly it is signaled, and propose the response posture we should adopt."},
-    {"phase": "3", "category": "Discovery", "title": "Size, scope, and complexity assessment",
-     "prompt": "Describe the size, scope, and complexity of the requirements. Cover: breadth of tasks, integration burden, technology stack, security/clearance posture, geographic footprint, dependencies on external organizations, methodologies prescribed, and the deliverables tempo. Cite the source for each claim."},
-    {"phase": "3", "category": "Discovery", "title": "Incumbent & competitor signals",
-     "prompt": "Surface every clue about the incumbent or likely competitors: transition language, GFE/GFI references, resume requirements, oddly specific past-performance asks, named tools/standards, license counts, transition timelines. List each clue with the cited source and what it implies."},
-    {"phase": "3", "category": "Discovery", "title": "Bid / no-bid scoring inputs",
-     "prompt": "Score this opportunity against standard bid/no-bid factors (customer fit, capability fit, competition, win probability, profitability, strategic value, risk). Cite RFP language supporting each score and surface unknowns we still need to chase."},
-    {"phase": "3", "category": "Strategy", "title": "Capture plan kickoff",
-     "prompt": "Outline a Shipley-style capture plan for this opportunity. Cover: opportunity background, customer mission and known procurement details, capture strategy (hot buttons, likely competitors, our discriminators), capture milestones (gate reviews, solution checkpoints, submission deadlines), capture team roles, and the intelligence-gathering / shaping / positioning actions required. Flag readiness risks and gaps."},
-    {"phase": "3", "category": "Strategy", "title": "Competitive landscape analysis",
-     "prompt": "List the steps you would take to analyze the competitive landscape for this scope, then execute them against the indexed RFP. Identify likely bidders, their probable positioning, and the discriminators we would need to neutralize each one."},
-    {"phase": "3", "category": "Strategy", "title": "SWOT vs this opportunity",
-     "prompt": "Build a SWOT analysis of our likely bid posture against this specific opportunity: strengths we can prove, weaknesses to mitigate, opportunities to ghost competitors, threats from incumbent advantage or scope drift. Anchor each entry in cited RFP language."},
-
     # ═════════════════ Phase 4 — Proposal Planning ═════════════════
     {"phase": "4", "category": "Compliance", "title": "Full Compliance Matrix (Instructions ↔ Evaluation)",
      "prompt": "Generate a full proposal-instruction ↔ evaluation-factor compliance matrix. For every proposal_instruction (UCF Section L or equivalent — non-UCF task orders, FOPRs, BPA calls, OTAs may name the section differently or embed instructions inline in the PWS), list the linked evaluation_factor (UCF Section M or equivalent — including adjectival or LPTA schemes), the responsible proposal volume, page-limit constraints, and any unmatched items as gaps. Tag each row with instruction_source (UCF-L | non-UCF | PWS-inline | attachment) and evaluation_source (UCF-M | non-UCF | adjectival | LPTA). Do NOT emit GAP merely because an entity lacks a literal 'Section L' / 'Section M' heading."},
@@ -115,7 +93,7 @@ PROMPT_LIBRARY: list[dict[str, str]] = [
 ]
 
 # ---------------------------------------------------------------------------
-# Suggested prompt library route (Shipley phases 3-6)
+# Suggested prompt library route (Shipley phases 4-6)
 #
 # Design rules:
 #  - Pattern-based, not keyword-based: prompts assume Theseus has indexed the
@@ -126,8 +104,8 @@ PROMPT_LIBRARY: list[dict[str, str]] = [
 #    {requirement_id}, {volume_or_section}.
 #  - Adaptable: each prompt works against any RFP the user has loaded into the
 #    active workspace.
-#  - Shipley-aligned: phases mirror Shipley capture/proposal lifecycle phases
-#    3 (Capture), 4 (Planning), 5 (Development), 6 (Color Reviews & Submittal).
+#  - Shipley-aligned: phases mirror Theseus's final-RFP scope:
+#    4 (Planning), 5 (Development), 6 (Color Reviews & Submittal).
 # ---------------------------------------------------------------------------
 
 

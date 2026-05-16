@@ -19,11 +19,19 @@ An isolated knowledge graph + vector database for exactly one RFP. Lives at `rag
 - `.ontology_bootstrap` — bootstrap marker; present = skip bootstrap on next startup
 - `<name>_errors.log`, `<name>_processing.log` — per-workspace ingest logs
 - `chats/` — persisted chat history for this workspace
-- `pursuits/` — capture pursuit artifacts (skill outputs)
 - `mineru/` — MinerU parse cache (intermediate PDF extraction results)
 - `skill_runs/<skill>/<timestamp>/` — per-invocation skill run directories
 
-_Avoid_: project, environment, instance.
+Theseus workspaces do not track Shipley stage gates, bid/no-bid state, PWin, capture plans, or multi-opportunity pipelines. Those global capture-management concepts belong outside Theseus and may be supplied to a workspace only as upstream source artifacts after the final RFP exists.
+_Avoid_: project, environment, instance, pursuit.
+
+**Proposal support artifact**:
+A workspace-scoped work product that helps the team develop a compliant and compelling proposal for the final RFP: compliance matrices, proposal outlines, section drafts, win-theme maps, proof-point tables, BOE/workload analyses, risk registers, review checklists, submission checklists, rendered DOCX/XLSX/HTML outputs, and similar proposal-development deliverables. Theseus skills exist to produce or validate these artifacts. They may use upstream capture intelligence as evidence, but they do not manage the upstream capture process.
+_Avoid_: gate artifact, pipeline card, global capture task.
+
+**Capture Workbench / Capture Chat**:
+The user-facing name for Theseus because capture managers use the system to turn a final RFP workspace into compliant, compelling proposal artifacts. In Theseus, "capture" names the practitioner context and strategic lens, not Shipley Phase 0-3 capture management. Capture Chat remains final-RFP, workspace-scoped, and evidence-grounded.
+_Avoid_: treating the Capture moniker as permission to add bid/no-bid, PWin, gate reviews, opportunity pipeline state, or global capture tasks.
 
 **Knowledge graph (KG)**:
 The graph database holding all entities and relationships for a workspace. Backed by Neo4j when `GRAPH_STORAGE=Neo4JStorage` (production default). Accessed via `src/core/neo4j_io.py`. The semantic post-processor reads from and writes to this graph. Skills query it via the `kg_query(cypher)` and `kg_entities(types[])` tools.
@@ -342,7 +350,7 @@ Filesystem batch ingest. Reads all unprocessed files from `inputs/<workspace>/`,
 _Avoid_: confusing scan with upload — they share the pipeline but differ in trigger, batching, and background execution.
 
 **Bootstrap**:
-One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge (Shipley methodology, FAR patterns, evaluation frameworks) before any RFP documents are uploaded. Triggered automatically at server startup via `maybe_bootstrap_ontology()` in `src/server/rag_post_init.py`. Gate: `AUTO_BOOTSTRAP_ONTOLOGY` env var (default `true`). Fresh workspace (no marker) + env enabled -> ontology entities/relationships become the initial KG foundation. `.ontology_bootstrap` marker written after success; present -> skip on subsequent startups. `ONTOLOGY_BOOTSTRAP_FORCE=true` re-seeds even if marker exists.
+One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge before any RFP documents are uploaded. Default bootstrap is final-RFP scoped: Shipley phases 4-6, FAR patterns, evaluation frameworks, workload/pricing, lessons learned, and company capabilities. Phase 0-3 capture doctrine (bid/no-bid, PWin, gate reviews, capture plan management) is reference-only and is not inserted into workspace KGs by default. Triggered automatically at server startup via `maybe_bootstrap_ontology()` in `src/server/rag_post_init.py`. Gate: `AUTO_BOOTSTRAP_ONTOLOGY` env var (default `true`). Fresh workspace (no marker) + env enabled -> ontology entities/relationships become the initial KG foundation. `.ontology_bootstrap` marker written after success; present -> skip on subsequent startups. `ONTOLOGY_BOOTSTRAP_FORCE=true` re-seeds even if marker exists.
 _Avoid_: initialization (overloaded with server startup), seed.
 
 **Server initialization** (`initialize_raganything()`, `src/server/initialization.py`):
@@ -618,17 +626,6 @@ Quantified evidence (past performance metric, contract value, throughput figure)
 
 **Compliance matrix**:
 An L-to-M cross-reference table showing every proposal instruction is addressed in the proposal. Built from `MAPS_TO` relationships in the knowledge graph.
-
-### Capture management
-
-**Pursuit** (`rag_storage/<workspace>/pursuits/<slug>/`):
-A single bid opportunity being tracked through Shipley stage gates. On-disk layout per pursuit:
-
-- `00_pursuit.yaml` — manifest with fields: `workspace`, `slug`, `title`, `agency`, `stage` (current gate: `identify`/`qualify`/`capture`/`proposal`/`submitted`/`award`), `gate.due`, `proposal_due`, `pwin.value`/`confidence`/`trend`, `pwin_drivers[]` (weighted scoring: customer 30%, solution 30%, competition 25%, price 15%; each has `score`, `rationale`, `next_action`), `readiness` scores (7 dimensions), `shipley_folders`
-- `01-identify/` through `06-award/` — Shipley phase folders; capture artifacts go here as the pursuit advances
-
-One workspace = one pursuit tracked (workspace slug = pursuit slug). No backend routes yet — YAML on disk read/written by the UI only. `stage` in `00_pursuit.yaml` is the single source of truth for current gate.
-_Avoid_: "opportunity" (generic); "bid" (use pursuit when the Shipley stage-gate context applies).
 
 ## Relationships
 

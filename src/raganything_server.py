@@ -65,7 +65,6 @@ KG_MODULES = [
     ("Workload & Pricing", "BOE · indirect rates · pricing discipline"),
     ("Lessons Learned", "anti-patterns · explicit benefit linkage rule"),
     ("Company Capabilities", "KBR platforms · proof points · past performance"),
-    ("Capture (Phase 0-3)", "pre-RFP terminology · upstream reference only"),
 ]
 
 
