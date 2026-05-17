@@ -443,6 +443,205 @@ def test_collect_competitive_obligation_intel_rolls_up_parent_idiq(tmp_path: Pat
     assert artifact["ptw_seed"]["recommended_baseline_usd"] == 500.0
 
 
+def test_collect_competitive_obligation_intel_exhausts_idv_pages(tmp_path: Path) -> None:
+    responses = {
+        "lookup_piid": [
+            {
+                "award_type": "idv",
+                "results": [
+                    {
+                        "Award ID": "PARENT-PAGED",
+                        "generated_internal_id": "CONT_IDV_PARENTPAGED_2044",
+                    }
+                ],
+            }
+        ],
+        "get_award_detail": [
+            {
+                "piid": "PARENT-PAGED",
+                "description": "Paged parent vehicle",
+                "parent_award": {},
+                "period_of_performance": {
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-12-31",
+                    "potential_end_date": "2026-12-31",
+                },
+                "recipient": {"name": "Vehicle Owner"},
+                "latest_transaction_contract_data": {},
+            }
+        ],
+        "get_transactions": [
+            {"results": [], "page_metadata": {"hasNext": False}},
+            {
+                "results": [
+                    {
+                        "id": "order-1-tx",
+                        "action_date": "2024-01-02",
+                        "action_type": None,
+                        "action_type_description": None,
+                        "modification_number": "0",
+                        "description": "Order 1 base",
+                        "federal_action_obligation": 100.0,
+                    }
+                ],
+                "page_metadata": {"hasNext": False},
+            },
+            {
+                "results": [
+                    {
+                        "id": "order-2-tx",
+                        "action_date": "2024-02-02",
+                        "action_type": None,
+                        "action_type_description": None,
+                        "modification_number": "0",
+                        "description": "Order 2 base",
+                        "federal_action_obligation": 200.0,
+                    }
+                ],
+                "page_metadata": {"hasNext": False},
+            },
+            {
+                "results": [
+                    {
+                        "id": "order-3-tx",
+                        "action_date": "2024-03-02",
+                        "action_type": None,
+                        "action_type_description": None,
+                        "modification_number": "0",
+                        "description": "Order 3 base",
+                        "federal_action_obligation": 300.0,
+                    }
+                ],
+                "page_metadata": {"hasNext": False},
+            },
+        ],
+        "get_idv_children": [
+            {
+                "results": [
+                    {
+                        "generated_unique_award_id": "CONT_AWD_ORDER1_2044_PARENTPAGED_2044",
+                        "piid": "ORDER-1",
+                        "description": "First order",
+                        "obligated_amount": 100.0,
+                        "period_of_performance_start_date": "2024-01-01",
+                        "period_of_performance_current_end_date": "2024-06-30",
+                    },
+                    {
+                        "generated_unique_award_id": "CONT_AWD_ORDER2_2044_PARENTPAGED_2044",
+                        "piid": "ORDER-2",
+                        "description": "Second order",
+                        "obligated_amount": 200.0,
+                        "period_of_performance_start_date": "2024-02-01",
+                        "period_of_performance_current_end_date": "2024-07-31",
+                    },
+                ],
+                "page_metadata": {"hasNext": True},
+            },
+            {
+                "results": [
+                    {
+                        "generated_unique_award_id": "CONT_AWD_ORDER3_2044_PARENTPAGED_2044",
+                        "piid": "ORDER-3",
+                        "description": "Third order",
+                        "obligated_amount": 300.0,
+                        "period_of_performance_start_date": "2024-03-01",
+                        "period_of_performance_current_end_date": "2024-08-31",
+                    }
+                ],
+                "page_metadata": {"hasNext": False},
+            },
+        ],
+        "get_idv_activity": [
+            {
+                "results": [
+                    {
+                        "generated_unique_award_id": "CONT_AWD_ORDER1_2044_PARENTPAGED_2044",
+                        "piid": "ORDER-1",
+                        "recipient_name": "ORDER ONE LLC",
+                        "recipient_id": "recipient-1",
+                        "obligated_amount": 100.0,
+                        "awarded_amount": 100.0,
+                        "period_of_performance_start_date": "2024-01-01",
+                        "period_of_performance_current_end_date": "2024-06-30",
+                    },
+                    {
+                        "generated_unique_award_id": "CONT_AWD_ORDER2_2044_PARENTPAGED_2044",
+                        "piid": "ORDER-2",
+                        "recipient_name": "ORDER TWO LLC",
+                        "recipient_id": "recipient-2",
+                        "obligated_amount": 200.0,
+                        "awarded_amount": 200.0,
+                        "period_of_performance_start_date": "2024-02-01",
+                        "period_of_performance_current_end_date": "2024-07-31",
+                    },
+                ],
+                "page_metadata": {"hasNext": True},
+            },
+            {
+                "results": [
+                    {
+                        "generated_unique_award_id": "CONT_AWD_ORDER3_2044_PARENTPAGED_2044",
+                        "piid": "ORDER-3",
+                        "recipient_name": "ORDER THREE LLC",
+                        "recipient_id": "recipient-3",
+                        "obligated_amount": 300.0,
+                        "awarded_amount": 300.0,
+                        "period_of_performance_start_date": "2024-03-01",
+                        "period_of_performance_current_end_date": "2024-08-31",
+                    }
+                ],
+                "page_metadata": {"hasNext": False},
+            },
+        ],
+        "search_awards": [
+            {
+                "results": [
+                    {
+                        "Award ID": "PARENT-PAGED",
+                        "Recipient Name": "VEHICLE OWNER",
+                        "Recipient UEI": "UEI-PAGED",
+                        "Description": "Paged parent vehicle",
+                        "Award Amount": 0.0,
+                        "Start Date": "2024-01-01",
+                        "Last Date to Order": "2026-12-31",
+                        "generated_internal_id": "CONT_IDV_PARENTPAGED_2044",
+                    }
+                ]
+            }
+        ],
+        "get_recipient_profile": [
+            {"name": "ORDER THREE LLC", "parent_name": "HOLDCO THREE"},
+            {"name": "ORDER TWO LLC", "parent_name": "HOLDCO TWO"},
+            {"name": "ORDER ONE LLC", "parent_name": "HOLDCO ONE"},
+        ],
+    }
+    ctx = _ctx(tmp_path, responses)
+
+    result = _run(tool_collect_competitive_obligation_intel(ctx, "PARENT-PAGED"))
+    artifact = json.loads(
+        (ctx.run_dir / "artifacts" / "competitive_intel_obligation.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    session = ctx.mcp_sessions["usaspending"]
+    child_calls = [args for name, args in session.calls if name == "get_idv_children"]
+    activity_calls = [args for name, args in session.calls if name == "get_idv_activity"]
+
+    assert result.payload["obligations_summary"] == {
+        "total_obligated_usd": 600.0,
+        "net_obligated_usd": 600.0,
+        "child_order_count": 3,
+    }
+    assert artifact["hierarchy"]["child_award_ids"] == [
+        "CONT_AWD_ORDER1_2044_PARENTPAGED_2044",
+        "CONT_AWD_ORDER2_2044_PARENTPAGED_2044",
+        "CONT_AWD_ORDER3_2044_PARENTPAGED_2044",
+    ]
+    assert [args["page"] for args in child_calls] == [1, 2]
+    assert [args["page"] for args in activity_calls] == [1, 2]
+    assert {args["limit"] for args in child_calls + activity_calls} == {25}
+
+
 def test_collect_competitive_obligation_intel_keeps_idiq_order_scope_single_award(tmp_path: Path) -> None:
     responses = {
         "lookup_piid": [

@@ -106,7 +106,11 @@ def _handle(msg: dict) -> None:
                 }
             )
             return
-        text = args.get("text", "")
+        large_chars = os.getenv("THESEUS_FAKE_MCP_LARGE_ECHO_CHARS")
+        if large_chars:
+            text = "x" * int(large_chars)
+        else:
+            text = args.get("text", "")
         _send(
             {
                 "jsonrpc": "2.0",

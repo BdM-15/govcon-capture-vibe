@@ -7,6 +7,7 @@ from datetime import date, datetime
 import json
 from typing import Any
 
+from src.skills.mcp_session import MCPError
 from src.skills.tool_filesystem import tool_write_file
 from src.skills.tool_types import ToolContext, ToolError, ToolResult
 
@@ -14,9 +15,8 @@ from src.skills.tool_types import ToolContext, ToolError, ToolResult
 _ARTIFACT_PATH = "competitive_intel_obligation.json"
 _USASPENDING_SERVER = "usaspending"
 _LOOKUP_LIMIT = 10
-_IDV_PAGE_LIMIT = 100
+_IDV_PAGE_LIMIT = 25
 _TRANSACTION_PAGE_LIMIT = 5000
-_MAX_IDV_PAGES = 200
 _MAX_TRANSACTION_PAGES = 50
 _MAX_RECIPIENT_PROFILES = 50
 _OBLIGATION_SCOPES = {"auto", "vehicle", "single_award"}
@@ -533,7 +533,10 @@ async def _call_usaspending_json(
     tools_invoked: list[str],
 ) -> dict[str, Any]:
     tools_invoked.append(f"mcp__usaspending__{tool_name}")
-    raw = await session.call_tool(tool_name, arguments)
+    try:
+        raw = await session.call_tool(tool_name, arguments)
+    except MCPError as exc:
+        raise ToolError(str(exc)) from exc
     try:
         payload = json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -668,7 +671,9 @@ async def _fetch_idv_children(
     warnings: list[str],
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
-    for page in range(1, _MAX_IDV_PAGES + 1):
+    seen_page_signatures: set[tuple[str, ...]] = set()
+    page = 1
+    while True:
         try:
             payload = await _call_usaspending_json(
                 session,
@@ -686,6 +691,11 @@ async def _fetch_idv_children(
             return results
 
         batch = payload.get("results") or []
+        if _page_is_repeated(batch, seen_page_signatures):
+            warnings.append(
+                "IDV child traversal stopped because USAspending returned a repeated page."
+            )
+            return results
         for row in batch:
             if not isinstance(row, dict):
                 continue
@@ -723,11 +733,12 @@ async def _fetch_idv_children(
             )
         if not _page_has_next(payload, len(batch), _IDV_PAGE_LIMIT):
             return results
-
-    warnings.append(
-        f"IDV child traversal hit the internal safety ceiling of {_MAX_IDV_PAGES} pages."
-    )
-    return results
+        if not batch:
+            warnings.append(
+                "IDV child traversal stopped because USAspending reported another page but returned no rows."
+            )
+            return results
+        page += 1
 
 
 async def _fetch_idv_activity(
@@ -737,7 +748,9 @@ async def _fetch_idv_activity(
     warnings: list[str],
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
-    for page in range(1, _MAX_IDV_PAGES + 1):
+    seen_page_signatures: set[tuple[str, ...]] = set()
+    page = 1
+    while True:
         try:
             payload = await _call_usaspending_json(
                 session,
@@ -754,6 +767,11 @@ async def _fetch_idv_activity(
             return results
 
         batch = payload.get("results") or []
+        if _page_is_repeated(batch, seen_page_signatures):
+            warnings.append(
+                "IDV activity traversal stopped because USAspending returned a repeated page."
+            )
+            return results
         for row in batch:
             if not isinstance(row, dict):
                 continue
@@ -788,11 +806,12 @@ async def _fetch_idv_activity(
             )
         if not _page_has_next(payload, len(batch), _IDV_PAGE_LIMIT):
             return results
-
-    warnings.append(
-        f"IDV activity traversal hit the internal safety ceiling of {_MAX_IDV_PAGES} pages."
-    )
-    return results
+        if not batch:
+            warnings.append(
+                "IDV activity traversal stopped because USAspending reported another page but returned no rows."
+            )
+            return results
+        page += 1
 
 
 async def _fetch_transactions(
@@ -2898,6 +2917,23 @@ def _page_has_next(payload: dict[str, Any], result_count: int, limit: int) -> bo
     if isinstance(metadata, dict) and metadata.get("hasNext") is not None:
         return bool(metadata.get("hasNext"))
     return result_count >= limit
+
+
+def _page_is_repeated(
+    batch: list[Any],
+    seen_page_signatures: set[tuple[str, ...]],
+) -> bool:
+    signature = tuple(
+        _clean_text(row.get("generated_unique_award_id")) or ""
+        for row in batch
+        if isinstance(row, dict)
+    )
+    if not signature:
+        return False
+    if signature in seen_page_signatures:
+        return True
+    seen_page_signatures.add(signature)
+    return False
 
 
 def _date_only(value: Any) -> str | None:
