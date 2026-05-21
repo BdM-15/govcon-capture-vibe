@@ -157,6 +157,22 @@ def test_session_tool_error_surfaces(tmp_path: Path, monkeypatch) -> None:
     _run(_go())
 
 
+def test_session_handles_large_json_rpc_lines(tmp_path: Path, monkeypatch) -> None:
+    async def _go():
+        _write_manifest(tmp_path / "large")
+        manifest = load_manifest(tmp_path / "large" / "theseus_manifest.json")
+        monkeypatch.setenv("THESEUS_FAKE_MCP_LARGE_ECHO_CHARS", "200000")
+        session = MCPSession(manifest)
+        try:
+            await session.start()
+            out = await session.call_tool("echo", {"text": "ignored"})
+            assert out == "echo:" + ("x" * 200000)
+        finally:
+            await session.shutdown()
+
+    _run(_go())
+
+
 def test_session_shutdown_idempotent(tmp_path: Path) -> None:
     async def _go():
         _write_manifest(tmp_path / "fakey")

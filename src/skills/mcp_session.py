@@ -18,6 +18,7 @@ from src.skills.mcp_protocol import (
 from src.skills.settings import (
     mcp_handshake_timeout,
     mcp_shutdown_timeout,
+    mcp_stdio_buffer_limit,
     mcp_tool_call_timeout,
 )
 
@@ -65,6 +66,7 @@ class MCPSession:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=env,
+                limit=mcp_stdio_buffer_limit(),
             )
         except FileNotFoundError as exc:
             raise MCPError(

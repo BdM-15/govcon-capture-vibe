@@ -143,6 +143,11 @@ def mcp_shutdown_timeout() -> float:
     return env_float("MCP_SHUTDOWN_TIMEOUT", 3.0, 0.1)
 
 
+def mcp_stdio_buffer_limit() -> int:
+    """Maximum bytes asyncio will buffer for one MCP stdio line."""
+    return env_int("MCP_STDIO_BUFFER_LIMIT", 16_000_000, 65_536, 100_000_000)
+
+
 class SkillSettingsStore:
     """Per-workspace skill invocation settings backed by JSON files."""
 

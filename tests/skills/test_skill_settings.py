@@ -7,6 +7,7 @@ from src.skills.settings import (
     env_int,
     mcp_handshake_timeout,
     mcp_shutdown_timeout,
+    mcp_stdio_buffer_limit,
     mcp_tool_call_timeout,
     resolve_skill_runtime_mode,
     skill_tools_max_turns,
@@ -44,6 +45,14 @@ def test_mcp_timeouts_are_read_from_skill_settings(monkeypatch) -> None:
 
     monkeypatch.delenv("X_INT", raising=False)
     assert env_int("X_INT", 10, 1, 100) == 10
+
+
+def test_mcp_stdio_buffer_limit_is_env_backed(monkeypatch) -> None:
+    monkeypatch.setenv("MCP_STDIO_BUFFER_LIMIT", "250000")
+    assert mcp_stdio_buffer_limit() == 250000
+
+    monkeypatch.setenv("MCP_STDIO_BUFFER_LIMIT", "1")
+    assert mcp_stdio_buffer_limit() == 65536
 
 
 def test_resolve_skill_runtime_mode_precedence(monkeypatch) -> None:
