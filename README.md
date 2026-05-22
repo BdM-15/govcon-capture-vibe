@@ -43,6 +43,12 @@ Vanilla LightRAG can't tell a CLIN from a generic line item, doesn't recognize t
 
 ## Quick Start
 
+### Known Dependency Constraint (Pydantic v3)
+
+- Current stack is intentionally on Pydantic v2.x.
+- This repo does not directly pin `pydantic`, but core dependencies currently require `<3` (notably FastAPI, OpenAI SDK, Instructor, xAI SDK).
+- Upgrade to Pydantic v3 should be deferred until upstream constraints widen; track periodically by checking dependency metadata in the active `.venv`.
+
 ### Prerequisites
 
 - **Python 3.13+**

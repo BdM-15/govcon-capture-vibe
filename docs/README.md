@@ -26,3 +26,4 @@ Living documentation index for Project Theseus.
 
 - Historical architecture and white-paper docs were removed during repo cleanup. Use git history if you need archived context.
 - Current system facts live in [../README.md](../README.md) and [../.github/copilot-instructions.md](../.github/copilot-instructions.md), not in deleted design memos.
+- Pydantic v3 migration is a future item blocked by upstream dependency constraints (`<3` in key packages); see [../README.md](../README.md) section "Known Dependency Constraint (Pydantic v3)".
