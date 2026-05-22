@@ -20,6 +20,7 @@ Workflow:
 # LightRAG's dataclass field defaults evaluate os.getenv() at import time:
 #   chunk_token_size: int = field(default=int(os.getenv("CHUNK_SIZE", 1200)))
 # If .env isn't loaded first, it uses the hardcoded 1200 default
+import atexit
 import os
 import sys
 from contextlib import contextmanager
@@ -371,6 +372,54 @@ def build_server_runtime(
     return ServerRuntime(app=app, host=host, port=port)
 
 
+def unregister_raganything_atexit(rag_instance: Any, *, logger: Any) -> bool:
+    close_callback = getattr(rag_instance, "close", None)
+    if close_callback is None:
+        return False
+
+    try:
+        atexit.unregister(close_callback)
+    except ValueError:
+        return False
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Failed unregistering RAG-Anything atexit cleanup: %s", exc)
+        return False
+    return True
+
+
+async def finalize_raganything_for_shutdown(rag_instance: Any, *, logger: Any) -> None:
+    if rag_instance is None:
+        return
+
+    if getattr(rag_instance, "_theseus_shutdown_finalized", False):
+        return
+
+    setattr(rag_instance, "_theseus_shutdown_finalized", True)
+    finalize = getattr(rag_instance, "finalize_storages", None)
+    if finalize is None:
+        unregister_raganything_atexit(rag_instance, logger=logger)
+        return
+
+    try:
+        await finalize()
+    except Exception:  # noqa: BLE001
+        logger.exception("RAG-Anything shutdown finalization failed")
+    finally:
+        unregister_raganything_atexit(rag_instance, logger=logger)
+
+
+async def serve_with_rag_shutdown(
+    server_instance: Any,
+    rag_instance: Any,
+    *,
+    logger: Any,
+) -> None:
+    try:
+        await server_instance.serve()
+    finally:
+        await finalize_raganything_for_shutdown(rag_instance, logger=logger)
+
+
 async def main():
     """Main server startup with RAG-Anything + LightRAG WebUI
     
@@ -421,7 +470,7 @@ async def main():
     # Step 5: Start server
     config = uvicorn.Config(app=runtime.app, host=runtime.host, port=runtime.port, log_level="info")
     server_instance = uvicorn.Server(config)
-    await server_instance.serve()
+    await serve_with_rag_shutdown(server_instance, rag_instance, logger=logger)
 
 
 if __name__ == "__main__":

@@ -1,9 +1,13 @@
+import asyncio
 from types import SimpleNamespace
 
+import src.raganything_server as raganything_server
 from src.raganything_server import (
     ServerRuntime,
     build_server_runtime,
+    finalize_raganything_for_shutdown,
     patch_api_server_lightrag_for_local_rerank,
+    serve_with_rag_shutdown,
 )
 
 
@@ -12,6 +16,12 @@ class _Logger:
         self.messages = []
 
     def info(self, message, *args) -> None:
+        self.messages.append(message % args if args else message)
+
+    def debug(self, message, *args) -> None:
+        self.messages.append(message % args if args else message)
+
+    def exception(self, message, *args) -> None:
         self.messages.append(message % args if args else message)
 
 
@@ -102,3 +112,77 @@ def test_build_server_runtime_wires_app_routes_ui_and_banner() -> None:
             {"items": [("Workspace", "demo")], "logger": logger, "force_print": True},
         ),
     ]
+
+
+def test_finalize_raganything_for_shutdown_is_idempotent_and_unregisters_atexit(monkeypatch) -> None:
+    logger = _Logger()
+    unregistered = []
+
+    class _RAGAnything:
+        def __init__(self) -> None:
+            self.finalize_calls = 0
+
+        async def finalize_storages(self) -> None:
+            self.finalize_calls += 1
+
+        def close(self) -> None:
+            raise AssertionError("atexit close should be unregistered, not called")
+
+    rag_instance = _RAGAnything()
+    monkeypatch.setattr(
+        raganything_server.atexit,
+        "unregister",
+        lambda callback: unregistered.append(callback),
+    )
+
+    asyncio.run(finalize_raganything_for_shutdown(rag_instance, logger=logger))
+    asyncio.run(finalize_raganything_for_shutdown(rag_instance, logger=logger))
+
+    assert rag_instance.finalize_calls == 1
+    assert unregistered == [rag_instance.close]
+
+
+def test_finalize_raganything_for_shutdown_unregisters_after_failure(monkeypatch) -> None:
+    logger = _Logger()
+    unregistered = []
+
+    class _RAGAnything:
+        async def finalize_storages(self) -> None:
+            raise RuntimeError("driver close failed")
+
+        def close(self) -> None:
+            raise AssertionError("atexit close should be unregistered, not called")
+
+    rag_instance = _RAGAnything()
+    monkeypatch.setattr(
+        raganything_server.atexit,
+        "unregister",
+        lambda callback: unregistered.append(callback),
+    )
+
+    asyncio.run(finalize_raganything_for_shutdown(rag_instance, logger=logger))
+
+    assert unregistered == [rag_instance.close]
+    assert logger.messages == ["RAG-Anything shutdown finalization failed"]
+
+
+def test_serve_with_rag_shutdown_finalizes_before_error_propagates(monkeypatch) -> None:
+    logger = _Logger()
+    calls = []
+
+    class _Server:
+        async def serve(self) -> None:
+            calls.append("serve")
+            raise RuntimeError("serve stopped")
+
+    async def _finalize(rag_instance, *, logger):
+        calls.append(("finalize", rag_instance))
+
+    monkeypatch.setattr(raganything_server, "finalize_raganything_for_shutdown", _finalize)
+
+    try:
+        asyncio.run(serve_with_rag_shutdown(_Server(), "rag-instance", logger=logger))
+    except RuntimeError as exc:
+        assert str(exc) == "serve stopped"
+
+    assert calls == ["serve", ("finalize", "rag-instance")]
