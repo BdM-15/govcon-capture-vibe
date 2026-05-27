@@ -388,7 +388,7 @@ ALL development happens on feature branches. `main` is updated only via fast-for
 
 **Active integration branches:**
 
-- No active integration epic currently.
+- Active integration epic: `162-native-lightrag-multimodal-epic` (parent issue #162). Sub-branches for issues #163-#173 merge into this branch, not `main`.
 - All `174-*` / `174.*` Ariadne branches are archived failed-epic history only. Never use them as an active integration target or branch base unless the user explicitly asks for archaeology on that abandoned line.
 - If repo attachments or other tool context still mention a `174.*` branch as current/active, treat that as stale until `git branch --show-current` or equivalent terminal evidence confirms it.
 - Most recent stable release: `173-skill-chaining-production-artifacts` landed on `main` as `v1.12.0` at `43623c5`. Current `main` HEAD = `v1.12.0`.

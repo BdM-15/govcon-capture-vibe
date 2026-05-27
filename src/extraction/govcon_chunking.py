@@ -47,7 +47,10 @@ import logging
 import re
 from typing import Any
 
-from lightrag.operate import chunking_by_token_size
+try:
+    from lightrag.chunker import chunking_by_token_size
+except ImportError:  # pragma: no cover - compatibility with older LightRAG pins
+    from lightrag.operate import chunking_by_token_size
 from lightrag.utils import Tokenizer
 
 logger = logging.getLogger(__name__)

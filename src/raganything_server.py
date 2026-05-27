@@ -79,6 +79,15 @@ class ServerRuntime:
 
 
 @dataclass
+class TheseusRAGRuntime:
+    """Native LightRAG runtime plus startup health and settings."""
+
+    adapter: Any
+    health: Any
+    settings: Any
+
+
+@dataclass
 class UIQueryBridges:
     query: Callable[[str, str, list[dict], bool, dict | None], Awaitable[Any]]
     query_data: Callable[[str, str, list[dict], dict | None], Awaitable[Any]]
@@ -118,9 +127,15 @@ def build_startup_banner_items(
     relationship_count: int,
     colors: Any,
     version_resolver: Callable[[str], str] = resolve_package_version,
+    pipeline_health: Any | None = None,
 ) -> list[tuple[str, str]]:
     """Build the startup banner rows for log_banner()."""
     mineru_version = version_resolver("mineru")
+    lightrag_version = (
+        pipeline_health.lightrag_version
+        if pipeline_health is not None
+        else version_resolver("lightrag-hku")
+    )
     device = settings.mineru_device_mode.upper()
     device_color = colors.GREEN if device == "CUDA" else colors.YELLOW
 
@@ -142,8 +157,7 @@ def build_startup_banner_items(
         ),
         ("Reranker", format_reranker_line(settings, colors)),
         ("", ""),
-        ("LightRAG", f"{colors.DIM}{version_resolver('lightrag-hku')}{colors.RESET}"),
-        ("RAG-Anything", f"{colors.DIM}{version_resolver('raganything')}{colors.RESET}"),
+        ("LightRAG", f"{colors.DIM}{lightrag_version}{colors.RESET}"),
         (
             "MinerU",
             f"{colors.DIM}{mineru_version}{colors.RESET}  ·  Device: {colors.BOLD}{device_color}{device}{colors.RESET}  ·  Method: {colors.YELLOW}{settings.parse_method.upper()}{colors.RESET}",
@@ -164,6 +178,45 @@ def build_startup_banner_items(
             f"{colors.BOLD}{colors.MAGENTA}{len(KG_MODULES)} domain ontologies{colors.RESET}  {colors.DIM}injected for query enrichment{colors.RESET}",
         ),
     ]
+    if pipeline_health is None:
+        lightrag_index = next(
+            index for index, (label, _) in enumerate(startup_items) if label == "LightRAG"
+        )
+        startup_items.insert(
+            lightrag_index + 1,
+            ("RAG-Anything", f"{colors.DIM}{version_resolver('raganything')}{colors.RESET}"),
+        )
+    else:
+        pipeline_state = "available" if pipeline_health.native_pipeline_available else "missing"
+        storage = pipeline_health.storage
+        for index, (label, _) in enumerate(startup_items):
+            if label == "Multimodal":
+                startup_items[index] = (
+                    "Multimodal",
+                    f"{pipeline_health.multimodal}  {colors.GREEN}▸ ENABLED{colors.RESET}",
+                )
+                break
+        lightrag_index = next(
+            index for index, (label, _) in enumerate(startup_items) if label == "LightRAG"
+        )
+        startup_items.insert(
+            lightrag_index + 1,
+            (
+                "Native Pipeline",
+                f"{colors.GREEN if pipeline_health.native_pipeline_available else colors.YELLOW}{pipeline_state}{colors.RESET}",
+            ),
+        )
+        startup_items.insert(
+            lightrag_index + 2,
+            ("Role Registry", f"{colors.CYAN}{', '.join(pipeline_health.roles)}{colors.RESET}"),
+        )
+        startup_items.insert(
+            lightrag_index + 3,
+            (
+                "Storage Detail",
+                f"kv={storage['kv']} · vector={storage['vector']} · graph={storage['graph']} · doc_status={storage['doc_status']}",
+            ),
+        )
     startup_items.extend(
         (f"  {colors.MAGENTA}▸{colors.RESET} {name}", f"{colors.DIM}{description}{colors.RESET}")
         for name, description in KG_MODULES
@@ -186,6 +239,37 @@ def build_startup_banner_items(
     if graph_storage == "Neo4JStorage":
         startup_items.append(("Neo4j", f"{colors.BLUE}http://localhost:7474{colors.RESET}"))
     return startup_items
+
+
+async def initialize_theseus_rag_runtime(
+    *,
+    global_args_obj: Any,
+    configure_lightrag_args_fn: Callable[[], None] | None = None,
+    initialize_native_lightrag_fn: Callable[..., Awaitable[Any]] | None = None,
+    get_settings_fn: Callable[[], Any] | None = None,
+) -> TheseusRAGRuntime:
+    """Configure and initialize the native LightRAG runtime for Theseus."""
+
+    if configure_lightrag_args_fn is None:
+        from src.server.config import configure_lightrag_args as configure_lightrag_args_fn
+
+    if initialize_native_lightrag_fn is None:
+        from src.server.native_lightrag_runtime import initialize_native_lightrag as initialize_native_lightrag_fn
+
+    if get_settings_fn is None:
+        from src.core import get_settings as get_settings_fn
+
+    configure_lightrag_args_fn()
+    settings = get_settings_fn()
+    native_runtime = await initialize_native_lightrag_fn(
+        settings,
+        graph_storage=getattr(global_args_obj, "graph_storage", None),
+    )
+    return TheseusRAGRuntime(
+        adapter=native_runtime.adapter,
+        health=native_runtime.health,
+        settings=settings,
+    )
 
 
 def make_ui_query_bridges(
@@ -312,6 +396,7 @@ def build_server_runtime(
     colors: Any | None = None,
     entity_types: list[Any] | None = None,
     relationship_types: list[Any] | None = None,
+    pipeline_health: Any | None = None,
 ) -> ServerRuntime:
     """Build app, wire routes/UI, log banner, return launch config."""
 
@@ -361,6 +446,7 @@ def build_server_runtime(
         entity_count=len(entity_types),
         relationship_count=len(relationship_types),
         colors=colors,
+        pipeline_health=pipeline_health,
     )
     log_banner_fn(
         f"{colors.BOLD}✅ PROJECT THESEUS — READY{colors.RESET}",
@@ -435,29 +521,17 @@ async def main():
     """
     from lightrag.api.config import global_args
     from lightrag.api.lightrag_server import create_app
-    from src.core import get_settings
-    from src.server.config import configure_raganything_args
-    from src.server.initialization import initialize_raganything, get_rag_instance
     from src.server.routes import register_custom_ingestion_routes
     from src.server.ui_routes import register_ui
     import uvicorn
 
     # Initialization message moved to app.py for cleaner startup
-    
-    # Step 1: Configure LightRAG global_args
-    configure_raganything_args()
-    
-    # Step 2: Initialize RAG-Anything for document processing
-    await initialize_raganything()
-    rag_instance = get_rag_instance()
-    
-    if not rag_instance:
-        raise RuntimeError("Failed to initialize RAG-Anything instance")
-    
-    settings = get_settings()
+
+    rag_runtime = await initialize_theseus_rag_runtime(global_args_obj=global_args)
+    rag_instance = rag_runtime.adapter
     runtime = build_server_runtime(
         rag_instance,
-        settings=settings,
+        settings=rag_runtime.settings,
         global_args_obj=global_args,
         logger=logger,
         create_app_fn=create_app,
@@ -465,6 +539,7 @@ async def main():
         make_ui_query_bridges_fn=make_ui_query_bridges,
         register_ui_fn=register_ui,
         build_startup_banner_items_fn=build_startup_banner_items,
+        pipeline_health=rag_runtime.health,
     )
 
     # Step 5: Start server

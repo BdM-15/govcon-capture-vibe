@@ -16,7 +16,6 @@ load_dotenv(override=True)
 # Now safe to import LightRAG and our config
 import logging
 from lightrag.api.config import global_args
-from lightrag.operate import chunking_by_token_size  # noqa: F401  # kept for reference / fallback
 from src.extraction.govcon_chunking import govcon_chunking_func
 
 from src.core.config import get_settings
@@ -25,12 +24,9 @@ from src.ontology.schema import VALID_ENTITY_TYPES
 logger = logging.getLogger(__name__)
 
 
-def configure_raganything_args():
+def configure_lightrag_args():
     """
-    Configure global_args for LightRAG server to use with RAG-Anything.
-    
-    We'll configure the LightRAG server normally, then RAG-Anything will
-    wrap the storage/processing with multimodal capabilities.
+    Configure global_args for the native LightRAG server runtime.
     
     All configuration values come from the centralized Settings class.
     """
@@ -164,3 +160,8 @@ def configure_raganything_args():
     )
     
     # Configuration complete - detailed startup logging happens in initialization.py
+
+
+def configure_raganything_args():
+    """Backward-compatible alias for older tests and migration branches."""
+    configure_lightrag_args()

@@ -8,7 +8,7 @@ dependencies = [
     # Core RAG functionality (includes lightrag-hku, mineru[core], and document parsers)
     "raganything[all]>=1.2.10",
     # LightRAG knowledge graph engine (explicit pin for Neo4j workspace features)
-    "lightrag-hku>=1.4.13",
+    "lightrag-hku>=1.5.0rc3",
     # Cloud LLM access (xAI Grok via OpenAI-compatible API)
     # v2.x required by instructor >=1.15 and LightRAG >=1.4.13
     "openai>=2.0.0,<3.0.0",
@@ -72,7 +72,7 @@ explicit = true
 # Override torch/torchvision to use CUDA 12.4 builds
 torch = { index = "pytorch-cu124" }
 torchvision = { index = "pytorch-cu124" }
-lightrag-hku = { git = "https://github.com/HKUDS/LightRAG.git", rev = "7ad1e82096ade043de530baf9565e90184749f50" }
+lightrag-hku = { git = "https://github.com/HKUDS/LightRAG.git", rev = "33b067ffadf1eee2655a7efe9c72de4f8c25cbab" }
 
 [dependency-groups]
 dev = [
