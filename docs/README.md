@@ -10,6 +10,7 @@ Living documentation index for Project Theseus.
 - Skills platform overview: [SKILLS.md](SKILLS.md)
 - Skill authoring and audit rules: [SKILL_SPEC_COMPLIANCE.md](SKILL_SPEC_COMPLIANCE.md)
 - Skill taxonomy and closed vocabularies: [SKILL_TAXONOMY.md](SKILL_TAXONOMY.md)
+- Native ingestion regression gate: [NATIVE_INGESTION_REGRESSION_GATE.md](NATIVE_INGESTION_REGRESSION_GATE.md)
 
 ## Current docs
 
@@ -20,6 +21,7 @@ Living documentation index for Project Theseus.
 | [SKILLS.md](SKILLS.md)                                                   | Dual-use skills platform, authoring contract, install flow  |
 | [SKILL_SPEC_COMPLIANCE.md](SKILL_SPEC_COMPLIANCE.md)                     | Open Agent Skills compliance audit and migration notes      |
 | [SKILL_TAXONOMY.md](SKILL_TAXONOMY.md)                                   | Persona, Shipley phase, and capability vocabularies         |
+| [NATIVE_INGESTION_REGRESSION_GATE.md](NATIVE_INGESTION_REGRESSION_GATE.md) | Native LightRAG smoke gate and local MinerU/VLM checklist |
 | [../.github/copilot-instructions.md](../.github/copilot-instructions.md) | Repo-specific coding rules and cross-cutting checklists     |
 
 ## Notes

@@ -347,6 +347,10 @@ When surfacing a non-trivial structural change:
     - `.\.venv\Scripts\python.exe tools/test_query_prompt.py --workspace <name> --query-id M2` — Tests mentor persona signal detection
     - Signal categories: `shipley_terms`, `mentoring_language`, `risk_flags`, `reasoning_chain`
     - Note: Tests query against cached LLM responses. Re-process workspace under new prompts for fresh results.
+4.  **Native Ingestion Regression Gate**:
+  - `.\.venv\Scripts\python.exe tools/native_ingestion_regression_gate.py --fixture --json` — no-GPU/no-MinerU smoke for native pipeline capabilities, parser routing, multimodal prompt contracts, fixture entity/relationship counts, multimodal evidence, and known-answer checks.
+  - Full local check: `.\.venv\Scripts\python.exe tools/native_ingestion_regression_gate.py --workspace rag_storage/<workspace> --known-answer-file tools/native_known_answers.example.json --require-multimodal --output run-dir/artifacts/native-ingestion-gate.json` after reprocessing a representative workspace.
+  - Run the fixture gate before touching native ingestion, parser routing, multimodal prompts, strict-schema boundaries, or LightRAG pins. See `docs/NATIVE_INGESTION_REGRESSION_GATE.md`.
 
 ### Environment Setup
 

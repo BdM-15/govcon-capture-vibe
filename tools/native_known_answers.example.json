@@ -1,0 +1,19 @@
+{
+  "checks": [
+    {
+      "id": "lm_traceability",
+      "query": "How do Section L instructions map to Section M evaluation factors?",
+      "expected_terms": ["section l", "section m", "evaluation factor"]
+    },
+    {
+      "id": "deliverable_catalog",
+      "query": "Which deliverables or CDRLs are required?",
+      "expected_terms": ["cdrl", "deliverable"]
+    },
+    {
+      "id": "multimodal_workload",
+      "query": "What workload evidence appears in tables or attachments?",
+      "expected_terms": ["workload", "table"]
+    }
+  ]
+}
