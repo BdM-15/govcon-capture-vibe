@@ -52,12 +52,14 @@ def test_register_custom_ingestion_routes_replaces_insert_and_upload() -> None:
 
 def test_route_document_processor_uses_native_lightrag_ingestion(monkeypatch) -> None:
     calls = []
+    callback = object()
 
-    async def fake_native_ingest(file_path, file_name, rag_instance, llm_func):
-        calls.append((file_path, file_name, rag_instance, llm_func))
+    async def fake_native_ingest(file_path, file_name, rag_instance, llm_func, *, callback):
+        calls.append((file_path, file_name, rag_instance, llm_func, callback))
         return {"method": "native_lightrag_pipeline"}
 
     monkeypatch.setattr(routes, "run_native_ingestion", fake_native_ingest)
+    monkeypatch.setattr(routes, "_callback", callback)
     rag = object()
     llm = object()
 
@@ -71,7 +73,7 @@ def test_route_document_processor_uses_native_lightrag_ingestion(monkeypatch) ->
     )
 
     assert result == {"method": "native_lightrag_pipeline"}
-    assert calls == [("inputs/ws/demo.pdf", "demo.pdf", rag, llm)]
+    assert calls == [("inputs/ws/demo.pdf", "demo.pdf", rag, llm, callback)]
 
 
 def test_default_upload_and_scan_routes_share_native_processor(monkeypatch) -> None:

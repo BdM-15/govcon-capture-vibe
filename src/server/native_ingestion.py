@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -58,6 +59,7 @@ async def process_document_with_native_ingestion(
     *,
     track_id: str | None = None,
     from_scan: bool = False,
+    callback: Any | None = None,
 ) -> dict[str, Any]:
     """Queue one source document through LightRAG's native parser pipeline."""
 
@@ -66,6 +68,7 @@ async def process_document_with_native_ingestion(
     resolved_track_id = track_id or _new_track_id(file_name)
     parser_engine, process_options = resolve_govcon_parser_directives(file_name or file_path)
     doc_id = compute_mdhash_id(Path(file_name or file_path).name, prefix="doc-")
+    start_time = time.perf_counter()
 
     try:
         logger.info(
@@ -85,6 +88,12 @@ async def process_document_with_native_ingestion(
             from_scan=from_scan,
         )
         await lightrag.apipeline_process_enqueue_documents()
+        if callback is not None:
+            callback.on_document_complete(
+                file_path=file_path,
+                doc_id=doc_id,
+                duration_seconds=time.perf_counter() - start_time,
+            )
         return {
             "status": "success",
             "relationships_inferred": 0,
@@ -101,4 +110,10 @@ async def process_document_with_native_ingestion(
             doc_id,
             str(exc),
         )
+        if callback is not None:
+            callback.on_document_error(
+                file_path=file_path,
+                doc_id=doc_id,
+                error=str(exc),
+            )
         raise

@@ -33,6 +33,7 @@ async def process_document_with_native_ingestion(
         file_name,
         rag_instance,
         llm_func,
+        callback=_callback,
     )
 
 

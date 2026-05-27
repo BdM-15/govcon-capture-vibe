@@ -40,6 +40,18 @@ class _Rag:
         self.lightrag = lightrag
 
 
+class _NativeCallback:
+    def __init__(self):
+        self.completed: list[dict] = []
+        self.errors: list[dict] = []
+
+    def on_document_complete(self, **kwargs) -> None:
+        self.completed.append(kwargs)
+
+    def on_document_error(self, **kwargs) -> None:
+        self.errors.append(kwargs)
+
+
 def test_process_document_with_native_ingestion_enqueues_pending_parse_document(tmp_path: Path) -> None:
     source = tmp_path / "demo.pdf"
     source.write_bytes(b"%PDF")
@@ -73,6 +85,30 @@ def test_process_document_with_native_ingestion_enqueues_pending_parse_document(
     }
 
 
+def test_native_ingestion_success_notifies_batch_callback(tmp_path: Path) -> None:
+    source = tmp_path / "demo.pdf"
+    source.write_bytes(b"%PDF")
+    lightrag = _NativeLightRAG(workspace="alpha")
+    callback = _NativeCallback()
+
+    asyncio.run(
+        process_document_with_native_ingestion(
+            str(source),
+            source.name,
+            _Rag(lightrag),
+            llm_func=object(),
+            track_id="upload-demo",
+            callback=callback,
+        )
+    )
+
+    assert len(callback.completed) == 1
+    assert callback.completed[0]["file_path"] == str(source)
+    assert callback.completed[0]["doc_id"].startswith("doc-")
+    assert callback.completed[0]["duration_seconds"] >= 0
+    assert callback.errors == []
+
+
 def test_resolve_govcon_parser_directives_keeps_text_bearing_tables_in_text_chunks(monkeypatch) -> None:
     monkeypatch.setenv("LIGHTRAG_PARSER", "pdf:mineru-ite,docx:native-ite,xls*:mineru-t")
 
@@ -103,6 +139,31 @@ def test_native_ingestion_failure_records_recoverable_failed_status(tmp_path: Pa
     assert failed_doc["file_path"] == "broken.pdf"
     assert failed_doc["status"] == "failed"
     assert failed_doc["error_msg"] == "parser failed"
+
+
+def test_native_ingestion_failure_notifies_batch_callback(tmp_path: Path) -> None:
+    source = tmp_path / "broken.pdf"
+    source.write_bytes(b"%PDF")
+    lightrag = _NativeLightRAG(workspace="alpha", fail_process=True)
+    callback = _NativeCallback()
+
+    with pytest.raises(RuntimeError, match="parser failed"):
+        asyncio.run(
+            process_document_with_native_ingestion(
+                str(source),
+                source.name,
+                _Rag(lightrag),
+                llm_func=object(),
+                track_id="upload-broken",
+                callback=callback,
+            )
+        )
+
+    assert callback.completed == []
+    assert len(callback.errors) == 1
+    assert callback.errors[0]["file_path"] == str(source)
+    assert callback.errors[0]["doc_id"].startswith("doc-")
+    assert callback.errors[0]["error"] == "parser failed"
 
 
 def test_native_ingestion_uses_active_lightrag_workspace_instance(tmp_path: Path) -> None:
