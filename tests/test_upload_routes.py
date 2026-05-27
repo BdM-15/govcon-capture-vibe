@@ -34,7 +34,7 @@ def test_insert_endpoint_processes_saved_file(monkeypatch, tmp_path: Path) -> No
         return saved_path
 
     async def fake_process(file_path, file_name, rag_instance, llm_func):
-        return {"relationships_inferred": 3}
+        return {"relationships_inferred": 3, "method": "native_lightrag_pipeline"}
 
     monkeypatch.setattr(upload_routes, "save_upload_to_workspace", fake_save)
 
@@ -53,6 +53,7 @@ def test_insert_endpoint_processes_saved_file(monkeypatch, tmp_path: Path) -> No
 
     assert response.status_code == 200, response.text
     assert response.json()["relationships_inferred"] == 3
+    assert response.json()["method"] == "native_lightrag_pipeline"
     assert callback.started == ["demo.pdf"]
     assert callback.ended == ["demo.pdf"]
 
@@ -103,7 +104,7 @@ def test_documents_upload_processes_when_not_stage_only(monkeypatch, tmp_path: P
         return saved_path
 
     async def fake_process(file_path, file_name, rag_instance, llm_func):
-        return {"relationships_inferred": 1}
+        return {"relationships_inferred": 1, "method": "native_lightrag_pipeline"}
 
     monkeypatch.setattr(upload_routes, "save_upload_to_workspace", fake_save)
 
@@ -123,5 +124,6 @@ def test_documents_upload_processes_when_not_stage_only(monkeypatch, tmp_path: P
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "success"
     assert response.json()["relationships_inferred"] == 1
+    assert response.json()["method"] == "native_lightrag_pipeline"
     assert callback.started == ["demo.pdf"]
     assert callback.ended == ["demo.pdf"]
