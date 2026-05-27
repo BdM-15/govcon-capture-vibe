@@ -23,7 +23,7 @@ LightRAG evaluates os.getenv() at import time for dataclass defaults.
 import os
 from typing import Optional
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings
 
 
@@ -287,8 +287,75 @@ class Settings(BaseSettings):
     )
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # MINERU CONFIGURATION
+    # NATIVE LIGHTRAG PARSER ROUTING + MINERU CONFIGURATION
     # ═══════════════════════════════════════════════════════════════════════════
+    lightrag_parser: str = Field(
+        default="pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xls*:mineru-t",
+        validation_alias="LIGHTRAG_PARSER",
+        description="LightRAG-native parser routing rules, e.g. pdf:mineru-ite,docx:native-ite; unmatched files use legacy fallback"
+    )
+    mineru_api_mode: str = Field(
+        default="local",
+        validation_alias="MINERU_API_MODE",
+        description="LightRAG MinerU API mode: local or official"
+    )
+    mineru_local_endpoint: str = Field(
+        default="http://localhost:8888",
+        validation_alias="MINERU_LOCAL_ENDPOINT",
+        description="Base URL for a self-hosted MinerU API when MINERU_API_MODE=local"
+    )
+    mineru_official_endpoint: str = Field(
+        default="https://mineru.net",
+        validation_alias="MINERU_OFFICIAL_ENDPOINT",
+        description="Base URL for MinerU official API when MINERU_API_MODE=official"
+    )
+    mineru_api_token: Optional[str] = Field(
+        default=None,
+        validation_alias="MINERU_API_TOKEN",
+        description="MinerU official API token; required only when MINERU_API_MODE=official"
+    )
+    mineru_local_backend: str = Field(
+        default="pipeline",
+        validation_alias=AliasChoices("MINERU_LOCAL_BACKEND", "MINERU_BACKEND"),
+        description="MinerU local backend passed to LightRAG's native MinerU client"
+    )
+    mineru_local_parse_method: str = Field(
+        default="auto",
+        validation_alias=AliasChoices("MINERU_LOCAL_PARSE_METHOD", "PARSE_METHOD"),
+        description="MinerU local parse method passed to LightRAG's native MinerU client"
+    )
+    mineru_language: str = Field(
+        default="en",
+        validation_alias=AliasChoices("MINERU_LANGUAGE", "MINERU_LANG"),
+        description="MinerU language hint passed to LightRAG's native MinerU client"
+    )
+    max_parallel_parse_native: int = Field(
+        default=5,
+        validation_alias="MAX_PARALLEL_PARSE_NATIVE",
+        description="LightRAG native parser worker concurrency"
+    )
+    max_parallel_parse_mineru: int = Field(
+        default=1,
+        validation_alias="MAX_PARALLEL_PARSE_MINERU",
+        description="LightRAG MinerU parser worker concurrency"
+    )
+    max_parallel_parse_docling: int = Field(
+        default=1,
+        validation_alias="MAX_PARALLEL_PARSE_DOCLING",
+        description="LightRAG Docling parser worker concurrency"
+    )
+    max_parallel_analyze: int = Field(
+        default=5,
+        validation_alias="MAX_PARALLEL_ANALYZE",
+        description="LightRAG multimodal analysis worker concurrency"
+    )
+    vlm_process_enable: bool = Field(
+        default=True,
+        validation_alias="VLM_PROCESS_ENABLE",
+        description="Enable LightRAG native VLM multimodal analysis for routed i/t/e content"
+    )
+
+    # Legacy RAG-Anything / MinerU names retained while the migration finishes.
     parser: str = Field(
         default="mineru",
         description="Document parser: mineru or docling"

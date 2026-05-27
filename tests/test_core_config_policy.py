@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.core.config import (
+    Settings,
     effective_async,
     missing_required_settings_errors,
     validate_required_settings,
@@ -47,3 +48,35 @@ def test_validate_required_settings_raises_full_message() -> None:
 
     with pytest.raises(ValueError, match="LLM_BINDING_API_KEY is required"):
         validate_required_settings(settings)
+
+
+def test_settings_exposes_native_lightrag_parser_env_names() -> None:
+    settings = Settings(
+        LIGHTRAG_PARSER="pdf:mineru-ite,docx:native-ite",
+        MINERU_API_MODE="official",
+        MINERU_OFFICIAL_ENDPOINT="https://mineru.example",
+        MINERU_API_TOKEN="mineru-token",
+        MINERU_LOCAL_BACKEND="pipeline",
+        MINERU_LOCAL_PARSE_METHOD="ocr",
+        MINERU_LANGUAGE="en",
+        MAX_PARALLEL_PARSE_NATIVE=6,
+        MAX_PARALLEL_PARSE_MINERU=3,
+        MAX_PARALLEL_PARSE_DOCLING=2,
+        MAX_PARALLEL_ANALYZE=8,
+        VLM_PROCESS_ENABLE=True,
+        CHUNK_SIZE=4096,
+        CHUNK_OVERLAP_SIZE=600,
+    )
+
+    assert settings.lightrag_parser == "pdf:mineru-ite,docx:native-ite"
+    assert settings.mineru_api_mode == "official"
+    assert settings.mineru_official_endpoint == "https://mineru.example"
+    assert settings.mineru_api_token == "mineru-token"
+    assert settings.mineru_local_backend == "pipeline"
+    assert settings.mineru_local_parse_method == "ocr"
+    assert settings.mineru_language == "en"
+    assert settings.max_parallel_parse_native == 6
+    assert settings.max_parallel_parse_mineru == 3
+    assert settings.max_parallel_parse_docling == 2
+    assert settings.max_parallel_analyze == 8
+    assert settings.vlm_process_enable is True

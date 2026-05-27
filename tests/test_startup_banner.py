@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from src.raganything_server import build_startup_banner_items, format_reranker_line
-from src.server.native_lightrag_runtime import NativePipelineHealth
+from src.server.native_lightrag_runtime import NativeParserHealth, NativePipelineHealth
 
 
 class _Colors:
@@ -92,6 +92,14 @@ def test_build_startup_banner_items_reports_native_pipeline_health() -> None:
                 "doc_status": "JsonDocStatusStorage",
             },
             multimodal="native",
+            parser=NativeParserHealth(
+                routing="pdf:mineru-ite,docx:native-ite",
+                mineru_api_mode="local",
+                mineru_endpoint="http://localhost:8888",
+                mineru_backend="pipeline",
+                mineru_parse_method="auto",
+                concurrency={"native": 5, "mineru": 2, "docling": 1, "analyze": 4},
+            ),
         ),
     )
 
@@ -102,6 +110,13 @@ def test_build_startup_banner_items_reports_native_pipeline_health() -> None:
     assert "Storage Detail" in labels
     assert "Schema" in labels
     assert "RAG-Anything" not in labels
+    assert "Parser Routing" in labels
+    assert "MinerU Mode" in labels
+    assert "Parser Workers" in labels
     assert "1.5.0rc3" in values
     assert "extract, keyword, query, vlm" in values
     assert "JsonKVStorage" in values
+    assert "pdf:mineru-ite,docx:native-ite" in values
+    assert "local" in values
+    assert "pipeline" in values
+    assert "mineru=2" in values

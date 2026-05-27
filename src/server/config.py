@@ -1,5 +1,5 @@
 """
-Server Configuration for RAG-Anything + LightRAG
+Server Configuration for native LightRAG
 
 Configures global_args for LightRAG server with government contracting ontology.
 Uses xAI Grok for LLM and OpenAI for embeddings.
@@ -15,13 +15,38 @@ load_dotenv(override=True)
 
 # Now safe to import LightRAG and our config
 import logging
+from typing import Any, Callable
+
 from lightrag.api.config import global_args
 from src.extraction.govcon_chunking import govcon_chunking_func
 
 from src.core.config import get_settings
 from src.ontology.schema import VALID_ENTITY_TYPES
+from src.server.native_lightrag_runtime import NativeParserHealth, configure_native_parser_environment
 
 logger = logging.getLogger(__name__)
+
+
+def configure_native_parser_args(
+    settings: Any,
+    *,
+    global_args_obj: Any = global_args,
+    environ: dict[str, str] | None = None,
+    validate_parser_routing_fn: Callable[[str], None] | None = None,
+) -> NativeParserHealth:
+    """Apply LightRAG-native parser routing settings to env and global args."""
+
+    parser_health = configure_native_parser_environment(
+        settings,
+        environ=environ,
+        validate_parser_routing_fn=validate_parser_routing_fn,
+    )
+    global_args_obj.vlm_process_enable = bool(getattr(settings, "vlm_process_enable", True))
+    global_args_obj.max_parallel_parse_native = parser_health.concurrency["native"]
+    global_args_obj.max_parallel_parse_mineru = parser_health.concurrency["mineru"]
+    global_args_obj.max_parallel_parse_docling = parser_health.concurrency["docling"]
+    global_args_obj.max_parallel_analyze = parser_health.concurrency["analyze"]
+    return parser_health
 
 
 def configure_lightrag_args():
@@ -148,10 +173,18 @@ def configure_lightrag_args():
     
     # Multimodal support
     global_args.enable_multimodal = True
+    parser_health = configure_native_parser_args(settings)
     
     logger.info(f"  Parallelization: max_parallel_insert={settings.max_parallel_insert}, "
                 f"llm_max_async={effective_llm_async}, embedding_max_async={effective_embedding_async}")
     logger.info(f"  Post-processing will use: max_async={settings.get_effective_post_processing_max_async()}")
+    logger.info(
+        "  Native parser routing: %s; MinerU mode=%s backend=%s method=%s",
+        parser_health.routing or "legacy",
+        parser_health.mineru_api_mode,
+        parser_health.mineru_backend,
+        parser_health.mineru_parse_method,
+    )
     logger.info(
         "  Local state storage: kv=%s, vector=%s, doc_status=%s",
         global_args.kv_storage,

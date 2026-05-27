@@ -189,12 +189,24 @@ def build_startup_banner_items(
     else:
         pipeline_state = "available" if pipeline_health.native_pipeline_available else "missing"
         storage = pipeline_health.storage
+        parser = pipeline_health.parser
         for index, (label, _) in enumerate(startup_items):
             if label == "Multimodal":
                 startup_items[index] = (
                     "Multimodal",
                     f"{pipeline_health.multimodal}  {colors.GREEN}▸ ENABLED{colors.RESET}",
                 )
+            if label == "MinerU":
+                startup_items[index] = (
+                    "MinerU",
+                    f"{colors.DIM}{mineru_version}{colors.RESET}  ·  Mode: {colors.YELLOW}{parser.mineru_api_mode.upper()}{colors.RESET}  ·  Backend: {colors.CYAN}{parser.mineru_backend}{colors.RESET}  ·  Method: {colors.YELLOW}{parser.mineru_parse_method}{colors.RESET}",
+                )
+            if label == "MinerU" and parser.mineru_endpoint:
+                startup_items[index] = (
+                    "MinerU",
+                    f"{startup_items[index][1]}  ·  Endpoint: {colors.DIM}{parser.mineru_endpoint}{colors.RESET}",
+                )
+            if label == "Multimodal":
                 break
         lightrag_index = next(
             index for index, (label, _) in enumerate(startup_items) if label == "LightRAG"
@@ -215,6 +227,24 @@ def build_startup_banner_items(
             (
                 "Storage Detail",
                 f"kv={storage['kv']} · vector={storage['vector']} · graph={storage['graph']} · doc_status={storage['doc_status']}",
+            ),
+        )
+        startup_items.insert(
+            lightrag_index + 4,
+            ("Parser Routing", f"{colors.CYAN}{parser.routing or 'legacy'}{colors.RESET}"),
+        )
+        startup_items.insert(
+            lightrag_index + 5,
+            (
+                "MinerU Mode",
+                f"{colors.YELLOW}{parser.mineru_api_mode}{colors.RESET} · backend={parser.mineru_backend} · method={parser.mineru_parse_method}",
+            ),
+        )
+        startup_items.insert(
+            lightrag_index + 6,
+            (
+                "Parser Workers",
+                f"native={parser.concurrency['native']} · mineru={parser.concurrency['mineru']} · docling={parser.concurrency['docling']} · analyze={parser.concurrency['analyze']}",
             ),
         )
     startup_items.extend(
@@ -507,11 +537,10 @@ async def serve_with_rag_shutdown(
 
 
 async def main():
-    """Main server startup with RAG-Anything + LightRAG WebUI
+    """Main server startup with native LightRAG + Theseus UI
     
     Architecture:
-    - RAG-Anything: Document ingestion (MinerU multimodal parser)
-    - LightRAG: WebUI + query endpoints (knowledge graph queries)
+    - LightRAG: Native parser pipeline, WebUI, and query endpoints
     - Semantic Post-Processing: Automatic LLM-powered relationship inference
     
     Custom Features:
