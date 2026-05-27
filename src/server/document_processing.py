@@ -326,7 +326,7 @@ async def process_document_with_semantic_inference(
             )
 
         llm_timeout = settings.llm_timeout
-        logger.info("🚀 Using RAG-Anything native end-to-end pipeline")
+        logger.info("🚀 Using legacy content-list compatibility pipeline")
         logger.info("   Ontology: 33 govcon entity types | Timeout: %ss", llm_timeout)
 
         await rag_instance.insert_content_list(
@@ -336,7 +336,7 @@ async def process_document_with_semantic_inference(
         )
 
         total_duration = (datetime.now() - start_time).total_seconds()
-        logger.info("✅ RAG-Anything processing complete")
+        logger.info("✅ Legacy content-list compatibility processing complete")
 
         await ensure_doc_status_processed(
             rag_instance,
@@ -363,8 +363,8 @@ async def process_document_with_semantic_inference(
         return {
             "status": "success",
             "relationships_inferred": 0,
-            "method": "native_rag_anything",
-            "message": "✅ Document processed via RAG-Anything native pipeline.",
+            "method": "legacy_content_list_pipeline",
+            "message": "✅ Document processed via legacy content-list compatibility pipeline.",
         }
     except Exception as exc:
         await record_failed_doc(rag_instance, file_path, file_name, doc_id, str(exc))

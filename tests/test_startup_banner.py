@@ -65,7 +65,7 @@ def test_build_startup_banner_items_includes_endpoints_and_optional_neo4j() -> N
     assert "Workspace" in labels
     assert "Schema" in labels
     assert "WebUI" in labels
-    assert "Capture UI" in labels
+    assert "Capture Workbench" in labels
     assert "Neo4j" in labels
     assert any("33" in value and "35" in value for label, value in items if label == "Schema")
 
@@ -105,6 +105,8 @@ def test_build_startup_banner_items_reports_native_pipeline_health() -> None:
 
     values = "\n".join(value for _, value in items)
     labels = [label for label, _ in items]
+    assert "Runtime" in labels
+    assert any("LightRAG-first" in value for label, value in items if label == "Runtime")
     assert "Native Pipeline" in labels
     assert "Role Registry" in labels
     assert "Storage Detail" in labels

@@ -110,7 +110,7 @@ def test_build_server_runtime_wires_app_routes_ui_and_banner() -> None:
         ),
         (
             "log_banner",
-            "<b>✅ PROJECT THESEUS — READY</b>",
+            "<b>✅ LIGHTRAG-FIRST CAPTURE WORKBENCH READY</b>",
             {"items": [("Workspace", "demo")], "logger": logger, "force_print": True},
         ),
     ]
@@ -224,7 +224,7 @@ def test_finalize_raganything_for_shutdown_unregisters_after_failure(monkeypatch
     asyncio.run(finalize_raganything_for_shutdown(rag_instance, logger=logger))
 
     assert unregistered == [rag_instance.close]
-    assert logger.messages == ["RAG-Anything shutdown finalization failed"]
+    assert logger.messages == ["Compatibility shutdown finalization failed"]
 
 
 def test_serve_with_rag_shutdown_finalizes_before_error_propagates(monkeypatch) -> None:

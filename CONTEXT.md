@@ -58,11 +58,11 @@ Workspace scoping: all Neo4j nodes belonging to a workspace carry a label equal 
 _Avoid_: calling it "the Neo4j client" (ambiguous — `neo4j_config.py` also has a config class); confusing it with the LightRAG-internal KV stores (separate path, separate format).
 
 **Ingest pipeline**:
-The sequence that turns a raw RFP document into graph data: MinerU parse -> content filter/rebalance -> `insert_content_list` (multimodal analysis + LightRAG chunking + entity/relationship extraction) -> batch completion -> semantic post-processing trigger. Entry point: `process_document_with_semantic_inference()` in `src/server/document_processing.py`. This function is passed as `process_document_func` to both upload and scan routes — identical pipeline regardless of trigger.
+The sequence that turns a raw RFP document into graph data: route source file with `LIGHTRAG_PARSER` -> enqueue with LightRAG native pending-parse status -> native parser/MinerU multimodal analysis -> LightRAG chunking + entity/relationship extraction -> batch completion -> semantic post-processing trigger. Entry point: `process_document_with_native_ingestion()` in `src/server/native_ingestion.py`. Upload and scan routes both pass through this helper, so the trigger differs but the processing contract is identical.
 
-Steps inside `process_document_with_semantic_inference`: (1) `rag_instance.parse_document()` via MinerU, (2) `filter_discarded_content_blocks()` — drops structural chrome (`discarded`, `header`, `footer`, `page_number`, `aside_text`, `page_footnote`) defined in `DISCARDED_CONTENT_TYPES`; these carry no extractable govcon content, (3) `rebalance_modal_content_blocks()`, (4) `rag_instance.insert_content_list()` — RAG-Anything native end-to-end (multimodal VLM + LightRAG chunking + extraction), (5) callback dispatches `on_document_complete` -> batch timer reset.
+Steps inside `process_document_with_native_ingestion`: (1) resolve parser engine/options with `resolve_govcon_parser_directives()`, suppressing table VLM for text-bearing file types, (2) compute deterministic `doc-` id, (3) call `apipeline_enqueue_documents(..., docs_format=FULL_DOCS_FORMAT_PENDING_PARSE, parse_engine=..., process_options=...)`, (4) call `apipeline_process_enqueue_documents()` so LightRAG performs parsing, native multimodal analysis, chunking, extraction, KG/VDB writes, and doc-status updates, (5) dispatch `on_document_complete` / `on_document_error` to the batch callback so semantic post-processing can run once the queue is idle.
 
-**Modal rebalancing** (`rebalance_modal_content_blocks`): Pre-`insert_content_list` normalization step. RAG-Anything sends non-text blocks through a VLM multimodal path. If MinerU already extracted text from a table or list, re-typing it as `text` routes it through the cheaper LightRAG text path instead — avoids double-extraction and over-amplification. Rules: `table` with non-empty body → convert to `[TABLE]...[/TABLE]` text block; `list` → `[LIST]...[/LIST]` text block; `seal` → discard; images/equations → pass through as multimodal. Logged as "Rebalanced modal artifacts" with per-type counts.
+**Text-bearing table suppression** (`_suppress_text_bearing_table_analysis`): Native-ingestion guardrail in `src/server/native_ingestion.py`. For CSV, Office, Markdown, TSV, and text files, remove the `t` table-VLM option from resolved parser directives so already-textual tabular content travels the cheaper text/extraction path instead of being amplified through multimodal analysis. The older `rebalance_modal_content_blocks()` helper remains for legacy content-list compatibility only.
 _Avoid_: "the pipeline" (ambiguous -- see Flagged ambiguities).
 
 **Semantic post-processor**:
@@ -79,7 +79,7 @@ _Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambig
 Four sequential sub-operations applied to Neo4j entities before relationship work:
 
 1. **Type cleanup** (`plan_entity_type_updates()`): Deterministic scan of all entities grouped by `entity_type`. Three patterns caught:
-   - `table` type → `heuristic_table_type_mapping()`: keyword match on entity name + description → maps to `proposal_instruction`, `deliverable`, `evaluation_factor`, `performance_standard`, `requirement`, `clause`, etc. (RAG-Anything VLM outputs these as `table` before downstream context is available)
+  - `table` type → `heuristic_table_type_mapping()`: keyword match on entity name + description → maps to `proposal_instruction`, `deliverable`, `evaluation_factor`, `performance_standard`, `requirement`, `clause`, etc. (native multimodal/table extraction can output generic `table` before downstream context is available)
    - `#evaluation_factor` / `|requirement` prefix artifacts → strip `#`/`|` prefix → valid entity type (LightRAG occasionally emits these prefix-polluted strings)
    - `unknown` type → collected for LLM batch retyping (step 2)
 2. **UNKNOWN retyping** (`_retype_unknown_entities()`): LLM call via `retype_entities_batch()`, batches of 20. Entities whose description can't map to a valid govcon type stay `unknown`.
@@ -497,14 +497,14 @@ LightRAG 1.5.0 allows a separate model per processing role. `build_role_llm_rout
 | `vlm`          | `VLM_LLM_MODEL`          | reuses `EXTRACT_LLM_MODEL`    | VLM table/image/equation analysis (LightRAG `vlm` role). Max 8 k tokens.                                                                                      |
 | `post_process` | `POST_PROCESS_LLM_MODEL` | `grok-4-1-fast-reasoning`     | Inference algorithms in `src/inference/`. **Not** a LightRAG role — called directly by `SemanticPostProcessor`.                                               |
 
-`keyword` and `vlm` reuse `extraction_llm_name` at the function level; their `.env` vars exist in config but are not wired in `llm_routing.py`. `modal_llm_func` (RAGAnything multimodal processor) also reuses `extraction_llm_name` and strips any strict JSON schema `response_format` if accidentally passed.
+All LightRAG roles are built by `build_role_llm_routing()` and wired into the native runtime. Strict entity/relationship schema enforcement applies only to the `extract` role; native multimodal table/equation calls keep LightRAG's required `response_format={"type": "json_object"}` contract instead of receiving the GovCon extraction schema.
 _Avoid_: "the LLM" (five model slots exist); "reasoning model" without specifying which role.
 
 **mineru/ cache** (`rag_storage/<workspace>/mineru/`):
 MinerU parse artifacts written once per document. Layout: `<doc_filename>_<hash8>/<doc_filename>/auto/` containing:
 
 - `<doc>.md` — reconstructed markdown of the full document
-- `<doc>_content_list.json` / `_content_list_v2.json` — structured content blocks (text, table, image, equation items) passed to RAGAnything for modal processing
+- `<doc>_content_list.json` / `_content_list_v2.json` — structured content blocks (text, table, image, equation items) consumed by LightRAG native parser and multimodal processing
 - `<doc>_middle.json` / `_model.json` — intermediate layout analysis from MinerU
 - `<doc>_layout.pdf` / `_span.pdf` / `_origin.pdf` — layout visualisation and original copy
 - `images/` — extracted image files referenced by content blocks

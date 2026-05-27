@@ -1,7 +1,7 @@
 """
-RAG-Anything Initialization Module
+Legacy compatibility initialization module.
 
-This module handles the initialization of the RAG-Anything instance with:
+This module handles the temporary RAG-Anything compatibility instance with:
 - Custom entity extraction prompts (govcon_lightrag_json.txt, Parts A-L)
 - Government contracting ontology (catalog-driven entity types, canonical relationship set)
 - Multimodal document processing (MinerU parser)
@@ -40,7 +40,7 @@ from src.utils.time_utils import to_local_iso
 
 logger = logging.getLogger(__name__)
 
-# Global RAG-Anything instance
+# Global compatibility instance
 _rag_anything = None
 
 
@@ -264,7 +264,7 @@ def build_raganything_runtime(
 
 
 async def initialize_raganything():
-    """Initialize RAG-Anything instance for multimodal document processing
+    """Initialize the legacy compatibility instance.
     
     Configuration:
     - Parser: MinerU (multimodal - images, tables, equations)
@@ -275,7 +275,7 @@ async def initialize_raganything():
     - Chunking: Configurable via CHUNK_SIZE env var, 15% overlap
     
     Returns:
-        RAGAnything: Configured instance ready for document ingestion
+        RAGAnything: Configured compatibility instance
     """
     global _rag_anything
     
@@ -298,10 +298,10 @@ async def initialize_raganything():
     # are automatically inherited by MinerU subprocess from os.environ after dotenv loads .env
     
     # ═══════════════════════════════════════════════════════════════════════════════
-    # RAG-ANYTHING CONTEXT-AWARE PROCESSING (Issue #62)
+    # COMPATIBILITY CONTEXT-AWARE PROCESSING SETTINGS
     # ═══════════════════════════════════════════════════════════════════════════════
-    # When processing multimodal content (tables, images, equations), RAG-Anything
-    # can extract surrounding page context to provide section awareness.
+    # Retained for legacy content-list paths. Native LightRAG ingestion owns the
+    # active parser and multimodal processing path.
     #
     # Without context: Table on p53 → "table_p53" (isolated node, no relationships)
     # With context: Table on p53 → "AL JABER AIR BASE workload table from Appendix H"
@@ -309,12 +309,12 @@ async def initialize_raganything():
     #
     # This enables Algorithm 7 (CDRL/Section patterns) to infer parent relationships.
     #
-    # IMPORTANT: Context settings are read by RAGAnythingConfig from env vars:
+    # IMPORTANT: Compatibility context settings are read by RAGAnythingConfig from env vars:
     #   CONTEXT_WINDOW, CONTEXT_MODE, CONTENT_FORMAT, MAX_CONTEXT_TOKENS,
     #   INCLUDE_HEADERS, INCLUDE_CAPTIONS, CONTEXT_FILTER_CONTENT_TYPES
     # ═══════════════════════════════════════════════════════════════════════════════
     
-    # Create RAG-Anything configuration - it reads context settings from env vars automatically
+    # Create compatibility configuration - it reads context settings from env vars automatically
     # parser_output_dir: Route MinerU parsed output into a dedicated subfolder so
     # workspace state stays readable for humans: canonical LightRAG stores remain
     # at rag_storage/{workspace}/ while per-document MinerU artifacts live under
@@ -335,7 +335,7 @@ async def initialize_raganything():
     logger.info(f"📁 MinerU parser output → {mineru_output_dir}")
     
     # Log context-aware processing configuration (read from config after env var loading)
-    logger.info(f"✅ RAG-Anything context-aware processing: {'ENABLED' if config.context_window > 0 else 'DISABLED'}")
+    logger.info(f"✅ Compatibility context-aware processing: {'ENABLED' if config.context_window > 0 else 'DISABLED'}")
     logger.info(f"   - context_window: {config.context_window} pages")
     logger.info(f"   - context_mode: {config.context_mode}")
     logger.info(f"   - content_format: {config.content_format}")
@@ -354,7 +354,7 @@ async def initialize_raganything():
     # - rag_response / naive_rag_response: Shipley lifecycle support
     # - keywords_extraction: GovCon query understanding
     # 
-    # Prompts are applied via PROMPTS.update(GOVCON_PROMPTS) after RAG-Anything init
+    # Prompts are applied via PROMPTS.update(GOVCON_PROMPTS) after compatibility init
     # ═══════════════════════════════════════════════════════════════════════════════
     
     logger.info("=" * 88)
@@ -381,12 +381,12 @@ async def initialize_raganything():
         "entity_extraction_use_json": True,
     }
     
-    # LLM function for RAGAnything top-level + modal processors. RAGAnything's
+    # LLM function for compatibility top-level + modal processors. The legacy
     # TableModalProcessor / EquationModalProcessor parse their own JSON shape
     # ({detailed_description, entity_info}); do NOT route them through the strict
     # GovCon extraction schema ({entities, relationships}) or every table falls
     # back with "Missing required fields in response".
-    logger.info("✅ RAG-Anything modal LLM uses non-strict table/equation parser path")
+    logger.info("✅ Compatibility modal LLM uses non-strict table/equation parser path")
     
     _rag_anything = RAGAnything(
         config=config,
@@ -396,9 +396,7 @@ async def initialize_raganything():
         lightrag_kwargs=lightrag_kwargs,
     )
     
-    # CRITICAL: Ensure LightRAG is initialized BEFORE any document processing
-    # This is required because process_document_complete_lightrag_api() accesses
-    # self.lightrag.doc_status BEFORE calling _ensure_lightrag_initialized()
+    # CRITICAL: Ensure LightRAG is initialized before compatibility callbacks touch storage.
     result = await _rag_anything._ensure_lightrag_initialized()
     if not result.get("success", False):
         error_msg = result.get("error", "Unknown error")

@@ -96,7 +96,7 @@ def configure_lightrag_args():
     # IMPORTANT: LightRAG's API server uses `llm_model` (from env `LLM_MODEL`) for /query.
     # We explicitly bind queries to the reasoning model to avoid "compliance-only" answers.
     #
-    # Extraction is handled separately by RAG-Anything via src/server/initialization.py (dual-model router),
+    # Extraction is handled separately by the native LightRAG role registry,
     # so setting the query model here will NOT force extraction to use reasoning.
     query_model = settings.reasoning_llm_name
 

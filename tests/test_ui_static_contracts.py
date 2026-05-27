@@ -45,6 +45,14 @@ def test_ui_static_files_do_not_contain_common_mojibake_sequences() -> None:
     assert not offenders, "UI mojibake detected:\n" + "\n".join(offenders)
 
 
+def test_stack_footer_presents_lightrag_first_runtime_not_raganything_peer() -> None:
+    source = _INDEX_HTML.read_text(encoding="utf-8")
+
+    assert "lightrag native" in source
+    assert "compat layer" in source
+    assert "raganything v" not in source
+
+
 def test_studio_filename_button_is_only_preview_trigger() -> None:
     source = _INDEX_HTML.read_text(encoding="utf-8")
     start = source.index('class="studio-filename-btn text-neon-cyan"')

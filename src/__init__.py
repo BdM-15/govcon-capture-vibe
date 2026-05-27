@@ -74,7 +74,7 @@ inference/
 
 server/
   - Environment configuration (catalog-driven entity types)
-  - RAGAnything initialization
+  - Native LightRAG runtime initialization
   - FastAPI endpoints
   - Semantic post-processing orchestration
 

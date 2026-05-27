@@ -356,14 +356,14 @@
             </div>
             <div class="space-y-1.5">
               <div class="flex justify-between">
-                <span class="text-slate-500">lightrag</span
+                <span class="text-slate-500">lightrag native</span
                 ><span
                   class="text-neon-cyan tabular-nums"
                   x-text="stats.stack?.lightrag ? 'v' + stats.stack.lightrag : '—'"
                 ></span>
               </div>
               <div class="flex justify-between">
-                <span class="text-slate-500">raganything</span
+                <span class="text-slate-500">compat layer</span
                 ><span
                   class="text-neon-magenta tabular-nums"
                   x-text="stats.stack?.raganything ? 'v' + stats.stack.raganything : '—'"
@@ -4831,7 +4831,7 @@
                     <div class="font-semibold">Server Control</div>
                     <div
                       class="text-[11px] font-mono text-slate-500 truncate"
-                      x-text="`lightrag v${stats.stack?.lightrag || '?'} · raganything v${stats.stack?.raganything || '?'} · mineru v${stats.stack?.mineru || '?'}`"
+                      x-text="`lightrag native v${stats.stack?.lightrag || '?'} · compat v${stats.stack?.raganything || '?'} · mineru v${stats.stack?.mineru || '?'}`"
                     ></div>
                   </div>
                 </div>
@@ -4889,7 +4889,7 @@
                     <div
                       class="text-slate-500 uppercase tracking-wider text-[10px] mb-1"
                     >
-                      lightrag
+                      lightrag native
                     </div>
                     <div
                       class="text-neon-cyan tabular-nums"
@@ -4900,7 +4900,7 @@
                     <div
                       class="text-slate-500 uppercase tracking-wider text-[10px] mb-1"
                     >
-                      raganything
+                      compat layer
                     </div>
                     <div
                       class="text-neon-magenta tabular-nums"

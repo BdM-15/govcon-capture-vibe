@@ -5,7 +5,7 @@ Sets up structured logging with both file and console output.
 Prevents terminal overflow by using rotating log files.
 
 Features:
-- Dedicated processing.log for RFP processing (RAG-Anything, LightRAG, semantic inference)
+- Dedicated processing.log for RFP processing (native LightRAG parsing, extraction, semantic inference)
 - Filtered console output (no HTTP health check spam)
 - Separate error logging
 - Automatic log rotation (10MB files, 5 backups per log)

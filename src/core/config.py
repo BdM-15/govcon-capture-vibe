@@ -355,7 +355,7 @@ class Settings(BaseSettings):
         description="Enable LightRAG native VLM multimodal analysis for routed i/t/e content"
     )
 
-    # Legacy RAG-Anything / MinerU names retained while the migration finishes.
+    # Temporary compatibility aliases retained while the migration finishes.
     parser: str = Field(
         default="mineru",
         description="Document parser: mineru or docling"
@@ -395,7 +395,7 @@ class Settings(BaseSettings):
 
     
     # ═══════════════════════════════════════════════════════════════════════════
-    # CONTEXT-AWARE PROCESSING (RAG-Anything)
+    # CONTEXT-AWARE PROCESSING COMPATIBILITY SETTINGS
     # ═══════════════════════════════════════════════════════════════════════════
     context_window: int = Field(
         default=2,

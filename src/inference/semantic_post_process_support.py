@@ -391,7 +391,7 @@ def plan_entity_type_updates(
 
 
 def heuristic_table_type_mapping(entity: Dict) -> str:
-    """Map RAG-Anything `table` entities into govcon entity types."""
+    """Map generic multimodal `table` entities into govcon entity types."""
     name = (entity.get("entity_name") or "").lower()
     desc = (entity.get("description") or entity.get("content") or "").lower()
     text = f"{name} {desc}"

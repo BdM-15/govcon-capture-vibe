@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Project Theseus is a **capture workbench** for final federal solicitation packages. It pairs a domain-specific government contracting ontology with **RAG-Anything** (multimodal ingestion via MinerU) + **LightRAG** (knowledge graph + hybrid retrieval) and **xAI Grok** cloud LLMs, then surfaces the result through a custom **Capture Workbench UI** (Capture Chat + Intel Panels) backed by a Shipley-mentor query persona focused on Shipley phases 4-6.
+Project Theseus is a **LightRAG-first capture workbench** for final federal solicitation packages. It pairs a domain-specific government contracting ontology with **native LightRAG ingestion** (parser routing, MinerU multimodal parsing, native KG + hybrid retrieval) and **xAI Grok** cloud LLMs, then surfaces the result through a custom **Capture Workbench UI** (Capture Chat + Intel Panels) backed by a Shipley-mentor query persona focused on Shipley phases 4-6.
 
 ### Core Innovation
 
@@ -24,9 +24,9 @@ Project Theseus is a **capture workbench** for final federal solicitation packag
 
 | Component             | Technology                                                           | Purpose                                                                                |
 | --------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| **Document Parsing**  | [MinerU](https://github.com/opendatalab/MinerU) 3.x via RAG-Anything | Multimodal PDF / DOCX / XLSX extraction (tables, images, equations)                    |
-| **RAG Orchestration** | [RAG-Anything](https://github.com/HKUDS/RAG-Anything) v1.2.10+       | Multimodal document pipeline + context-aware processing                                |
-| **Knowledge Graph**   | [LightRAG](https://github.com/HKUDS/LightRAG) v1.4.13+               | Graph construction + hybrid retrieval (pip: `lightrag-hku`)                            |
+| **Document Parsing**  | [LightRAG](https://github.com/HKUDS/LightRAG) native parser routing + [MinerU](https://github.com/opendatalab/MinerU) | Multimodal PDF / DOCX / XLSX extraction (text, tables, images, equations)              |
+| **RAG Orchestration** | [LightRAG](https://github.com/HKUDS/LightRAG) native enqueue/process pipeline | Document status, chunking, multimodal analysis, KG construction, hybrid retrieval       |
+| **Knowledge Graph**   | [LightRAG](https://github.com/HKUDS/LightRAG) v1.5 native runtime     | Graph construction + hybrid retrieval (pip: `lightrag-hku`)                            |
 | **LLM**               | xAI Grok (dual-model routing)                                        | `grok-4-1-fast-non-reasoning` (extraction) + `grok-4.20-reasoning` (query / inference) |
 | **Embeddings**        | OpenAI `text-embedding-3-large`                                      | 3072-dim vectors (must use OpenAI endpoint, not xAI)                                   |
 | **Graph Storage**     | Neo4j 5.25 Community (preferred) / NetworkX fallback                 | Per-workspace isolation, Cypher + APOC                                                 |
@@ -63,7 +63,7 @@ Vanilla LightRAG can't tell a CLIN from a generic line item, doesn't recognize t
 git clone https://github.com/BdM-15/proj-theseus.git
 cd proj-theseus
 
-# 2. Install dependencies (raganything, lightrag-hku, xai-sdk, instructor, mineru[core])
+# 2. Install dependencies (lightrag-hku, mineru[core], xai-sdk, instructor, Neo4j client)
 uv sync
 
 # 3. Configure environment
@@ -100,8 +100,8 @@ python app.py
 │  1. DOCUMENT INGEST                                                      │
 │     └─ inputs/uploaded/ → /scan-rfp → inputs/__enqueued__/               │
 │                                                                          │
-│  2. MINERU PARSING (via RAG-Anything, GPU-accelerated)                   │
-│     └─ text + tables + images + equations + page-aware context           │
+│  2. NATIVE LIGHTRAG PARSER ROUTING (MinerU / native / fallback)          │
+│     └─ LIGHTRAG_PARSER selects engines and VLM options by suffix         │
 │                                                                          │
 │  3. MULTIMODAL ANALYSIS (VLM, govcon-aware prompts)                      │
 │     └─ Tables/images/equations described with the same 33-entity         │
@@ -140,9 +140,13 @@ Theseus runs three independently-registered prompt systems that share a single o
 | ------------------------------ | ------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | **1. LightRAG Extraction**     | Entity/relationship extraction from text chunks   | `prompts/govcon_prompt.py` → `_build_v8_system_prompt()`                                 |
 | **2. LightRAG Query/Response** | Shipley-mentor RAG answering + keyword extraction | `prompts/govcon_prompt.py` (`rag_response`, `naive_rag_response`, `keywords_extraction`) |
-| **3. RAGAnything Multimodal**  | Table / image / equation VLM analysis             | `prompts/multimodal/govcon_multimodal_prompts.py`                                        |
+| **3. Native LightRAG Multimodal** | Table / image / equation VLM analysis          | `prompts/multimodal/govcon_multimodal_prompts.py`                                        |
 
 Algorithm-specific inference prompts live under `prompts/relationship_inference/` and are loaded by modules in `src/inference/`.
+
+### Operator Note: Reprocessing After Parser or Prompt Changes
+
+Parser routing, multimodal prompts, and extraction prompts only affect documents processed after the change. Existing workspaces keep their current KG, vector, and document-status records. To apply a new `LIGHTRAG_PARSER`, `MINERU_API_MODE`, prompt, or ontology setting, reprocess the workspace: clear documents from **Server Control** in the Capture Workbench (or delete/recreate the workspace), then scan/upload the source files again. Use **Clear LLM cache** when only query synthesis behavior changed.
 
 ---
 
@@ -243,10 +247,11 @@ proj-theseus/
 ├── app.py                        # Entry point (Neo4j Docker management, server bootstrap)
 ├── docker-compose.neo4j.yml      # Neo4j 5.25 + APOC + GDS
 ├── src/
-│   ├── raganything_server.py     # Main server: wires LightRAG, RAG-Anything, UI, routes
+│   ├── raganything_server.py     # Main server: wires native LightRAG, UI, routes
 │   ├── server/
 │   │   ├── config.py             # LightRAG global_args (loads .env first)
-│   │   ├── initialization.py     # Registers all 3 prompt systems + RAG-Anything
+│   │   ├── native_lightrag_runtime.py # Direct LightRAG runtime + parser/role health
+│   │   ├── initialization.py     # Legacy compatibility helpers retained until #173
 │   │   ├── routes.py             # Custom endpoints (/scan-rfp, /insert, batch tracker)
 │   │   └── ui_routes.py          # Workbench API (Intel Panels, chats, workspace ops)
 │   ├── ui/static/                # Capture Workbench UI (Alpine + Tailwind, zero-build)
@@ -265,7 +270,7 @@ proj-theseus/
 ├── prompts/
 │   ├── govcon_prompt.py          # System 2 — query/response (Shipley mentor)
 │   ├── extraction/               # System 1 — entity/relationship extraction
-│   ├── multimodal/               # System 3 — RAG-Anything VLM prompts
+│   ├── multimodal/               # System 3 — native LightRAG VLM prompts
 │   └── relationship_inference/   # Per-algorithm inference prompts
 ├── rag_storage/                  # Per-workspace KG data (KV stores + VDB + mineru/)
 ├── inputs/uploaded/              # Drop-zone for new RFPs (scan moves to __enqueued__/)
@@ -350,6 +355,16 @@ CHUNK_SIZE=4096                     # Tokens per chunk
 CHUNK_OVERLAP_SIZE=600              # 15% overlap
 MAX_ASYNC=16                        # LLM extraction concurrency (matches ARCHITECTURE.md)
 EMBEDDING_FUNC_MAX_ASYNC=16         # Embedding API concurrency
+
+# ============================================================================
+# Native LightRAG Parser Routing + MinerU Configuration
+# ============================================================================
+LIGHTRAG_PARSER=pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xls*:mineru-t
+VLM_PROCESS_ENABLE=true             # Enables native table/image/equation analysis
+MINERU_API_MODE=local               # local = self-hosted mineru-api/router; official = mineru.net
+MINERU_LOCAL_ENDPOINT=http://localhost:8888
+MINERU_LOCAL_BACKEND=pipeline
+MINERU_LOCAL_PARSE_METHOD=auto
 ```
 
 ### Neo4j Setup (Recommended)
@@ -451,8 +466,9 @@ python -m pytest tests/test_json_extraction.py -v
 ```toml
 # From pyproject.toml
 dependencies = [
-    "raganything[all]>=1.2.10",     # RAG-Anything + MinerU 3.0
-    "lightrag-hku>=1.4.13",         # LightRAG with WebUI
+    "lightrag-hku>=1.5.0",          # LightRAG native multimodal pipeline + WebUI
+    "mineru[core]>=2.1.0",          # MinerU parsing used by LightRAG parser routing
+    "raganything[all]>=1.2.10",     # Temporary compatibility surface until issue #173
     "openai>=2.0.0,<3.0.0",         # OpenAI-compatible API client
     "xai-sdk>=1.5.0",               # xAI Grok client
     "instructor>=1.15.0",           # Pydantic LLM validation
@@ -513,8 +529,8 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
-- **[LightRAG](https://github.com/HKUDS/LightRAG)** - Knowledge graph foundation
-- **[RAG-Anything](https://github.com/HKUDS/RAG-Anything)** - Multimodal processing
+- **[LightRAG](https://github.com/HKUDS/LightRAG)** - Native multimodal pipeline and knowledge graph foundation
+- **[RAG-Anything](https://github.com/HKUDS/RAG-Anything)** - Historical integration and temporary compatibility surface
 - **[MinerU](https://github.com/opendatalab/MinerU)** - PDF parsing
 - **[xAI](https://x.ai/)** - Grok LLM API
 - **[Shipley Associates](https://shipley.com/)** - Government contracting methodology

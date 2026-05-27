@@ -1,11 +1,12 @@
 """
-Government Contracting Multimodal Prompts for RAGAnything (v2.0)
+Government contracting multimodal prompts for LightRAG native multimodal analysis.
 
-Registered via register_prompt_language("govcon", GOVCON_MULTIMODAL_PROMPTS)
-then activated with set_prompt_language("govcon").
+`GOVCON_NATIVE_MULTIMODAL_PROMPTS` is registered into
+`lightrag.prompt_multimodal.MULTIMODAL_PROMPTS` by the native runtime.
+`GOVCON_MULTIMODAL_PROMPTS` remains for legacy compatibility until issue #173.
 
-These replace RAGAnything's generic data-analyst prompts with federal acquisition
-expertise across all multimodal content types: tables, images, and equations.
+These replace generic data-analyst multimodal prompts with federal acquisition
+expertise across tables, images, and equations.
 
 Ontology alignment: Prompts reference the canonical govcon entity types and canonical
 relationship types defined in src/ontology/schema.py and the extraction prompt
@@ -524,7 +525,7 @@ GOVCON_NATIVE_MULTIMODAL_PROMPTS: dict[str, str] = {
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# REGISTRY — all keys that override RAGAnything defaults
+# REGISTRY — legacy compatibility prompt keys retained until issue #173
 # ═══════════════════════════════════════════════════════════════════════════════
 
 GOVCON_MULTIMODAL_PROMPTS: dict = {

@@ -1,4 +1,4 @@
-"""Per-role LightRAG/RAG-Anything LLM routing setup."""
+"""Per-role LightRAG LLM routing setup."""
 
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ def _is_native_multimodal_analysis_prompt(prompt: Any) -> bool:
 
 
 def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> RoleLLMRouting:
-    """Build all per-role LLM wrappers/configs used by LightRAG and RAG-Anything."""
+    """Build all per-role LLM wrappers/configs used by LightRAG."""
     extraction_model = settings.extraction_llm_name
     reasoning_model = settings.reasoning_llm_name
     keyword_model = getattr(settings, "keyword_llm_name", extraction_model)

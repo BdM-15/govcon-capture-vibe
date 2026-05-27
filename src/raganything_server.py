@@ -1,18 +1,18 @@
 """
-RAG-Anything Server with LightRAG WebUI
-Multimodal RAG system for government contracting documents
+LightRAG-first Capture Workbench server.
+Multimodal RAG system for government contracting documents.
 
 Architecture:
 - src/server/config.py: Configuration (ontology-backed entity catalog, API credentials, chunking)
-- src/server/initialization.py: RAGAnything initialization (tri-LLM, custom prompts)
+- src/server/native_lightrag_runtime.py: Native LightRAG runtime, role routing, parser health
 - src/server/routes.py: FastAPI endpoints + semantic post-processing
 - This file: Main entry point + server orchestration
 
 Workflow:
-1. Document Upload → /insert endpoint → UCF detection
-2. Dual-Path Processing → Section-aware OR standard extraction
+1. Document Upload → /insert or /documents/upload
+2. Native LightRAG parser routing → MinerU/native parser + multimodal analysis
 3. Entity Extraction → catalog-driven custom types (extraction LLM: non-reasoning)
-4. Semantic Post-Processing → 8 LLM inference algorithms (reasoning LLM)
+4. Semantic Post-Processing → L↔M, document structure, orphan resolution
 5. Knowledge Graph Storage → Neo4j or local GraphML
 """
 
@@ -145,6 +145,10 @@ def build_startup_banner_items(
             "Storage",
             f"{colors.YELLOW}{graph_storage}{colors.RESET}  ·  {colors.DIM}{working_dir}{colors.RESET}",
         ),
+        (
+            "Runtime",
+            f"{colors.GREEN}LightRAG-first Capture Workbench{colors.RESET}  ·  {colors.DIM}native ingestion + native multimodal{colors.RESET}",
+        ),
         ("", ""),
         ("Extract  (LightRAG)", f"{colors.CYAN}{settings.extraction_llm_name}{colors.RESET}"),
         ("Keyword  (LightRAG)", f"{colors.CYAN}{settings.keyword_llm_name}{colors.RESET}"),
@@ -184,7 +188,7 @@ def build_startup_banner_items(
         )
         startup_items.insert(
             lightrag_index + 1,
-            ("RAG-Anything", f"{colors.DIM}{version_resolver('raganything')}{colors.RESET}"),
+            ("Compat Layer", f"{colors.DIM}{version_resolver('raganything')}{colors.RESET}"),
         )
     else:
         pipeline_state = "available" if pipeline_health.native_pipeline_available else "missing"
@@ -260,7 +264,7 @@ def build_startup_banner_items(
             ("", ""),
             ("WebUI", f"{colors.BLUE}http://{host}:{port}/webui{colors.RESET}"),
             (
-                "Capture UI",
+                "Capture Workbench",
                 f"{colors.BOLD}{colors.CYAN}http://{host}:{port}/ui{colors.RESET}  {colors.DIM}(new){colors.RESET}",
             ),
             ("API Docs", f"{colors.BLUE}http://{host}:{port}/docs{colors.RESET}"),
@@ -479,7 +483,7 @@ def build_server_runtime(
         pipeline_health=pipeline_health,
     )
     log_banner_fn(
-        f"{colors.BOLD}✅ PROJECT THESEUS — READY{colors.RESET}",
+        f"{colors.BOLD}✅ LIGHTRAG-FIRST CAPTURE WORKBENCH READY{colors.RESET}",
         items=startup_items,
         logger=logger,
         force_print=True,
@@ -498,7 +502,7 @@ def unregister_raganything_atexit(rag_instance: Any, *, logger: Any) -> bool:
     except ValueError:
         return False
     except Exception as exc:  # noqa: BLE001
-        logger.debug("Failed unregistering RAG-Anything atexit cleanup: %s", exc)
+        logger.debug("Failed unregistering compatibility atexit cleanup: %s", exc)
         return False
     return True
 
@@ -519,7 +523,7 @@ async def finalize_raganything_for_shutdown(rag_instance: Any, *, logger: Any) -
     try:
         await finalize()
     except Exception:  # noqa: BLE001
-        logger.exception("RAG-Anything shutdown finalization failed")
+        logger.exception("Compatibility shutdown finalization failed")
     finally:
         unregister_raganything_atexit(rag_instance, logger=logger)
 

@@ -1,4 +1,4 @@
-"""Post-initialization wiring for an already-initialized RAGAnything instance."""
+"""Post-initialization wiring for the legacy compatibility instance."""
 
 from __future__ import annotations
 
@@ -57,11 +57,11 @@ def verify_govcon_chunker(rag_anything) -> None:
 
 
 def register_processing_callback(rag_anything, *, llm_model_func) -> None:
-    """Register the shared GovCon processing callback on the RAGAnything instance."""
+    """Register the shared GovCon processing callback on the compatibility instance."""
     processing_callback = get_processing_callback()
     processing_callback.set_llm_func(llm_model_func)
     rag_anything.callback_manager.register(processing_callback)
-    logger.info("✅ GovConProcessingCallback registered with RAG-Anything callback_manager")
+    logger.info("✅ GovConProcessingCallback registered with compatibility callback_manager")
 
 
 def extend_vdb_meta_fields(lightrag_instance) -> None:
@@ -167,14 +167,14 @@ def register_native_modal_processors(rag_anything, *, llm_model_func, vision_mod
         context_extractor,
     )
 
-    logger.info("✅ Native RAGAnything modal processors registered with govcon prompts")
+    logger.info("✅ Compatibility modal processors registered with govcon prompts")
     logger.info("   table    → TableModalProcessor    (govcon TABLE_ANALYSIS_SYSTEM + table_prompt)")
     logger.info("   image    → ImageModalProcessor    (govcon IMAGE_ANALYSIS_SYSTEM + vision_prompt)")
     logger.info("   equation → EquationModalProcessor (govcon EQUATION_ANALYSIS_SYSTEM + equation_prompt)")
 
 
 def apply_role_llm_funcs_shim(rag_anything) -> None:
-    """Patch LightRAG config views so RAG-Anything multimodal code can see role_llm_funcs."""
+    """Patch LightRAG config views so compatibility multimodal code can see role_llm_funcs."""
     lightrag = rag_anything.lightrag
     build_global_config = getattr(lightrag, "_build_global_config", None)
     live_role_funcs = getattr(lightrag, "role_llm_funcs", None)
