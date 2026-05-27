@@ -252,7 +252,7 @@ def _contract_checks() -> tuple[dict[str, Any], list[dict[str, Any]]]:
 
         parser_engine, process_options = resolve_file_parser_directives(
             "smoke.pdf",
-            parser_rules="pdf:mineru-ite,docx:native-ite,xls*:native",
+            parser_rules="pdf:mineru-ite,docx:native-ite,xlsx:legacy",
             require_external_endpoint=False,
         )
         capabilities["parser_pdf"] = {"engine": parser_engine, "options": process_options}

@@ -20,7 +20,7 @@ Note: this AFCAP5 ISR fixture covers PDF plus XLSX. DOCX is covered by the parse
 ## Configuration Tested
 
 ```dotenv
-LIGHTRAG_PARSER=pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xls*:native
+LIGHTRAG_PARSER=pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xlsx:legacy
 VLM_PROCESS_ENABLE=true
 MINERU_API_MODE=local
 MINERU_LOCAL_BACKEND=pipeline
@@ -30,7 +30,7 @@ CHUNK_OVERLAP_SIZE=600
 MAX_GLEANING=0
 ```
 
-Spreadsheet note: MinerU local API reported `Currently, XLSX files are not supported`, so Theseus routes `.xlsx` / `.xlsm` workbooks through the native workbook text adapter and enqueues the extracted sheet text into LightRAG as raw content. PDFs still use MinerU for OCR/layout and multimodal table/image/equation extraction.
+Spreadsheet note: MinerU local API reported `Currently, XLSX files are not supported`, so Theseus extracts `.xlsx` workbook text and enqueues it through LightRAG legacy raw ingestion. LightRAG's stock XLSX extractor is currently wired through its API upload route rather than the reusable native parser worker, while Theseus owns custom upload routes for callbacks/status checks. PDFs still use MinerU for OCR/layout and multimodal table/image/equation extraction.
 
 ## Regression Gate Result
 
@@ -137,13 +137,13 @@ Use AFCAP5 ISR as the compact native quality regression target for #172, not MCP
 Keep the current native default for the next parity run:
 
 - `pdf:mineru-ite` for the FOPR and PWS PDFs.
-- `xls*:native` for workbooks, handled by the Theseus workbook text adapter before LightRAG raw ingestion because MinerU local API does not support XLSX.
+- `xlsx:legacy` for workbooks, handled as extracted workbook text before LightRAG raw ingestion because MinerU local API does not support XLSX.
 - `CHUNK_SIZE=4096`, `CHUNK_OVERLAP_SIZE=600`, `MAX_GLEANING=0`.
 - `VLM_PROCESS_ENABLE=true` with local MinerU `pipeline` backend.
 
 Do not start #173 solely from this agent evidence. Human sign-off should first resolve or explicitly accept these findings:
 
-1. Whether native workbook text extraction is sufficient for XLSX parity versus a future richer spreadsheet/table sidecar.
+1. Whether raw workbook text extraction is sufficient for XLSX parity versus a future richer spreadsheet/table sidecar.
 2. Whether empty placeholder image descriptions are acceptable for AFCAP5 ISR.
 3. Whether non-canonical raw relationship labels in `vdb_relationships.json` are expected, need normalization, or need a #173 regression test.
 

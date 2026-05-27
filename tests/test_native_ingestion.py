@@ -138,10 +138,10 @@ def test_native_ingestion_success_notifies_batch_callback(tmp_path: Path) -> Non
 
 
 def test_resolve_govcon_parser_directives_keeps_text_bearing_tables_in_text_chunks(monkeypatch) -> None:
-    monkeypatch.setenv("LIGHTRAG_PARSER", "pdf:mineru-ite,docx:native-ite,xls*:mineru-t")
+    monkeypatch.setenv("LIGHTRAG_PARSER", "pdf:mineru-ite,docx:native-ite,xlsx:mineru-t")
 
     assert resolve_govcon_parser_directives("attachment.docx") == ("native", "ie")
-    assert resolve_govcon_parser_directives("pricing.xlsx") == ("native", "")
+    assert resolve_govcon_parser_directives("pricing.xlsx") == ("legacy", "")
     assert resolve_govcon_parser_directives("diagram.pdf") == ("mineru", "ite")
 
 
@@ -176,7 +176,7 @@ def test_native_ingestion_extracts_xlsx_to_raw_text_before_enqueue(tmp_path: Pat
     assert "A2=0001" in enqueue["args"][0]
     assert "B2=1250" in enqueue["args"][0]
     assert enqueue["kwargs"]["docs_format"] == "raw"
-    assert enqueue["kwargs"]["parse_engine"] == "native"
+    assert enqueue["kwargs"]["parse_engine"] == "legacy"
     assert enqueue["kwargs"]["process_options"] == ""
 
 

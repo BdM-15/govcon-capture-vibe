@@ -9,7 +9,11 @@ from itertools import zip_longest
 from pathlib import Path
 from typing import Any
 
-from lightrag.constants import FULL_DOCS_FORMAT_PENDING_PARSE, FULL_DOCS_FORMAT_RAW
+from lightrag.constants import (
+    FULL_DOCS_FORMAT_PENDING_PARSE,
+    FULL_DOCS_FORMAT_RAW,
+    PARSER_ENGINE_LEGACY,
+)
 from lightrag.parser.routing import resolve_file_parser_directives
 from lightrag.utils import compute_mdhash_id
 
@@ -50,12 +54,14 @@ def _suppress_text_bearing_table_analysis(file_name: str, process_options: str) 
 
 def resolve_govcon_parser_directives(file_name: str) -> tuple[str, str]:
     if Path(file_name).suffix.lower() in SPREADSHEET_SUFFIXES:
-        return "native", ""
+        return PARSER_ENGINE_LEGACY, ""
     parser_engine, process_options = resolve_file_parser_directives(
         file_name,
         require_external_endpoint=False,
     )
-    return parser_engine, _suppress_text_bearing_table_analysis(file_name, process_options)
+    return parser_engine, _suppress_text_bearing_table_analysis(
+        file_name, process_options
+    )
 
 
 def _is_spreadsheet(file_name: str) -> bool:
@@ -73,16 +79,14 @@ def _extract_spreadsheet_text(file_path: str, file_name: str) -> str:
     suffix = Path(file_name).suffix.lower()
     if suffix not in OPENPYXL_WORKBOOK_SUFFIXES:
         raise ValueError(
-            "Native spreadsheet extraction supports .xlsx/.xlsm only; "
+            "Spreadsheet extraction supports .xlsx/.xlsm only; "
             f"convert {file_name} to .xlsx."
         )
 
     try:
         from openpyxl import load_workbook
     except ImportError as exc:  # pragma: no cover - dependency is declared in project env
-        raise RuntimeError(
-            "openpyxl is required for native spreadsheet extraction"
-        ) from exc
+        raise RuntimeError("openpyxl is required for spreadsheet extraction") from exc
 
     values_workbook = load_workbook(file_path, read_only=True, data_only=True)
     formulas_workbook = load_workbook(file_path, read_only=True, data_only=False)
