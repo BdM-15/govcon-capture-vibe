@@ -26,11 +26,12 @@ def test_readme_describes_native_lightrag_ingestion_and_operator_reprocessing() 
     assert "RAGAnything Multimodal" not in source
 
 
-def test_env_example_presents_legacy_raganything_settings_as_compatibility_only() -> None:
+def test_env_example_presents_native_lightrag_parser_settings_only() -> None:
     source = _read(".env.example")
 
     assert "Native LightRAG parser routing" in source
-    assert "Temporary compatibility settings" in source
+    assert "xlsx:legacy" in source
+    assert "Temporary compatibility settings" not in source
     assert "LEGACY RAG-ANYTHING CONTEXT COMPATIBILITY" not in source
     assert "LEGACY MINERU ALIASES" not in source
 

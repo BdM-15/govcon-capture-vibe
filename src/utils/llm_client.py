@@ -3,8 +3,8 @@ LLM Client Utilities - Centralized async LLM wrapper for xAI Grok
 =================================================================
 
 Single source of truth for all LLM calls in the system.
-Uses RAG-Anything's resilience infrastructure (@async_retry, CircuitBreaker)
-for automatic retry with exponential backoff and cascade failure prevention.
+Uses local resilience helpers for automatic retry with exponential backoff and
+cascade failure prevention.
 
 Usage:
     from src.utils.llm_client import call_llm_async, call_llm_batch, call_llm_structured
@@ -23,9 +23,9 @@ from typing import Optional, List, Dict, Any, Type, TypeVar
 import instructor
 from openai import AsyncOpenAI
 from pydantic import BaseModel
-from raganything.resilience import async_retry, CircuitBreaker
 
 from src.core import get_settings
+from src.utils.resilience import CircuitBreaker, async_retry
 
 logger = logging.getLogger(__name__)
 

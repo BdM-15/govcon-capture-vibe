@@ -20,7 +20,6 @@ Workflow:
 # LightRAG's dataclass field defaults evaluate os.getenv() at import time:
 #   chunk_token_size: int = field(default=int(os.getenv("CHUNK_SIZE", 1200)))
 # If .env isn't loaded first, it uses the hardcoded 1200 default
-import atexit
 import os
 import sys
 from contextlib import contextmanager
@@ -48,12 +47,11 @@ import asyncio
 import logging
 
 # Suppress verbose logging from libraries
-logging.getLogger("raganything").setLevel(logging.WARNING)
 logging.getLogger("lightrag").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # Set up logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("theseus.server")
 
 
 KG_MODULES = [
@@ -182,15 +180,7 @@ def build_startup_banner_items(
             f"{colors.BOLD}{colors.MAGENTA}{len(KG_MODULES)} domain ontologies{colors.RESET}  {colors.DIM}injected for query enrichment{colors.RESET}",
         ),
     ]
-    if pipeline_health is None:
-        lightrag_index = next(
-            index for index, (label, _) in enumerate(startup_items) if label == "LightRAG"
-        )
-        startup_items.insert(
-            lightrag_index + 1,
-            ("Compat Layer", f"{colors.DIM}{version_resolver('raganything')}{colors.RESET}"),
-        )
-    else:
+    if pipeline_health is not None:
         pipeline_state = "available" if pipeline_health.native_pipeline_available else "missing"
         storage = pipeline_health.storage
         parser = pipeline_health.parser
@@ -281,6 +271,7 @@ async def initialize_theseus_rag_runtime(
     configure_lightrag_args_fn: Callable[[], None] | None = None,
     initialize_native_lightrag_fn: Callable[..., Awaitable[Any]] | None = None,
     get_settings_fn: Callable[[], Any] | None = None,
+    set_active_rag_instance_fn: Callable[[Any], None] | None = None,
 ) -> TheseusRAGRuntime:
     """Configure and initialize the native LightRAG runtime for Theseus."""
 
@@ -293,12 +284,16 @@ async def initialize_theseus_rag_runtime(
     if get_settings_fn is None:
         from src.core import get_settings as get_settings_fn
 
+    if set_active_rag_instance_fn is None:
+        from src.server.runtime_state import set_active_rag_instance as set_active_rag_instance_fn
+
     configure_lightrag_args_fn()
     settings = get_settings_fn()
     native_runtime = await initialize_native_lightrag_fn(
         settings,
         graph_storage=getattr(global_args_obj, "graph_storage", None),
     )
+    set_active_rag_instance_fn(native_runtime.adapter)
     return TheseusRAGRuntime(
         adapter=native_runtime.adapter,
         health=native_runtime.health,
@@ -492,22 +487,7 @@ def build_server_runtime(
     return ServerRuntime(app=app, host=host, port=port)
 
 
-def unregister_raganything_atexit(rag_instance: Any, *, logger: Any) -> bool:
-    close_callback = getattr(rag_instance, "close", None)
-    if close_callback is None:
-        return False
-
-    try:
-        atexit.unregister(close_callback)
-    except ValueError:
-        return False
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("Failed unregistering compatibility atexit cleanup: %s", exc)
-        return False
-    return True
-
-
-async def finalize_raganything_for_shutdown(rag_instance: Any, *, logger: Any) -> None:
+async def finalize_native_runtime_for_shutdown(rag_instance: Any, *, logger: Any) -> None:
     if rag_instance is None:
         return
 
@@ -517,18 +497,15 @@ async def finalize_raganything_for_shutdown(rag_instance: Any, *, logger: Any) -
     setattr(rag_instance, "_theseus_shutdown_finalized", True)
     finalize = getattr(rag_instance, "finalize_storages", None)
     if finalize is None:
-        unregister_raganything_atexit(rag_instance, logger=logger)
         return
 
     try:
         await finalize()
     except Exception:  # noqa: BLE001
-        logger.exception("Compatibility shutdown finalization failed")
-    finally:
-        unregister_raganything_atexit(rag_instance, logger=logger)
+        logger.exception("Native runtime shutdown finalization failed")
 
 
-async def serve_with_rag_shutdown(
+async def serve_with_runtime_shutdown(
     server_instance: Any,
     rag_instance: Any,
     *,
@@ -537,7 +514,7 @@ async def serve_with_rag_shutdown(
     try:
         await server_instance.serve()
     finally:
-        await finalize_raganything_for_shutdown(rag_instance, logger=logger)
+        await finalize_native_runtime_for_shutdown(rag_instance, logger=logger)
 
 
 async def main():
@@ -578,7 +555,7 @@ async def main():
     # Step 5: Start server
     config = uvicorn.Config(app=runtime.app, host=runtime.host, port=runtime.port, log_level="info")
     server_instance = uvicorn.Server(config)
-    await serve_with_rag_shutdown(server_instance, rag_instance, logger=logger)
+    await serve_with_runtime_shutdown(server_instance, rag_instance, logger=logger)
 
 
 if __name__ == "__main__":

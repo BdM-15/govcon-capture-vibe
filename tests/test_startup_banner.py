@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from src.raganything_server import build_startup_banner_items, format_reranker_line
+from src.theseus_server import build_startup_banner_items, format_reranker_line
 from src.server.native_lightrag_runtime import NativeParserHealth, NativePipelineHealth
 
 
@@ -58,7 +58,7 @@ def test_build_startup_banner_items_includes_endpoints_and_optional_neo4j() -> N
         entity_count=33,
         relationship_count=35,
         colors=_Colors,
-        version_resolver=lambda pkg: {"mineru": "1.2.3", "lightrag-hku": "2.0.0", "raganything": "3.0.0"}[pkg],
+        version_resolver=lambda pkg: {"mineru": "1.2.3", "lightrag-hku": "2.0.0"}[pkg],
     )
 
     labels = [label for label, _ in items]
@@ -80,7 +80,7 @@ def test_build_startup_banner_items_reports_native_pipeline_health() -> None:
         entity_count=33,
         relationship_count=35,
         colors=_Colors,
-        version_resolver=lambda pkg: {"mineru": "1.2.3", "lightrag-hku": "1.5.0rc3", "raganything": "3.0.0"}[pkg],
+        version_resolver=lambda pkg: {"mineru": "1.2.3", "lightrag-hku": "1.5.0rc3"}[pkg],
         pipeline_health=NativePipelineHealth(
             lightrag_version="1.5.0rc3",
             native_pipeline_available=True,

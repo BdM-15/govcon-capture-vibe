@@ -125,20 +125,20 @@ def configure_lightrag_args():
         "entity_types": entity_types,
     }
     
-    # ═══════════════════════════════════════════════════════════════════════════
+    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     # PARALLELIZATION CONFIGURATION (Semantic naming from centralized config)
-    # ═══════════════════════════════════════════════════════════════════════════
+    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     # LightRAG has three concurrency controls:
     # - max_parallel_insert: Document-level parallelism (files processed concurrently)
     # - max_async / llm_model_max_async: Chunk-level LLM concurrency within each document
     # - embedding_func_max_async: Embedding API concurrency
     #
     # Our centralized config uses semantic names for clarity:
-    # - settings.max_parallel_insert → document-level (recommended: llm_max_async / 3)
-    # - settings.llm_max_async → extraction LLM concurrency (higher for throughput)
-    # - settings.embedding_max_async → embedding concurrency
-    # - settings.post_processing_max_async → semantic inference (lower for stability)
-    # ═══════════════════════════════════════════════════════════════════════════
+    # - settings.max_parallel_insert â†’ document-level (recommended: llm_max_async / 3)
+    # - settings.llm_max_async â†’ extraction LLM concurrency (higher for throughput)
+    # - settings.embedding_max_async â†’ embedding concurrency
+    # - settings.post_processing_max_async â†’ semantic inference (lower for stability)
+    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     
     # Document-level parallelism (how many files processed at once)
     global_args.max_parallel_insert = settings.max_parallel_insert
@@ -157,7 +157,7 @@ def configure_lightrag_args():
     # - Embeddings auto-truncate to model limits via EmbeddingFunc.max_token_size
     #
     # NOTE: global_args.chunking_func is NOT consumed by lightrag.api.lightrag_server
-    # — the API constructs LightRAG without forwarding this attribute. The actual
+    # â€” the API constructs LightRAG without forwarding this attribute. The actual
     # registration of govcon_chunking_func happens in src/server/initialization.py
     # via lightrag_kwargs={"chunking_func": govcon_chunking_func}. We set the
     # attribute here only for completeness / future LightRAG API support.
@@ -191,10 +191,5 @@ def configure_lightrag_args():
         global_args.vector_storage,
         global_args.doc_status_storage,
     )
-    
-    # Configuration complete - detailed startup logging happens in initialization.py
 
-
-def configure_raganything_args():
-    """Backward-compatible alias for older tests and migration branches."""
-    configure_lightrag_args()
+    # Configuration complete - detailed startup logging happens in the server entry point.

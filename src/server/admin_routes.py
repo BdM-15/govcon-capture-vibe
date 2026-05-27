@@ -51,7 +51,6 @@ def stack_versions() -> dict[str, Optional[str]]:
     versions: dict[str, Optional[str]] = {}
     for key, distribution in (
         ("lightrag", "lightrag-hku"),
-        ("raganything", "raganything"),
         ("mineru", "mineru"),
         ("transformers", "transformers"),
     ):

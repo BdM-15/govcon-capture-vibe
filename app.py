@@ -36,9 +36,7 @@ if sys.platform == 'win32':
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 from pathlib import Path
 
-# Import LightRAG and the temporary RAG-Anything compatibility dependency from pip
-# BEFORE adding src to path. This prevents any old fork from shadowing the pip package.
-from raganything import RAGAnything
+# Import LightRAG before adding src to path. This prevents local modules from shadowing the pip package.
 from lightrag.api.lightrag_server import create_app as _verify_lightrag_import
 
 # NOW add src to Python path for our custom server module
@@ -46,7 +44,7 @@ src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
 
 # Import the LightRAG-first Capture Workbench server.
-from raganything_server import main
+from theseus_server import main
 
 
 def check_docker_available():

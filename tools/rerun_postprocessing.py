@@ -54,17 +54,20 @@ async def rerun_one(workspace: str) -> dict:
     from src.core import config as core_config
     core_config.reset_settings()
 
-    # Initialize RAGAnything so VDB sync (Phase 5) can write back to LightRAG kv stores.
+    # Initialize native LightRAG so VDB sync (Phase 5) can write back to LightRAG kv stores.
     # Without this, inferred relationships land in Neo4j only and the JSON kv stores
     # the UI reads stay stale. This call is async and does NOT trigger document processing.
     # NOTE: lightrag.api.config parses sys.argv at import time, so we shield it from our CLI args.
     saved_argv = sys.argv[:]
     sys.argv = [sys.argv[0]]
     try:
-        from src.server.initialization import initialize_raganything, get_rag_instance
-        if get_rag_instance() is None:
-            logger.info("Initializing RAGAnything for VDB sync …")
-            await initialize_raganything()
+        from lightrag.api.config import global_args
+        from src.theseus_server import initialize_theseus_rag_runtime
+        from src.server.runtime_state import get_active_rag_instance
+
+        if get_active_rag_instance() is None:
+            logger.info("Initializing native LightRAG for VDB sync ...")
+            await initialize_theseus_rag_runtime(global_args_obj=global_args)
     finally:
         sys.argv = saved_argv
 

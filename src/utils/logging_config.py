@@ -280,7 +280,7 @@ def setup_logging(
     # CRITICAL: LightRAG's logger has propagate=False, so root handlers alone do
     # not receive its records. Attach both processing and error handlers directly
     # so workspace errors land in <workspace>_errors.log as well as processing.log.
-    for external_logger_name in ("lightrag", "raganything"):
+    for external_logger_name in ("lightrag",):
         external_logger = logging.getLogger(external_logger_name)
         _remove_workspace_file_handlers(external_logger)
         external_logger.addHandler(processing_handler)

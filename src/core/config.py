@@ -355,7 +355,7 @@ class Settings(BaseSettings):
         description="Enable LightRAG native VLM multimodal analysis for routed i/t/e content"
     )
 
-    # Temporary compatibility aliases retained while the migration finishes.
+    # Legacy env aliases still parsed so older local .env files continue to boot.
     parser: str = Field(
         default="mineru",
         description="Document parser: mineru or docling"

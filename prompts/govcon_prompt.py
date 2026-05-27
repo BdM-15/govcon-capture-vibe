@@ -173,7 +173,7 @@ from prompts.govcon import EXTRACTION_PROMPTS, QUERY_PROMPTS, build_v8_system_pr
 
 # CRITICAL: load .env before prompt assembly — this module may be imported
 # before the server entry-point's load_dotenv() has run (e.g. during tests or
-# when govcon_prompt.py is evaluated inside initialize_raganything()).
+# when govcon_prompt.py is evaluated by native LightRAG startup).
 load_dotenv(override=True)
 
 

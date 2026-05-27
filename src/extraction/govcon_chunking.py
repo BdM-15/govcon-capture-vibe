@@ -2,7 +2,8 @@
 GovCon document classification + banner injection at chunk time.
 
 NON-INVASIVE FOR CONTENT: Wraps LightRAG's native ``chunking_by_token_size``
-and installs an idempotent native-pipeline chunk builder wrapper. No RAGAnything
+and installs an idempotent native-pipeline chunk builder wrapper. No external
+integration package
 internals are touched.
 
 For legacy/non-explicit chunking this is registered as LightRAG's

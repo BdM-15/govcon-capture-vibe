@@ -49,7 +49,8 @@ def test_stack_footer_presents_lightrag_first_runtime_not_raganything_peer() -> 
     source = _INDEX_HTML.read_text(encoding="utf-8")
 
     assert "lightrag native" in source
-    assert "compat layer" in source
+    assert "compat layer" not in source
+    assert "stats.stack?.raganything" not in source
     assert "raganything v" not in source
 
 

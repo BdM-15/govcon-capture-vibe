@@ -1,14 +1,14 @@
 [project]
 name = "govcon-capture-vibe"
 version = "1.8.0"
-description = "Cloud-optimized government contracting RFP analysis using RAG-Anything + LightRAG with xAI Grok"
+description = "Cloud-optimized government contracting RFP analysis using native LightRAG multimodal processing with xAI Grok"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    # Core RAG functionality (includes lightrag-hku, mineru[core], and document parsers)
-    "raganything[all]>=1.2.10",
-    # LightRAG knowledge graph engine (explicit pin for Neo4j workspace features)
+    # LightRAG knowledge graph engine (explicit pin for native multimodal and Neo4j workspace features)
     "lightrag-hku>=1.5.0rc3",
+    # MinerU 3.x multimodal document parsing for LightRAG parser routing
+    "mineru[core]>=3.0.9",
     # Cloud LLM access (xAI Grok via OpenAI-compatible API)
     # v2.x required by instructor >=1.15 and LightRAG >=1.4.13
     "openai>=2.0.0,<3.0.0",
@@ -80,11 +80,5 @@ dev = [
     "pytest>=9.0.3",
 ]
 
-# Note: raganything[all]>=1.2.10 bundles:
-# - lightrag-hku (knowledge graph + WebUI)
-# - mineru[core] (MinerU 3.x multimodal document parsing - includes shapely,
-#   pyclipper, dill, omegaconf, torch, torchvision, transformers in [pipeline] extra)
-# - Pillow, reportlab, paddleocr, weasyprint, pygments (format extras)
-# 
 # torch/torchvision are explicitly declared above with [tool.uv.sources] to ensure
 # CUDA 12.4 builds are installed from the PyTorch index instead of CPU-only PyPI versions.

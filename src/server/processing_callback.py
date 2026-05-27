@@ -9,14 +9,13 @@ import threading
 from datetime import datetime
 
 from lightrag.api.config import global_args
-from raganything.callbacks import ProcessingCallback
 
 from src.core import get_settings
 
 logger = logging.getLogger(__name__)
 
 
-class GovConProcessingCallback(ProcessingCallback):
+class GovConProcessingCallback:
     """Track document lifecycle and trigger semantic post-processing per batch."""
 
     def __init__(self):

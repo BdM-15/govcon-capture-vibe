@@ -94,9 +94,9 @@ async def sync_discoveries_to_vdb(
         - error: Error message if failed
     """
     # Import here to avoid circular imports
-    from src.server.initialization import get_rag_instance
+    from src.server.runtime_state import get_active_rag_instance
     
-    rag_instance = get_rag_instance()
+    rag_instance = get_active_rag_instance()
     if not rag_instance:
         logger.warning("⚠️ RAG instance not available - skipping VDB sync")
         return {

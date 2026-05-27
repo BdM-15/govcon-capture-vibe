@@ -64,7 +64,7 @@ def test_route_document_processor_uses_native_lightrag_ingestion(monkeypatch) ->
     llm = object()
 
     result = asyncio.run(
-        routes.process_document_with_semantic_inference(
+        routes.process_document_with_native_ingestion(
             "inputs/ws/demo.pdf",
             "demo.pdf",
             rag,

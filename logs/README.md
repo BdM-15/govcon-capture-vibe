@@ -73,9 +73,9 @@ logs/server.log
 **Example Entries**:
 
 ```
-2025-01-25 14:29:50 | INFO | raganything_server | 🚀 LightRAG-first Capture Workbench Starting
-2025-01-25 14:29:51 | INFO | raganything_server | LLM: grok-4-fast-reasoning via https://api.x.ai/v1
-2025-01-25 14:29:51 | INFO | raganything_server | Embeddings: text-embedding-3-large via https://api.openai.com/v1
+2025-01-25 14:29:50 | INFO | theseus.server | 🚀 LightRAG-first Capture Workbench Starting
+2025-01-25 14:29:51 | INFO | theseus.server | LLM: grok-4-fast-reasoning via https://api.x.ai/v1
+2025-01-25 14:29:51 | INFO | theseus.server | Embeddings: text-embedding-3-large via https://api.openai.com/v1
 2025-01-25 14:29:52 | INFO | uvicorn | Application startup complete
 ```
 

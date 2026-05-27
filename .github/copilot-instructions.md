@@ -10,7 +10,7 @@
 
 ## Project Overview
 
-**Ontology-based RAG system** for federal RFP analysis. Uses a **LightRAG-first native multimodal pipeline** (parser routing + MinerU + native KG/queries) with **xAI Grok** cloud processing. RAG-Anything remains a temporary compatibility dependency until issue #173 removes the legacy surface.
+**Ontology-based RAG system** for federal RFP analysis. Uses a **LightRAG-first native multimodal pipeline** (parser routing + MinerU + native KG/queries) with **xAI Grok** cloud processing.
 
 **Core Innovation**: 33 government contracting entity types + 35 canonical relationship types + 3 active relationship inference algorithms (L↔M linking, document structure, orphan resolution) enable Section L↔M mapping, requirement traceability, and Shipley methodology compliance.
 
@@ -40,11 +40,11 @@
 
 This project has **three independent prompt systems** that MUST stay aligned. Changes to the domain ontology, entity types, relationship types, or Shipley methodology MUST propagate across ALL three:
 
-| System                         | Purpose                                         | Files                                                                                    | Registration                                                                |
-| ------------------------------ | ----------------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| **1. LightRAG Extraction**     | Entity/relationship extraction from text chunks | `prompts/govcon_prompt.py` → `_build_v8_system_prompt()`                                 | `PROMPTS.update(GOVCON_PROMPTS)` in `src/server/initialization.py`          |
-| **2. LightRAG Query/Response** | RAG query answering (Shipley mentor persona)    | `prompts/govcon_prompt.py` (`rag_response`, `naive_rag_response`, `keywords_extraction`) | Same `PROMPTS.update()` call                                                |
-| **3. LightRAG Native Multimodal** | Table/image/equation VLM analysis             | `prompts/multimodal/govcon_multimodal_prompts.py`                                        | `MULTIMODAL_PROMPTS.update(...)` in `src/server/native_lightrag_runtime.py`  |
+| System                            | Purpose                                         | Files                                                                                    | Registration                                                                |
+| --------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **1. LightRAG Extraction**        | Entity/relationship extraction from text chunks | `prompts/govcon_prompt.py` → `_build_v8_system_prompt()`                                 | `PROMPTS.update(GOVCON_PROMPTS)` in `src/server/initialization.py`          |
+| **2. LightRAG Query/Response**    | RAG query answering (Shipley mentor persona)    | `prompts/govcon_prompt.py` (`rag_response`, `naive_rag_response`, `keywords_extraction`) | Same `PROMPTS.update()` call                                                |
+| **3. LightRAG Native Multimodal** | Table/image/equation VLM analysis               | `prompts/multimodal/govcon_multimodal_prompts.py`                                        | `MULTIMODAL_PROMPTS.update(...)` in `src/server/native_lightrag_runtime.py` |
 
 **Additionally**, post-processing inference prompts live in `prompts/relationship_inference/` (13 algorithm-specific markdown files used by `src/inference/` modules).
 
@@ -74,11 +74,11 @@ This project has **three independent prompt systems** that MUST stay aligned. Ch
 
 ## Architecture & LightRAG Integration
 
-This project extends **LightRAG** directly with government-contracting prompts, role routing, parser routing, and semantic post-processing. RAG-Anything-specific code is legacy compatibility only until the removal epic lands.
+This project extends **LightRAG** directly with government-contracting prompts, role routing, parser routing, and semantic post-processing.
 
 ### Core Components (`src/`)
 
-- `src/raganything_server.py` - **Main Entry Point**. Orchestrates the LightRAG-first Capture Workbench server and routes.
+- `src/theseus_server.py` - **Main Entry Point**. Orchestrates the LightRAG-first Capture Workbench server and routes.
 - `src/server/` - Server configuration and routing
   - `config.py` - LightRAG `global_args` setup (MUST load .env first)
   - `routes.py` - Custom endpoints with batch completion detection
@@ -348,9 +348,10 @@ When surfacing a non-trivial structural change:
     - Signal categories: `shipley_terms`, `mentoring_language`, `risk_flags`, `reasoning_chain`
     - Note: Tests query against cached LLM responses. Re-process workspace under new prompts for fresh results.
 4.  **Native Ingestion Regression Gate**:
-  - `.\.venv\Scripts\python.exe tools/native_ingestion_regression_gate.py --fixture --json` — no-GPU/no-MinerU smoke for native pipeline capabilities, parser routing, multimodal prompt contracts, fixture entity/relationship counts, multimodal evidence, and known-answer checks.
-  - Full local check: `.\.venv\Scripts\python.exe tools/native_ingestion_regression_gate.py --workspace rag_storage/<workspace> --known-answer-file tools/native_known_answers.example.json --require-multimodal --output run-dir/artifacts/native-ingestion-gate.json` after reprocessing a representative workspace.
-  - Run the fixture gate before touching native ingestion, parser routing, multimodal prompts, strict-schema boundaries, or LightRAG pins. See `docs/NATIVE_INGESTION_REGRESSION_GATE.md`.
+
+- `.\.venv\Scripts\python.exe tools/native_ingestion_regression_gate.py --fixture --json` — no-GPU/no-MinerU smoke for native pipeline capabilities, parser routing, multimodal prompt contracts, fixture entity/relationship counts, multimodal evidence, and known-answer checks.
+- Full local check: `.\.venv\Scripts\python.exe tools/native_ingestion_regression_gate.py --workspace rag_storage/<workspace> --known-answer-file tools/native_known_answers.example.json --require-multimodal --output run-dir/artifacts/native-ingestion-gate.json` after reprocessing a representative workspace.
+- Run the fixture gate before touching native ingestion, parser routing, multimodal prompts, strict-schema boundaries, or LightRAG pins. See `docs/NATIVE_INGESTION_REGRESSION_GATE.md`.
 
 ### Environment Setup
 
@@ -470,7 +471,7 @@ The `DocumentQueueTracker` in `src/server/routes.py` auto-detects batch completi
 
 ### Custom Endpoint Override
 
-Routes override LightRAG defaults in `src/raganything_server.py`.
+Routes override LightRAG defaults in `src/theseus_server.py`.
 
 ### File Operations
 

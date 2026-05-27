@@ -303,6 +303,8 @@ def test_pyproject_pins_lightrag_to_native_multimodal_commit() -> None:
     sources = pyproject["tool"]["uv"]["sources"]
 
     assert "lightrag-hku>=1.5.0rc3" in dependencies
+    assert "mineru[core]>=3.0.9" in dependencies
+    assert not any(dependency.startswith("raganything") for dependency in dependencies)
     assert sources["lightrag-hku"] == {
         "git": "https://github.com/HKUDS/LightRAG.git",
         "rev": "33b067ffadf1eee2655a7efe9c72de4f8c25cbab",

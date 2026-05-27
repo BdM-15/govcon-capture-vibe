@@ -26,7 +26,7 @@ async def process_document_with_native_ingestion(
     file_path: str,
     file_name: str,
     rag_instance,
-    llm_func
+    llm_func,
 ) -> dict:
     return await run_native_ingestion(
         file_path,
@@ -35,10 +35,6 @@ async def process_document_with_native_ingestion(
         llm_func,
         callback=_callback,
     )
-
-
-process_document_with_semantic_inference = process_document_with_native_ingestion
-
 
 def _preserve_non_overridden_post_routes(routes: Iterable[Any]) -> list[Any]:
     kept_routes: list[Any] = []
