@@ -62,6 +62,22 @@ def test_workspace_gate_reads_lightrag_artifacts_and_fails_on_missing_known_answ
         ),
         encoding="utf-8",
     )
+    (workspace / "kv_store_doc_status.json").write_text(
+        json.dumps(
+            {
+                "doc-1": {
+                    "file_path": "solicitation.pdf",
+                    "status": "processed",
+                },
+                "doc-2": {
+                    "file_path": "cost.xlsx",
+                    "status": "failed",
+                    "error_msg": "xlsx parser failed",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
     report = build_native_ingestion_regression_report(
         workspace_path=workspace,
@@ -82,6 +98,143 @@ def test_workspace_gate_reads_lightrag_artifacts_and_fails_on_missing_known_answ
     }
     assert report["workspace"]["relationship_counts_by_type"] == {"EVIDENCES": 1}
     assert report["workspace"]["known_answer_checks"][0]["missing_terms"] == ["52.204-21"]
+    assert report["workspace"]["document_status"]["counts_by_status"] == {
+        "failed": 1,
+        "processed": 1,
+    }
+
+
+def test_workspace_gate_can_require_processed_xlsx_and_no_failed_docs(tmp_path: Path) -> None:
+    workspace = tmp_path / "demo"
+    workspace.mkdir()
+    (workspace / "vdb_entities.json").write_text(
+        json.dumps({"data": [{"entity_name": "CLIN 0001", "entity_type": "contract_line_item"}]}),
+        encoding="utf-8",
+    )
+    (workspace / "vdb_relationships.json").write_text(
+        json.dumps({"data": [{"src_id": "CLIN 0001", "tgt_id": "Cost Workbook", "keywords": "PRICED_UNDER"}]}),
+        encoding="utf-8",
+    )
+    (workspace / "kv_store_text_chunks.json").write_text(json.dumps({"chunk-1": {"content": "pricing"}}), encoding="utf-8")
+    (workspace / "kv_store_doc_status.json").write_text(
+        json.dumps(
+            {
+                "doc-1": {"file_path": "solicitation.pdf", "status": "processed"},
+                "doc-2": {"file_path": "cost.xlsx", "status": "failed", "error_msg": "xlsx parser failed"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_native_ingestion_regression_report(
+        workspace_path=workspace,
+        require_processed_suffixes=[".xlsx"],
+        fail_on_failed_docs=True,
+    )
+
+    assert report["passed"] is False
+    assert report["workspace"]["document_status"]["counts_by_suffix_status"] == {
+        ".pdf": {"processed": 1},
+        ".xlsx": {"failed": 1},
+    }
+    assert any(check["id"] == "processed_suffix_xlsx" and check["passed"] is False for check in report["gate_checks"])
+    assert any(
+        check["id"] == "document_status_has_no_failed_records" and check["passed"] is False
+        for check in report["gate_checks"]
+    )
+
+
+def test_document_status_gate_uses_latest_status_per_file(tmp_path: Path) -> None:
+    workspace = tmp_path / "demo"
+    workspace.mkdir()
+    (workspace / "vdb_entities.json").write_text(
+        json.dumps({"data": [{"entity_name": "CLIN 0001", "entity_type": "contract_line_item"}]}),
+        encoding="utf-8",
+    )
+    (workspace / "vdb_relationships.json").write_text(
+        json.dumps({"data": [{"src_id": "CLIN 0001", "tgt_id": "Cost Workbook", "keywords": "PRICED_UNDER"}]}),
+        encoding="utf-8",
+    )
+    (workspace / "kv_store_text_chunks.json").write_text(json.dumps({"chunk-1": {"content": "pricing"}}), encoding="utf-8")
+    (workspace / "kv_store_doc_status.json").write_text(
+        json.dumps(
+            {
+                "failed-doc": {
+                    "file_path": "cost.xlsx",
+                    "status": "failed",
+                    "error_msg": "first attempt failed",
+                    "updated_at": "2026-05-01T10:00:00Z",
+                },
+                "doc-ok": {
+                    "file_path": "cost.xlsx",
+                    "status": "processed",
+                    "updated_at": "2026-05-01T10:05:00Z",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_native_ingestion_regression_report(
+        workspace_path=workspace,
+        require_processed_suffixes=[".xlsx"],
+        fail_on_failed_docs=True,
+    )
+
+    assert report["passed"] is True
+    assert report["workspace"]["document_status"]["raw_record_count"] == 2
+    assert report["workspace"]["document_status"]["effective_record_count"] == 1
+    assert report["workspace"]["document_status"]["counts_by_suffix_status"] == {
+        ".xlsx": {"processed": 1},
+    }
+
+
+def test_document_status_gate_ignores_duplicate_attempt_records(tmp_path: Path) -> None:
+    workspace = tmp_path / "demo"
+    workspace.mkdir()
+    (workspace / "vdb_entities.json").write_text(
+        json.dumps({"data": [{"entity_name": "CLIN 0001", "entity_type": "contract_line_item"}]}),
+        encoding="utf-8",
+    )
+    (workspace / "vdb_relationships.json").write_text(
+        json.dumps({"data": [{"src_id": "CLIN 0001", "tgt_id": "Cost Workbook", "keywords": "PRICED_UNDER"}]}),
+        encoding="utf-8",
+    )
+    (workspace / "kv_store_text_chunks.json").write_text(json.dumps({"chunk-1": {"content": "pricing"}}), encoding="utf-8")
+    (workspace / "kv_store_doc_status.json").write_text(
+        json.dumps(
+            {
+                "doc-ok": {
+                    "file_path": "cost.xlsx",
+                    "status": "processed",
+                    "updated_at": "2026-05-01T10:00:00Z",
+                },
+                "dup-later": {
+                    "file_path": "cost.xlsx",
+                    "status": "failed",
+                    "content_summary": "[DUPLICATE:filename] Original document: doc-ok",
+                    "error_msg": "File name already exists.",
+                    "metadata": {"is_duplicate": True},
+                    "updated_at": "2026-05-01T10:05:00Z",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_native_ingestion_regression_report(
+        workspace_path=workspace,
+        require_processed_suffixes=[".xlsx"],
+        fail_on_failed_docs=True,
+    )
+
+    assert report["passed"] is True
+    document_status = report["workspace"]["document_status"]
+    assert document_status["raw_record_count"] == 2
+    assert document_status["duplicate_record_count"] == 1
+    assert document_status["effective_record_count"] == 1
+    assert document_status["failed_records"] == []
+    assert document_status["counts_by_suffix_status"] == {".xlsx": {"processed": 1}}
 
 
 def test_report_json_writer_and_cli_fixture_mode(tmp_path: Path) -> None:

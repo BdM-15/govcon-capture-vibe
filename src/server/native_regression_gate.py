@@ -164,6 +164,77 @@ def _workspace_records(workspace_path: Path) -> tuple[list[dict[str, Any]], list
     return entities, relationships, chunks
 
 
+def _workspace_doc_status(workspace_path: Path) -> list[dict[str, Any]]:
+    status_path = workspace_path / "kv_store_doc_status.json"
+    if not status_path.exists():
+        return []
+    return _records(_load_json(status_path))
+
+
+def _document_status_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
+    duplicate_records = [
+        record for record in records if _is_duplicate_status_record(record)
+    ]
+    source_records = [
+        record for record in records if not _is_duplicate_status_record(record)
+    ]
+    effective_records = _latest_doc_status_by_file(source_records)
+    by_status = _count_by_key(effective_records, "status")
+    suffix_status: dict[str, dict[str, int]] = {}
+    failed_records = []
+    for record in effective_records:
+        file_path = str(record.get("file_path") or record.get("content_summary") or "")
+        suffix = Path(file_path).suffix.lower() or "unknown"
+        status = str(record.get("status") or "unknown").lower()
+        suffix_counts = suffix_status.setdefault(suffix, {})
+        suffix_counts[status] = suffix_counts.get(status, 0) + 1
+        if status == "failed":
+            failed_records.append(
+                {
+                    "file_path": record.get("file_path") or file_path,
+                    "error_msg": record.get("error_msg") or record.get("error") or "",
+                }
+            )
+    return {
+        "counts_by_status": by_status,
+        "counts_by_suffix_status": dict(sorted(suffix_status.items())),
+        "failed_records": failed_records,
+        "raw_record_count": len(records),
+        "duplicate_record_count": len(duplicate_records),
+        "effective_record_count": len(effective_records),
+    }
+
+
+def _is_duplicate_status_record(record: dict[str, Any]) -> bool:
+    metadata = (
+        record.get("metadata") if isinstance(record.get("metadata"), dict) else {}
+    )
+    summary = str(record.get("content_summary") or "")
+    return bool(metadata.get("is_duplicate")) or summary.startswith("[DUPLICATE:")
+
+
+def _latest_doc_status_by_file(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    latest: dict[str, dict[str, Any]] = {}
+    for index, record in enumerate(records):
+        file_path = str(
+            record.get("file_path")
+            or record.get("content_summary")
+            or f"record-{index}"
+        )
+        candidate_sort_key = (
+            str(record.get("updated_at") or record.get("created_at") or ""),
+            index,
+        )
+        current = latest.get(file_path)
+        current_sort_key = current.get("_sort_key") if current else None
+        if current is None or candidate_sort_key >= current_sort_key:
+            latest[file_path] = {**record, "_sort_key": candidate_sort_key}
+    return [
+        {key: value for key, value in record.items() if key != "_sort_key"}
+        for record in latest.values()
+    ]
+
+
 def _contract_checks() -> tuple[dict[str, Any], list[dict[str, Any]]]:
     capabilities: dict[str, Any] = {}
     checks: list[dict[str, Any]] = []
@@ -181,7 +252,7 @@ def _contract_checks() -> tuple[dict[str, Any], list[dict[str, Any]]]:
 
         parser_engine, process_options = resolve_file_parser_directives(
             "smoke.pdf",
-            parser_rules="pdf:mineru-ite,docx:native-ite,xls*:mineru-t",
+            parser_rules="pdf:mineru-ite,docx:native-ite,xls*:native",
             require_external_endpoint=False,
         )
         capabilities["parser_pdf"] = {"engine": parser_engine, "options": process_options}
@@ -248,6 +319,8 @@ def build_native_ingestion_regression_report(
     use_fixture: bool = False,
     known_answer_checks: list[dict[str, Any]] | None = None,
     require_multimodal: bool = False,
+    require_processed_suffixes: list[str] | None = None,
+    fail_on_failed_docs: bool = False,
 ) -> dict[str, Any]:
     """Build a native ingestion regression report without external services by default."""
 
@@ -261,14 +334,18 @@ def build_native_ingestion_regression_report(
     else:
         path = Path(workspace_path)  # type: ignore[arg-type]
         entities, relationships, chunks = _workspace_records(path)
+        doc_status_records = _workspace_doc_status(path)
         source = str(path)
         checks = known_answer_checks or []
+    if use_fixture:
+        doc_status_records = []
 
     corpus_records = [*entities, *relationships, *chunks]
     entity_counts = _count_by_key(entities, "entity_type")
     relationship_counts = _count_by_key(relationships, "rel_type", "relation_type", "keywords", uppercase=True)
     multimodal = _multimodal_evidence(corpus_records)
     known_answers = _evaluate_known_answers(checks, corpus_records)
+    document_status = _document_status_summary(doc_status_records)
     capabilities, contract_checks = _contract_checks()
 
     gate_checks = [
@@ -291,6 +368,26 @@ def build_native_ingestion_regression_report(
                 "detail": f"{multimodal['tables']} table evidence records counted",
             }
         )
+    if fail_on_failed_docs:
+        failed_count = len(document_status["failed_records"])
+        gate_checks.append(
+            {
+                "id": "document_status_has_no_failed_records",
+                "passed": failed_count == 0,
+                "detail": f"{failed_count} failed document records counted",
+            }
+        )
+    for suffix in require_processed_suffixes or []:
+        normalized_suffix = suffix if suffix.startswith(".") else f".{suffix}"
+        suffix_counts = document_status["counts_by_suffix_status"].get(normalized_suffix.lower(), {})
+        processed_count = suffix_counts.get("processed", 0)
+        gate_checks.append(
+            {
+                "id": f"processed_suffix_{normalized_suffix.lower().lstrip('.')}",
+                "passed": processed_count > 0,
+                "detail": f"{processed_count} processed {normalized_suffix.lower()} document records counted",
+            }
+        )
 
     passed = all(item["passed"] for item in [*contract_checks, *gate_checks, *known_answers])
     return {
@@ -304,6 +401,7 @@ def build_native_ingestion_regression_report(
             "relationship_counts_by_type": relationship_counts,
             "multimodal_evidence": multimodal,
             "known_answer_checks": known_answers,
+            "document_status": document_status,
         },
     }
 

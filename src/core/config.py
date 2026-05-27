@@ -290,9 +290,9 @@ class Settings(BaseSettings):
     # NATIVE LIGHTRAG PARSER ROUTING + MINERU CONFIGURATION
     # ═══════════════════════════════════════════════════════════════════════════
     lightrag_parser: str = Field(
-        default="pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xls*:mineru-t",
+        default="pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xls*:native",
         validation_alias="LIGHTRAG_PARSER",
-        description="LightRAG-native parser routing rules, e.g. pdf:mineru-ite,docx:native-ite; unmatched files use legacy fallback"
+        description="LightRAG-native parser routing rules, e.g. pdf:mineru-ite,docx:native-ite,xls*:native; unmatched files use legacy fallback"
     )
     mineru_api_mode: str = Field(
         default="local",

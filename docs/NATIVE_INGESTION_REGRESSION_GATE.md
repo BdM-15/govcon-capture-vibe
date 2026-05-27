@@ -26,14 +26,23 @@ Run workspace mode after processing a representative RFP through the native pars
 .\.venv\Scripts\python.exe tools/native_ingestion_regression_gate.py --workspace rag_storage/<workspace> --known-answer-file tools/native_known_answers.example.json --require-multimodal --output run-dir/artifacts/native-ingestion-gate.json
 ```
 
+For a parser bake-off workspace that must prove Office ingestion, require the relevant suffixes and fail on any failed doc-status records:
+
+```powershell
+.\.venv\Scripts\python.exe tools/native_ingestion_regression_gate.py --workspace rag_storage/<workspace> --known-answer-file tools/native_known_answers.example.json --require-multimodal --require-processed-suffix .xlsx --fail-on-failed-docs --output run-dir/artifacts/native-ingestion-gate.json
+```
+
 Workspace mode reads the LightRAG artifacts under `rag_storage/<workspace>` and reports:
 
 - `entity_counts_by_type` from `vdb_entities.json`.
 - `relationship_counts_by_type` from `vdb_relationships.json`.
 - `multimodal_evidence` from chunks/entities/relationships.
 - `known_answer_checks` from a JSON file with `id`, `query`, and `expected_terms` fields.
+- `document_status` from `kv_store_doc_status.json`, including processed/failed counts by suffix.
 
-The command exits non-zero if native capability checks fail, if the workspace has no entities/relationships, if `--require-multimodal` is set and no table evidence is found, or if any known-answer expected term is missing.
+For XLSX/XLSM workbooks, Theseus uses the native workbook text adapter before LightRAG raw ingestion because MinerU local API does not support XLSX. Keep `--require-processed-suffix .xlsx --fail-on-failed-docs` in parser bake-offs where spreadsheet extraction is part of the quality bar.
+
+The command exits non-zero if native capability checks fail, if the workspace has no entities/relationships, if `--require-multimodal` is set and no table evidence is found, if any known-answer expected term is missing, if `--require-processed-suffix` has no processed doc-status record for that suffix, or if `--fail-on-failed-docs` sees failed doc-status records.
 
 ## Full Local MinerU + VLM Checklist
 

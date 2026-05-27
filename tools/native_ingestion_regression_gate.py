@@ -39,6 +39,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--known-answer-file", type=Path, help="JSON known-answer checks for workspace mode")
     parser.add_argument("--require-multimodal", action="store_true", help="Fail if no table evidence is found")
+    parser.add_argument(
+        "--require-processed-suffix",
+        action="append",
+        default=[],
+        help="Fail unless at least one doc-status record with this suffix is processed. Repeatable, e.g. --require-processed-suffix .xlsx",
+    )
+    parser.add_argument("--fail-on-failed-docs", action="store_true", help="Fail if doc status contains failed records")
     parser.add_argument("--output", type=Path, help="Write the JSON report to this path")
     parser.add_argument("--json", action="store_true", help="Print JSON instead of a text summary")
     return parser
@@ -53,6 +60,8 @@ def main(argv: list[str] | None = None) -> int:
         use_fixture=use_fixture,
         known_answer_checks=known_answer_checks,
         require_multimodal=args.require_multimodal,
+        require_processed_suffixes=args.require_processed_suffix,
+        fail_on_failed_docs=args.fail_on_failed_docs,
     )
     if args.output:
         write_report_json(report, args.output)

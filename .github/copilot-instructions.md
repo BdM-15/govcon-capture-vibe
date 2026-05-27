@@ -107,10 +107,10 @@ This project extends **LightRAG** directly with government-contracting prompts, 
 
 ### Native LightRAG Multimodal & MinerU Integration
 
-Theseus uses LightRAG's native parser pipeline and `lightrag.prompt_multimodal.MULTIMODAL_PROMPTS`, with MinerU as the primary OCR/layout parser for PDFs and OCR-heavy Office files.
+Theseus uses LightRAG's native parser pipeline and `lightrag.prompt_multimodal.MULTIMODAL_PROMPTS`, with MinerU as the primary OCR/layout parser for PDFs and OCR-heavy Office files. XLSX/XLSM workbooks are handled by Theseus's native workbook text adapter before LightRAG raw ingestion because MinerU local API does not support XLSX.
 
 - **Multimodal Support**: Handles text, images, tables, and equations through LightRAG native multimodal prompts.
-- **Parser Routing**: Controlled by `LIGHTRAG_PARSER` (for example `pdf:mineru-ite,docx:native-ite,xls*:mineru-t`). Options: `i` image VLM, `t` table VLM, `e` equation VLM.
+- **Parser Routing**: Controlled by `LIGHTRAG_PARSER` (for example `pdf:mineru-ite,docx:native-ite,xls*:native`). Options: `i` image VLM, `t` table VLM, `e` equation VLM.
 - **MinerU Mode**: `MINERU_API_MODE=local` requires `MINERU_LOCAL_ENDPOINT`; `official` requires `MINERU_API_TOKEN`.
 - **Vision Model**: Uses the LightRAG `vlm` role from `src/server/llm_routing.py`.
 - **Multimodal Prompts**: `prompts/multimodal/govcon_multimodal_prompts.py` provides entity-type-aware, Shipley-aligned native prompts for table/image/equation analysis.
@@ -126,7 +126,7 @@ Native LightRAG parser output and surrounding page text provide context for tabl
 **Configuration (.env)**:
 
 ```bash
-LIGHTRAG_PARSER=pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xls*:mineru-t
+LIGHTRAG_PARSER=pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xls*:native
 VLM_PROCESS_ENABLE=true
 MINERU_API_MODE=local
 MINERU_LOCAL_ENDPOINT=http://localhost:8888
@@ -454,7 +454,7 @@ WORKING_DIR=./rag_storage/workspace_name
 BATCH_TIMEOUT_SECONDS=30
 
 # Native LightRAG parser routing
-LIGHTRAG_PARSER=pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xls*:mineru-t
+LIGHTRAG_PARSER=pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xls*:native
 VLM_PROCESS_ENABLE=true
 MINERU_API_MODE=local
 MINERU_LOCAL_ENDPOINT=http://localhost:8888

@@ -24,7 +24,7 @@ Project Theseus is a **LightRAG-first capture workbench** for final federal soli
 
 | Component             | Technology                                                           | Purpose                                                                                |
 | --------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| **Document Parsing**  | [LightRAG](https://github.com/HKUDS/LightRAG) native parser routing + [MinerU](https://github.com/opendatalab/MinerU) | Multimodal PDF / DOCX / XLSX extraction (text, tables, images, equations)              |
+| **Document Parsing**  | [LightRAG](https://github.com/HKUDS/LightRAG) native parser routing + [MinerU](https://github.com/opendatalab/MinerU) + native workbook text adapter | Multimodal PDF / DOCX / XLSX extraction (text, tables, images, equations)              |
 | **RAG Orchestration** | [LightRAG](https://github.com/HKUDS/LightRAG) native enqueue/process pipeline | Document status, chunking, multimodal analysis, KG construction, hybrid retrieval       |
 | **Knowledge Graph**   | [LightRAG](https://github.com/HKUDS/LightRAG) v1.5 native runtime     | Graph construction + hybrid retrieval (pip: `lightrag-hku`)                            |
 | **LLM**               | xAI Grok (dual-model routing)                                        | `grok-4-1-fast-non-reasoning` (extraction) + `grok-4.20-reasoning` (query / inference) |
@@ -359,7 +359,7 @@ EMBEDDING_FUNC_MAX_ASYNC=16         # Embedding API concurrency
 # ============================================================================
 # Native LightRAG Parser Routing + MinerU Configuration
 # ============================================================================
-LIGHTRAG_PARSER=pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xls*:mineru-t
+LIGHTRAG_PARSER=pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xls*:native
 VLM_PROCESS_ENABLE=true             # Enables native table/image/equation analysis
 MINERU_API_MODE=local               # local = self-hosted mineru-api/router; official = mineru.net
 MINERU_LOCAL_ENDPOINT=http://localhost:8888

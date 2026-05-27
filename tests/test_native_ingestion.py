@@ -10,18 +10,45 @@ from src.server.native_ingestion import (
 
 
 class _DocStatus:
-    def __init__(self):
+    def __init__(self, records: dict | None = None):
+        self._data = records or {}
         self.upserts: list[dict] = []
+        self.deletes: list[list[str]] = []
+        self.index_done_calls = 0
 
     async def upsert(self, payload: dict) -> None:
         self.upserts.append(payload)
+        self._data.update(payload)
+
+    async def delete(self, doc_ids: list[str]) -> None:
+        self.deletes.append(doc_ids)
+        for doc_id in doc_ids:
+            self._data.pop(doc_id, None)
+
+    async def index_done_callback(self) -> None:
+        self.index_done_calls += 1
+
+    async def get_docs_by_track_id(self, track_id: str) -> dict:
+        return {
+            doc_id: record
+            for doc_id, record in self._data.items()
+            if record.get("track_id") == track_id
+        }
 
 
 class _NativeLightRAG:
-    def __init__(self, *, workspace: str = "alpha", fail_process: bool = False):
+    def __init__(
+        self,
+        *,
+        workspace: str = "alpha",
+        fail_process: bool = False,
+        doc_status: _DocStatus | None = None,
+        process_status_records: dict | None = None,
+    ):
         self.workspace = workspace
         self.fail_process = fail_process
-        self.doc_status = _DocStatus()
+        self.doc_status = doc_status or _DocStatus()
+        self.process_status_records = process_status_records or {}
         self.enqueues: list[dict] = []
         self.process_calls = 0
 
@@ -31,6 +58,7 @@ class _NativeLightRAG:
 
     async def apipeline_process_enqueue_documents(self):
         self.process_calls += 1
+        self.doc_status._data.update(self.process_status_records)
         if self.fail_process:
             raise RuntimeError("parser failed")
 
@@ -113,8 +141,43 @@ def test_resolve_govcon_parser_directives_keeps_text_bearing_tables_in_text_chun
     monkeypatch.setenv("LIGHTRAG_PARSER", "pdf:mineru-ite,docx:native-ite,xls*:mineru-t")
 
     assert resolve_govcon_parser_directives("attachment.docx") == ("native", "ie")
-    assert resolve_govcon_parser_directives("pricing.xlsx") == ("mineru", "")
+    assert resolve_govcon_parser_directives("pricing.xlsx") == ("native", "")
     assert resolve_govcon_parser_directives("diagram.pdf") == ("mineru", "ite")
+
+
+def test_native_ingestion_extracts_xlsx_to_raw_text_before_enqueue(tmp_path: Path) -> None:
+    from openpyxl import Workbook
+
+    source = tmp_path / "cost.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Pricing"
+    sheet["A1"] = "CLIN"
+    sheet["B1"] = "Amount"
+    sheet["A2"] = "0001"
+    sheet["B2"] = 1250
+    workbook.save(source)
+    workbook.close()
+    lightrag = _NativeLightRAG(workspace="alpha")
+
+    asyncio.run(
+        process_document_with_native_ingestion(
+            str(source),
+            source.name,
+            _Rag(lightrag),
+            llm_func=object(),
+            track_id="upload-xlsx",
+        )
+    )
+
+    enqueue = lightrag.enqueues[0]
+    assert enqueue["args"][0].startswith("# Workbook: cost.xlsx")
+    assert "## Sheet: Pricing" in enqueue["args"][0]
+    assert "A2=0001" in enqueue["args"][0]
+    assert "B2=1250" in enqueue["args"][0]
+    assert enqueue["kwargs"]["docs_format"] == "raw"
+    assert enqueue["kwargs"]["parse_engine"] == "native"
+    assert enqueue["kwargs"]["process_options"] == ""
 
 
 def test_native_ingestion_failure_records_recoverable_failed_status(tmp_path: Path) -> None:
@@ -139,6 +202,76 @@ def test_native_ingestion_failure_records_recoverable_failed_status(tmp_path: Pa
     assert failed_doc["file_path"] == "broken.pdf"
     assert failed_doc["status"] == "failed"
     assert failed_doc["error_msg"] == "parser failed"
+
+
+def test_native_ingestion_retry_clears_failed_status_records_before_enqueue(tmp_path: Path) -> None:
+    source = tmp_path / "cost.pdf"
+    source.write_bytes(b"%PDF")
+    doc_status = _DocStatus(
+        {
+            "failed-old": {
+                "file_path": "cost.pdf",
+                "status": "failed",
+                "error_msg": "mineru failed",
+            },
+            "dup-old": {
+                "file_path": "cost.pdf",
+                "status": "failed",
+                "content_summary": "[DUPLICATE:filename] Original document: failed-old",
+                "metadata": {"is_duplicate": True},
+            },
+            "other-doc": {"file_path": "solicitation.pdf", "status": "processed"},
+        }
+    )
+    lightrag = _NativeLightRAG(workspace="alpha", doc_status=doc_status)
+
+    asyncio.run(
+        process_document_with_native_ingestion(
+            str(source),
+            source.name,
+            _Rag(lightrag),
+            llm_func=object(),
+            track_id="retry-cost",
+        )
+    )
+
+    assert doc_status.deletes == [["failed-old", "dup-old"]]
+    assert doc_status.index_done_calls == 1
+    assert set(doc_status._data) == {"other-doc"}
+    assert lightrag.enqueues[0]["kwargs"]["track_id"] == "retry-cost"
+
+
+def test_native_ingestion_surfaces_failed_track_status_after_processing(tmp_path: Path) -> None:
+    source = tmp_path / "cost.pdf"
+    source.write_bytes(b"%PDF")
+    lightrag = _NativeLightRAG(
+        workspace="alpha",
+        process_status_records={
+            "doc-failed": {
+                "file_path": "cost.pdf",
+                "status": "failed",
+                "track_id": "upload-cost",
+                "error_msg": "All connection attempts failed",
+            }
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="All connection attempts failed"):
+        asyncio.run(
+            process_document_with_native_ingestion(
+                str(source),
+                source.name,
+                _Rag(lightrag),
+                llm_func=object(),
+                track_id="upload-cost",
+            )
+        )
+
+    failed_payload = lightrag.doc_status.upserts[0]
+    failed_doc = next(iter(failed_payload.values()))
+    assert failed_doc["file_path"] == "cost.pdf"
+    assert failed_doc["status"] == "failed"
+    assert "All connection attempts failed" in failed_doc["error_msg"]
 
 
 def test_native_ingestion_failure_notifies_batch_callback(tmp_path: Path) -> None:
