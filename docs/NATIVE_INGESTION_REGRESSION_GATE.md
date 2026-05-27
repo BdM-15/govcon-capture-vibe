@@ -40,7 +40,7 @@ Workspace mode reads the LightRAG artifacts under `rag_storage/<workspace>` and 
 - `known_answer_checks` from a JSON file with `id`, `query`, and `expected_terms` fields.
 - `document_status` from `kv_store_doc_status.json`, including processed/failed counts by suffix.
 
-For XLSX workbooks, route to legacy raw ingestion (`xlsx:legacy`) after workbook text extraction because the local MinerU API does not support XLSX and LightRAG's stock XLSX extractor is wired through its API upload route, not the reusable native parser worker. Keep `--require-processed-suffix .xlsx --fail-on-failed-docs` in parser bake-offs where spreadsheet extraction is part of the quality bar.
+For XLSX workbooks, route to LightRAG's stock file-upload extraction helper with legacy raw ingestion (`xlsx:legacy`) because the local MinerU API does not support XLSX. Keep `--require-processed-suffix .xlsx --fail-on-failed-docs` in parser bake-offs where spreadsheet extraction is part of the quality bar.
 
 The command exits non-zero if native capability checks fail, if the workspace has no entities/relationships, if `--require-multimodal` is set and no table evidence is found, if any known-answer expected term is missing, if `--require-processed-suffix` has no processed doc-status record for that suffix, or if `--fail-on-failed-docs` sees failed doc-status records.
 

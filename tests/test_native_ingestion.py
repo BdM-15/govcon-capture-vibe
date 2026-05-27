@@ -145,20 +145,23 @@ def test_resolve_govcon_parser_directives_keeps_text_bearing_tables_in_text_chun
     assert resolve_govcon_parser_directives("diagram.pdf") == ("mineru", "ite")
 
 
-def test_native_ingestion_extracts_xlsx_to_raw_text_before_enqueue(tmp_path: Path) -> None:
-    from openpyxl import Workbook
-
+def test_native_ingestion_delegates_xlsx_to_lightrag_file_pipeline(tmp_path: Path) -> None:
     source = tmp_path / "cost.xlsx"
-    workbook = Workbook()
-    sheet = workbook.active
-    sheet.title = "Pricing"
-    sheet["A1"] = "CLIN"
-    sheet["B1"] = "Amount"
-    sheet["A2"] = "0001"
-    sheet["B2"] = 1250
-    workbook.save(source)
-    workbook.close()
+    source.write_bytes(b"fake workbook bytes")
     lightrag = _NativeLightRAG(workspace="alpha")
+    calls = []
+
+    async def fake_pipeline_enqueue_file(rag, file_path, track_id=None, from_scan=False):
+        calls.append((rag, file_path, track_id, from_scan))
+        await rag.apipeline_enqueue_documents(
+            "LightRAG extracted workbook text",
+            file_paths=file_path.name,
+            track_id=track_id,
+            parse_engine="legacy",
+            process_options="",
+            from_scan=from_scan,
+        )
+        return True, track_id
 
     asyncio.run(
         process_document_with_native_ingestion(
@@ -167,17 +170,43 @@ def test_native_ingestion_extracts_xlsx_to_raw_text_before_enqueue(tmp_path: Pat
             _Rag(lightrag),
             llm_func=object(),
             track_id="upload-xlsx",
+            from_scan=True,
+            pipeline_enqueue_file_fn=fake_pipeline_enqueue_file,
         )
     )
 
+    assert calls == [(lightrag, source, "upload-xlsx", True)]
     enqueue = lightrag.enqueues[0]
-    assert enqueue["args"][0].startswith("# Workbook: cost.xlsx")
-    assert "## Sheet: Pricing" in enqueue["args"][0]
-    assert "A2=0001" in enqueue["args"][0]
-    assert "B2=1250" in enqueue["args"][0]
-    assert enqueue["kwargs"]["docs_format"] == "raw"
+    assert enqueue["args"] == ("LightRAG extracted workbook text",)
+    assert enqueue["kwargs"]["file_paths"] == "cost.xlsx"
     assert enqueue["kwargs"]["parse_engine"] == "legacy"
     assert enqueue["kwargs"]["process_options"] == ""
+    assert enqueue["kwargs"]["from_scan"] is True
+    assert lightrag.process_calls == 1
+
+
+def test_native_ingestion_surfaces_lightrag_file_pipeline_enqueue_failure(tmp_path: Path) -> None:
+    source = tmp_path / "cost.xlsx"
+    source.write_bytes(b"fake workbook bytes")
+    lightrag = _NativeLightRAG(workspace="alpha")
+
+    async def fake_pipeline_enqueue_file(rag, file_path, track_id=None, from_scan=False):
+        return False, track_id
+
+    with pytest.raises(RuntimeError, match="LightRAG file enqueue failed"):
+        asyncio.run(
+            process_document_with_native_ingestion(
+                str(source),
+                source.name,
+                _Rag(lightrag),
+                llm_func=object(),
+                track_id="upload-xlsx",
+                pipeline_enqueue_file_fn=fake_pipeline_enqueue_file,
+            )
+        )
+
+    assert lightrag.enqueues == []
+    assert lightrag.process_calls == 0
 
 
 def test_native_ingestion_failure_records_recoverable_failed_status(tmp_path: Path) -> None:

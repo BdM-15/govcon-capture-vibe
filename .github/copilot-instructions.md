@@ -107,7 +107,7 @@ This project extends **LightRAG** directly with government-contracting prompts, 
 
 ### Native LightRAG Multimodal & MinerU Integration
 
-Theseus uses LightRAG's native parser pipeline and `lightrag.prompt_multimodal.MULTIMODAL_PROMPTS`, with MinerU as the primary OCR/layout parser for PDFs and OCR-heavy Office files. XLSX workbooks are extracted to text before LightRAG raw ingestion because MinerU local API does not support XLSX and LightRAG's stock XLSX extractor is wired through its API upload route, not the reusable native parser worker.
+Theseus uses LightRAG's native parser pipeline and `lightrag.prompt_multimodal.MULTIMODAL_PROMPTS`, with MinerU as the primary OCR/layout parser for PDFs and OCR-heavy Office files. XLSX workbooks use LightRAG's stock file-upload extraction path (`pipeline_enqueue_file`) and `xlsx:legacy` because MinerU local API does not support XLSX in practice.
 
 - **Multimodal Support**: Handles text, images, tables, and equations through LightRAG native multimodal prompts.
 - **Parser Routing**: Controlled by `LIGHTRAG_PARSER` (for example `pdf:mineru-ite,docx:native-ite,xlsx:legacy`). Options: `i` image VLM, `t` table VLM, `e` equation VLM.

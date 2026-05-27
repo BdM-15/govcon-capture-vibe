@@ -24,7 +24,7 @@ Project Theseus is a **LightRAG-first capture workbench** for final federal soli
 
 | Component             | Technology                                                           | Purpose                                                                                |
 | --------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| **Document Parsing**  | [LightRAG](https://github.com/HKUDS/LightRAG) native parser routing + [MinerU](https://github.com/opendatalab/MinerU) + XLSX raw-ingest adapter | Multimodal PDF / DOCX extraction plus workbook text ingestion                           |
+| **Document Parsing**  | [LightRAG](https://github.com/HKUDS/LightRAG) native parser routing + [MinerU](https://github.com/opendatalab/MinerU) + LightRAG XLSX extraction | Multimodal PDF / DOCX extraction plus workbook text ingestion                           |
 | **RAG Orchestration** | [LightRAG](https://github.com/HKUDS/LightRAG) native enqueue/process pipeline | Document status, chunking, multimodal analysis, KG construction, hybrid retrieval       |
 | **Knowledge Graph**   | [LightRAG](https://github.com/HKUDS/LightRAG) v1.5 native runtime     | Graph construction + hybrid retrieval (pip: `lightrag-hku`)                            |
 | **LLM**               | xAI Grok (dual-model routing)                                        | `grok-4-1-fast-non-reasoning` (extraction) + `grok-4.20-reasoning` (query / inference) |
