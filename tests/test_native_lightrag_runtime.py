@@ -242,6 +242,35 @@ def test_initialize_native_lightrag_initializes_storages() -> None:
     assert prompt_map == govcon_prompts
 
 
+def test_initialize_native_lightrag_registers_native_multimodal_prompts() -> None:
+    prompt_map = {}
+    multimodal_prompt_map = {"table_analysis": "generic"}
+    native_prompts = {"table_analysis": "govcon table", "image_analysis": "govcon image"}
+
+    built_runtime = SimpleNamespace(
+        adapter=SimpleNamespace(lightrag=SimpleNamespace()),
+        health=SimpleNamespace(native_pipeline_available=True),
+    )
+
+    async def run():
+        return await initialize_native_lightrag(
+            _settings(),
+            graph_storage="Neo4JStorage",
+            build_runtime_fn=lambda settings, graph_storage: built_runtime,
+            prompt_map=prompt_map,
+            govcon_prompts={"rag_response": "mentor"},
+            multimodal_prompt_map=multimodal_prompt_map,
+            native_multimodal_prompts=native_prompts,
+        )
+
+    asyncio.run(run())
+
+    assert multimodal_prompt_map == {
+        "table_analysis": "govcon table",
+        "image_analysis": "govcon image",
+    }
+
+
 def test_pyproject_pins_lightrag_to_native_multimodal_commit() -> None:
     with open("pyproject.toml", "rb") as file:
         pyproject = tomllib.load(file)

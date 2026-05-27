@@ -40,10 +40,21 @@ def _strict_schema_enabled() -> bool:
     )
 
 
+def _is_native_multimodal_analysis_prompt(prompt: Any) -> bool:
+    if not isinstance(prompt, str):
+        return False
+    return (
+        "================ TABLE CONTENT ================" in prompt
+        or "================ EQUATION BODY ================" in prompt
+    )
+
+
 def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> RoleLLMRouting:
     """Build all per-role LLM wrappers/configs used by LightRAG and RAG-Anything."""
     extraction_model = settings.extraction_llm_name
     reasoning_model = settings.reasoning_llm_name
+    keyword_model = getattr(settings, "keyword_llm_name", extraction_model)
+    vlm_model = getattr(settings, "vlm_llm_name", extraction_model)
     query_max_tokens = settings.llm_max_output_tokens
     extract_timeout = settings.llm_timeout
 
@@ -83,10 +94,13 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
 
     async def extract_llm_func(prompt, system_prompt=None, history_messages=[], **kwargs):
         kwargs.setdefault("max_tokens", EXTRACT_MAX_TOKENS)
-        if strict_extraction_response_format is not None:
+        model = extraction_model
+        if _is_native_multimodal_analysis_prompt(prompt):
+            model = vlm_model
+        elif strict_extraction_response_format is not None:
             kwargs["response_format"] = strict_extraction_response_format
         return await openai_complete_if_cache(
-            extraction_model,
+            model,
             prompt,
             system_prompt=system_prompt,
             history_messages=history_messages,
@@ -110,7 +124,7 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
     async def keyword_llm_func(prompt, system_prompt=None, history_messages=[], **kwargs):
         kwargs["max_tokens"] = KEYWORD_MAX_TOKENS
         return await openai_complete_if_cache(
-            extraction_model,
+            keyword_model,
             prompt,
             system_prompt=system_prompt,
             history_messages=history_messages,
@@ -123,7 +137,7 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
         kwargs.setdefault("max_tokens", VLM_MAX_TOKENS)
         if messages:
             return await openai_complete_if_cache(
-                extraction_model,
+                vlm_model,
                 "",
                 system_prompt=None,
                 history_messages=[],
@@ -145,7 +159,7 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
             if system_prompt:
                 built_messages.insert(0, {"role": "system", "content": system_prompt})
             return await openai_complete_if_cache(
-                extraction_model,
+                vlm_model,
                 "",
                 system_prompt=None,
                 history_messages=[],
@@ -155,7 +169,7 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
                 **kwargs,
             )
         return await openai_complete_if_cache(
-            extraction_model,
+            vlm_model,
             prompt,
             system_prompt=system_prompt,
             history_messages=history_messages,
@@ -171,7 +185,7 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
         if isinstance(json_schema, dict) and json_schema.get("name") == "GovConExtractionResult":
             kwargs.pop("response_format", None)
         return await openai_complete_if_cache(
-            extraction_model,
+            vlm_model,
             prompt,
             system_prompt=system_prompt,
             history_messages=history_messages,
@@ -197,13 +211,13 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
     )
     logger.info(
         "   keyword  → %s  max_tokens=%6d  timeout=%ss",
-        f"{extraction_model:40s}",
+        f"{keyword_model:40s}",
         KEYWORD_MAX_TOKENS,
         KEYWORD_TIMEOUT,
     )
     logger.info(
         "   vlm      → %s  max_tokens=%6d  timeout=%ss",
-        f"{extraction_model:40s}",
+        f"{vlm_model:40s}",
         VLM_MAX_TOKENS,
         VLM_TIMEOUT,
     )
@@ -238,13 +252,13 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
             func=keyword_llm_func,
             kwargs={"max_tokens": KEYWORD_MAX_TOKENS},
             timeout=KEYWORD_TIMEOUT,
-            metadata={"model": extraction_model, "host": xai_base_url, "binding": "openai"},
+            metadata={"model": keyword_model, "host": xai_base_url, "binding": "openai"},
         ),
         "vlm": RoleLLMConfig(
             func=vlm_llm_func,
             kwargs={"max_tokens": VLM_MAX_TOKENS},
             timeout=VLM_TIMEOUT,
-            metadata={"model": extraction_model, "host": xai_base_url, "binding": "openai"},
+            metadata={"model": vlm_model, "host": xai_base_url, "binding": "openai"},
         ),
     }
 

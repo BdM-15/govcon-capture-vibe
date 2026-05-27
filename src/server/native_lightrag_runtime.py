@@ -267,6 +267,8 @@ async def initialize_native_lightrag(
     build_runtime_fn: Callable[[Any, str | None], NativeLightRAGRuntime] | None = None,
     prompt_map: dict[str, Any] | None = None,
     govcon_prompts: dict[str, Any] | None = None,
+    multimodal_prompt_map: dict[str, Any] | None = None,
+    native_multimodal_prompts: dict[str, Any] | None = None,
 ) -> NativeLightRAGRuntime:
     """Build direct LightRAG runtime and initialize native storages."""
 
@@ -276,7 +278,16 @@ async def initialize_native_lightrag(
     if govcon_prompts is None:
         from prompts.govcon_prompt import GOVCON_PROMPTS as govcon_prompts
 
+    if multimodal_prompt_map is None:
+        from lightrag.prompt_multimodal import MULTIMODAL_PROMPTS as multimodal_prompt_map
+
+    if native_multimodal_prompts is None:
+        from prompts.multimodal.govcon_multimodal_prompts import (
+            GOVCON_NATIVE_MULTIMODAL_PROMPTS as native_multimodal_prompts,
+        )
+
     prompt_map.update(govcon_prompts)
+    multimodal_prompt_map.update(native_multimodal_prompts)
 
     if build_runtime_fn is None:
         runtime = build_native_lightrag_runtime(settings, graph_storage=graph_storage)
