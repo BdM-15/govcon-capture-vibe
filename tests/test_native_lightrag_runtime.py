@@ -212,6 +212,30 @@ def test_build_native_lightrag_runtime_applies_parser_routing_to_lightrag_kwargs
     assert runtime.health.parser is parser_health
 
 
+def test_build_native_lightrag_runtime_installs_chunk_guardrails() -> None:
+    calls = []
+
+    build_native_lightrag_runtime(
+        _settings(),
+        graph_storage="NetworkXStorage",
+        lightrag_cls=_FakeLightRAG,
+        embed_factory=SimpleNamespace(func=lambda **kwargs: kwargs),
+        embedding_func_cls=_FakeEmbeddingFunc,
+        build_role_llm_routing_fn=lambda settings, **kwargs: SimpleNamespace(
+            modal_llm_func="modal-llm",
+            vision_model_func="vision-llm",
+            role_llm_configs={"extract": "extract-cfg"},
+        ),
+        get_default_catalog=lambda: SimpleNamespace(render_part_d=lambda: "PART D"),
+        make_rerank_func=lambda: None,
+        native_pipeline_available_fn=lambda: True,
+        version_resolver=lambda pkg: "1.5.0rc3",
+        install_chunk_guardrails_fn=lambda: calls.append("installed"),
+    )
+
+    assert calls == ["installed"]
+
+
 def test_initialize_native_lightrag_initializes_storages() -> None:
     calls = []
     prompt_map = {}

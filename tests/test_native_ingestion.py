@@ -3,7 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from src.server.native_ingestion import process_document_with_native_ingestion
+from src.server.native_ingestion import (
+    process_document_with_native_ingestion,
+    resolve_govcon_parser_directives,
+)
 
 
 class _DocStatus:
@@ -68,6 +71,14 @@ def test_process_document_with_native_ingestion_enqueues_pending_parse_document(
         "track_id": "upload-demo",
         "workspace": "alpha",
     }
+
+
+def test_resolve_govcon_parser_directives_keeps_text_bearing_tables_in_text_chunks(monkeypatch) -> None:
+    monkeypatch.setenv("LIGHTRAG_PARSER", "pdf:mineru-ite,docx:native-ite,xls*:mineru-t")
+
+    assert resolve_govcon_parser_directives("attachment.docx") == ("native", "ie")
+    assert resolve_govcon_parser_directives("pricing.xlsx") == ("mineru", "")
+    assert resolve_govcon_parser_directives("diagram.pdf") == ("mineru", "ite")
 
 
 def test_native_ingestion_failure_records_recoverable_failed_status(tmp_path: Path) -> None:

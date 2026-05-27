@@ -159,6 +159,7 @@ def build_native_lightrag_runtime(
     configure_native_parser_environment_fn: Callable[[Any], NativeParserHealth] = configure_native_parser_environment,
     native_pipeline_available_fn: Callable[[], bool] = native_pipeline_available,
     version_resolver: Callable[[str], str] = resolve_package_version,
+    install_chunk_guardrails_fn: Callable[[], None] | None = None,
 ) -> NativeLightRAGRuntime:
     """Construct direct LightRAG runtime plus health data for startup surfaces."""
 
@@ -182,6 +183,13 @@ def build_native_lightrag_runtime(
 
     if chunking_func is None:
         from src.extraction.govcon_chunking import govcon_chunking_func as chunking_func
+
+    if install_chunk_guardrails_fn is None:
+        from src.extraction.govcon_chunking import (
+            install_govcon_native_chunk_guardrails as install_chunk_guardrails_fn,
+        )
+
+    install_chunk_guardrails_fn()
 
     parser_health = configure_native_parser_environment_fn(settings)
     role_routing = build_role_llm_routing_fn(

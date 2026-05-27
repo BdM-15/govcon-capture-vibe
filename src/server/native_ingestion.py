@@ -16,10 +16,38 @@ from src.server.document_processing import record_failed_doc
 logger = logging.getLogger(__name__)
 
 
+TEXT_BEARING_TABLE_SUFFIXES = {
+    ".csv",
+    ".doc",
+    ".docx",
+    ".md",
+    ".txt",
+    ".xls",
+    ".xlsm",
+    ".xlsx",
+    ".tsv",
+}
+
+
 def _new_track_id(file_name: str) -> str:
     stem = Path(file_name).stem or "document"
     safe_stem = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in stem)[:48]
     return f"native-{safe_stem}-{uuid.uuid4().hex[:8]}"
+
+
+def _suppress_text_bearing_table_analysis(file_name: str, process_options: str) -> str:
+    suffix = Path(file_name).suffix.lower()
+    if suffix not in TEXT_BEARING_TABLE_SUFFIXES:
+        return process_options
+    return "".join(option for option in process_options if option != "t")
+
+
+def resolve_govcon_parser_directives(file_name: str) -> tuple[str, str]:
+    parser_engine, process_options = resolve_file_parser_directives(
+        file_name,
+        require_external_endpoint=False,
+    )
+    return parser_engine, _suppress_text_bearing_table_analysis(file_name, process_options)
 
 
 async def process_document_with_native_ingestion(
@@ -36,10 +64,7 @@ async def process_document_with_native_ingestion(
     del llm_func
     lightrag = rag_instance.lightrag
     resolved_track_id = track_id or _new_track_id(file_name)
-    parser_engine, process_options = resolve_file_parser_directives(
-        file_name or file_path,
-        require_external_endpoint=False,
-    )
+    parser_engine, process_options = resolve_govcon_parser_directives(file_name or file_path)
     doc_id = compute_mdhash_id(Path(file_name or file_path).name, prefix="doc-")
 
     try:
