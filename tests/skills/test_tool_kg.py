@@ -1,7 +1,9 @@
 import asyncio
+import json
 
 import pytest
 
+from src.skills.context import build_skill_briefing_book, retrieve_relevant_entities_for_skill
 from src.skills.tools import ToolContext, ToolError, tool_kg_chunks, tool_kg_entities
 
 
@@ -70,4 +72,81 @@ def test_tool_kg_chunks_normalizes_mode_and_sets(tmp_path) -> None:
         "matched_entity_names": ["A", "B"],
         "matched_chunk_ids": ["c1", "c2"],
         "metadata": {"x": 1},
+    }
+
+
+def test_tools_mode_kg_tools_read_native_ingested_evidence(tmp_path) -> None:
+    (tmp_path / "vdb_entities.json").write_text(
+        json.dumps(
+            {
+                "data": [
+                    {
+                        "entity_name": "Native Workload Requirement",
+                        "entity_type": "requirement",
+                        "description": "Native extraction entity",
+                        "source_id": "chunk-native-workload",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "vdb_chunks.json").write_text(
+        json.dumps(
+            {
+                "data": [
+                    {
+                        "__id__": "chunk-native-workload",
+                        "file_path": "native-rfp.pdf",
+                        "content": "Native workload chunk",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "vdb_relationships.json").write_text(json.dumps({"data": []}), encoding="utf-8")
+
+    async def native_query_data(query: str, mode: str, history: list[dict], overrides: dict) -> dict:
+        return {
+            "status": "success",
+            "data": {
+                "entities": [{"entity_name": "Native Workload Requirement"}],
+                "chunks": [{"chunk_id": "chunk-native-workload"}],
+            },
+        }
+
+    ctx = _ctx(tmp_path)
+    ctx.slice_fn = lambda types, limit, chunks, rels, names: build_skill_briefing_book(
+        tmp_path,
+        types,
+        limit,
+        chunks,
+        rels,
+        names,
+    )
+    ctx.retrieve_fn = lambda prompt, desc, mode, top_k: retrieve_relevant_entities_for_skill(
+        native_query_data,
+        prompt,
+        desc,
+        mode,
+        top_k,
+    )
+
+    entities = _run(tool_kg_entities(ctx, types=["requirement"], limit=5))
+    chunks = _run(tool_kg_chunks(ctx, "workload", top_k=5, mode="mix"))
+
+    assert entities.payload["entities"]["requirement"][0]["name"] == "Native Workload Requirement"
+    assert entities.payload["source_chunks"][0]["chunk_id"] == "chunk-native-workload"
+    assert chunks.payload == {
+        "matched_entity_names": ["native workload requirement"],
+        "matched_chunk_ids": ["chunk-native-workload"],
+        "metadata": {
+            "mode": "mix",
+            "top_k": 5,
+            "matched_entities": 1,
+            "matched_chunks": 1,
+            "used": True,
+            "reason": "",
+        },
     }
