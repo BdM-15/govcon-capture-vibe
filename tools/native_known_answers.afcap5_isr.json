@@ -1,0 +1,19 @@
+{
+  "checks": [
+    {
+      "id": "israel_bosi_sites",
+      "query": "Which bases and site-specific BOS-I requirements drive this AFCAP5 ISR task order?",
+      "expected_terms": ["hatzor", "nevatim", "bos-i"]
+    },
+    {
+      "id": "quality_control_thresholds",
+      "query": "What quality control and performance thresholds matter most in the PWS?",
+      "expected_terms": ["quality control plan", "performance", "cor"]
+    },
+    {
+      "id": "staffing_workload_cost",
+      "query": "What staffing or workload evidence should inform the basis of estimate?",
+      "expected_terms": ["staffing matrix", "clin", "key personnel"]
+    }
+  ]
+}

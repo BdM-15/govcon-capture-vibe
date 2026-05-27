@@ -11,7 +11,7 @@ Living documentation index for Project Theseus.
 - Skill authoring and audit rules: [SKILL_SPEC_COMPLIANCE.md](SKILL_SPEC_COMPLIANCE.md)
 - Skill taxonomy and closed vocabularies: [SKILL_TAXONOMY.md](SKILL_TAXONOMY.md)
 - Native ingestion regression gate: [NATIVE_INGESTION_REGRESSION_GATE.md](NATIVE_INGESTION_REGRESSION_GATE.md)
-- Native quality bake-off: [NATIVE_QUALITY_BAKEOFF_MCPP_II.md](NATIVE_QUALITY_BAKEOFF_MCPP_II.md)
+- Native quality bake-off: [NATIVE_QUALITY_BAKEOFF_AFCAP5_ISR.md](NATIVE_QUALITY_BAKEOFF_AFCAP5_ISR.md)
 
 ## Current docs
 
@@ -23,7 +23,7 @@ Living documentation index for Project Theseus.
 | [SKILL_SPEC_COMPLIANCE.md](SKILL_SPEC_COMPLIANCE.md)                     | Open Agent Skills compliance audit and migration notes      |
 | [SKILL_TAXONOMY.md](SKILL_TAXONOMY.md)                                   | Persona, Shipley phase, and capability vocabularies         |
 | [NATIVE_INGESTION_REGRESSION_GATE.md](NATIVE_INGESTION_REGRESSION_GATE.md) | Native LightRAG smoke gate and local MinerU/VLM checklist |
-| [NATIVE_QUALITY_BAKEOFF_MCPP_II.md](NATIVE_QUALITY_BAKEOFF_MCPP_II.md)     | MCPP II native quality bake-off evidence and sign-off notes |
+| [NATIVE_QUALITY_BAKEOFF_AFCAP5_ISR.md](NATIVE_QUALITY_BAKEOFF_AFCAP5_ISR.md) | AFCAP5 ISR native quality bake-off evidence and sign-off notes |
 | [../.github/copilot-instructions.md](../.github/copilot-instructions.md) | Repo-specific coding rules and cross-cutting checklists     |
 
 ## Notes
