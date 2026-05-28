@@ -126,6 +126,90 @@ def test_build_skill_briefing_book_whitelist_can_keep_retrieved_concepts(tmp_pat
     }
 
 
+def test_build_skill_briefing_book_reads_native_ingested_vdb_evidence(tmp_path: Path) -> None:
+    _write_json(
+        tmp_path / "vdb_entities.json",
+        {
+            "data": [
+                {
+                    "__id__": "ent-native-workload",
+                    "entity_name": "Native Workload Requirement",
+                    "entity_type": "requirement",
+                    "description": "Maintain deployed comms workload data.",
+                    "source_id": "chunk-native-workload",
+                },
+                {
+                    "__id__": "ent-native-eval",
+                    "entity_name": "Technical Evaluation Factor",
+                    "entity_type": "evaluation_factor",
+                    "description": "Evaluates technical approach.",
+                    "source_id": "chunk-native-eval",
+                },
+            ]
+        },
+    )
+    _write_json(
+        tmp_path / "vdb_chunks.json",
+        {
+            "data": [
+                {
+                    "__id__": "chunk-native-workload",
+                    "file_path": "native-rfp.pdf",
+                    "content": "Native parsed workload requirement text",
+                }
+            ]
+        },
+    )
+    _write_json(
+        tmp_path / "vdb_relationships.json",
+        {
+            "data": [
+                {
+                    "src_id": "Native Workload Requirement",
+                    "tgt_id": "Technical Evaluation Factor",
+                    "keywords": "EVALUATED_BY",
+                    "description": "Native evidence links workload to evaluation.",
+                    "source_id": "chunk-native-workload",
+                }
+            ]
+        },
+    )
+
+    briefing = build_skill_briefing_book(
+        tmp_path,
+        entity_types=["requirement"],
+        max_per_type=5,
+        max_chunks_per_entity=1,
+        max_relationships_per_entity=2,
+    )
+
+    assert briefing["entities"] == {
+        "requirement": [
+            {
+                "name": "Native Workload Requirement",
+                "description": "Maintain deployed comms workload data.",
+                "source_chunks": ["chunk-native-workload"],
+            }
+        ]
+    }
+    assert briefing["source_chunks"] == [
+        {
+            "chunk_id": "chunk-native-workload",
+            "file_path": "native-rfp.pdf",
+            "content": "Native parsed workload requirement text",
+        }
+    ]
+    assert briefing["relationships"] == [
+        {
+            "src": "Native Workload Requirement",
+            "type": "EVALUATED_BY",
+            "tgt": "Technical Evaluation Factor",
+            "description": "Native evidence links workload to evaluation.",
+            "source_chunk": "chunk-native-workload",
+        }
+    ]
+
+
 def test_retrieve_relevant_entities_for_skill_returns_whitelist_and_metadata() -> None:
     calls = []
 

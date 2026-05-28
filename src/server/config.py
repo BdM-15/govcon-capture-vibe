@@ -1,5 +1,5 @@
 """
-Server Configuration for RAG-Anything + LightRAG
+Server Configuration for native LightRAG
 
 Configures global_args for LightRAG server with government contracting ontology.
 Uses xAI Grok for LLM and OpenAI for embeddings.
@@ -15,22 +15,43 @@ load_dotenv(override=True)
 
 # Now safe to import LightRAG and our config
 import logging
+from typing import Any, Callable
+
 from lightrag.api.config import global_args
-from lightrag.operate import chunking_by_token_size  # noqa: F401  # kept for reference / fallback
 from src.extraction.govcon_chunking import govcon_chunking_func
 
 from src.core.config import get_settings
 from src.ontology.schema import VALID_ENTITY_TYPES
+from src.server.native_lightrag_runtime import NativeParserHealth, configure_native_parser_environment
 
 logger = logging.getLogger(__name__)
 
 
-def configure_raganything_args():
+def configure_native_parser_args(
+    settings: Any,
+    *,
+    global_args_obj: Any = global_args,
+    environ: dict[str, str] | None = None,
+    validate_parser_routing_fn: Callable[[str], None] | None = None,
+) -> NativeParserHealth:
+    """Apply LightRAG-native parser routing settings to env and global args."""
+
+    parser_health = configure_native_parser_environment(
+        settings,
+        environ=environ,
+        validate_parser_routing_fn=validate_parser_routing_fn,
+    )
+    global_args_obj.vlm_process_enable = bool(getattr(settings, "vlm_process_enable", True))
+    global_args_obj.max_parallel_parse_native = parser_health.concurrency["native"]
+    global_args_obj.max_parallel_parse_mineru = parser_health.concurrency["mineru"]
+    global_args_obj.max_parallel_parse_docling = parser_health.concurrency["docling"]
+    global_args_obj.max_parallel_analyze = parser_health.concurrency["analyze"]
+    return parser_health
+
+
+def configure_lightrag_args():
     """
-    Configure global_args for LightRAG server to use with RAG-Anything.
-    
-    We'll configure the LightRAG server normally, then RAG-Anything will
-    wrap the storage/processing with multimodal capabilities.
+    Configure global_args for the native LightRAG server runtime.
     
     All configuration values come from the centralized Settings class.
     """
@@ -75,7 +96,7 @@ def configure_raganything_args():
     # IMPORTANT: LightRAG's API server uses `llm_model` (from env `LLM_MODEL`) for /query.
     # We explicitly bind queries to the reasoning model to avoid "compliance-only" answers.
     #
-    # Extraction is handled separately by RAG-Anything via src/server/initialization.py (dual-model router),
+    # Extraction is handled separately by the native LightRAG role registry,
     # so setting the query model here will NOT force extraction to use reasoning.
     query_model = settings.reasoning_llm_name
 
@@ -104,20 +125,20 @@ def configure_raganything_args():
         "entity_types": entity_types,
     }
     
-    # ═══════════════════════════════════════════════════════════════════════════
+    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     # PARALLELIZATION CONFIGURATION (Semantic naming from centralized config)
-    # ═══════════════════════════════════════════════════════════════════════════
+    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     # LightRAG has three concurrency controls:
     # - max_parallel_insert: Document-level parallelism (files processed concurrently)
     # - max_async / llm_model_max_async: Chunk-level LLM concurrency within each document
     # - embedding_func_max_async: Embedding API concurrency
     #
     # Our centralized config uses semantic names for clarity:
-    # - settings.max_parallel_insert → document-level (recommended: llm_max_async / 3)
-    # - settings.llm_max_async → extraction LLM concurrency (higher for throughput)
-    # - settings.embedding_max_async → embedding concurrency
-    # - settings.post_processing_max_async → semantic inference (lower for stability)
-    # ═══════════════════════════════════════════════════════════════════════════
+    # - settings.max_parallel_insert â†’ document-level (recommended: llm_max_async / 3)
+    # - settings.llm_max_async â†’ extraction LLM concurrency (higher for throughput)
+    # - settings.embedding_max_async â†’ embedding concurrency
+    # - settings.post_processing_max_async â†’ semantic inference (lower for stability)
+    # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     
     # Document-level parallelism (how many files processed at once)
     global_args.max_parallel_insert = settings.max_parallel_insert
@@ -136,7 +157,7 @@ def configure_raganything_args():
     # - Embeddings auto-truncate to model limits via EmbeddingFunc.max_token_size
     #
     # NOTE: global_args.chunking_func is NOT consumed by lightrag.api.lightrag_server
-    # — the API constructs LightRAG without forwarding this attribute. The actual
+    # â€” the API constructs LightRAG without forwarding this attribute. The actual
     # registration of govcon_chunking_func happens in src/server/initialization.py
     # via lightrag_kwargs={"chunking_func": govcon_chunking_func}. We set the
     # attribute here only for completeness / future LightRAG API support.
@@ -152,15 +173,23 @@ def configure_raganything_args():
     
     # Multimodal support
     global_args.enable_multimodal = True
+    parser_health = configure_native_parser_args(settings)
     
     logger.info(f"  Parallelization: max_parallel_insert={settings.max_parallel_insert}, "
                 f"llm_max_async={effective_llm_async}, embedding_max_async={effective_embedding_async}")
     logger.info(f"  Post-processing will use: max_async={settings.get_effective_post_processing_max_async()}")
+    logger.info(
+        "  Native parser routing: %s; MinerU mode=%s backend=%s method=%s",
+        parser_health.routing or "legacy",
+        parser_health.mineru_api_mode,
+        parser_health.mineru_backend,
+        parser_health.mineru_parse_method,
+    )
     logger.info(
         "  Local state storage: kv=%s, vector=%s, doc_status=%s",
         global_args.kv_storage,
         global_args.vector_storage,
         global_args.doc_status_storage,
     )
-    
-    # Configuration complete - detailed startup logging happens in initialization.py
+
+    # Configuration complete - detailed startup logging happens in the server entry point.

@@ -1,6 +1,4 @@
-"""
-GovCon multimodal prompt registry for RAGAnything register_prompt_language().
-"""
+"""GovCon multimodal prompt registry."""
 from prompts.multimodal.govcon_multimodal_prompts import GOVCON_MULTIMODAL_PROMPTS
 
 __all__ = ["GOVCON_MULTIMODAL_PROMPTS"]

@@ -20,10 +20,10 @@ except Exception:  # pragma: no cover — zoneinfo always present on 3.9+
     LOCAL_TZ = timezone.utc  # fallback so the app never crashes on a bad env
 
 
-# RAGAnything bug: hardcodes `time.strftime("%Y-%m-%dT%H:%M:%S+00:00")`,
-# which produces local time mislabeled as UTC (no microseconds, literal
-# "+00:00" suffix). Detect that exact shape and treat as naive-local.
-_RAGANYTHING_BUG_RE = re.compile(
+# Legacy ingestion once emitted local timestamps mislabeled as UTC (no
+# microseconds, literal "+00:00" suffix). Detect that exact shape and treat it
+# as naive-local.
+_LOCAL_PLUS_ZERO_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$"
 )
 
@@ -55,9 +55,9 @@ def to_local_iso(value: object, timespec: str = "seconds") -> Optional[str]:
             dt = datetime.fromtimestamp(float(value), tz=timezone.utc)
         elif isinstance(value, str):
             s = value.strip()
-            # RAGAnything bug — value is actually local time mislabeled as UTC.
+            # Legacy value is actually local time mislabeled as UTC.
             # Reinterpret as naive local instead of converting from UTC.
-            if _RAGANYTHING_BUG_RE.match(s):
+            if _LOCAL_PLUS_ZERO_RE.match(s):
                 naive = datetime.strptime(s[:19], "%Y-%m-%dT%H:%M:%S")
                 dt = naive.replace(tzinfo=LOCAL_TZ)
             else:

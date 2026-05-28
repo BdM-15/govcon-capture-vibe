@@ -5,7 +5,7 @@ These tests prevent accidental re-introduction:
   - ENTITY_EXTRACTION_USE_JSON must NOT appear in .env
   - govcon_lightrag_native.txt must NOT exist at its original path
   - output_sanitizer.py must NOT exist
-  - entity_extraction_use_json must be hardcoded True in initialization.py
+    - entity_extraction_use_json must be hardcoded True in native_lightrag_runtime.py
 """
 from __future__ import annotations
 
@@ -58,12 +58,12 @@ def test_output_sanitizer_absent():
 
 
 # ---------------------------------------------------------------------------
-# 4. initialization.py must hardcode entity_extraction_use_json=True
+# 4. native_lightrag_runtime.py must hardcode entity_extraction_use_json=True
 # ---------------------------------------------------------------------------
 
 def test_entity_extraction_use_json_hardcoded_true():
-    """Parse initialization.py AST to confirm the kwarg is True, not a variable."""
-    init_path = _ROOT / "src" / "server" / "initialization.py"
+    """Parse native_lightrag_runtime.py AST to confirm the kwarg is True, not a variable."""
+    init_path = _ROOT / "src" / "server" / "native_lightrag_runtime.py"
     source = init_path.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(init_path))
 
@@ -84,7 +84,7 @@ def test_entity_extraction_use_json_hardcoded_true():
                 found_value = None  # variable reference — treat as failure
 
     assert found_value is True, (
-        "initialization.py: entity_extraction_use_json must be hardcoded True. "
+        "native_lightrag_runtime.py: entity_extraction_use_json must be hardcoded True. "
         "Found: %r. See Phase 2.5 (issue #124)." % found_value
     )
 

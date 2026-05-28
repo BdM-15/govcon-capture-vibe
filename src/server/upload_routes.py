@@ -21,7 +21,7 @@ def create_insert_endpoint(
     process_document_func,
     callback,
 ):
-    """Create custom /insert endpoint with automatic semantic post-processing."""
+    """Create custom /insert endpoint with native LightRAG processing."""
 
     async def insert_with_semantic_processing(
         file: UploadFile = File(...),
@@ -51,7 +51,7 @@ def create_insert_endpoint(
                     "message": f"Document {file_path.name} processed successfully",
                     "saved_to": str(file_path),
                     "relationships_inferred": processing_result["relationships_inferred"],
-                    "method": "RAG-Anything + LLM semantic inference (format-agnostic)",
+                    "method": processing_result.get("method", "native_lightrag_pipeline"),
                 }
             )
         except Exception as exc:
@@ -76,9 +76,9 @@ def create_documents_upload_endpoint(
     process_document_func,
     callback,
 ):
-    """Override LightRAG's WebUI /documents/upload endpoint to use RAG-Anything."""
+    """Override LightRAG's WebUI /documents/upload endpoint."""
 
-    async def documents_upload_with_raganything(
+    async def documents_upload_with_native_lightrag(
         file: UploadFile = File(...),
         workspace: Optional[str] = Query(
             None,
@@ -131,7 +131,7 @@ def create_documents_upload_endpoint(
                     "message": f"Document {file_path.name} processed successfully",
                     "saved_to": str(file_path),
                     "relationships_inferred": processing_result.get("relationships_inferred", 0),
-                    "method": "RAG-Anything + LLM semantic inference (format-agnostic)",
+                    "method": processing_result.get("method", "native_lightrag_pipeline"),
                 }
             )
         except Exception as exc:
@@ -144,7 +144,7 @@ def create_documents_upload_endpoint(
 
     app.add_api_route(
         "/documents/upload",
-        documents_upload_with_raganything,
+        documents_upload_with_native_lightrag,
         methods=["POST"],
         response_class=JSONResponse,
     )

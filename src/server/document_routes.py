@@ -38,7 +38,6 @@ _PROCESSING_LOGGERS = (
     "src.extraction",
     "src.ontology",
     "src.server.processing_log",
-    "raganything",
     "nano-vectordb",
 )
 

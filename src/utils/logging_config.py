@@ -5,7 +5,7 @@ Sets up structured logging with both file and console output.
 Prevents terminal overflow by using rotating log files.
 
 Features:
-- Dedicated processing.log for RFP processing (RAG-Anything, LightRAG, semantic inference)
+- Dedicated processing.log for RFP processing (native LightRAG parsing, extraction, semantic inference)
 - Filtered console output (no HTTP health check spam)
 - Separate error logging
 - Automatic log rotation (10MB files, 5 backups per log)
@@ -280,7 +280,7 @@ def setup_logging(
     # CRITICAL: LightRAG's logger has propagate=False, so root handlers alone do
     # not receive its records. Attach both processing and error handlers directly
     # so workspace errors land in <workspace>_errors.log as well as processing.log.
-    for external_logger_name in ("lightrag", "raganything"):
+    for external_logger_name in ("lightrag",):
         external_logger = logging.getLogger(external_logger_name)
         _remove_workspace_file_handlers(external_logger)
         external_logger.addHandler(processing_handler)

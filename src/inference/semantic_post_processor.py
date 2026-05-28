@@ -177,7 +177,7 @@ class SemanticPostProcessingRun:
         )
 
         if table_mapped > 0:
-            logger.info("  📊 Processing %s table entities (from RAG-Anything)...", table_mapped)
+            logger.info("  📊 Processing %s generic table entities...", table_mapped)
             logger.info("  ✅ Heuristically mapped %s table entities", table_mapped)
         if hash_cleaned > 0:
             logger.info("  ✅ Cleaned %s prefixed entity types (#, #|, |)", hash_cleaned)

@@ -1,13 +1,15 @@
 """
 GovCon document classification + banner injection at chunk time.
 
-NON-INVASIVE: Wraps LightRAG's native ``chunking_by_token_size``. No library
-patches, no monkey patches, no RAGAnything internals touched.
+NON-INVASIVE FOR CONTENT: Wraps LightRAG's native ``chunking_by_token_size``
+and installs an idempotent native-pipeline chunk builder wrapper. No external
+integration package
+internals are touched.
 
-This is registered via ``global_args.chunking_func`` in ``src/server/config.py``,
-which is LightRAG's documented extension point for custom chunking. The same
-seam was already in use for the default chunker — we just substitute a
-classifier-decorated version.
+For legacy/non-explicit chunking this is registered as LightRAG's
+``chunking_func``. For explicit native strategies (``F/R/V/P``) that bypass
+``chunking_func``, ``install_govcon_native_chunk_guardrails`` wraps LightRAG's
+chunk dictionary builder so the same classifier-decorated chunks are persisted.
 
 How it works
 ------------
@@ -47,13 +49,17 @@ import logging
 import re
 from typing import Any
 
-from lightrag.operate import chunking_by_token_size
+try:
+    from lightrag.chunker import chunking_by_token_size
+except ImportError:  # pragma: no cover - compatibility with older LightRAG pins
+    from lightrag.operate import chunking_by_token_size
 from lightrag.utils import Tokenizer
 
 logger = logging.getLogger(__name__)
 
 
 BANNER_TEMPLATE = "[GOVCON_DOC: type={doc_type}; note={note}]"
+BANNER_PREFIX = "[GOVCON_DOC:"
 
 # Classification rules — ordered by specificity (most specific first).
 # Each rule: (doc_type, note, list of case-insensitive regex patterns).
@@ -200,6 +206,94 @@ def classify_document(content: str) -> tuple[str, str]:
     return "unknown", ""
 
 
+def _classification_input_from_chunks(chunks: list[dict[str, Any]]) -> str:
+    ordered = sorted(
+        enumerate(chunks),
+        key=lambda item: (
+            item[1].get("chunk_order_index")
+            if isinstance(item[1].get("chunk_order_index"), int)
+            else item[0]
+        ),
+    )
+    return "\n\n".join(str(chunk.get("content") or "") for _, chunk in ordered)
+
+
+def decorate_govcon_chunks(
+    chunks: list[dict[str, Any]],
+    *,
+    source_content: str | None = None,
+) -> list[dict[str, Any]]:
+    """Decorate chunk dictionaries with GovCon document guardrails."""
+    if not chunks:
+        return chunks
+
+    classification_content = source_content
+    if classification_content is None:
+        classification_content = _classification_input_from_chunks(chunks)
+    doc_type, note = classify_document(classification_content)
+    if doc_type == "unknown":
+        return chunks
+
+    banner = BANNER_TEMPLATE.format(doc_type=doc_type, note=note)
+    for chunk in chunks:
+        content = str(chunk.get("content") or "")
+        if content and not content.startswith(BANNER_PREFIX):
+            chunk["content"] = f"{banner}\n\n{content}"
+        chunk["govcon_doc_type"] = doc_type
+    return chunks
+
+
+def build_govcon_chunks_dict_from_chunking_result(
+    chunking_result: list[dict[str, Any]],
+    *,
+    doc_id: str,
+    file_path: str,
+    base_builder: Any | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Decorate native chunk outputs before LightRAG persists chunk dictionaries."""
+    if base_builder is None:
+        from lightrag.utils_pipeline import build_chunks_dict_from_chunking_result as base_builder
+
+    decorated = decorate_govcon_chunks(list(chunking_result))
+    return base_builder(decorated, doc_id=doc_id, file_path=file_path)
+
+
+def _wrap_chunks_dict_builder(builder: Any) -> Any:
+    if getattr(builder, "_govcon_guardrails", False):
+        return builder
+
+    def wrapped(chunking_result: list[dict[str, Any]], *, doc_id: str, file_path: str):
+        return build_govcon_chunks_dict_from_chunking_result(
+            chunking_result,
+            doc_id=doc_id,
+            file_path=file_path,
+            base_builder=builder,
+        )
+
+    wrapped._govcon_guardrails = True  # type: ignore[attr-defined]
+    wrapped._govcon_original = builder  # type: ignore[attr-defined]
+    return wrapped
+
+
+def install_govcon_native_chunk_guardrails(
+    *,
+    pipeline_module: Any | None = None,
+    utils_pipeline_module: Any | None = None,
+) -> None:
+    """Patch LightRAG native chunk persistence with GovCon guardrail decoration."""
+    if pipeline_module is None:
+        import lightrag.pipeline as pipeline_module
+    if utils_pipeline_module is None:
+        import lightrag.utils_pipeline as utils_pipeline_module
+
+    pipeline_module.build_chunks_dict_from_chunking_result = _wrap_chunks_dict_builder(
+        pipeline_module.build_chunks_dict_from_chunking_result
+    )
+    utils_pipeline_module.build_chunks_dict_from_chunking_result = _wrap_chunks_dict_builder(
+        utils_pipeline_module.build_chunks_dict_from_chunking_result
+    )
+
+
 def govcon_chunking_func(
     tokenizer: Tokenizer,
     content: str,
@@ -215,8 +309,6 @@ def govcon_chunking_func(
     splitting to LightRAG's native chunker, then decorate every chunk
     with a doc-type banner and a ``govcon_doc_type`` metadata key.
     """
-    doc_type, note = classify_document(content)
-
     chunks = chunking_by_token_size(
         tokenizer=tokenizer,
         content=content,
@@ -226,22 +318,21 @@ def govcon_chunking_func(
         chunk_token_size=chunk_token_size,
     )
 
-    if doc_type == "unknown" or not chunks:
-        if chunks:
-            logger.info(
-                "GovCon chunking: %d chunks, doc_type=unknown (no banner added)",
-                len(chunks),
-            )
-        return chunks
+    decorated = decorate_govcon_chunks(chunks, source_content=content)
+    doc_type = decorated[0].get("govcon_doc_type", "unknown") if decorated else "unknown"
+    if doc_type != "unknown":
+        logger.info(
+            "GovCon chunking: %d chunks classified as '%s' (banner prepended)",
+            len(decorated),
+            doc_type,
+        )
+        return decorated
 
-    banner = BANNER_TEMPLATE.format(doc_type=doc_type, note=note)
-    for chunk in chunks:
-        chunk["content"] = f"{banner}\n\n{chunk['content']}"
-        chunk["govcon_doc_type"] = doc_type
+    if not decorated:
+        return decorated
 
     logger.info(
-        "GovCon chunking: %d chunks classified as '%s' (banner prepended)",
+        "GovCon chunking: %d chunks, doc_type=unknown (no banner added)",
         len(chunks),
-        doc_type,
     )
     return chunks

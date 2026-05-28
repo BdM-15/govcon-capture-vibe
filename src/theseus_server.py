@@ -1,18 +1,18 @@
 """
-RAG-Anything Server with LightRAG WebUI
-Multimodal RAG system for government contracting documents
+LightRAG-first Capture Workbench server.
+Multimodal RAG system for government contracting documents.
 
 Architecture:
 - src/server/config.py: Configuration (ontology-backed entity catalog, API credentials, chunking)
-- src/server/initialization.py: RAGAnything initialization (tri-LLM, custom prompts)
+- src/server/native_lightrag_runtime.py: Native LightRAG runtime, role routing, parser health
 - src/server/routes.py: FastAPI endpoints + semantic post-processing
 - This file: Main entry point + server orchestration
 
 Workflow:
-1. Document Upload → /insert endpoint → UCF detection
-2. Dual-Path Processing → Section-aware OR standard extraction
+1. Document Upload → /insert or /documents/upload
+2. Native LightRAG parser routing → MinerU/native parser + multimodal analysis
 3. Entity Extraction → catalog-driven custom types (extraction LLM: non-reasoning)
-4. Semantic Post-Processing → 8 LLM inference algorithms (reasoning LLM)
+4. Semantic Post-Processing → L↔M, document structure, orphan resolution
 5. Knowledge Graph Storage → Neo4j or local GraphML
 """
 
@@ -20,7 +20,6 @@ Workflow:
 # LightRAG's dataclass field defaults evaluate os.getenv() at import time:
 #   chunk_token_size: int = field(default=int(os.getenv("CHUNK_SIZE", 1200)))
 # If .env isn't loaded first, it uses the hardcoded 1200 default
-import atexit
 import os
 import sys
 from contextlib import contextmanager
@@ -48,12 +47,11 @@ import asyncio
 import logging
 
 # Suppress verbose logging from libraries
-logging.getLogger("raganything").setLevel(logging.WARNING)
 logging.getLogger("lightrag").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # Set up logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("theseus.server")
 
 
 KG_MODULES = [
@@ -76,6 +74,15 @@ class ServerRuntime:
     app: Any
     host: str
     port: int
+
+
+@dataclass
+class TheseusRAGRuntime:
+    """Native LightRAG runtime plus startup health and settings."""
+
+    adapter: Any
+    health: Any
+    settings: Any
 
 
 @dataclass
@@ -118,9 +125,15 @@ def build_startup_banner_items(
     relationship_count: int,
     colors: Any,
     version_resolver: Callable[[str], str] = resolve_package_version,
+    pipeline_health: Any | None = None,
 ) -> list[tuple[str, str]]:
     """Build the startup banner rows for log_banner()."""
     mineru_version = version_resolver("mineru")
+    lightrag_version = (
+        pipeline_health.lightrag_version
+        if pipeline_health is not None
+        else version_resolver("lightrag-hku")
+    )
     device = settings.mineru_device_mode.upper()
     device_color = colors.GREEN if device == "CUDA" else colors.YELLOW
 
@@ -129,6 +142,10 @@ def build_startup_banner_items(
         (
             "Storage",
             f"{colors.YELLOW}{graph_storage}{colors.RESET}  ·  {colors.DIM}{working_dir}{colors.RESET}",
+        ),
+        (
+            "Runtime",
+            f"{colors.GREEN}LightRAG-first Capture Workbench{colors.RESET}  ·  {colors.DIM}native ingestion + native multimodal{colors.RESET}",
         ),
         ("", ""),
         ("Extract  (LightRAG)", f"{colors.CYAN}{settings.extraction_llm_name}{colors.RESET}"),
@@ -142,8 +159,7 @@ def build_startup_banner_items(
         ),
         ("Reranker", format_reranker_line(settings, colors)),
         ("", ""),
-        ("LightRAG", f"{colors.DIM}{version_resolver('lightrag-hku')}{colors.RESET}"),
-        ("RAG-Anything", f"{colors.DIM}{version_resolver('raganything')}{colors.RESET}"),
+        ("LightRAG", f"{colors.DIM}{lightrag_version}{colors.RESET}"),
         (
             "MinerU",
             f"{colors.DIM}{mineru_version}{colors.RESET}  ·  Device: {colors.BOLD}{device_color}{device}{colors.RESET}  ·  Method: {colors.YELLOW}{settings.parse_method.upper()}{colors.RESET}",
@@ -164,6 +180,67 @@ def build_startup_banner_items(
             f"{colors.BOLD}{colors.MAGENTA}{len(KG_MODULES)} domain ontologies{colors.RESET}  {colors.DIM}injected for query enrichment{colors.RESET}",
         ),
     ]
+    if pipeline_health is not None:
+        pipeline_state = "available" if pipeline_health.native_pipeline_available else "missing"
+        storage = pipeline_health.storage
+        parser = pipeline_health.parser
+        for index, (label, _) in enumerate(startup_items):
+            if label == "Multimodal":
+                startup_items[index] = (
+                    "Multimodal",
+                    f"{pipeline_health.multimodal}  {colors.GREEN}▸ ENABLED{colors.RESET}",
+                )
+            if label == "MinerU":
+                startup_items[index] = (
+                    "MinerU",
+                    f"{colors.DIM}{mineru_version}{colors.RESET}  ·  Mode: {colors.YELLOW}{parser.mineru_api_mode.upper()}{colors.RESET}  ·  Backend: {colors.CYAN}{parser.mineru_backend}{colors.RESET}  ·  Method: {colors.YELLOW}{parser.mineru_parse_method}{colors.RESET}",
+                )
+            if label == "MinerU" and parser.mineru_endpoint:
+                startup_items[index] = (
+                    "MinerU",
+                    f"{startup_items[index][1]}  ·  Endpoint: {colors.DIM}{parser.mineru_endpoint}{colors.RESET}",
+                )
+            if label == "Multimodal":
+                break
+        lightrag_index = next(
+            index for index, (label, _) in enumerate(startup_items) if label == "LightRAG"
+        )
+        startup_items.insert(
+            lightrag_index + 1,
+            (
+                "Native Pipeline",
+                f"{colors.GREEN if pipeline_health.native_pipeline_available else colors.YELLOW}{pipeline_state}{colors.RESET}",
+            ),
+        )
+        startup_items.insert(
+            lightrag_index + 2,
+            ("Role Registry", f"{colors.CYAN}{', '.join(pipeline_health.roles)}{colors.RESET}"),
+        )
+        startup_items.insert(
+            lightrag_index + 3,
+            (
+                "Storage Detail",
+                f"kv={storage['kv']} · vector={storage['vector']} · graph={storage['graph']} · doc_status={storage['doc_status']}",
+            ),
+        )
+        startup_items.insert(
+            lightrag_index + 4,
+            ("Parser Routing", f"{colors.CYAN}{parser.routing or 'legacy'}{colors.RESET}"),
+        )
+        startup_items.insert(
+            lightrag_index + 5,
+            (
+                "MinerU Mode",
+                f"{colors.YELLOW}{parser.mineru_api_mode}{colors.RESET} · backend={parser.mineru_backend} · method={parser.mineru_parse_method}",
+            ),
+        )
+        startup_items.insert(
+            lightrag_index + 6,
+            (
+                "Parser Workers",
+                f"native={parser.concurrency['native']} · mineru={parser.concurrency['mineru']} · docling={parser.concurrency['docling']} · analyze={parser.concurrency['analyze']}",
+            ),
+        )
     startup_items.extend(
         (f"  {colors.MAGENTA}▸{colors.RESET} {name}", f"{colors.DIM}{description}{colors.RESET}")
         for name, description in KG_MODULES
@@ -177,7 +254,7 @@ def build_startup_banner_items(
             ("", ""),
             ("WebUI", f"{colors.BLUE}http://{host}:{port}/webui{colors.RESET}"),
             (
-                "Capture UI",
+                "Capture Workbench",
                 f"{colors.BOLD}{colors.CYAN}http://{host}:{port}/ui{colors.RESET}  {colors.DIM}(new){colors.RESET}",
             ),
             ("API Docs", f"{colors.BLUE}http://{host}:{port}/docs{colors.RESET}"),
@@ -186,6 +263,42 @@ def build_startup_banner_items(
     if graph_storage == "Neo4JStorage":
         startup_items.append(("Neo4j", f"{colors.BLUE}http://localhost:7474{colors.RESET}"))
     return startup_items
+
+
+async def initialize_theseus_rag_runtime(
+    *,
+    global_args_obj: Any,
+    configure_lightrag_args_fn: Callable[[], None] | None = None,
+    initialize_native_lightrag_fn: Callable[..., Awaitable[Any]] | None = None,
+    get_settings_fn: Callable[[], Any] | None = None,
+    set_active_rag_instance_fn: Callable[[Any], None] | None = None,
+) -> TheseusRAGRuntime:
+    """Configure and initialize the native LightRAG runtime for Theseus."""
+
+    if configure_lightrag_args_fn is None:
+        from src.server.config import configure_lightrag_args as configure_lightrag_args_fn
+
+    if initialize_native_lightrag_fn is None:
+        from src.server.native_lightrag_runtime import initialize_native_lightrag as initialize_native_lightrag_fn
+
+    if get_settings_fn is None:
+        from src.core import get_settings as get_settings_fn
+
+    if set_active_rag_instance_fn is None:
+        from src.server.runtime_state import set_active_rag_instance as set_active_rag_instance_fn
+
+    configure_lightrag_args_fn()
+    settings = get_settings_fn()
+    native_runtime = await initialize_native_lightrag_fn(
+        settings,
+        graph_storage=getattr(global_args_obj, "graph_storage", None),
+    )
+    set_active_rag_instance_fn(native_runtime.adapter)
+    return TheseusRAGRuntime(
+        adapter=native_runtime.adapter,
+        health=native_runtime.health,
+        settings=settings,
+    )
 
 
 def make_ui_query_bridges(
@@ -312,6 +425,7 @@ def build_server_runtime(
     colors: Any | None = None,
     entity_types: list[Any] | None = None,
     relationship_types: list[Any] | None = None,
+    pipeline_health: Any | None = None,
 ) -> ServerRuntime:
     """Build app, wire routes/UI, log banner, return launch config."""
 
@@ -361,9 +475,10 @@ def build_server_runtime(
         entity_count=len(entity_types),
         relationship_count=len(relationship_types),
         colors=colors,
+        pipeline_health=pipeline_health,
     )
     log_banner_fn(
-        f"{colors.BOLD}✅ PROJECT THESEUS — READY{colors.RESET}",
+        f"{colors.BOLD}✅ LIGHTRAG-FIRST CAPTURE WORKBENCH READY{colors.RESET}",
         items=startup_items,
         logger=logger,
         force_print=True,
@@ -372,22 +487,7 @@ def build_server_runtime(
     return ServerRuntime(app=app, host=host, port=port)
 
 
-def unregister_raganything_atexit(rag_instance: Any, *, logger: Any) -> bool:
-    close_callback = getattr(rag_instance, "close", None)
-    if close_callback is None:
-        return False
-
-    try:
-        atexit.unregister(close_callback)
-    except ValueError:
-        return False
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("Failed unregistering RAG-Anything atexit cleanup: %s", exc)
-        return False
-    return True
-
-
-async def finalize_raganything_for_shutdown(rag_instance: Any, *, logger: Any) -> None:
+async def finalize_native_runtime_for_shutdown(rag_instance: Any, *, logger: Any) -> None:
     if rag_instance is None:
         return
 
@@ -397,18 +497,15 @@ async def finalize_raganything_for_shutdown(rag_instance: Any, *, logger: Any) -
     setattr(rag_instance, "_theseus_shutdown_finalized", True)
     finalize = getattr(rag_instance, "finalize_storages", None)
     if finalize is None:
-        unregister_raganything_atexit(rag_instance, logger=logger)
         return
 
     try:
         await finalize()
     except Exception:  # noqa: BLE001
-        logger.exception("RAG-Anything shutdown finalization failed")
-    finally:
-        unregister_raganything_atexit(rag_instance, logger=logger)
+        logger.exception("Native runtime shutdown finalization failed")
 
 
-async def serve_with_rag_shutdown(
+async def serve_with_runtime_shutdown(
     server_instance: Any,
     rag_instance: Any,
     *,
@@ -417,15 +514,14 @@ async def serve_with_rag_shutdown(
     try:
         await server_instance.serve()
     finally:
-        await finalize_raganything_for_shutdown(rag_instance, logger=logger)
+        await finalize_native_runtime_for_shutdown(rag_instance, logger=logger)
 
 
 async def main():
-    """Main server startup with RAG-Anything + LightRAG WebUI
+    """Main server startup with native LightRAG + Theseus UI
     
     Architecture:
-    - RAG-Anything: Document ingestion (MinerU multimodal parser)
-    - LightRAG: WebUI + query endpoints (knowledge graph queries)
+    - LightRAG: Native parser pipeline, WebUI, and query endpoints
     - Semantic Post-Processing: Automatic LLM-powered relationship inference
     
     Custom Features:
@@ -435,29 +531,17 @@ async def main():
     """
     from lightrag.api.config import global_args
     from lightrag.api.lightrag_server import create_app
-    from src.core import get_settings
-    from src.server.config import configure_raganything_args
-    from src.server.initialization import initialize_raganything, get_rag_instance
     from src.server.routes import register_custom_ingestion_routes
     from src.server.ui_routes import register_ui
     import uvicorn
 
     # Initialization message moved to app.py for cleaner startup
-    
-    # Step 1: Configure LightRAG global_args
-    configure_raganything_args()
-    
-    # Step 2: Initialize RAG-Anything for document processing
-    await initialize_raganything()
-    rag_instance = get_rag_instance()
-    
-    if not rag_instance:
-        raise RuntimeError("Failed to initialize RAG-Anything instance")
-    
-    settings = get_settings()
+
+    rag_runtime = await initialize_theseus_rag_runtime(global_args_obj=global_args)
+    rag_instance = rag_runtime.adapter
     runtime = build_server_runtime(
         rag_instance,
-        settings=settings,
+        settings=rag_runtime.settings,
         global_args_obj=global_args,
         logger=logger,
         create_app_fn=create_app,
@@ -465,12 +549,13 @@ async def main():
         make_ui_query_bridges_fn=make_ui_query_bridges,
         register_ui_fn=register_ui,
         build_startup_banner_items_fn=build_startup_banner_items,
+        pipeline_health=rag_runtime.health,
     )
 
     # Step 5: Start server
     config = uvicorn.Config(app=runtime.app, host=runtime.host, port=runtime.port, log_level="info")
     server_instance = uvicorn.Server(config)
-    await serve_with_rag_shutdown(server_instance, rag_instance, logger=logger)
+    await serve_with_runtime_shutdown(server_instance, rag_instance, logger=logger)
 
 
 if __name__ == "__main__":

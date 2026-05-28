@@ -106,6 +106,64 @@ def test_chat_crud_and_sync_message_routes(tmp_path) -> None:
     assert deleted.json() == {"status": "deleted", "id": chat_id}
 
 
+def test_sync_message_route_persists_native_sources(tmp_path) -> None:
+    query_calls: list[tuple[Any, ...]] = []
+    data_calls: list[tuple[Any, ...]] = []
+
+    async def query_func(text, mode, history, stream, overrides):
+        query_calls.append((text, mode, history, stream, overrides))
+        return "Native answer cites workload requirement."
+
+    async def data_func(text, mode, history, overrides):
+        data_calls.append((text, mode, history, overrides))
+        return {
+            "status": "success",
+            "data": {
+                "chunks": [
+                    {
+                        "reference_id": "ref-native-1",
+                        "chunk_id": "chunk-native-1",
+                        "file_path": "native-rfp.pdf",
+                        "content": "Native-ingested PWS source text",
+                    }
+                ],
+                "references": [
+                    {"reference_id": "ref-native-1", "file_path": "native-rfp.pdf"}
+                ],
+                "entities": [{"entity_name": "Workload Requirement"}],
+                "relationships": [{"src_id": "Workload Requirement"}],
+            },
+        }
+
+    client, _ = _client(tmp_path, query_func=query_func, data_func=data_func)
+    created = client.post("/api/ui/chats", json={"title": "Native", "mode": "mix"})
+    chat_id = created.json()["id"]
+
+    response = client.post(
+        f"/api/ui/chats/{chat_id}/messages",
+        json={"content": "What workload drives pricing?"},
+    )
+
+    assert response.status_code == 200, response.text
+    assistant = response.json()["assistant"]
+    assert assistant["content"] == "Native answer cites workload requirement."
+    assert assistant["sources"]["counts"] == {
+        "chunks": 1,
+        "entities": 1,
+        "relationships": 1,
+        "references": 1,
+    }
+    assert assistant["sources"]["chunks"][0]["file_path"] == "native-rfp.pdf"
+    assert query_calls[0] == (
+        "What workload drives pricing?",
+        "mix",
+        [],
+        False,
+        {"top_k": 7},
+    )
+    assert data_calls[0] == ("What workload drives pricing?", "mix", [], {"top_k": 7})
+
+
 def test_streaming_message_route_emits_sse_and_persists_sources(tmp_path) -> None:
     query_calls: list[tuple[Any, ...]] = []
     data_calls: list[tuple[Any, ...]] = []

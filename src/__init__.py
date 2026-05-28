@@ -20,11 +20,11 @@ Module Architecture & Dependency Flow:
 │                                                             │
 │  3. server/ (Orchestration Layer)                           │
 │     ├── config.py - Environment configuration              │
-│     ├── initialization.py - RAGAnything setup              │
+│     ├── native_lightrag_runtime.py - Native LightRAG setup│
 │     └── routes.py - FastAPI endpoints                      │
 │     Dependencies: core/, ingestion/, inference/            │
 │                                                             │
-│  4. raganything_server.py + app.py (Entry Points)          │
+│  4. Server entry points                                    │
 │     Dependencies: server/                                   │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
@@ -41,7 +41,7 @@ Dependency Flow (Bottom-Up):
               ↓
             server
               ↓
-    raganything_server + app
+    server entry point + app
 
 Import Rules:
 - ✅ core can import: nothing (foundation)
@@ -74,14 +74,14 @@ inference/
 
 server/
   - Environment configuration (catalog-driven entity types)
-  - RAGAnything initialization
+  - Native LightRAG runtime initialization
   - FastAPI endpoints
   - Semantic post-processing orchestration
 
 Usage Example:
 
-    # Entry point (app.py or raganything_server.py)
-    from src.server import initialize_raganything, create_insert_endpoint
+    # Entry point (app.py or server module)
+    from src.server.native_lightrag_runtime import initialize_native_lightrag
     
     # Server imports from ingestion and inference
     from src.ingestion import detect_ucf_format

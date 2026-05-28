@@ -1,10 +1,12 @@
 import asyncio
+import json
 from types import SimpleNamespace
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.server.skill_routes import register_skill_invoke_ui_routes, register_skill_run_ui_routes
+from src.skills.context import build_skill_briefing_book, retrieve_relevant_entities_for_skill
 from src.skills.chain_planner import ChainPlan, PlannedSkill
 from src.skills.chain_models import ChainSpec, ChainStepSpec
 from src.skills.settings import SkillSettingsStore
@@ -313,6 +315,114 @@ def test_skill_invoke_route_tools_mode(tmp_path) -> None:
         "mode": "off",
         "top_k": 9,
     }
+
+
+def test_proposal_skill_tools_mode_can_use_native_ingested_evidence(tmp_path) -> None:
+    (tmp_path / "vdb_entities.json").write_text(
+        json.dumps(
+            {
+                "data": [
+                    {
+                        "entity_name": "Native Workload Requirement",
+                        "entity_type": "requirement",
+                        "description": "Native evidence for proposal support.",
+                        "source_id": "chunk-native-workload",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "vdb_chunks.json").write_text(
+        json.dumps(
+            {
+                "data": [
+                    {
+                        "__id__": "chunk-native-workload",
+                        "file_path": "native-rfp.pdf",
+                        "content": "Native parsed workload evidence for proposal response.",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "vdb_relationships.json").write_text(json.dumps({"data": []}), encoding="utf-8")
+
+    class _NativeEvidenceManager(_FakeManager):
+        def __init__(self):
+            super().__init__("tools")
+            self.evidence = {}
+
+        async def invoke(self, name: str, **kwargs):
+            self.invoke_calls.append((name, kwargs))
+            self.evidence["briefing"] = kwargs["slice_fn"](["requirement"], 10, 1, 2, None)
+            self.evidence["retrieval"] = await kwargs["retrieve_fn"](
+                "workload evidence",
+                "draft proposal response",
+                "hybrid",
+                10,
+            )
+            self.run_payload = {
+                "run_id": "run-1",
+                "skill": "proposal-generator",
+                "metadata": {"user_prompt": kwargs["user_prompt"]},
+                "response": "tools response",
+                "artifacts": [],
+                "transcript": [],
+                "tool_outputs": [],
+                "input_request": {},
+            }
+            return SimpleNamespace(
+                skill="proposal-generator",
+                workspace="ws-a",
+                response="tools response",
+                entities_used=["Native Workload Requirement"],
+                warnings=[],
+                elapsed_ms=12,
+                prompt_tokens_estimate=34,
+                run_id="run-1",
+                run_dir=str(tmp_path / "skill_runs" / "proposal-generator" / "run-1"),
+                finish_reason="completed",
+            )
+
+    async def native_query_data(query: str, mode: str, history: list[dict], overrides: dict) -> dict:
+        return {
+            "status": "success",
+            "data": {
+                "entities": [{"entity_name": "Native Workload Requirement"}],
+                "chunks": [{"chunk_id": "chunk-native-workload"}],
+            },
+        }
+
+    manager = _NativeEvidenceManager()
+    app = FastAPI()
+    register_skill_invoke_ui_routes(
+        app,
+        workspace_dir=lambda: tmp_path,
+        settings_store=SkillSettingsStore(lambda: tmp_path),
+        data_func=native_query_data,
+        llm_func=_llm,
+        workspace_name=lambda: "ws-a",
+        manager_factory=lambda: manager,
+        slice_workspace_entities=build_skill_briefing_book,
+        retrieve_entities_for_skill=retrieve_relevant_entities_for_skill,
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/ui/skills/proposal-generator/invoke",
+        json={"prompt": "Draft proposal response from native evidence", "retrieval_mode": "mix"},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["runtime_mode"] == "tools"
+    assert body["skill"] == "proposal-generator"
+    assert manager.evidence["briefing"]["entities"]["requirement"][0]["name"] == "Native Workload Requirement"
+    assert manager.evidence["briefing"]["source_chunks"][0]["chunk_id"] == "chunk-native-workload"
+    assert manager.evidence["retrieval"]["names"] == {"native workload requirement"}
+    assert manager.evidence["retrieval"]["chunk_ids"] == {"chunk-native-workload"}
 
 
 def test_skill_chain_invoke_route_builds_spec_and_context(tmp_path) -> None:

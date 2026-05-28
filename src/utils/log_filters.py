@@ -9,7 +9,7 @@ class ConsoleFilter(logging.Filter):
     """Allowlist filter for console output."""
 
     _ALLOWED = {
-        "src.raganything_server",
+        "theseus.server",
         "uvicorn.error",
         "src.server.routes",
         "src.inference",
@@ -32,7 +32,6 @@ class ProcessingFilter(logging.Filter):
 
     _PROCESSING_LOGGERS = [
         "lightrag",
-        "raganything",
         "src.server.routes",
         "src.inference",
         "src.ingestion",
@@ -65,7 +64,6 @@ class ServerFilter(logging.Filter):
     _PROCESSING_LOGGERS = [
         "lightrag.llm",
         "lightrag.kg",
-        "raganything",
     ]
 
     def filter(self, record):

@@ -311,10 +311,28 @@ def register_chat_routes(
 
         history = chat_store.build_history(chat, exclude_last=True)
         overrides = query_settings.build_overrides()
+        sources_payload: dict | None = None
+        mode = chat.get("mode", "mix")
+        if data_func is not None and mode != "bypass":
+            try:
+                data_result = await data_func(
+                    payload.content,
+                    mode,
+                    history,
+                    overrides,
+                )
+                if isinstance(data_result, dict) and data_result.get("status") == "success":
+                    sources_payload = trim_sources(data_result.get("data", {}))
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "Sources pre-flight failed for chat %s: %s",
+                    chat_id,
+                    exc,
+                )
         try:
             answer = await query_func(
                 payload.content,
-                chat.get("mode", "mix"),
+                mode,
                 history,
                 False,
                 overrides,
@@ -327,8 +345,10 @@ def register_chat_routes(
             "role": "assistant",
             "content": strip_think(str(answer)),
             "ts": now(),
-            "mode": chat.get("mode", "mix"),
+            "mode": mode,
         }
+        if sources_payload is not None:
+            assistant_msg["sources"] = sources_payload
         chat["messages"].append(assistant_msg)
         chat["updated_at"] = now()
 

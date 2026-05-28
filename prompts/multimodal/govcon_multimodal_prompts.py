@@ -1,11 +1,12 @@
 """
-Government Contracting Multimodal Prompts for RAGAnything (v2.0)
+Government contracting multimodal prompts for LightRAG native multimodal analysis.
 
-Registered via register_prompt_language("govcon", GOVCON_MULTIMODAL_PROMPTS)
-then activated with set_prompt_language("govcon").
+`GOVCON_NATIVE_MULTIMODAL_PROMPTS` is registered into
+`lightrag.prompt_multimodal.MULTIMODAL_PROMPTS` by the native runtime.
+`GOVCON_MULTIMODAL_PROMPTS` remains for legacy compatibility until issue #173.
 
-These replace RAGAnything's generic data-analyst prompts with federal acquisition
-expertise across all multimodal content types: tables, images, and equations.
+These replace generic data-analyst multimodal prompts with federal acquisition
+expertise across tables, images, and equations.
 
 Ontology alignment: Prompts reference the canonical govcon entity types and canonical
 relationship types defined in src/ontology/schema.py and the extraction prompt
@@ -360,7 +361,171 @@ Be specific and complete. Use canonical relationship types.\
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# REGISTRY — all keys that override RAGAnything defaults
+# NATIVE LIGHTRAG MULTIMODAL PROMPTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+NATIVE_IMAGE_ANALYSIS = """You are an expert federal acquisition visual analyst. Analyze the provided image from a government contracting document and return one JSON object.
+
+================ INSTRUCTIONS ================
+
+1. CONTENT RECOGNITION
+    Identify the image type, all visible labels, document structure, and any govcon entities or relationships shown. Focus on RFP, SOW, PWS, proposal_instruction, evaluation_factor, Section J attachment, CDRL, org chart, facility layout, process flow, performance framework, and technical schematic content.
+
+2. GOVCON VOCABULARY
+    Use canonical entity language when useful: REQUIREMENT, EVALUATION_FACTOR, PROPOSAL_INSTRUCTION, DOCUMENT_SECTION, DELIVERABLE, CONTRACT_LINE_ITEM, PERFORMANCE_STANDARD, WORK_SCOPE_ITEM, LOCATION, ORGANIZATION, LABOR_CATEGORY, WORKLOAD_METRIC, GOVERNMENT_FURNISHED_ITEM, CUSTOMER_PRIORITY, PAIN_POINT, STRATEGIC_THEME. Use canonical relationship terms when visible: CHILD_OF, CONTAINS, REFERENCES, EVALUATED_BY, MEASURED_BY, STAFFED_BY, PRODUCES, FUNDS, GOVERNED_BY, REPORTED_TO, SUPPORTS.
+
+3. ADDITIONAL CONTEXT
+    Use captions, footnotes, leading text, and trailing text only to identify the owning section, expand abbreviations, or connect the visible image to the source document. Do not invent visual content not present in the image.
+
+4. NAMING (`name`)
+    Produce a concise snake_case name that identifies the visual and its contract role, such as `section_m_evaluation_factor_hierarchy` or `appendix_h_facility_layout`.
+
+5. TYPE (`type`)
+    Pick exactly one value from this fixed list: Photo, Illustration, Screenshot, Icon, Chart, Table, Infographic, Flowchart, Chat Log, Wireframe, Texture, Other.
+
+6. DESCRIPTION (`description`, <= 500 words)
+    Write natural prose in {language}. Include document location if supported, image type, all important visible text, quantitative values, hierarchy or reporting relationships, proposal/evaluation impact, and any Shipley signals such as customer priorities, pain points, discriminator hooks, or compliance risks.
+
+7. OUTPUT RULES
+    Return one valid JSON object only. No markdown, no code fences, no preamble.
+
+================ ADDITIONAL CONTEXT ================
+- Source file: {file_path}
+- Item id: {item_id}
+- Captions: {captions}
+- Footnotes: {footnotes}
+- Leading Text:
+```
+{leading}
+```
+- Trailing Text:
+```
+{trailing}
+```
+
+================ OUTPUT FORMAT ================
+{{
+  "name": "<concise distinctive govcon visual name>",
+  "type": "<Photo | Illustration | Screenshot | Icon | Chart | Table | Infographic | Flowchart | Chat Log | Wireframe | Texture | Other>",
+  "description": "<govcon visual analysis in natural prose>"
+}}
+
+Output:
+"""
+
+
+NATIVE_TABLE_ANALYSIS = """You are an expert federal acquisition table analyst. Analyze the provided table content from a government contracting document and return one JSON object.
+
+================ INSTRUCTIONS ================
+
+1. CONTENT RECOGNITION
+    Read the table carefully. Identify rows, columns, headings, units, footnotes, totals, null markers, dollar amounts, quantities, frequencies, date ranges, period-of-performance labels, CLIN/SLIN numbers, CDRL identifiers, and evaluation weights or ratings. Preserve exact values.
+
+2. GOVCON VOCABULARY
+    Use canonical entity language when useful: REQUIREMENT, EVALUATION_FACTOR, PROPOSAL_INSTRUCTION, DOCUMENT_SECTION, DELIVERABLE, CONTRACT_LINE_ITEM, PERFORMANCE_STANDARD, WORK_SCOPE_ITEM, LOCATION, LABOR_CATEGORY, EQUIPMENT, WORKLOAD_METRIC, PRICING_ELEMENT, GOVERNMENT_FURNISHED_ITEM, CUSTOMER_PRIORITY, PAIN_POINT, STRATEGIC_THEME. Use canonical relationship terms when visible: CHILD_OF, CONTAINS, REFERENCES, EVALUATED_BY, MEASURED_BY, QUANTIFIES, STAFFED_BY, PRODUCES, FUNDS, SUPPORTS.
+
+3. ADDITIONAL CONTEXT
+    Use captions, footnotes, leading text, and trailing text to identify the owning section or appendix, continuation-table status, abbreviations, and the table's contract purpose. Table content takes priority over context.
+
+4. NAMING (`name`)
+    Produce a concise snake_case name that identifies the table and its owner or contract role, such as `appendix_h_workload_metrics` or `section_m_technical_rating_table`.
+
+5. DESCRIPTION (`description`, <= 500 words)
+    Write natural prose in {language}. Cover document location, table purpose, row and column meaning, units, key quantities and dollar values, workload/pricing/evaluation implications, and Shipley signals such as compliance traps, customer priorities, pain points, and discriminator hooks. Never generalize when a specific value is visible.
+
+6. OUTPUT RULES
+    Return one valid JSON object only. No markdown, no code fences, no preamble.
+
+================ TABLE CONTENT ================
+```
+{content}
+```
+
+================ ADDITIONAL CONTEXT ================
+- Source file: {file_path}
+- Item id: {item_id}
+- Captions: {captions}
+- Footnotes: {footnotes}
+- Leading Text:
+```
+{leading}
+```
+- Trailing Text:
+```
+{trailing}
+```
+
+================ OUTPUT FORMAT ================
+{{
+  "name": "<concise distinctive govcon table name>",
+  "description": "<govcon table analysis in natural prose>"
+}}
+
+Output:
+"""
+
+
+NATIVE_EQUATION_ANALYSIS = """You are an expert federal acquisition quantitative analyst. Analyze the provided equation or formula from a government contracting document and return one JSON object.
+
+================ INSTRUCTIONS ================
+
+1. CONTENT RECOGNITION
+    Identify what the formula computes, its variables, units, threshold values, scoring or incentive role, performance measurement role, workload or pricing use, and any referenced CLIN, PWS paragraph, KPI, SLA, AQL, or evaluation factor.
+
+2. GOVCON VOCABULARY
+    Use canonical entity language when useful: REQUIREMENT, EVALUATION_FACTOR, PERFORMANCE_STANDARD, WORKLOAD_METRIC, PRICING_ELEMENT, CONTRACT_LINE_ITEM, WORK_SCOPE_ITEM, DELIVERABLE, CUSTOMER_PRIORITY, PAIN_POINT. Use canonical relationship terms when visible: MEASURED_BY, QUANTIFIES, TRACKED_BY, FUNDS, EVALUATED_BY, REFERENCES, SUPPORTS.
+
+3. NORMALIZED EQUATION (`equation`)
+    Output the math-mode body only. Strip display wrappers such as dollar delimiters or equation environments. Preserve symbols, subscripts, superscripts, operators, and variable names. If the input is plain text, normalize to readable LaTeX where practical.
+
+4. NAMING (`name`)
+    Produce a concise snake_case name that identifies the formula's contract purpose, such as `aql_deduction_formula` or `clin_workload_rate_calculation`.
+
+5. DESCRIPTION (`description`, <= 300 words)
+    Write natural prose in {language}. Include document location if supported, equation purpose, variable meanings, performance/pricing/evaluation impact, related entity types, and any compliance or cost risk.
+
+6. OUTPUT RULES
+    Return one valid JSON object only. No markdown, no code fences, no preamble.
+
+================ EQUATION BODY ================
+```
+{content}
+```
+
+================ ADDITIONAL CONTEXT ================
+- Source file: {file_path}
+- Item id: {item_id}
+- Captions: {captions}
+- Footnotes: {footnotes}
+- Leading Text:
+```
+{leading}
+```
+- Trailing Text:
+```
+{trailing}
+```
+
+================ OUTPUT FORMAT ================
+{{
+  "name": "<concise distinctive govcon equation name>",
+  "equation": "<normalized equation body>",
+  "description": "<govcon equation analysis in natural prose>"
+}}
+
+Output:
+"""
+
+
+GOVCON_NATIVE_MULTIMODAL_PROMPTS: dict[str, str] = {
+     "image_analysis": NATIVE_IMAGE_ANALYSIS,
+     "table_analysis": NATIVE_TABLE_ANALYSIS,
+     "equation_analysis": NATIVE_EQUATION_ANALYSIS,
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# REGISTRY — legacy compatibility prompt keys retained until issue #173
 # ═══════════════════════════════════════════════════════════════════════════════
 
 GOVCON_MULTIMODAL_PROMPTS: dict = {

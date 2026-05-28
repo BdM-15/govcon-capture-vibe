@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
-from src.raganything_server import build_startup_banner_items, format_reranker_line
+from src.theseus_server import build_startup_banner_items, format_reranker_line
+from src.server.native_lightrag_runtime import NativeParserHealth, NativePipelineHealth
 
 
 class _Colors:
@@ -57,13 +58,67 @@ def test_build_startup_banner_items_includes_endpoints_and_optional_neo4j() -> N
         entity_count=33,
         relationship_count=35,
         colors=_Colors,
-        version_resolver=lambda pkg: {"mineru": "1.2.3", "lightrag-hku": "2.0.0", "raganything": "3.0.0"}[pkg],
+        version_resolver=lambda pkg: {"mineru": "1.2.3", "lightrag-hku": "2.0.0"}[pkg],
     )
 
     labels = [label for label, _ in items]
     assert "Workspace" in labels
     assert "Schema" in labels
     assert "WebUI" in labels
-    assert "Capture UI" in labels
+    assert "Capture Workbench" in labels
     assert "Neo4j" in labels
     assert any("33" in value and "35" in value for label, value in items if label == "Schema")
+
+
+def test_build_startup_banner_items_reports_native_pipeline_health() -> None:
+    items = build_startup_banner_items(
+        _settings(),
+        host="127.0.0.1",
+        port=9621,
+        graph_storage="Neo4JStorage",
+        working_dir="rag_storage/demo",
+        entity_count=33,
+        relationship_count=35,
+        colors=_Colors,
+        version_resolver=lambda pkg: {"mineru": "1.2.3", "lightrag-hku": "1.5.0rc3"}[pkg],
+        pipeline_health=NativePipelineHealth(
+            lightrag_version="1.5.0rc3",
+            native_pipeline_available=True,
+            roles=["extract", "keyword", "query", "vlm"],
+            storage={
+                "kv": "JsonKVStorage",
+                "vector": "NanoVectorDBStorage",
+                "graph": "Neo4JStorage",
+                "doc_status": "JsonDocStatusStorage",
+            },
+            multimodal="native",
+            parser=NativeParserHealth(
+                routing="pdf:mineru-ite,docx:native-ite",
+                mineru_api_mode="local",
+                mineru_endpoint="http://localhost:8888",
+                mineru_backend="pipeline",
+                mineru_parse_method="auto",
+                concurrency={"native": 5, "mineru": 2, "docling": 1, "analyze": 4},
+            ),
+        ),
+    )
+
+    values = "\n".join(value for _, value in items)
+    labels = [label for label, _ in items]
+    assert "Runtime" in labels
+    assert any("LightRAG-first" in value for label, value in items if label == "Runtime")
+    assert "Native Pipeline" in labels
+    assert "Role Registry" in labels
+    assert "Storage Detail" in labels
+    assert "Schema" in labels
+    assert "RAG-Anything" not in labels
+    assert "Parser Routing" in labels
+    assert "MinerU Mode" in labels
+    assert "Parser Workers" in labels
+    assert "1.5.0rc3" in values
+    assert "extract, keyword, query, vlm" in values
+    assert "JsonKVStorage" in values
+    assert "pdf:mineru-ite,docx:native-ite" in values
+    assert "local" in values
+    assert "pipeline" in values
+    assert "mineru=2" in values

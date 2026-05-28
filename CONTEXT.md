@@ -13,7 +13,7 @@ An isolated knowledge graph + vector database for exactly one RFP. Lives at `rag
 
 - `graph_chunk_entity_relation.graphml` — GraphML snapshot; legacy file, KG lives in Neo4j
 - `vdb_entities.json`, `vdb_relationships.json`, `vdb_chunks.json` — LightRAG VDB embedding stores
-- `kv_store_doc_status.json` — primary doc lifecycle store. Keys = `doc-<hash>`. Each record: `status` (PENDING → PROCESSING → PREPROCESSED → PROCESSED | FAILED), `chunks_count`, `chunks_list`, `content_summary`, `content_length`, `created_at`, `updated_at`, `file_path`, `track_id`, `metadata` (timing, engine). First file to check for "doc processed but missing from KG". RAG-Anything writes extra fields (`multimodal_processed`, `multimodal_content`, `scheme_name`) and non-standard status strings ("handling" → PROCESSING, "parsing" → PROCESSING, "ready" → PENDING) — stripped/remapped by `apply_doc_status_compatibility_shim()` in `src/server/doc_status_compat.py` before any LightRAG KV write. Timestamps stored as local ISO strings (converted from UTC by `to_local_iso()`). `DocStatus.PREPROCESSED` = MinerU parse done, extraction not yet started (LightRAG internal state — rarely visible in UI).
+- `kv_store_doc_status.json` — primary doc lifecycle store. Keys = `doc-<hash>`. Each record: `status` (PENDING → PROCESSING → PREPROCESSED → PROCESSED | FAILED), `chunks_count`, `chunks_list`, `content_summary`, `content_length`, `created_at`, `updated_at`, `file_path`, `track_id`, `metadata` (timing, engine). First file to check for "doc processed but missing from KG". Native LightRAG writes and reads this store directly; failures surfaced by Theseus use `record_failed_doc()` in `src/server/document_processing.py`. Timestamps stored as local ISO strings (converted from UTC by `to_local_iso()`). `DocStatus.PREPROCESSED` = MinerU parse done, extraction not yet started (LightRAG internal state — rarely visible in UI).
 - `kv_store_text_chunks.json`, `kv_store_full_docs.json`, `kv_store_entity_chunks.json`, `kv_store_full_entities.json`, `kv_store_full_relations.json`, `kv_store_relation_chunks.json` — LightRAG chunk/entity/relation KV stores
 - `kv_store_llm_response_cache.json`, `kv_store_parse_cache.json` — LLM + parse caches (safe to delete to force reprocessing)
 - `.ontology_bootstrap` — bootstrap marker; present = skip bootstrap on next startup
@@ -58,11 +58,11 @@ Workspace scoping: all Neo4j nodes belonging to a workspace carry a label equal 
 _Avoid_: calling it "the Neo4j client" (ambiguous — `neo4j_config.py` also has a config class); confusing it with the LightRAG-internal KV stores (separate path, separate format).
 
 **Ingest pipeline**:
-The sequence that turns a raw RFP document into graph data: MinerU parse -> content filter/rebalance -> `insert_content_list` (multimodal analysis + LightRAG chunking + entity/relationship extraction) -> batch completion -> semantic post-processing trigger. Entry point: `process_document_with_semantic_inference()` in `src/server/document_processing.py`. This function is passed as `process_document_func` to both upload and scan routes — identical pipeline regardless of trigger.
+The sequence that turns a raw RFP document into graph data: route source file with `LIGHTRAG_PARSER` -> enqueue with LightRAG native pending-parse status -> native parser/MinerU multimodal analysis -> LightRAG chunking + entity/relationship extraction -> batch completion -> semantic post-processing trigger. Entry point: `process_document_with_native_ingestion()` in `src/server/native_ingestion.py`. Upload and scan routes both pass through this helper, so the trigger differs but the processing contract is identical.
 
-Steps inside `process_document_with_semantic_inference`: (1) `rag_instance.parse_document()` via MinerU, (2) `filter_discarded_content_blocks()` — drops structural chrome (`discarded`, `header`, `footer`, `page_number`, `aside_text`, `page_footnote`) defined in `DISCARDED_CONTENT_TYPES`; these carry no extractable govcon content, (3) `rebalance_modal_content_blocks()`, (4) `rag_instance.insert_content_list()` — RAG-Anything native end-to-end (multimodal VLM + LightRAG chunking + extraction), (5) callback dispatches `on_document_complete` -> batch timer reset.
+Steps inside `process_document_with_native_ingestion`: (1) resolve parser engine/options with `resolve_govcon_parser_directives()`, suppressing table VLM for text-bearing file types, (2) compute deterministic `doc-` id, (3) call `apipeline_enqueue_documents(..., docs_format=FULL_DOCS_FORMAT_PENDING_PARSE, parse_engine=..., process_options=...)`, (4) call `apipeline_process_enqueue_documents()` so LightRAG performs parsing, native multimodal analysis, chunking, extraction, KG/VDB writes, and doc-status updates, (5) dispatch `on_document_complete` / `on_document_error` to the batch callback so semantic post-processing can run once the queue is idle.
 
-**Modal rebalancing** (`rebalance_modal_content_blocks`): Pre-`insert_content_list` normalization step. RAG-Anything sends non-text blocks through a VLM multimodal path. If MinerU already extracted text from a table or list, re-typing it as `text` routes it through the cheaper LightRAG text path instead — avoids double-extraction and over-amplification. Rules: `table` with non-empty body → convert to `[TABLE]...[/TABLE]` text block; `list` → `[LIST]...[/LIST]` text block; `seal` → discard; images/equations → pass through as multimodal. Logged as "Rebalanced modal artifacts" with per-type counts.
+**Text-bearing table suppression** (`_suppress_text_bearing_table_analysis`): Native-ingestion guardrail in `src/server/native_ingestion.py`. For CSV, Office, Markdown, TSV, and text files, remove the `t` table-VLM option from resolved parser directives so already-textual tabular content travels the cheaper text/extraction path instead of being amplified through multimodal analysis.
 _Avoid_: "the pipeline" (ambiguous -- see Flagged ambiguities).
 
 **Semantic post-processor**:
@@ -79,7 +79,7 @@ _Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambig
 Four sequential sub-operations applied to Neo4j entities before relationship work:
 
 1. **Type cleanup** (`plan_entity_type_updates()`): Deterministic scan of all entities grouped by `entity_type`. Three patterns caught:
-   - `table` type → `heuristic_table_type_mapping()`: keyword match on entity name + description → maps to `proposal_instruction`, `deliverable`, `evaluation_factor`, `performance_standard`, `requirement`, `clause`, etc. (RAG-Anything VLM outputs these as `table` before downstream context is available)
+  - `table` type → `heuristic_table_type_mapping()`: keyword match on entity name + description → maps to `proposal_instruction`, `deliverable`, `evaluation_factor`, `performance_standard`, `requirement`, `clause`, etc. (native multimodal/table extraction can output generic `table` before downstream context is available)
    - `#evaluation_factor` / `|requirement` prefix artifacts → strip `#`/`|` prefix → valid entity type (LightRAG occasionally emits these prefix-polluted strings)
    - `unknown` type → collected for LLM batch retyping (step 2)
 2. **UNKNOWN retyping** (`_retype_unknown_entities()`): LLM call via `retype_entities_batch()`, batches of 20. Entities whose description can't map to a valid govcon type stay `unknown`.
@@ -333,7 +333,7 @@ Filesystem staging area for batch ingest. Drop PDFs/DOCX here, then call `POST /
 _Avoid_: upload folder, queue (there is no queue; scan is synchronous per-file in a background task).
 
 **Ingestion route seam** (`src/server/routes.py`):
-`register_custom_ingestion_routes(app, rag_instance)` replaces LightRAG's stock `POST /insert` and `POST /documents/upload` routes with Theseus multimodal handlers. Strategy: `_preserve_non_overridden_post_routes()` filters out the two overridden paths from `app.router.routes`, then re-registers them via `create_insert_endpoint`, `create_documents_upload_endpoint`, `create_scan_endpoint`. All three share the same `process_document_with_semantic_inference` adapter (wraps `document_processing.py` with callback injection) and the singleton `GovConProcessingCallback`. `_OVERRIDDEN_POST_PATHS = {"/insert", "/documents/upload"}` is the closed set of replaced endpoints.
+`register_custom_ingestion_routes(app, rag_instance)` replaces LightRAG's stock `POST /insert` and `POST /documents/upload` routes with Theseus multimodal handlers. Strategy: `_preserve_non_overridden_post_routes()` filters out the two overridden paths from `app.router.routes`, then re-registers them via `create_insert_endpoint`, `create_documents_upload_endpoint`, `create_scan_endpoint`. All three share the same `process_document_with_native_ingestion` adapter and the singleton `GovConProcessingCallback`. `_OVERRIDDEN_POST_PATHS = {"/insert", "/documents/upload"}` is the closed set of replaced endpoints.
 _Avoid_: "route overrides module" (that's the shim `route_overrides.py`); the real seam is `routes.py`.
 
 **Upload** (`POST /documents/upload`):
@@ -350,24 +350,21 @@ Filesystem batch ingest. Reads all unprocessed files from `inputs/<workspace>/`,
 _Avoid_: confusing scan with upload — they share the pipeline but differ in trigger, batching, and background execution.
 
 **Bootstrap**:
-One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge before any RFP documents are uploaded. Default bootstrap is final-RFP scoped: Shipley phases 4-6, FAR patterns, evaluation frameworks, workload/pricing, lessons learned, and company capabilities. Phase 0-3 capture doctrine (bid/no-bid, PWin, gate reviews, capture plan management) is reference-only and is not inserted into workspace KGs by default. Triggered automatically at server startup via `maybe_bootstrap_ontology()` in `src/server/rag_post_init.py`. Gate: `AUTO_BOOTSTRAP_ONTOLOGY` env var (default `true`). Fresh workspace (no marker) + env enabled -> ontology entities/relationships become the initial KG foundation. `.ontology_bootstrap` marker written after success; present -> skip on subsequent startups. `ONTOLOGY_BOOTSTRAP_FORCE=true` re-seeds even if marker exists.
+One-time pre-seeding of a workspace's knowledge graph with curated govcon domain knowledge before any RFP documents are uploaded. Default bootstrap is final-RFP scoped: Shipley phases 4-6, FAR patterns, evaluation frameworks, workload/pricing, lessons learned, and company capabilities. Phase 0-3 capture doctrine (bid/no-bid, PWin, gate reviews, capture plan management) is reference-only and is not inserted into workspace KGs by default.
 _Avoid_: initialization (overloaded with server startup), seed.
 
-**Server initialization** (`initialize_raganything()`, `src/server/initialization.py`):
-Async startup function called once by `src/raganything_server.py`. Builds and wires all runtime components in order:
+**Server initialization** (`initialize_theseus_rag_runtime()`, `src/theseus_server.py`):
+Async startup function called once by the server entry point. Builds and wires all runtime components in order:
 
-1. `configure_mineru_environment(settings)` — writes MinerU env vars (`HF_TOKEN`, `CUDA_VISIBLE_DEVICES`, etc.) before import.
-2. `build_raganything_runtime(settings, ...)` → `GovconInitializationRuntime` — dataclass holding resolved config, embedding func, LLM funcs, `use_strict_schema`, chunking func name, banner template.
-3. `RAGAnythingConfig` — reads context-aware processing env vars (`CONTEXT_WINDOW`, `CONTEXT_MODE`, `MAX_CONTEXT_TOKENS`, `INCLUDE_HEADERS`, `INCLUDE_CAPTIONS`, `CONTEXT_FILTER_CONTENT_TYPES`) automatically.
-4. Instantiates `RAGAnything(config, llm_model_func=runtime.modal_llm_func, vision_model_func, embedding_func, lightrag_kwargs)`. Modal LLM (`modal_llm_func`) is non-strict — table/equation parsers expect `{detailed_description, entity_info}` shape, NOT the strict GovCon `{entities, relationships}` schema.
-5. `await _rag_anything._ensure_lightrag_initialized()` — must succeed before any document processing (LightRAG accesses `doc_status` before its own lazy init guard).
-6. `await finalize_rag_initialization(...)` — registers govcon prompts (`PROMPTS.update(GOVCON_PROMPTS)`), registers multimodal language (`register_prompt_language("govcon", ...)`), applies strict schema to `extract` role if `use_strict_schema`.
+1. `configure_lightrag_args()` — writes LightRAG global args from `Settings`.
+2. `initialize_native_lightrag(settings, graph_storage=...)` — configures parser routing, registers govcon text and multimodal prompts, constructs the direct LightRAG instance, installs chunk guardrails, and initializes storages.
+3. `set_active_rag_instance(adapter)` — stores the native adapter in `src/server/runtime_state.py` for post-processing VDB sync and tooling.
 
-`get_rag_instance()` → cached `_rag_anything` (raises if called before `initialize_raganything()`).
-_Avoid_: "Phase 1.3" as a runtime concept (it is a historical issue label, not a named runtime feature); calling `modal_llm_func` the "extraction LLM" (extraction uses a separate strict-schema wrapper; modal uses the bare non-strict func).
+`get_active_rag_instance()` returns the active native adapter or `None` before startup.
+_Avoid_: calling the adapter a wrapper runtime for a separate ingestion stack; Theseus now delegates parser and extraction work to native LightRAG.
 
 **Dashboard stats** (`src/server/admin_routes.py`):
-`GET /api/ui/stats` → `gather_stats()` → payload for the UI header widget. Fields: `workspace`, `graph_storage`, `working_dir`, `documents` (kv_store_doc_status key count), `entities` (vdb_entities count), `relationships` (vdb_relationships count), `chunks` (vdb_chunks count), `chats` (JSON file count), `chat.history_pairs_cap` (`UI_CHAT_HISTORY_TURNS`, default 20), `version` (`THESEUS_RELEASE_VERSION` env → git describe → "v0.0.0"), `ontology.entity_type_count`, `ontology.relationship_type_count`, `ontology.extraction_relationship_type_count` (excludes `REQUIRES`/`ENABLED_BY`/`RESPONSIBLE_FOR` which are inference-only), `models.extraction`, `models.reasoning`, `models.embedding`, `models.rerank` (null when `enable_rerank=false`), `stack` (installed versions for lightrag-hku, raganything, mineru, transformers). All counts are fast key-counting reads — no Neo4j queries.
+`GET /api/ui/stats` → `gather_stats()` → payload for the UI header widget. Fields: `workspace`, `graph_storage`, `working_dir`, `documents` (kv_store_doc_status key count), `entities` (vdb_entities count), `relationships` (vdb_relationships count), `chunks` (vdb_chunks count), `chats` (JSON file count), `chat.history_pairs_cap` (`UI_CHAT_HISTORY_TURNS`, default 20), `version` (`THESEUS_RELEASE_VERSION` env → git describe → "v0.0.0"), `ontology.entity_type_count`, `ontology.relationship_type_count`, `ontology.extraction_relationship_type_count` (excludes `REQUIRES`/`ENABLED_BY`/`RESPONSIBLE_FOR` which are inference-only), `models.extraction`, `models.reasoning`, `models.embedding`, `models.rerank` (null when `enable_rerank=false`), `stack` (installed versions for lightrag-hku, mineru, transformers). All counts are fast key-counting reads — no Neo4j queries.
 
 `GET /api/ui/mcps` — lists vendored MCP servers from `tools/mcps/` with env-var status (secret values masked: first 4 + last 2 chars). `POST /api/ui/mcps/{name}/keys` — update MCP env vars (`_SAFE_MCP_NAME`, `_SAFE_ENV_KEY` regex guards) and optionally restart. `POST /api/ui/mcps/{name}/test` — test MCP connection.
 _Avoid_: counting documents from Neo4j (stats reads VDB JSON files — faster, no connection required).
@@ -473,13 +470,13 @@ Key field groups:
 - **Embeddings**: `embedding_binding_host` (must be OpenAI endpoint — xAI has no embedding API), `embedding_binding_api_key`, `embedding_model` (`text-embedding-3-large`), `embedding_dim` (3072).
 - **Parallelism**: `max_parallel_insert` (4 concurrent docs), `llm_max_async` (16 concurrent LLM calls during extraction), `embedding_max_async` (16), `post_processing_max_async` / `get_effective_post_processing_max_async()`.
 
-`validate_required()` fails-fast at startup (called in `src/raganything_server.py`) with explicit missing-field errors rather than cryptic downstream failures.
+`validate_required()` fails-fast at startup (called in `src/theseus_server.py`) with explicit missing-field errors rather than cryptic downstream failures.
 _Avoid_: reading `.env` directly (all code reads `get_settings()`); treating `post_processing_llm_name` as a LightRAG role (it is not).
 
 **Centralized LLM client** (`src/utils/llm_client.py`):
 Single async LLM wrapper used by the inference algorithms (and legacy skill paths) when calling xAI Grok outside of LightRAG's role system. Three functions:
 
-- `call_llm_async(prompt, system_prompt?, model?, temperature?, max_tokens?)` — single async call. Uses `settings.post_processing_llm_name` as default model. Wraps `openai.AsyncOpenAI` with `@async_retry` + `CircuitBreaker` from RAGAnything's resilience infrastructure (exponential backoff, cascade protection).
+- `call_llm_async(prompt, system_prompt?, model?, temperature?, max_tokens?)` — single async call. Uses `settings.post_processing_llm_name` as default model. Wraps `openai.AsyncOpenAI` with local `@async_retry` + `CircuitBreaker` helpers (exponential backoff, cascade protection).
 - `call_llm_batch(prompts, max_concurrent?, ...)` — concurrent batch via `asyncio.Semaphore`. `MAX_CONCURRENT_LLM_CALLS` caps concurrency.
 - `call_llm_structured(prompt, ResponseModel, max_retries?)` — uses `instructor` library for Pydantic-typed structured output; retries parse failures up to `max_retries`.
 
@@ -497,14 +494,14 @@ LightRAG 1.5.0 allows a separate model per processing role. `build_role_llm_rout
 | `vlm`          | `VLM_LLM_MODEL`          | reuses `EXTRACT_LLM_MODEL`    | VLM table/image/equation analysis (LightRAG `vlm` role). Max 8 k tokens.                                                                                      |
 | `post_process` | `POST_PROCESS_LLM_MODEL` | `grok-4-1-fast-reasoning`     | Inference algorithms in `src/inference/`. **Not** a LightRAG role — called directly by `SemanticPostProcessor`.                                               |
 
-`keyword` and `vlm` reuse `extraction_llm_name` at the function level; their `.env` vars exist in config but are not wired in `llm_routing.py`. `modal_llm_func` (RAGAnything multimodal processor) also reuses `extraction_llm_name` and strips any strict JSON schema `response_format` if accidentally passed.
+All LightRAG roles are built by `build_role_llm_routing()` and wired into the native runtime. Strict entity/relationship schema enforcement applies only to the `extract` role; native multimodal table/equation calls keep LightRAG's required `response_format={"type": "json_object"}` contract instead of receiving the GovCon extraction schema.
 _Avoid_: "the LLM" (five model slots exist); "reasoning model" without specifying which role.
 
 **mineru/ cache** (`rag_storage/<workspace>/mineru/`):
 MinerU parse artifacts written once per document. Layout: `<doc_filename>_<hash8>/<doc_filename>/auto/` containing:
 
 - `<doc>.md` — reconstructed markdown of the full document
-- `<doc>_content_list.json` / `_content_list_v2.json` — structured content blocks (text, table, image, equation items) passed to RAGAnything for modal processing
+- `<doc>_content_list.json` / `_content_list_v2.json` — structured content blocks (text, table, image, equation items) consumed by LightRAG native parser and multimodal processing
 - `<doc>_middle.json` / `_model.json` — intermediate layout analysis from MinerU
 - `<doc>_layout.pdf` / `_span.pdf` / `_origin.pdf` — layout visualisation and original copy
 - `images/` — extracted image files referenced by content blocks
@@ -538,8 +535,8 @@ The VLM prompt for analyzing tables, images, and equations extracted by MinerU. 
 **Log filters and helpers** (`src/utils/log_filters.py`, `src/utils/log_helpers.py`):
 Two logging filter classes control what appears on which output channel:
 
-- `ConsoleFilter`: allowlist filter — passes WARNINGs+ from all loggers, but INFO/DEBUG only from `src.raganything_server`, `uvicorn.error`, `src.server.routes`, `src.inference`, `src.extraction.govcon_reranker`. Suppresses `uvicorn.access` info lines entirely. Keeps the terminal readable during ingest without losing warning signals.
-- `ProcessingFilter`: capture filter — routes log records to the per-workspace processing log. Passes any record whose logger name starts with `lightrag`, `raganything`, `src.server.routes`, `src.inference`, `src.ingestion`, or `src.extraction.govcon_reranker`. Fallback: keyword match in message (`"Processing"`, `"entities"`, `"relationships"`, `"semantic"`, `"Neo4j"`, `"inference"`, `"enrichment"`, `"parsing"`, `"extraction"`).
+- `ConsoleFilter`: allowlist filter — passes WARNINGs+ from all loggers, but INFO/DEBUG only from `theseus.server`, `uvicorn.error`, `src.server.routes`, `src.inference`, `src.extraction.govcon_reranker`. Suppresses `uvicorn.access` info lines entirely. Keeps the terminal readable during ingest without losing warning signals.
+- `ProcessingFilter`: capture filter — routes log records to the per-workspace processing log. Passes any record whose logger name starts with `lightrag`, `src.server.routes`, `src.inference`, `src.ingestion`, or `src.extraction.govcon_reranker`. Fallback: keyword match in message (`"Processing"`, `"entities"`, `"relationships"`, `"semantic"`, `"Neo4j"`, `"inference"`, `"enrichment"`, `"parsing"`, `"extraction"`).
 
 `log_graceful_failure(logger, operation, error, context)`: single-line WARNING helper — truncates error to 100 chars, appends "continuing with degraded result". Used at catch sites where partial results are acceptable.
 `get_log_summary(log_dir)` → dict of log files with sizes + timestamps in `logs/`.
@@ -578,7 +575,7 @@ How LightRAG retrieves context before generating an answer. Passed per-chat; sto
 
 Implementation: `local`/`global`/`hybrid`/`mix` all dispatch to `kg_query()` in LightRAG's `operate.py`; `mix` additionally calls `_get_vector_context()`. `naive` calls `naive_query()`. All except `bypass` are valid for `kg_chunks` skill tool.
 
-**UI query bridge** (`make_ui_query_bridges()` in `src/raganything_server.py`):
+**UI query bridge** (`make_ui_query_bridges()` in `src/theseus_server.py`):
 Thin adapter that binds the LightRAG instance to three callables exposed to the UI chat routes: `UIQueryBridges.query` (`aquery` — streaming-capable), `UIQueryBridges.query_data` (`aquery_data` — returns structured `{sources, response}` for the UI data tab), `UIQueryBridges.llm` (raw LLM call for non-RAG prompts). Override kwargs passed from the UI are filtered against `QueryParam.__dataclass_fields__` before forwarding — unknown fields are silently dropped. `min_rerank_score` is a special override applied directly to `rag_instance.lightrag.min_rerank_score` (not a `QueryParam` field).
 _Avoid_: "query API" (bridge is an internal adapter, not a public API); passing unknown `QueryParam` fields (they are dropped silently, not rejected).
 

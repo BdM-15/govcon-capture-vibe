@@ -27,7 +27,7 @@ logs/server.log
 **Purpose**: Complete RFP processing history  
 **Contains**:
 
-- Document upload and parsing (RAG-Anything, MinerU)
+- Document upload and parsing through the native LightRAG parser pipeline (MinerU/native routes)
 - Entity extraction counts by type
 - Relationship inference (Phase 6) results
 - Metadata enrichment (Phase 7) results
@@ -44,7 +44,7 @@ logs/server.log
 **Example Entries**:
 
 ```
-2025-01-25 14:30:15 | INFO | src.server.routes | 📄 Processing M6700425R0007 MCPP II DRAFT RFP 23 MAY 25.pdf
+2025-01-25 14:30:15 | INFO | src.server.native_ingestion | 📄 Processing M6700425R0007 MCPP II DRAFT RFP 23 MAY 25.pdf via native LightRAG parser pipeline
 2025-01-25 14:30:45 | INFO | src.server.routes | 📊 PRE-INFERENCE: 4793 entities, 5932 relationships
 2025-01-25 14:31:02 | INFO | src.server.routes | 🤖 Running LLM-powered relationship inference (5 algorithms)...
 2025-01-25 14:31:15 | INFO | src.server.routes | ✅ Phase 7 complete: 40 entities enriched with metadata
@@ -73,9 +73,9 @@ logs/server.log
 **Example Entries**:
 
 ```
-2025-01-25 14:29:50 | INFO | raganything_server | 🚀 RAG-Anything Server Starting
-2025-01-25 14:29:51 | INFO | raganything_server | LLM: grok-4-fast-reasoning via https://api.x.ai/v1
-2025-01-25 14:29:51 | INFO | raganything_server | Embeddings: text-embedding-3-large via https://api.openai.com/v1
+2025-01-25 14:29:50 | INFO | theseus.server | 🚀 LightRAG-first Capture Workbench Starting
+2025-01-25 14:29:51 | INFO | theseus.server | LLM: grok-4-fast-reasoning via https://api.x.ai/v1
+2025-01-25 14:29:51 | INFO | theseus.server | Embeddings: text-embedding-3-large via https://api.openai.com/v1
 2025-01-25 14:29:52 | INFO | uvicorn | Application startup complete
 ```
 

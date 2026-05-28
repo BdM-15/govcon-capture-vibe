@@ -10,7 +10,7 @@
 
 ## Project Overview
 
-**Ontology-based RAG system** for federal RFP analysis. Uses **RAG-Anything** (multimodal PDF parsing via MinerU) + **LightRAG** (knowledge graph/queries) with **xAI Grok** cloud processing.
+**Ontology-based RAG system** for federal RFP analysis. Uses a **LightRAG-first native multimodal pipeline** (parser routing + MinerU + native KG/queries) with **xAI Grok** cloud processing.
 
 **Core Innovation**: 33 government contracting entity types + 35 canonical relationship types + 3 active relationship inference algorithms (L↔M linking, document structure, orphan resolution) enable Section L↔M mapping, requirement traceability, and Shipley methodology compliance.
 
@@ -40,11 +40,11 @@
 
 This project has **three independent prompt systems** that MUST stay aligned. Changes to the domain ontology, entity types, relationship types, or Shipley methodology MUST propagate across ALL three:
 
-| System                         | Purpose                                         | Files                                                                                    | Registration                                                                |
-| ------------------------------ | ----------------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| **1. LightRAG Extraction**     | Entity/relationship extraction from text chunks | `prompts/govcon_prompt.py` → `_build_v8_system_prompt()`                                 | `PROMPTS.update(GOVCON_PROMPTS)` in `src/server/initialization.py`          |
-| **2. LightRAG Query/Response** | RAG query answering (Shipley mentor persona)    | `prompts/govcon_prompt.py` (`rag_response`, `naive_rag_response`, `keywords_extraction`) | Same `PROMPTS.update()` call                                                |
-| **3. RAGAnything Multimodal**  | Table/image/equation VLM analysis               | `prompts/multimodal/govcon_multimodal_prompts.py`                                        | `register_prompt_language("govcon", ...)` in `src/server/initialization.py` |
+| System                            | Purpose                                         | Files                                                                                    | Registration                                                                |
+| --------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **1. LightRAG Extraction**        | Entity/relationship extraction from text chunks | `prompts/govcon_prompt.py` → `_build_v8_system_prompt()`                                 | `PROMPTS.update(GOVCON_PROMPTS)` in `src/server/initialization.py`          |
+| **2. LightRAG Query/Response**    | RAG query answering (Shipley mentor persona)    | `prompts/govcon_prompt.py` (`rag_response`, `naive_rag_response`, `keywords_extraction`) | Same `PROMPTS.update()` call                                                |
+| **3. LightRAG Native Multimodal** | Table/image/equation VLM analysis               | `prompts/multimodal/govcon_multimodal_prompts.py`                                        | `MULTIMODAL_PROMPTS.update(...)` in `src/server/native_lightrag_runtime.py` |
 
 **Additionally**, post-processing inference prompts live in `prompts/relationship_inference/` (13 algorithm-specific markdown files used by `src/inference/` modules).
 
@@ -74,15 +74,16 @@ This project has **three independent prompt systems** that MUST stay aligned. Ch
 
 ## Architecture & LightRAG Integration
 
-This project wraps **LightRAG** and **RAGAnything** to provide specialized government contracting capabilities.
+This project extends **LightRAG** directly with government-contracting prompts, role routing, parser routing, and semantic post-processing.
 
 ### Core Components (`src/`)
 
-- `src/raganything_server.py` - **Main Entry Point**. Orchestrates the server, initializes LightRAG, and sets up routes.
+- `src/theseus_server.py` - **Main Entry Point**. Orchestrates the LightRAG-first Capture Workbench server and routes.
 - `src/server/` - Server configuration and routing
   - `config.py` - LightRAG `global_args` setup (MUST load .env first)
   - `routes.py` - Custom endpoints with batch completion detection
-  - `initialization.py` - RAGAnything wrapper initialization, prompt registration (all 3 systems)
+  - `native_lightrag_runtime.py` - Direct LightRAG runtime, role registry, parser health, native multimodal prompt registration
+  - `initialization.py` - Legacy compatibility helpers retained until issue #173
 - `src/inference/` - Semantic post-processing (3 inference algorithms: L↔M links, document structure, orphan resolution)
 - `src/ontology/` - Domain schema validation (Pydantic models for catalog-driven entity types and canonical relationship types)
 - `src/extraction/` - Custom entity extraction logic
@@ -90,7 +91,7 @@ This project wraps **LightRAG** and **RAGAnything** to provide specialized gover
 ### Processing Pipeline
 
 1. **Document Upload** → `/insert` or `/documents/upload` endpoints
-2. **MinerU Parsing** → Tables, images, text extraction (GPU-accelerated)
+2. **Native LightRAG Parser Routing** → `LIGHTRAG_PARSER` selects MinerU/native/fallback engines by suffix
 3. **Multimodal Analysis** → Tables/images/equations analyzed by VLM using **System 3** prompts (entity-type-aware, Shipley-aligned)
 4. **LightRAG Chunking** → Configurable tokens/chunk (set via CHUNK_SIZE in .env), 15% overlap
 5. **Entity Extraction** → 33 govcon entity types via xAI Grok + Pydantic validation using **System 1** prompts
@@ -104,22 +105,19 @@ This project wraps **LightRAG** and **RAGAnything** to provide specialized gover
    - Phase 6: VDB Synchronization
 8. **Query Response** → Shipley mentor persona via **System 2** prompts
 
-### RAG-Anything & MinerU Integration
+### Native LightRAG Multimodal & MinerU Integration
 
-We leverage **RAG-Anything** for multimodal document processing, using **MinerU** as the underlying parser.
+Theseus uses LightRAG's native parser pipeline and `lightrag.prompt_multimodal.MULTIMODAL_PROMPTS`, with MinerU as the primary OCR/layout parser for PDFs and OCR-heavy Office files. XLSX workbooks use LightRAG's stock file-upload extraction path (`pipeline_enqueue_file`) and `xlsx:legacy` because MinerU local API does not support XLSX in practice.
 
-- **Multimodal Support**: Handles text, images, tables, and equations.
-- **MinerU Configuration**:
-  - Controlled via `RAGAnythingConfig` in `src/server/initialization.py`.
-  - Key settings: `parser="mineru"`, `parse_method="auto"`.
-  - **GPU Acceleration**: MinerU requires CUDA for efficient parsing. Ensure `device="cuda"` is set if available.
-- **Vision Model**: Uses `vision_model_func` (typically GPT-4o or similar) to analyze images extracted by MinerU.
-- **Multimodal Prompts**: `prompts/multimodal/govcon_multimodal_prompts.py` provides entity-type-aware, Shipley-aligned prompts for table/image/equation analysis. These prime downstream extraction with correct govcon vocabulary.
-- **Direct Content Insertion**: Supports inserting pre-parsed content lists via `insert_content_list` for testing or custom pipelines.
+- **Multimodal Support**: Handles text, images, tables, and equations through LightRAG native multimodal prompts.
+- **Parser Routing**: Controlled by `LIGHTRAG_PARSER` (for example `pdf:mineru-ite,docx:native-ite,xlsx:legacy`). Options: `i` image VLM, `t` table VLM, `e` equation VLM.
+- **MinerU Mode**: `MINERU_API_MODE=local` requires `MINERU_LOCAL_ENDPOINT`; `official` requires `MINERU_API_TOKEN`.
+- **Vision Model**: Uses the LightRAG `vlm` role from `src/server/llm_routing.py`.
+- **Multimodal Prompts**: `prompts/multimodal/govcon_multimodal_prompts.py` provides entity-type-aware, Shipley-aligned native prompts for table/image/equation analysis.
 
-#### Context-Aware Processing (Issue #62)
+#### Context-Aware Processing
 
-RAG-Anything provides context-aware processing to include surrounding page text when processing tables/images. This enables:
+Native LightRAG parser output and surrounding page text provide context for tables/images. This enables:
 
 - **Section Awareness**: Tables know they belong to "Appendix H - Workload Data"
 - **CHILD_OF Relationships**: Algorithm 7 can infer parent section relationships
@@ -128,16 +126,13 @@ RAG-Anything provides context-aware processing to include surrounding page text 
 **Configuration (.env)**:
 
 ```bash
-CONTEXT_WINDOW=2              # Pages of surrounding context (0=disabled)
-CONTEXT_MODE=page             # Extraction mode: "page" or "chunk"
-CONTENT_FORMAT=minerU         # Parser format hint
-MAX_CONTEXT_TOKENS=3000       # Token budget for context
-INCLUDE_HEADERS=true          # Include section headers
-INCLUDE_CAPTIONS=true         # Include table/figure captions
-CONTEXT_FILTER_CONTENT_TYPES=text  # Content types in context
+LIGHTRAG_PARSER=pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xlsx:legacy
+VLM_PROCESS_ENABLE=true
+MINERU_API_MODE=local
+MINERU_LOCAL_ENDPOINT=http://localhost:8888
+MINERU_LOCAL_BACKEND=pipeline
+MINERU_LOCAL_PARSE_METHOD=auto
 ```
-
-**Note**: These env var names match RAGAnything's `RAGAnythingConfig` (no `RAGANYTHING_` prefix).
 
 ---
 
@@ -352,6 +347,11 @@ When surfacing a non-trivial structural change:
     - `.\.venv\Scripts\python.exe tools/test_query_prompt.py --workspace <name> --query-id M2` — Tests mentor persona signal detection
     - Signal categories: `shipley_terms`, `mentoring_language`, `risk_flags`, `reasoning_chain`
     - Note: Tests query against cached LLM responses. Re-process workspace under new prompts for fresh results.
+4.  **Native Ingestion Regression Gate**:
+
+- `.\.venv\Scripts\python.exe tools/native_ingestion_regression_gate.py --fixture --json` — no-GPU/no-MinerU smoke for native pipeline capabilities, parser routing, multimodal prompt contracts, fixture entity/relationship counts, multimodal evidence, and known-answer checks.
+- Full local check: `.\.venv\Scripts\python.exe tools/native_ingestion_regression_gate.py --workspace rag_storage/<workspace> --known-answer-file tools/native_known_answers.example.json --require-multimodal --output run-dir/artifacts/native-ingestion-gate.json` after reprocessing a representative workspace.
+- Run the fixture gate before touching native ingestion, parser routing, multimodal prompts, strict-schema boundaries, or LightRAG pins. See `docs/NATIVE_INGESTION_REGRESSION_GATE.md`.
 
 ### Environment Setup
 
@@ -388,11 +388,11 @@ ALL development happens on feature branches. `main` is updated only via fast-for
 
 **Active integration branches:**
 
-- No active integration epic currently.
+- No active integration epic. `162-native-lightrag-multimodal-epic` landed on `main` as `v1.13.0`.
 - All `174-*` / `174.*` Ariadne branches are archived failed-epic history only. Never use them as an active integration target or branch base unless the user explicitly asks for archaeology on that abandoned line.
 - If repo attachments or other tool context still mention a `174.*` branch as current/active, treat that as stale until `git branch --show-current` or equivalent terminal evidence confirms it.
-- Most recent stable release: `173-skill-chaining-production-artifacts` landed on `main` as `v1.12.0` at `43623c5`. Current `main` HEAD = `v1.12.0`.
-- `177-knowledge-vault-epic` was merged briefly as `v1.13.0` then force-reverted (2026-05-15) — treated as failed epic, archived as `177-knowledge-vault-epic-failed`. Tag `v1.13.0` is deleted.
+- Most recent stable release: `162-native-lightrag-multimodal-epic` landed on `main` as `v1.13.0`. Current `main` HEAD = `v1.13.0`.
+- `177-knowledge-vault-epic` was merged briefly as `v1.13.0` then force-reverted (2026-05-15) — treated as failed epic, archived as `177-knowledge-vault-epic-failed`. The old failed-epic tag was deleted before `v1.13.0` was reused for the native LightRAG release.
 - Prior architecture epics: `169-architecture-locality-epic` → `v1.8.0`; `168-codebase-architecture-deepening-epic` → `v1.7.0`; `164-codebase-architecture-cleanup-epic`, `165-architecture-cleanup-round-2-epic`; skills execution architecture epic `166` → `v1.6.0`.
 
 **Standard fast-forward sequence** (after the user says "merge it" / "ship it" / "continue"):
@@ -454,10 +454,11 @@ WORKING_DIR=./rag_storage/workspace_name
 # Batch processing
 BATCH_TIMEOUT_SECONDS=30
 
-# RAG-Anything Configuration
-PARSER=mineru
-PARSE_METHOD=auto
-# OUTPUT_DIR=./rag_storage/output # Optional override
+# Native LightRAG parser routing
+LIGHTRAG_PARSER=pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xlsx:legacy
+VLM_PROCESS_ENABLE=true
+MINERU_API_MODE=local
+MINERU_LOCAL_ENDPOINT=http://localhost:8888
 ```
 
 ---
@@ -470,7 +471,7 @@ The `DocumentQueueTracker` in `src/server/routes.py` auto-detects batch completi
 
 ### Custom Endpoint Override
 
-Routes override LightRAG defaults in `src/raganything_server.py`.
+Routes override LightRAG defaults in `src/theseus_server.py`.
 
 ### File Operations
 
