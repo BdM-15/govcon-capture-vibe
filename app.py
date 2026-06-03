@@ -229,28 +229,50 @@ if __name__ == "__main__":
         backup_count=5,
         console_output=True
     )
-    
+
+    from src.server.mineru_lifecycle import build_controller_from_env
+
     neo4j_started_by_us = False
-    
+    mineru_controller = None
+
     try:
         # Manage Neo4j startup
         if not manage_neo4j_startup():
             print("\n❌ Neo4j startup failed. Exiting.\n")
             sys.exit(1)
-        
+
         neo4j_started_by_us = is_neo4j_enabled() and is_neo4j_running()
-        
+
+        mineru_controller = build_controller_from_env()
+        if mineru_controller is not None:
+            print("🔍 Checking MinerU local API...")
+            if not mineru_controller.start():
+                print("\n❌ MinerU local API failed to start. Exiting.\n")
+                sys.exit(1)
+            if mineru_controller.started_by_us:
+                print(
+                    f"✅ MinerU FastAPI started at {mineru_controller.endpoint.docs_url}\n"
+                )
+            else:
+                print(
+                    f"✅ MinerU already running at {mineru_controller.endpoint.docs_url}\n"
+                )
+
         # Start the RAG server
         print("🚀 Starting Project Theseus...\n")
         asyncio.run(main())
-    
+
     except KeyboardInterrupt:
         print("\n\n🛑 Server stopped by user")
+        if mineru_controller is not None:
+            mineru_controller.stop()
         if neo4j_started_by_us:
             stop_neo4j()
-    
+
     except Exception as e:
         print(f"\n❌ Server error: {e}")
+        if mineru_controller is not None:
+            mineru_controller.stop()
         if neo4j_started_by_us:
             stop_neo4j()
         sys.exit(1)
