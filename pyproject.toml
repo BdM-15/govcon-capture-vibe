@@ -55,6 +55,12 @@ dependencies = [
     "pyarrow<19",
     "datasets<4",
     "langgraph>=1.1.10",
+    # opencv-python and opencv-python-headless share the site-packages/cv2/
+    # namespace and corrupt each other when installed at different versions
+    # (mineru pulls opencv-python; albumentations pulls opencv-python-headless).
+    # Pin both to the same version so file overlap is byte-identical.
+    "opencv-python==4.12.0.88",
+    "opencv-python-headless==4.12.0.88",
 ]
 
 # ============================================================================
