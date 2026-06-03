@@ -388,10 +388,10 @@ ALL development happens on feature branches. `main` is updated only via fast-for
 
 **Active integration branches:**
 
-- No active integration epic. `162-native-lightrag-multimodal-epic` landed on `main` as `v1.13.0`, with `v1.13.1` (issue #174) adding MinerU FastAPI subprocess lifecycle to `app.py` so `python app.py` is the only command needed to bring up Neo4j + MinerU + Theseus.
+- No active integration epic. `162-native-lightrag-multimodal-epic` landed on `main` as `v1.13.0`, with `v1.13.1` (issue #174) adding MinerU FastAPI subprocess lifecycle to `app.py` and `v1.13.2` restoring the GovCon ontology bootstrap call that was dropped during the RAG-Anything removal.
 - All `174-*` / `174.*` Ariadne branches are archived failed-epic history only. Never use them as an active integration target or branch base unless the user explicitly asks for archaeology on that abandoned line.
 - If repo attachments or other tool context still mention a `174.*` branch as current/active, treat that as stale until `git branch --show-current` or equivalent terminal evidence confirms it.
-- Most recent stable release: `v1.13.1` (cold-start single-entry-point hotfix on top of the native LightRAG multimodal epic). Current `main` HEAD = `v1.13.1`.
+- Most recent stable release: `v1.13.2` (ontology bootstrap restored on top of v1.13.1 single-entry-point hotfix and the native LightRAG multimodal epic). Current `main` HEAD = `v1.13.2`.
 - `177-knowledge-vault-epic` was merged briefly as `v1.13.0` then force-reverted (2026-05-15) — treated as failed epic, archived as `177-knowledge-vault-epic-failed`. The old failed-epic tag was deleted before `v1.13.0` was reused for the native LightRAG release.
 - Prior architecture epics: `169-architecture-locality-epic` → `v1.8.0`; `168-codebase-architecture-deepening-epic` → `v1.7.0`; `164-codebase-architecture-cleanup-epic`, `165-architecture-cleanup-round-2-epic`; skills execution architecture epic `166` → `v1.6.0`.
 
