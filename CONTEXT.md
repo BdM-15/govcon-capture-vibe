@@ -79,9 +79,11 @@ _Avoid_: "post-processing pipeline" (pipeline is overloaded -- see Flagged ambig
 Four sequential sub-operations applied to Neo4j entities before relationship work:
 
 1. **Type cleanup** (`plan_entity_type_updates()`): Deterministic scan of all entities grouped by `entity_type`. Three patterns caught:
-  - `table` type → `heuristic_table_type_mapping()`: keyword match on entity name + description → maps to `proposal_instruction`, `deliverable`, `evaluation_factor`, `performance_standard`, `requirement`, `clause`, etc. (native multimodal/table extraction can output generic `table` before downstream context is available)
-   - `#evaluation_factor` / `|requirement` prefix artifacts → strip `#`/`|` prefix → valid entity type (LightRAG occasionally emits these prefix-polluted strings)
-   - `unknown` type → collected for LLM batch retyping (step 2)
+
+- `table` type → `heuristic_table_type_mapping()`: keyword match on entity name + description → maps to `proposal_instruction`, `deliverable`, `evaluation_factor`, `performance_standard`, `requirement`, `clause`, etc. (native multimodal/table extraction can output generic `table` before downstream context is available)
+- `#evaluation_factor` / `|requirement` prefix artifacts → strip `#`/`|` prefix → valid entity type (LightRAG occasionally emits these prefix-polluted strings)
+- `unknown` type → collected for LLM batch retyping (step 2)
+
 2. **UNKNOWN retyping** (`_retype_unknown_entities()`): LLM call via `retype_entities_batch()`, batches of 20. Entities whose description can't map to a valid govcon type stay `unknown`.
 
 3. **Name canonicalization** (`plan_entity_name_updates()`): Targets `evaluation_factor` entities with punctuation-drift duplicates (e.g. `Factor 1 Technical Approach` vs `Factor 1: Technical Approach`). `canonicalize_factor_like_name()` normalises to `Factor <ordinal>: <label>` form. Returns `(name_updates, canonical_mapping)`. Neo4j updated via `Neo4jGraphIO.update_entity_names()`; VDB updated via `apply_entity_name_updates_to_vdb()` — rewrites `entity_name` in `vdb_entities.json` and `src_id`/`tgt_id` in `vdb_relationships.json`.
