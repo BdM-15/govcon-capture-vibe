@@ -265,6 +265,62 @@ def build_startup_banner_items(
     return startup_items
 
 
+async def maybe_bootstrap_govcon_ontology(
+    *,
+    lightrag: Any,
+    settings: Any,
+    bootstrap_fn: Callable[..., Awaitable[dict]] | None = None,
+    log: Any = logger,
+) -> dict | None:
+    """Inject the curated GovCon domain ontology into the active workspace once.
+
+    Restored after the RAG-Anything removal epic dropped the prior caller in
+    ``src/server/rag_post_init.py``. Honors ``AUTO_BOOTSTRAP_ONTOLOGY`` and
+    ``ONTOLOGY_BOOTSTRAP_FORCE`` from settings, no-ops on subsequent runs via
+    the workspace's ``.ontology_bootstrap`` marker, and never blocks startup
+    if bootstrap fails.
+    """
+
+    if not getattr(settings, "auto_bootstrap_ontology", True):
+        log.info("📚 Ontology auto-bootstrap DISABLED (AUTO_BOOTSTRAP_ONTOLOGY=False)")
+        return None
+
+    if bootstrap_fn is None:
+        from src.ontology.bootstrap import bootstrap_govcon_ontology as bootstrap_fn
+
+    workspace_path = os.path.join(settings.working_dir, settings.workspace)
+    try:
+        result = await bootstrap_fn(
+            lightrag=lightrag,
+            working_dir=workspace_path,
+            force=getattr(settings, "ontology_bootstrap_force", False),
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.warning(
+            "⚠️ Ontology bootstrap failed: %s — continuing without domain knowledge",
+            exc,
+        )
+        return None
+
+    status = result.get("status")
+    if status == "success":
+        log.info(
+            "✅ GovCon ontology bootstrapped into workspace '%s': %s entities, %s relationships",
+            settings.workspace,
+            result.get("entities_added"),
+            result.get("relationships_added"),
+        )
+    elif status == "already_bootstrapped":
+        log.info(
+            "📚 GovCon ontology already bootstrapped into workspace '%s' (%s)",
+            settings.workspace,
+            result.get("bootstrapped_at"),
+        )
+    else:
+        log.warning("⚠️ Ontology bootstrap: %s", result.get("error", "unknown issue"))
+    return result
+
+
 async def initialize_theseus_rag_runtime(
     *,
     global_args_obj: Any,
@@ -272,6 +328,7 @@ async def initialize_theseus_rag_runtime(
     initialize_native_lightrag_fn: Callable[..., Awaitable[Any]] | None = None,
     get_settings_fn: Callable[[], Any] | None = None,
     set_active_rag_instance_fn: Callable[[Any], None] | None = None,
+    bootstrap_ontology_fn: Callable[..., Awaitable[Any]] | None = None,
 ) -> TheseusRAGRuntime:
     """Configure and initialize the native LightRAG runtime for Theseus."""
 
@@ -287,6 +344,9 @@ async def initialize_theseus_rag_runtime(
     if set_active_rag_instance_fn is None:
         from src.server.runtime_state import set_active_rag_instance as set_active_rag_instance_fn
 
+    if bootstrap_ontology_fn is None:
+        bootstrap_ontology_fn = maybe_bootstrap_govcon_ontology
+
     configure_lightrag_args_fn()
     settings = get_settings_fn()
     native_runtime = await initialize_native_lightrag_fn(
@@ -294,6 +354,10 @@ async def initialize_theseus_rag_runtime(
         graph_storage=getattr(global_args_obj, "graph_storage", None),
     )
     set_active_rag_instance_fn(native_runtime.adapter)
+    await bootstrap_ontology_fn(
+        lightrag=getattr(native_runtime.adapter, "lightrag", None),
+        settings=settings,
+    )
     return TheseusRAGRuntime(
         adapter=native_runtime.adapter,
         health=native_runtime.health,

@@ -7,6 +7,7 @@ from src.theseus_server import (
     build_server_runtime,
     finalize_native_runtime_for_shutdown,
     initialize_theseus_rag_runtime,
+    maybe_bootstrap_govcon_ontology,
     patch_api_server_lightrag_for_local_rerank,
     serve_with_runtime_shutdown,
 )
@@ -22,8 +23,105 @@ class _Logger:
     def debug(self, message, *args) -> None:
         self.messages.append(message % args if args else message)
 
+    def warning(self, message, *args) -> None:
+        self.messages.append(message % args if args else message)
+
     def exception(self, message, *args) -> None:
         self.messages.append(message % args if args else message)
+
+
+def _bootstrap_settings(**overrides):
+    base = dict(
+        workspace="demo",
+        working_dir="./rag_storage",
+        auto_bootstrap_ontology=True,
+        ontology_bootstrap_force=False,
+    )
+    base.update(overrides)
+    return SimpleNamespace(**base)
+
+
+def test_maybe_bootstrap_govcon_ontology_skips_when_disabled() -> None:
+    log = _Logger()
+    calls = []
+
+    async def fake_bootstrap(**_):
+        calls.append("called")
+        return {"status": "success"}
+
+    result = asyncio.run(
+        maybe_bootstrap_govcon_ontology(
+            lightrag="lightrag",
+            settings=_bootstrap_settings(auto_bootstrap_ontology=False),
+            bootstrap_fn=fake_bootstrap,
+            log=log,
+        )
+    )
+
+    assert result is None
+    assert calls == []
+    assert any("DISABLED" in msg for msg in log.messages)
+
+
+def test_maybe_bootstrap_govcon_ontology_invokes_bootstrap_with_workspace_path() -> None:
+    log = _Logger()
+    captured: dict = {}
+
+    async def fake_bootstrap(*, lightrag, working_dir, force):
+        captured.update(lightrag=lightrag, working_dir=working_dir, force=force)
+        return {"status": "success", "entities_added": 42, "relationships_added": 7}
+
+    result = asyncio.run(
+        maybe_bootstrap_govcon_ontology(
+            lightrag="lightrag",
+            settings=_bootstrap_settings(working_dir="./rag_storage", workspace="demo"),
+            bootstrap_fn=fake_bootstrap,
+            log=log,
+        )
+    )
+
+    assert result["status"] == "success"
+    assert captured["lightrag"] == "lightrag"
+    assert captured["working_dir"].replace("\\", "/").endswith("rag_storage/demo")
+    assert captured["force"] is False
+
+
+def test_maybe_bootstrap_govcon_ontology_swallows_exceptions() -> None:
+    log = _Logger()
+
+    async def fake_bootstrap(**_):
+        raise RuntimeError("boom")
+
+    result = asyncio.run(
+        maybe_bootstrap_govcon_ontology(
+            lightrag="lightrag",
+            settings=_bootstrap_settings(),
+            bootstrap_fn=fake_bootstrap,
+            log=log,
+        )
+    )
+
+    assert result is None
+    assert any("Ontology bootstrap failed" in msg for msg in log.messages)
+
+
+def test_maybe_bootstrap_govcon_ontology_passes_force_flag() -> None:
+    captured: dict = {}
+
+    async def fake_bootstrap(*, lightrag, working_dir, force):
+        captured["force"] = force
+        return {"status": "already_bootstrapped", "bootstrapped_at": "ts"}
+
+    asyncio.run(
+        maybe_bootstrap_govcon_ontology(
+            lightrag="lightrag",
+            settings=_bootstrap_settings(ontology_bootstrap_force=True),
+            bootstrap_fn=fake_bootstrap,
+            log=_Logger(),
+        )
+    )
+
+    assert captured["force"] is True
 
 
 def test_patch_api_server_lightrag_for_local_rerank_injects_and_restores() -> None:
@@ -151,11 +249,18 @@ def test_initialize_theseus_rag_runtime_uses_native_lightrag() -> None:
     calls = []
     settings = SimpleNamespace(workspace="demo")
     global_args = SimpleNamespace(graph_storage="Neo4JStorage")
-    native_runtime = SimpleNamespace(adapter="native-adapter", health="native-health")
+    native_runtime = SimpleNamespace(
+        adapter=SimpleNamespace(lightrag="lightrag-instance"),
+        health="native-health",
+    )
 
     async def fake_initialize_native(settings_arg, *, graph_storage):
         calls.append(("initialize_native", settings_arg, graph_storage))
         return native_runtime
+
+    async def fake_bootstrap(*, lightrag, settings):
+        calls.append(("bootstrap_ontology", lightrag, settings))
+        return {"status": "already_bootstrapped"}
 
     initialized = asyncio.run(
         initialize_theseus_rag_runtime(
@@ -164,16 +269,18 @@ def test_initialize_theseus_rag_runtime_uses_native_lightrag() -> None:
             initialize_native_lightrag_fn=fake_initialize_native,
             get_settings_fn=lambda: settings,
             set_active_rag_instance_fn=lambda rag: calls.append(("set_active", rag)),
+            bootstrap_ontology_fn=fake_bootstrap,
         )
     )
 
-    assert initialized.adapter == "native-adapter"
+    assert initialized.adapter is native_runtime.adapter
     assert initialized.health == "native-health"
     assert initialized.settings is settings
     assert calls == [
         "configure_lightrag",
         ("initialize_native", settings, "Neo4JStorage"),
-        ("set_active", "native-adapter"),
+        ("set_active", native_runtime.adapter),
+        ("bootstrap_ontology", "lightrag-instance", settings),
     ]
 
 
