@@ -66,6 +66,12 @@ def test_gather_stats_counts_workspace_and_shapes_payload(tmp_path, monkeypatch)
 
     assert payload["workspace"] == "demo"
     assert payload["graph_storage"] == "Neo4JStorage"
+    assert payload["storage"] == {
+        "graph": "Neo4JStorage",
+        "vector": "NanoVectorDBStorage",
+        "kv": "JsonKVStorage",
+        "doc_status": "JsonDocStatusStorage",
+    }
     assert payload["documents"] == 2
     assert payload["entities"] == 3
     assert payload["relationships"] == 2
@@ -92,6 +98,8 @@ def test_dashboard_stats_route_uses_injected_dependencies(tmp_path) -> None:
         chats_dir=lambda: chats,
         settings_provider=_settings,
         graph_storage=lambda: "NetworkXStorage",
+        vector_storage=lambda: "NanoVectorDBStorage",
+        kv_storage=lambda: "JsonKVStorage",
         now=lambda: "now",
     )
     client = TestClient(app)
@@ -101,6 +109,7 @@ def test_dashboard_stats_route_uses_injected_dependencies(tmp_path) -> None:
     assert response.status_code == 200, response.text
     assert response.json()["workspace"] == "demo"
     assert response.json()["graph_storage"] == "NetworkXStorage"
+    assert response.json()["storage"]["vector"] == "NanoVectorDBStorage"
 
 
 def test_release_version_uses_repo_root_for_git_tag(monkeypatch) -> None:

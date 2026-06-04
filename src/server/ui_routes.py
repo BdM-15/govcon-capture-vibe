@@ -124,6 +124,8 @@ class UIRouteContext:
     chats_dir: Callable[[], Path]
     workspace_name: Callable[[], str]
     graph_storage: Callable[[], str]
+    vector_storage: Callable[[], str]
+    kv_storage: Callable[[], str]
     working_dir: Callable[[], Path]
     now: Callable[[], str]
     set_env_var: Callable[[str, str], None]
@@ -165,6 +167,8 @@ def build_ui_route_context(
         chats_dir=chats_dir,
         workspace_name=lambda: settings_provider().workspace,
         graph_storage=lambda: getattr(global_args_obj, "graph_storage", "") or "",
+        vector_storage=lambda: getattr(global_args_obj, "vector_storage", "NanoVectorDBStorage") or "NanoVectorDBStorage",
+        kv_storage=lambda: getattr(global_args_obj, "kv_storage", "JsonKVStorage") or "JsonKVStorage",
         working_dir=lambda: Path(global_args_obj.working_dir),
         now=now,
         set_env_var=lambda key, value: set_env_var_func(key, value),
@@ -189,6 +193,8 @@ def _register_feature_routes(
         chats_dir=context.chats_dir,
         settings_provider=get_settings,
         graph_storage=context.graph_storage,
+        vector_storage=context.vector_storage,
+        kv_storage=context.kv_storage,
         now=context.now,
     )
 

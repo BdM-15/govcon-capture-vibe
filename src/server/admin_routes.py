@@ -109,6 +109,8 @@ def gather_stats(
     chats_dir: Callable[[], Path],
     settings_provider: Callable[[], Any] = get_settings,
     graph_storage: Callable[[], str] = lambda: "NetworkXStorage",
+    vector_storage: Callable[[], str] = lambda: "NanoVectorDBStorage",
+    kv_storage: Callable[[], str] = lambda: "JsonKVStorage",
     now: Callable[[], str] = _now_iso,
     stack_versions_func: Callable[[], dict[str, Optional[str]]] = stack_versions,
     release_version_func: Callable[[], str] = release_version,
@@ -146,6 +148,12 @@ def gather_stats(
             "rerank": settings.rerank_model if settings.enable_rerank else None,
             "rerank_enabled": settings.enable_rerank,
         },
+        "storage": {
+            "graph": graph_storage(),
+            "vector": vector_storage(),
+            "kv": kv_storage(),
+            "doc_status": "JsonDocStatusStorage",
+        },
         "stack": stack_versions_func(),
         "timestamp": now(),
     }
@@ -158,6 +166,8 @@ def register_dashboard_stats_routes(
     chats_dir: Callable[[], Path],
     settings_provider: Callable[[], Any] = get_settings,
     graph_storage: Callable[[], str] = lambda: "NetworkXStorage",
+    vector_storage: Callable[[], str] = lambda: "NanoVectorDBStorage",
+    kv_storage: Callable[[], str] = lambda: "JsonKVStorage",
     now: Callable[[], str] = _now_iso,
 ) -> None:
     """Register dashboard stats endpoints."""
@@ -171,6 +181,8 @@ def register_dashboard_stats_routes(
                 chats_dir=chats_dir,
                 settings_provider=settings_provider,
                 graph_storage=graph_storage,
+                vector_storage=vector_storage,
+                kv_storage=kv_storage,
                 now=now,
             )
         )

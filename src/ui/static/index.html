@@ -5766,7 +5766,22 @@
                     <dt class="text-slate-500">graph</dt>
                     <dd
                       class="col-span-2 text-neon-magenta"
-                      x-text="stats.graph_storage || '—'"
+                      x-text="stats.storage?.graph || stats.graph_storage || '—'"
+                    ></dd>
+                    <dt class="text-slate-500">vector</dt>
+                    <dd
+                      class="col-span-2 text-neon-cyan"
+                      x-text="stats.storage?.vector || '—'"
+                    ></dd>
+                    <dt class="text-slate-500">kv</dt>
+                    <dd
+                      class="col-span-2 text-neon-cyan"
+                      x-text="stats.storage?.kv || '—'"
+                    ></dd>
+                    <dt class="text-slate-500">doc_status</dt>
+                    <dd
+                      class="col-span-2 text-neon-cyan"
+                      x-text="stats.storage?.doc_status || '—'"
                     ></dd>
                   </dl>
                 </div>
