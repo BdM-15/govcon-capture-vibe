@@ -58,6 +58,15 @@ node.swa_tas2 {
   caption: "{entity_id}";
 }
 
+node.ussag_ont {
+  color: #1E293B;
+  border-color: #0F172A;
+  text-color-internal: #64748B;
+  font-size: 8px;
+  diameter: 38px;
+  caption: "{entity_id}";
+}
+
 /* ── Requirements / Deliverables (amber) ──────────────────────────────────── */
 
 node.requirement {

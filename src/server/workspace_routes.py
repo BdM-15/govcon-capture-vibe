@@ -755,6 +755,41 @@ def load_graph_networkx(
     }
 
 
+_GRASS_PATH = Path(__file__).parent.parent / "ui" / "static" / "neo4j-style.grass"
+_WORKSPACE_LABEL_RULE = (
+    "node.{label} {{\n"
+    "  color: #1E293B;\n"
+    "  border-color: #0F172A;\n"
+    "  text-color-internal: #64748B;\n"
+    "  font-size: 8px;\n"
+    "  diameter: 38px;\n"
+    "  caption: \"{{entity_id}}\";\n"
+    "}}\n"
+)
+
+
+async def _get_all_workspace_labels() -> list[str]:
+    """Return all Neo4j labels that are not govcon entity types or system labels."""
+    from src.ontology.schema import VALID_ENTITY_TYPES  # noqa: PLC0415
+
+    entity_set = {e.lower() for e in VALID_ENTITY_TYPES} | SYSTEM_LABELS
+    try:
+        cfg = get_neo4j_connection_config()
+        from neo4j import AsyncGraphDatabase  # noqa: PLC0415
+
+        driver = AsyncGraphDatabase.driver(cfg.uri, auth=cfg.auth)
+        try:
+            async with driver.session(database=cfg.database) as session:
+                result = await session.run("CALL db.labels() YIELD label RETURN label")
+                rows = await result.data()
+                return [r["label"] for r in rows if r["label"].lower() not in entity_set]
+        finally:
+            await driver.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not fetch workspace labels for GraSS: %s", exc)
+        return []
+
+
 def register_graph_routes(
     app: FastAPI,
     *,
@@ -763,6 +798,44 @@ def register_graph_routes(
     working_dir: Callable[[], Path],
 ) -> None:
     """Register graph snapshot route for Theseus UI."""
+
+    @app.get("/api/ui/neo4j-style.grass", tags=["theseus-ui"])
+    async def neo4j_grass() -> "PlainTextResponse":
+        """Serve GraSS with workspace labels prepended before entity-type rules.
+
+        Neo4j Browser auto-generates a color rule for any label NOT in the
+        loaded GraSS and appends it at the end — overriding entity-type rules
+        (last-wins CSS cascade).  By fetching all current workspace labels from
+        the DB and prepending a dark-navy rule for each, we prevent that
+        auto-generation and let entity-type styles (listed later in the file) win.
+
+        Usage in Neo4j Browser:
+          :style reset
+          :style http://localhost:9621/api/ui/neo4j-style.grass
+        """
+        from fastapi.responses import PlainTextResponse  # noqa: PLC0415
+
+        static_grass = _GRASS_PATH.read_text(encoding="utf-8")
+        workspace_labels = await _get_all_workspace_labels()
+
+        if workspace_labels:
+            ws_block = "/* ── Auto-prepended workspace labels (prevents Browser auto-generation) ── */\n\n"
+            for lbl in sorted(workspace_labels):
+                ws_block += _WORKSPACE_LABEL_RULE.format(label=lbl)
+                ws_block += "\n"
+            # Insert after the default node/relationship block and before the first entity-type group
+            marker = "/* ── Workspace label"
+            if marker in static_grass:
+                # Replace the hand-edited workspace label section with the dynamic block
+                start = static_grass.index(marker)
+                # Find the next entity-type group comment
+                next_group = static_grass.index("/* ──", start + len(marker))
+                static_grass = static_grass[:start] + ws_block + static_grass[next_group:]
+            else:
+                # Prepend before the first entity-type rule
+                static_grass = ws_block + static_grass
+
+        return PlainTextResponse(static_grass, media_type="text/plain")
 
     @app.get("/api/ui/graph", tags=["theseus-ui"])
     async def ui_graph(

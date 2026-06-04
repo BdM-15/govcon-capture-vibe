@@ -117,6 +117,9 @@ $RECYCLE.BIN/
 rag_storage/
 rag_storage_*/
 
+# MinerU local FastAPI parse scratch dir (per-task UUID subdirs created at repo root)
+output/
+
 # Log files (not used by current code, regenerated if needed)
 logs/*.log
 logs/*.log.*
