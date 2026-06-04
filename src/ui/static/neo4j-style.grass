@@ -37,6 +37,27 @@ relationship {
   caption: "<type>";
 }
 
+/* ── Workspace label — defined first so entity-type rules below override it ─
+ *
+ * Neo4j Browser auto-generates a random style for any label NOT in this file,
+ * then appends it at the end — which wins over our entity-type rules.
+ * Defining node.swa_tas2 here prevents that auto-generation and lets the
+ * later entity-type rules take precedence (CSS last-wins cascade).
+ *
+ * If you use a different workspace, add node.<workspace> { ... } here too,
+ * or hit: :style http://localhost:9621/ui/neo4j-style.grass?ws=<workspace>
+ * (dynamic endpoint — see /api/ui/neo4j-style endpoint in ui_routes.py TODO)
+ */
+
+node.swa_tas2 {
+  color: #1E293B;
+  border-color: #0F172A;
+  text-color-internal: #64748B;
+  font-size: 8px;
+  diameter: 38px;
+  caption: "{entity_id}";
+}
+
 /* ── Requirements / Deliverables (amber) ──────────────────────────────────── */
 
 node.requirement {
