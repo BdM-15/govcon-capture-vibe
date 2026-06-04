@@ -2621,82 +2621,98 @@
               </div>
             </div>
 
-            <!-- Phase 4j: flat grid; meta skills pinned first -->
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              <template x-for="s in skillsFiltered()" :key="s.name">
-                <div
-                  class="card card-accent p-4 flex flex-col gap-3 cursor-pointer card-hover"
-                  :class="isMetaSkill(s) ? 'border-neon-cyan/40 ring-1 ring-neon-cyan/20' : 'border-neon-magenta/30'"
-                  @click="openSkill(s.name)"
-                >
-                  <div class="flex items-start justify-between gap-2">
-                    <div class="flex items-center gap-2 min-w-0">
-                      <i
-                        :data-lucide="isMetaSkill(s) ? 'sparkles' : 'wand-2'"
-                        class="w-4 h-4 flex-shrink-0"
-                        :class="isMetaSkill(s) ? 'text-neon-cyan' : 'text-neon-magenta'"
-                      ></i>
-                      <h3
-                        class="text-sm font-semibold text-slate-100 leading-snug truncate"
-                        x-text="s.name"
-                      ></h3>
+            <!-- Domain skills section -->
+            <div x-show="skillsFilteredDomain().length > 0" class="mb-6">
+              <div class="flex items-center gap-3 mb-3">
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neon-magenta/70">Domain Skills</span>
+                <div class="flex-1 h-px bg-neon-magenta/20"></div>
+                <span class="text-[10px] font-mono text-slate-600" x-text="skillsFilteredDomain().length"></span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <template x-for="s in skillsFilteredDomain()" :key="s.name">
+                  <div
+                    class="card card-accent p-4 flex flex-col gap-3 cursor-pointer card-hover border-neon-magenta/30"
+                    @click="openSkill(s.name)"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <i data-lucide="wand-2" class="w-4 h-4 flex-shrink-0 text-neon-magenta"></i>
+                        <h3 class="text-sm font-semibold text-slate-100 leading-snug truncate" x-text="s.name"></h3>
+                      </div>
+                      <span
+                        x-show="s.capability"
+                        class="pill whitespace-nowrap text-[10px] bg-ink-800 text-neon-magenta border border-neon-magenta/40"
+                        x-text="s.capability"
+                      ></span>
                     </div>
-                    <span
-                      x-show="s.capability"
-                      class="pill whitespace-nowrap text-[10px]"
-                      :class="isMetaSkill(s) ? 'bg-ink-800 text-neon-cyan border border-neon-cyan/40' : 'bg-ink-800 text-neon-magenta border border-neon-magenta/40'"
-                      x-text="s.capability"
-                    ></span>
-                  </div>
-                  <div
-                    class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
-                    x-text="personaLabel(s.personas_primary)"
-                  ></div>
-                  <p
-                    class="text-xs text-slate-400 leading-snug line-clamp-3"
-                    x-text="s.description"
-                  ></p>
-                  <div
-                    x-show="s.personas_secondary && s.personas_secondary.length"
-                    class="text-[10px] text-slate-500"
-                  >
-                    <span class="text-slate-600">also for:</span>
-                    <template
-                      x-for="(p, idx) in s.personas_secondary"
-                      :key="'sec-' + s.name + '-' + p"
-                    >
-                      <span>
-                        <span
-                          class="text-slate-400"
-                          x-text="personaLabel(p)"
-                        ></span
-                        ><span x-show="idx < s.personas_secondary.length - 1"
-                          >,
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500" x-text="personaLabel(s.personas_primary)"></div>
+                    <p class="text-xs text-slate-400 leading-snug line-clamp-3" x-text="s.description"></p>
+                    <div x-show="s.personas_secondary && s.personas_secondary.length" class="text-[10px] text-slate-500">
+                      <span class="text-slate-600">also for:</span>
+                      <template x-for="(p, idx) in s.personas_secondary" :key="'sec-' + s.name + '-' + p">
+                        <span>
+                          <span class="text-slate-400" x-text="personaLabel(p)"></span><span x-show="idx < s.personas_secondary.length - 1">, </span>
                         </span>
-                      </span>
-                    </template>
+                      </template>
+                    </div>
+                    <div class="flex items-center gap-2 text-[10px] font-mono text-slate-500 mt-auto">
+                      <span x-text="'v' + (s.version || '0.0.0')"></span>
+                      <span x-show="s.source === 'installed'" class="text-neon-magenta">installed</span>
+                      <span x-show="s.status" class="text-amber-400" x-text="s.status"></span>
+                      <span class="ml-auto" x-show="s.has_references">refs</span>
+                      <span x-show="s.has_assets || s.has_templates">assets</span>
+                      <span x-show="s.has_scripts">scripts</span>
+                    </div>
                   </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Meta / utility skills section -->
+            <div x-show="skillsFilteredMeta().length > 0" class="mb-2">
+              <div class="flex items-center gap-3 mb-3">
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neon-cyan/70">Utility &amp; Infrastructure</span>
+                <div class="flex-1 h-px bg-neon-cyan/20"></div>
+                <span class="text-[10px] font-mono text-slate-600" x-text="skillsFilteredMeta().length"></span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <template x-for="s in skillsFilteredMeta()" :key="s.name">
                   <div
-                    class="flex items-center gap-2 text-[10px] font-mono text-slate-500 mt-auto"
+                    class="card card-accent p-4 flex flex-col gap-3 cursor-pointer card-hover border-neon-cyan/40 ring-1 ring-neon-cyan/20"
+                    @click="openSkill(s.name)"
                   >
-                    <span x-text="'v' + (s.version || '0.0.0')"></span>
-                    <span
-                      x-show="s.source === 'installed'"
-                      class="text-neon-magenta"
-                    >
-                      installed
-                    </span>
-                    <span
-                      x-show="s.status"
-                      class="text-amber-400"
-                      x-text="s.status"
-                    ></span>
-                    <span class="ml-auto" x-show="s.has_references">refs</span>
-                    <span x-show="s.has_assets || s.has_templates">assets</span>
-                    <span x-show="s.has_scripts">scripts</span>
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <i data-lucide="sparkles" class="w-4 h-4 flex-shrink-0 text-neon-cyan"></i>
+                        <h3 class="text-sm font-semibold text-slate-100 leading-snug truncate" x-text="s.name"></h3>
+                      </div>
+                      <span
+                        x-show="s.capability"
+                        class="pill whitespace-nowrap text-[10px] bg-ink-800 text-neon-cyan border border-neon-cyan/40"
+                        x-text="s.capability"
+                      ></span>
+                    </div>
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500" x-text="personaLabel(s.personas_primary)"></div>
+                    <p class="text-xs text-slate-400 leading-snug line-clamp-3" x-text="s.description"></p>
+                    <div x-show="s.personas_secondary && s.personas_secondary.length" class="text-[10px] text-slate-500">
+                      <span class="text-slate-600">also for:</span>
+                      <template x-for="(p, idx) in s.personas_secondary" :key="'sec-' + s.name + '-' + p">
+                        <span>
+                          <span class="text-slate-400" x-text="personaLabel(p)"></span><span x-show="idx < s.personas_secondary.length - 1">, </span>
+                        </span>
+                      </template>
+                    </div>
+                    <div class="flex items-center gap-2 text-[10px] font-mono text-slate-500 mt-auto">
+                      <span x-text="'v' + (s.version || '0.0.0')"></span>
+                      <span x-show="s.source === 'installed'" class="text-neon-cyan">installed</span>
+                      <span x-show="s.status" class="text-amber-400" x-text="s.status"></span>
+                      <span class="ml-auto" x-show="s.has_references">refs</span>
+                      <span x-show="s.has_assets || s.has_templates">assets</span>
+                      <span x-show="s.has_scripts">scripts</span>
+                    </div>
                   </div>
-                </div>
-              </template>
+                </template>
+              </div>
             </div>
 
             <div

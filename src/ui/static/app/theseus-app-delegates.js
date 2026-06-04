@@ -440,6 +440,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusSkillsFiltered(this);
     },
 
+    skillsFilteredDomain() {
+      return window.theseusSkillsFilteredDomain(this);
+    },
+
+    skillsFilteredMeta() {
+      return window.theseusSkillsFilteredMeta(this);
+    },
+
     skillsCountForPersona(id) {
       return window.theseusSkillsCountForPersona(this, id);
     },
