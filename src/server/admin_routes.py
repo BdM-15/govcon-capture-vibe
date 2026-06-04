@@ -142,6 +142,7 @@ def gather_stats(
             "extraction": settings.extraction_llm_name,
             "reasoning": settings.reasoning_llm_name,
             "embedding": settings.embedding_model,
+            "vlm": settings.vlm_llm_name,
             "rerank": settings.rerank_model if settings.enable_rerank else None,
             "rerank_enabled": settings.enable_rerank,
         },

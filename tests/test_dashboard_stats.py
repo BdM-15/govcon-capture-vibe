@@ -22,6 +22,7 @@ def _settings() -> SimpleNamespace:
         extraction_llm_name="extract-model",
         reasoning_llm_name="reason-model",
         embedding_model="embed-model",
+        vlm_llm_name="vlm-model",
         rerank_model="rerank-model",
         enable_rerank=True,
     )
@@ -75,6 +76,7 @@ def test_gather_stats_counts_workspace_and_shapes_payload(tmp_path, monkeypatch)
     assert payload["ontology"]["entity_type_count"] == len(VALID_ENTITY_TYPES)
     assert payload["ontology"]["relationship_type_count"] == len(VALID_RELATIONSHIP_TYPES)
     assert payload["models"]["rerank"] == "rerank-model"
+    assert payload["models"]["vlm"] == "vlm-model"
     assert payload["stack"] == {"lightrag": "test"}
     assert payload["timestamp"] == "2026-05-03T12:00:00-05:00"
 
