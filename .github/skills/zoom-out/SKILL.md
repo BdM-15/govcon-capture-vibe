@@ -12,6 +12,7 @@ metadata:
   runtime: legacy
   disable-model-invocation: true
   upstream: https://github.com/mattpocock/agent-skills
+  developer_only: true
 ---
 
 I don't know this area of code well. Go up a layer of abstraction. Give me a map of all the relevant modules and callers, using the project's domain glossary vocabulary.

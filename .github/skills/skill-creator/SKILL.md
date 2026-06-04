@@ -15,6 +15,7 @@ metadata:
   status: active
   runtime: legacy
   upstream: https://github.com/anthropics/skills
+  developer_only: true
 ---
 
 # Skill Creator

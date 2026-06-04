@@ -15,6 +15,7 @@ metadata:
   status: active
   runtime: legacy
   upstream: https://github.com/mattpocock/agent-skills
+  developer_only: true
 ---
 
 Respond terse like smart caveman. All technical substance stay. Only fluff die.

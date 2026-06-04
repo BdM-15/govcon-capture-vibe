@@ -12,6 +12,7 @@ metadata:
   runtime: legacy
   disable-model-invocation: true
   upstream: https://github.com/mattpocock/agent-skills
+  developer_only: true
 ---
 
 # Setup Matt Pocock's Skills

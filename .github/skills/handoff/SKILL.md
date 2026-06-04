@@ -12,6 +12,7 @@ metadata:
   runtime: legacy
   argument-hint: "What will the next session be used for?"
   upstream: https://github.com/mattpocock/agent-skills
+  developer_only: true
 ---
 
 Write a handoff document summarising the current conversation so a fresh agent can continue the work. Save it to a path produced by `mktemp -t handoff-XXXXXX.md` (read the file before you write to it).

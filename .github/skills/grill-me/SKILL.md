@@ -11,6 +11,7 @@ metadata:
   status: active
   runtime: legacy
   upstream: https://github.com/mattpocock/agent-skills
+  developer_only: true
 ---
 
 Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.

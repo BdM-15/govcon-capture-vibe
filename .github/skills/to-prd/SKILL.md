@@ -11,6 +11,7 @@ metadata:
   status: active
   runtime: legacy
   upstream: https://github.com/mattpocock/agent-skills
+  developer_only: true
 ---
 
 This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know.
