@@ -191,6 +191,13 @@ def build_native_lightrag_runtime(
 
     install_chunk_guardrails_fn()
 
+    # Restore entity-type Neo4j labels dropped by LightRAG rc3.
+    # LightRAG 1.4.13 wrote `SET n:`{entity_type}`` so ontology types appeared
+    # as distinct node labels in Neo4j Browser.  rc3 dropped that line.  This
+    # patch reinstates the behaviour without touching the venv.
+    from src.server.neo4j_entity_label_patch import install_neo4j_entity_label_patch
+    install_neo4j_entity_label_patch()
+
     parser_health = configure_native_parser_environment_fn(settings)
     role_routing = build_role_llm_routing_fn(
         settings,
