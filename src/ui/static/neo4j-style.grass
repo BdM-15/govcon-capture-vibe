@@ -1,0 +1,287 @@
+/*
+ * Project Theseus — Neo4j Browser GraSS style sheet
+ * Load once in Neo4j Browser: :style http://localhost:9621/ui/neo4j-style.grass
+ * Persists in browser localStorage. Re-run only after changes here.
+ *
+ * Entity type groups:
+ *   Requirements/deliverables  — amber/yellow
+ *   Contract/financial         — emerald/green
+ *   Org/people                 — blue
+ *   Document/structure         — violet
+ *   Proposal/capture           — pink/magenta
+ *   Technical/equipment        — cyan/teal
+ *   Intelligence/analysis      — orange/red
+ *   Regulatory/clauses         — lime
+ *   Misc                       — assorted
+ */
+
+/* ── Defaults ─────────────────────────────────────────────────────────────── */
+
+node {
+  diameter: 44px;
+  color: #4B5563;
+  border-color: #374151;
+  border-width: 2px;
+  text-color-internal: #FFFFFF;
+  font-size: 9px;
+  caption: "{entity_id}";
+}
+
+relationship {
+  color: #6B7280;
+  shaft-width: 1px;
+  font-size: 7px;
+  padding: 3px;
+  text-color-external: #D1D5DB;
+  text-color-internal: #FFFFFF;
+  caption: "<type>";
+}
+
+/* ── Requirements / Deliverables (amber) ──────────────────────────────────── */
+
+node.requirement {
+  color: #D97706;
+  border-color: #B45309;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.deliverable {
+  color: #F59E0B;
+  border-color: #D97706;
+  text-color-internal: #1C1917;
+  caption: "{entity_id}";
+}
+
+node.performance_standard {
+  color: #FBBF24;
+  border-color: #D97706;
+  text-color-internal: #1C1917;
+  caption: "{entity_id}";
+}
+
+node.compliance_artifact {
+  color: #92400E;
+  border-color: #78350F;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+/* ── Contract / Financial (emerald/green) ─────────────────────────────────── */
+
+node.contract_line_item {
+  color: #10B981;
+  border-color: #059669;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.pricing_element {
+  color: #059669;
+  border-color: #047857;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.contract_vehicle {
+  color: #34D399;
+  border-color: #10B981;
+  text-color-internal: #1C1917;
+  caption: "{entity_id}";
+}
+
+node.period_of_performance {
+  color: #047857;
+  border-color: #065F46;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.workload_metric {
+  color: #0284C7;
+  border-color: #0369A1;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+/* ── Organization / People (blue) ─────────────────────────────────────────── */
+
+node.organization {
+  color: #3B82F6;
+  border-color: #2563EB;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.labor_category {
+  color: #2563EB;
+  border-color: #1D4ED8;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.location {
+  color: #60A5FA;
+  border-color: #3B82F6;
+  text-color-internal: #1C1917;
+  caption: "{entity_id}";
+}
+
+node.program {
+  color: #1D4ED8;
+  border-color: #1E40AF;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.past_performance_reference {
+  color: #14B8A6;
+  border-color: #0D9488;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+/* ── Document / Structure (violet) ───────────────────────────────────────── */
+
+node.document {
+  color: #8B5CF6;
+  border-color: #7C3AED;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.document_section {
+  color: #7C3AED;
+  border-color: #6D28D9;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.work_scope_item {
+  color: #A78BFA;
+  border-color: #8B5CF6;
+  text-color-internal: #1C1917;
+  caption: "{entity_id}";
+}
+
+node.drawing {
+  color: #6D28D9;
+  border-color: #5B21B6;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+/* ── Proposal / Capture (pink/magenta) ───────────────────────────────────── */
+
+node.proposal_instruction {
+  color: #EC4899;
+  border-color: #DB2777;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.evaluation_factor {
+  color: #DB2777;
+  border-color: #BE185D;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.proposal_volume {
+  color: #F472B6;
+  border-color: #EC4899;
+  text-color-internal: #1C1917;
+  caption: "{entity_id}";
+}
+
+node.customer_priority {
+  color: #BE185D;
+  border-color: #9D174D;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+/* ── Technical / Equipment (cyan/teal) ───────────────────────────────────── */
+
+node.technology {
+  color: #06B6D4;
+  border-color: #0891B2;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.technical_specification {
+  color: #0891B2;
+  border-color: #0E7490;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.equipment {
+  color: #22D3EE;
+  border-color: #06B6D4;
+  text-color-internal: #1C1917;
+  caption: "{entity_id}";
+}
+
+node.government_furnished_item {
+  color: #0E7490;
+  border-color: #155E75;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+/* ── Intelligence / Analysis (orange/red) ────────────────────────────────── */
+
+node.pain_point {
+  color: #EF4444;
+  border-color: #DC2626;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.strategic_theme {
+  color: #F97316;
+  border-color: #EA580C;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+node.concept {
+  color: #FB923C;
+  border-color: #F97316;
+  text-color-internal: #1C1917;
+  caption: "{entity_id}";
+}
+
+node.regulatory_reference {
+  color: #DC2626;
+  border-color: #B91C1C;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+/* ── Regulatory / Clauses (lime/green) ───────────────────────────────────── */
+
+node.amendment {
+  color: #84CC16;
+  border-color: #65A30D;
+  text-color-internal: #1C1917;
+  caption: "{entity_id}";
+}
+
+node.clause {
+  color: #65A30D;
+  border-color: #4D7C0F;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}
+
+/* ── Misc ────────────────────────────────────────────────────────────────── */
+
+node.event {
+  color: #CA8A04;
+  border-color: #A16207;
+  text-color-internal: #FFFFFF;
+  caption: "{entity_id}";
+}

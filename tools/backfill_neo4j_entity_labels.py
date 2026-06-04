@@ -85,6 +85,8 @@ async def run(workspace: str, *, dry_run: bool) -> None:
             return
 
         # --- stamp labels per type ---
+        import sys, pathlib
+        sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
         from src.server.neo4j_entity_label_patch import _sanitize_label
 
         grand_total = 0
