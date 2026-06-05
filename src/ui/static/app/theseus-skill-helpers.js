@@ -65,15 +65,15 @@ window.theseusSkillsFiltered = function theseusSkillsFiltered(app) {
 };
 
 window.theseusSkillsFilteredDomain = function theseusSkillsFilteredDomain(app) {
-  return window.theseusSkillsFiltered(app).filter(
-    (s) => !window.theseusIsMetaSkill(s),
-  );
+  return window
+    .theseusSkillsFiltered(app)
+    .filter((s) => !window.theseusIsMetaSkill(s));
 };
 
 window.theseusSkillsFilteredMeta = function theseusSkillsFilteredMeta(app) {
-  return window.theseusSkillsFiltered(app).filter(
-    (s) => window.theseusIsMetaSkill(s),
-  );
+  return window
+    .theseusSkillsFiltered(app)
+    .filter((s) => window.theseusIsMetaSkill(s));
 };
 
 window.theseusSkillsCountForPersona = function theseusSkillsCountForPersona(
