@@ -1,0 +1,159 @@
+          <!-- ============== ACTIVITY LOG ============== -->
+          <!--
+            Live tail of the per-workspace processing log file
+            (rag_storage/<workspace>/<workspace>_processing.log) — the
+            long-lived end-to-end audit trail covering MinerU parsing,
+            LightRAG extraction, post-processing phases 1-5, AND query-time
+            retrieval / reranking. Subscribes to /api/ui/processing-log/stream
+            when this tab is active; SSE is torn down on tab change.
+          -->
+          <section x-show="active === 'activity'" x-cloak class="h-full">
+            <div class="flex items-end justify-between mb-5 flex-wrap gap-3">
+              <div>
+                <h1 class="text-2xl font-bold tracking-tight">
+                  <span class="h1-gradient">Workspace Activity Log</span>
+                </h1>
+                <p class="text-sm text-slate-500 mt-1">
+                  End-to-end audit of the active workspace. Tail of
+                  <span
+                    class="font-mono text-slate-400"
+                    x-text="(stats && stats.workspace) ? `${stats.workspace}_processing.log` : 'workspace log'"
+                  ></span>
+                  — covers ingestion (MinerU parse, extraction, post-processing
+                  phases) and queries (kw extract, retrieval, rerank).
+                </p>
+              </div>
+              <div class="flex items-center gap-2 text-xs font-mono">
+                <span
+                  x-show="procLog.streaming"
+                  class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-neon-lime"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full bg-neon-lime animate-pulse"
+                  ></span>
+                  live
+                </span>
+                <span
+                  x-show="!procLog.streaming && procLog.error"
+                  class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-neon-red"
+                  :title="procLog.error"
+                >
+                  <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                  disconnected
+                </span>
+              </div>
+            </div>
+
+            <div class="card card-accent accent-amber p-5">
+              <div
+                class="flex items-center justify-between mb-3 flex-wrap gap-2"
+              >
+                <div class="flex items-center gap-2">
+                  <i data-lucide="activity" class="w-4 h-4 text-neon-amber"></i>
+                  <h2 class="font-semibold">Activity Stream</h2>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <select
+                    class="bg-ink-800 border border-edge rounded-md text-[11px] px-2 py-1 font-mono"
+                    x-model="procLog.category"
+                    title="Which audit bucket to view"
+                  >
+                    <option value="processing">processing</option>
+                    <option value="query">queries</option>
+                    <option value="all">all activity</option>
+                  </select>
+                  <select
+                    class="bg-ink-800 border border-edge rounded-md text-[11px] px-2 py-1 font-mono"
+                    x-model="procLog.filter"
+                    title="Severity / phase filter"
+                  >
+                    <option value="all">all levels</option>
+                    <option value="phase">phases only</option>
+                    <option value="errors">errors + warnings</option>
+                  </select>
+                  <label
+                    class="inline-flex items-center gap-1 text-[11px] font-mono text-slate-400 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      class="accent-neon-cyan"
+                      x-model="procLog.autoscroll"
+                    />
+                    autoscroll
+                  </label>
+                  <button
+                    class="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-slate-400 hover:text-neon-cyan transition"
+                    @click="clearProcLog()"
+                    title="Clear the in-browser view (log file is untouched)"
+                  >
+                    <i data-lucide="eraser" class="w-3.5 h-3.5"></i>
+                    <span>Clear view</span>
+                  </button>
+                </div>
+              </div>
+              <div
+                x-ref="procLogScroll"
+                class="rounded-lg border border-edge bg-ink-950/70 font-mono text-[11px] leading-snug overflow-y-auto"
+                style="height: calc(100vh - 18rem); min-height: 24rem"
+              >
+                <template x-if="!filteredProcLog().length">
+                  <div class="p-10 text-center text-slate-600">
+                    <i
+                      data-lucide="moon"
+                      class="w-6 h-6 mx-auto mb-2 text-slate-700"
+                    ></i>
+                    <div
+                      x-text="procLog.streaming ? 'No events match the current filters.' : 'Connecting to log stream…'"
+                    ></div>
+                  </div>
+                </template>
+                <template x-for="ev in filteredProcLog()" :key="ev.id">
+                  <div
+                    class="px-3 py-1.5 border-b border-edge/30 flex items-start gap-2"
+                    :class="{
+                      'text-neon-red bg-neon-red/10 border-l-2 border-l-neon-red/70': ev.kind === 'error',
+                      'text-neon-amber': ev.kind === 'warning',
+                      'text-neon-lime': ev.kind === 'success',
+                      'text-neon-cyan': ev.kind === 'phase' || ev.kind === 'batch',
+                      'text-slate-400': ev.kind === 'info',
+                      'text-slate-500': ev.kind === 'queue',
+                    }"
+                  >
+                    <span
+                      class="text-slate-600 shrink-0 tabular-nums"
+                      x-text="ev.ts_iso?.slice(11,19) || ''"
+                    ></span>
+                    <span
+                      class="shrink-0 text-[9px] uppercase tracking-wider font-bold opacity-70 w-12"
+                      x-text="ev.level"
+                    ></span>
+                    <span
+                      class="shrink-0 text-[9px] uppercase tracking-wider font-mono w-16 truncate text-slate-500"
+                      x-text="ev.category"
+                      :title="ev.logger"
+                    ></span>
+                    <template x-if="ev.phase">
+                      <span
+                        class="shrink-0 px-1.5 rounded bg-neon-cyan/15 text-neon-cyan text-[10px]"
+                        x-text="`P${ev.phase.index}`"
+                        :title="ev.phase.label"
+                      ></span>
+                    </template>
+                    <span
+                      class="break-all whitespace-pre-wrap"
+                      x-text="ev.message"
+                    ></span>
+                  </div>
+                </template>
+              </div>
+              <div
+                class="flex items-center justify-between mt-2 text-[10px] font-mono text-slate-500"
+              >
+                <span>
+                  <span x-text="filteredProcLog().length"></span>
+                  / <span x-text="procLog.events.length"></span> events shown
+                </span>
+                <span class="text-slate-600"> Polling every 1.5s </span>
+              </div>
+            </div>
+          </section>

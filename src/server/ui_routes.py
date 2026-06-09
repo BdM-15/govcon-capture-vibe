@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, Callable, Union
 
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from lightrag.api.config import global_args
 
@@ -290,7 +291,26 @@ def register_ui(
         restart_func=lambda: _self_restart(),
     )
 
-    # ---- Static SPA at /ui ------------------------------------------------
+    # ---- Fragmented SPA shell assembled at serve time (#190) ---------------
+    from src.ui.workbench_assembler import assemble_workbench_html
+
+    def _workbench_html() -> str:
+        return assemble_workbench_html(str(_STATIC_DIR))
+
+    @app.get("/ui", include_in_schema=False)
+    @app.get("/ui/", include_in_schema=False)
+    @app.get("/ui/index.html", include_in_schema=False)
+    async def serve_workbench_shell() -> HTMLResponse:
+        return HTMLResponse(
+            _workbench_html(),
+            headers={
+                "Cache-Control": "no-store, no-cache, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0",
+            },
+        )
+
+    # ---- Static assets under /ui (app/, styles/, views/ for dev only) ----
     app.mount(
         "/ui",
         TheseusStaticFiles(directory=str(_STATIC_DIR), html=True),

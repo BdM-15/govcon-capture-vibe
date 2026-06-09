@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from src.ui.workbench_assembler import assemble_workbench_html
+
 
 _ROOT = Path(__file__).parent.parent
-_INDEX_HTML = _ROOT / "src" / "ui" / "static" / "index.html"
 _UI_STATIC_ROOT = _ROOT / "src" / "ui" / "static"
+
+
+def _index_html() -> str:
+    return assemble_workbench_html(str(_UI_STATIC_ROOT))
 _PREVIEW_HELPERS = _ROOT / "src" / "ui" / "static" / "app" / "theseus-preview-helpers.js"
 _CHAIN_HELPERS = _ROOT / "src" / "ui" / "static" / "app" / "theseus-chain-helpers.js"
 _SKILL_HELPERS = _ROOT / "src" / "ui" / "static" / "app" / "theseus-skill-helpers.js"
@@ -23,7 +28,7 @@ _BANNED_MOJIBAKE = (
 
 
 def test_delete_modal_storage_display_uses_null_safe_guard() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
 
     assert (
         "deleteModal.target?.storage_mb != null ? deleteModal.target.storage_mb + ' MB' : 'not present'"
@@ -46,7 +51,7 @@ def test_ui_static_files_do_not_contain_common_mojibake_sequences() -> None:
 
 
 def test_stack_footer_presents_lightrag_first_runtime_not_raganything_peer() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
 
     assert "lightrag native" in source
     assert "compat layer" not in source
@@ -55,7 +60,7 @@ def test_stack_footer_presents_lightrag_first_runtime_not_raganything_peer() -> 
 
 
 def test_studio_filename_button_is_only_preview_trigger() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
     start = source.index('class="studio-filename-btn text-neon-cyan"')
     end = source.index("</button>", start)
     filename_button = source[start:end]
@@ -66,7 +71,7 @@ def test_studio_filename_button_is_only_preview_trigger() -> None:
 
 
 def test_studio_preview_header_hides_raw_filename_subline() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
     start = source.index('x-text="studioPreview.deliverable && (studioPreview.deliverable.display_name || studioPreview.deliverable.filename)"')
     end = source.index('x-show="studioPreview.deliverable"', start)
     header_slice = source[start:end]
@@ -75,7 +80,7 @@ def test_studio_preview_header_hides_raw_filename_subline() -> None:
 
 
 def test_studio_preview_keeps_reasoning_link_without_provenance_rail() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
 
     assert "Full reasoning" in source
     assert '<aside class="studio-provenance-rail">' not in source
@@ -86,7 +91,7 @@ def test_studio_preview_keeps_reasoning_link_without_provenance_rail() -> None:
 
 
 def test_studio_preview_exposes_version_history_and_compare() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
     helpers = _PREVIEW_HELPERS.read_text(encoding="utf-8")
 
     assert "Version History" in source
@@ -101,7 +106,7 @@ def test_studio_preview_exposes_version_history_and_compare() -> None:
 
 
 def test_reasoning_drawer_exposes_run_artifact_actions() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
     helpers = _PREVIEW_HELPERS.read_text(encoding="utf-8")
 
     assert "Artifacts From This Run" in source
@@ -118,7 +123,7 @@ def test_reasoning_drawer_exposes_run_artifact_actions() -> None:
 
 
 def test_studio_filter_bar_exposes_grouping_control() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
 
     assert 'x-model="studio.groupBy"' in source
     assert '<option value="chain">Chain</option>' in source
@@ -130,7 +135,7 @@ def test_studio_filter_bar_exposes_grouping_control() -> None:
 
 
 def test_studio_exposes_trash_toggle_and_restore_action() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
 
     assert "Studio Trash" in source
     assert "Trash empty." in source
@@ -140,7 +145,7 @@ def test_studio_exposes_trash_toggle_and_restore_action() -> None:
 
 
 def test_skills_expose_run_trash_and_restore_action() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
 
     assert "Run Trash" in source
     assert "Run trash empty." in source
@@ -149,7 +154,7 @@ def test_skills_expose_run_trash_and_restore_action() -> None:
 
 
 def test_skills_expose_resume_panel_for_interrupted_runs() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
     helpers = _SKILL_HELPERS.read_text(encoding="utf-8")
 
     assert 'x-show="skillRunInputRequest(skills.run)"' in source
@@ -163,7 +168,7 @@ def test_skills_expose_resume_panel_for_interrupted_runs() -> None:
 
 
 def test_skill_run_missing_input_panel_reuses_chat_like_composer_language() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
     helpers = _SKILL_HELPERS.read_text(encoding="utf-8")
 
     first_panel_start = source.index('id="skill-run-input-request-panel-template"')
@@ -180,7 +185,7 @@ def test_skill_run_missing_input_panel_reuses_chat_like_composer_language() -> N
 
 
 def test_studio_chain_trace_exposes_resume_action_for_resumeable_chain() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
     helpers = _CHAIN_HELPERS.read_text(encoding="utf-8")
 
     assert 'x-show="chainCanResume(chains.current)"' in source
@@ -192,7 +197,7 @@ def test_studio_chain_trace_exposes_resume_action_for_resumeable_chain() -> None
 
 
 def test_chain_trace_exposes_missing_input_resume_panel() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
     helpers = _CHAIN_HELPERS.read_text(encoding="utf-8")
 
     assert 'x-show="chainInputRequest(chains.current)"' in source
@@ -206,7 +211,7 @@ def test_chain_trace_exposes_missing_input_resume_panel() -> None:
 
 
 def test_chain_trace_missing_input_panel_reuses_chat_like_composer_language() -> None:
-    source = _INDEX_HTML.read_text(encoding="utf-8")
+    source = _index_html()
     helpers = _CHAIN_HELPERS.read_text(encoding="utf-8")
 
     first_panel_start = source.index('id="chain-input-request-panel-template"')

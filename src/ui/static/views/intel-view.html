@@ -1,0 +1,420 @@
+          <!-- ============== INTELLIGENCE ============== -->
+          <section x-show="active === 'intel'" x-cloak>
+            <!-- Top: tabs + summary chips -->
+            <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+              <div
+                class="flex gap-1 bg-ink-850 border border-edge rounded-lg p-1"
+              >
+                <template x-for="tab in intel.tabs" :key="tab.id">
+                  <button
+                    class="px-3 py-1.5 text-xs font-mono uppercase tracking-wider rounded-md transition"
+                    :class="intel.tab === tab.id ? 'bg-neon-cyan/15 text-neon-cyan shadow-glow' : 'text-slate-400 hover:text-white'"
+                    @click="intel.tab = tab.id"
+                  >
+                    <i
+                      :data-lucide="tab.icon"
+                      class="w-3.5 h-3.5 inline-block mr-1"
+                    ></i>
+                    <span x-text="tab.label"></span>
+                  </button>
+                </template>
+              </div>
+              <div
+                class="flex items-center gap-2 text-[11px] font-mono text-slate-500"
+              >
+                <span
+                  x-show="intel.loading"
+                  class="text-neon-cyan flex items-center gap-1.5"
+                >
+                  <span class="dot-pulse"
+                    ><span></span><span></span><span></span
+                  ></span>
+                  computing…
+                </span>
+                <span x-show="!intel.loading && intel.data">
+                  <span
+                    class="text-neon-cyan"
+                    x-text="intel.data?.totals?.entities || 0"
+                  ></span>
+                  entities ·
+                  <span
+                    class="text-neon-magenta"
+                    x-text="intel.data?.totals?.relationships || 0"
+                  ></span>
+                  rels · generated
+                  <span
+                    x-text="(intel.data?.generated_at || '').slice(11,19)"
+                  ></span>
+                </span>
+                <button
+                  class="btn btn-ghost border border-edge text-xs"
+                  @click="loadIntel()"
+                >
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Recompute
+                </button>
+              </div>
+            </div>
+
+            <!-- ===== Tab: Instructions ↔ Evaluation Matrix ===== -->
+            <div x-show="intel.tab === 'lm'" x-cloak class="space-y-6">
+              <div class="card overflow-hidden">
+                <div
+                  class="px-5 py-3 border-b border-edge flex items-center justify-between"
+                >
+                  <h2 class="font-semibold">
+                    Proposal Instructions → Evaluation Factors
+                    <span class="text-xs font-normal text-slate-500"
+                      >(UCF Section L → Section M, or equivalent for
+                      non-UCF)</span
+                    >
+                  </h2>
+                  <div class="flex items-center gap-3 text-[11px] font-mono">
+                    <span class="text-slate-500">show:</span>
+                    <label class="flex items-center gap-1.5"
+                      ><input
+                        type="checkbox"
+                        class="accent-neon-cyan"
+                        x-model="intel.showCovered"
+                      />
+                      covered</label
+                    >
+                    <label class="flex items-center gap-1.5"
+                      ><input
+                        type="checkbox"
+                        class="accent-neon-red"
+                        x-model="intel.showGaps"
+                      />
+                      gaps</label
+                    >
+                  </div>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead
+                      class="text-[11px] uppercase tracking-wider text-slate-500 font-mono"
+                    >
+                      <tr class="border-b border-edge">
+                        <th class="text-left px-5 py-2 w-1/3">
+                          Proposal Instruction
+                          <span class="text-slate-600 normal-case"
+                            >(Section L / equiv)</span
+                          >
+                        </th>
+                        <th class="text-left px-5 py-2">
+                          Linked Evaluation Factor / Subfactor
+                          <span class="text-slate-600 normal-case"
+                            >(Section M / equiv)</span
+                          >
+                        </th>
+                        <th class="px-5 py-2 w-20"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template
+                        x-for="row in filteredLmRows()"
+                        :key="row.instruction.id"
+                      >
+                        <tr
+                          class="border-b border-edge/40 hover:bg-white/5 align-top"
+                        >
+                          <td class="px-5 py-3">
+                            <div
+                              class="font-medium text-neon-cyan break-words"
+                              x-text="row.instruction.id"
+                            ></div>
+                            <div
+                              class="text-xs text-slate-500 mt-0.5"
+                              x-text="row.instruction.description"
+                            ></div>
+                          </td>
+                          <td class="px-5 py-3">
+                            <template x-if="row.factors.length">
+                              <div class="space-y-1">
+                                <template x-for="f in row.factors" :key="f.id">
+                                  <div class="flex items-start gap-2">
+                                    <span
+                                      class="pill mt-0.5"
+                                      :style="`background:${entityColor(f.type)}22;color:${entityColor(f.type)};border:1px solid ${entityColor(f.type)}55`"
+                                      x-text="f.type"
+                                    ></span>
+                                    <div class="min-w-0">
+                                      <div
+                                        class="text-slate-100 break-words"
+                                        x-text="f.id"
+                                      ></div>
+                                      <div
+                                        class="text-xs text-slate-500"
+                                        x-text="f.description"
+                                      ></div>
+                                    </div>
+                                  </div>
+                                </template>
+                              </div>
+                            </template>
+                            <span
+                              x-show="!row.factors.length"
+                              class="pill bg-neon-red/10 text-neon-red border border-neon-red/30"
+                              >⚠ unmapped</span
+                            >
+                          </td>
+                          <td class="px-5 py-3 text-right">
+                            <button
+                              class="btn btn-ghost text-xs"
+                              @click="askIntel('Trace proposal_instruction \\'' + row.instruction.id + '\\' (UCF Section L or equivalent) to the evaluation_factor entities (UCF Section M or equivalent) that evaluate it. Cite the source clauses.')"
+                            >
+                              <i
+                                data-lucide="message-square"
+                                class="w-3.5 h-3.5"
+                              ></i>
+                            </button>
+                          </td>
+                        </tr>
+                      </template>
+                      <tr x-show="!filteredLmRows().length">
+                        <td colspan="3" class="text-center text-slate-500 py-8">
+                          No instructions extracted yet.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Reverse view: factors that lack instructions -->
+              <div class="card overflow-hidden" x-show="orphanFactors().length">
+                <div class="px-5 py-3 border-b border-edge">
+                  <h2 class="font-semibold text-neon-amber">
+                    ⚠ Evaluation factors with no proposal instruction
+                    <span class="text-xs font-normal text-slate-500"
+                      >(Section M / equiv missing a Section L / equiv
+                      hook)</span
+                    >
+                  </h2>
+                </div>
+                <ul class="divide-y divide-edge/40">
+                  <template x-for="row in orphanFactors()" :key="row.factor.id">
+                    <li class="px-5 py-2 text-sm">
+                      <div
+                        class="font-medium text-neon-amber"
+                        x-text="row.factor.id"
+                      ></div>
+                      <div
+                        class="text-xs text-slate-500"
+                        x-text="row.factor.description"
+                      ></div>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+            </div>
+
+            <!-- ===== Tab: Traceability ===== -->
+            <div x-show="intel.tab === 'trace'" x-cloak>
+              <div class="card overflow-hidden">
+                <div
+                  class="px-5 py-3 border-b border-edge flex items-center justify-between"
+                >
+                  <h2 class="font-semibold">
+                    Requirement → Deliverable → Standard / Metric
+                  </h2>
+                  <input
+                    x-model="intel.traceFilter"
+                    placeholder="Filter…"
+                    class="bg-ink-900 border border-edge rounded-md px-2 py-1 text-xs font-mono w-48"
+                  />
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead
+                      class="text-[11px] uppercase tracking-wider text-slate-500 font-mono"
+                    >
+                      <tr class="border-b border-edge">
+                        <th class="text-left px-5 py-2">Requirement</th>
+                        <th class="text-left px-5 py-2">Deliverable</th>
+                        <th class="text-left px-5 py-2">
+                          Performance Standard
+                        </th>
+                        <th class="text-left px-5 py-2">Workload Metric</th>
+                        <th class="px-5 py-2 w-16"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template
+                        x-for="(row, i) in filteredTrace()"
+                        :key="row.requirement.id + '|' + i"
+                      >
+                        <tr
+                          class="border-b border-edge/40 hover:bg-white/5 align-top"
+                        >
+                          <td class="px-5 py-3">
+                            <div
+                              class="text-neon-magenta font-medium break-words"
+                              x-text="row.requirement.id"
+                            ></div>
+                            <div
+                              class="text-xs text-slate-500"
+                              x-text="row.requirement.description"
+                            ></div>
+                          </td>
+                          <td class="px-5 py-3">
+                            <template x-for="d in row.deliverables" :key="d.id">
+                              <div
+                                class="text-neon-lime break-words"
+                                x-text="d.id"
+                              ></div>
+                            </template>
+                            <span
+                              x-show="!row.deliverables.length"
+                              class="pill bg-neon-red/10 text-neon-red border border-neon-red/30"
+                              >⚠ gap</span
+                            >
+                          </td>
+                          <td class="px-5 py-3 text-xs">
+                            <template x-for="s in row.standards" :key="s.id"
+                              ><div x-text="s.id"></div
+                            ></template>
+                          </td>
+                          <td class="px-5 py-3 text-xs">
+                            <template x-for="m in row.metrics" :key="m.id"
+                              ><div x-text="m.id"></div
+                            ></template>
+                          </td>
+                          <td class="px-5 py-3 text-right">
+                            <span
+                              class="pill"
+                              :class="row.complete ? 'bg-neon-lime/10 text-neon-lime border border-neon-lime/30' : 'bg-neon-amber/10 text-neon-amber border border-neon-amber/30'"
+                              x-text="row.complete ? 'OK' : '…'"
+                            ></span>
+                          </td>
+                        </tr>
+                      </template>
+                      <tr x-show="!filteredTrace().length">
+                        <td colspan="5" class="text-center text-slate-500 py-8">
+                          No requirements extracted yet.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== Tab: Coverage heatmap ===== -->
+            <div x-show="intel.tab === 'coverage'" x-cloak>
+              <div class="card p-5">
+                <h2 class="font-semibold mb-1">Evaluation Factor Coverage</h2>
+                <p class="text-xs text-slate-500 mb-4">
+                  Score = inbound instructions + subfactors + supporting
+                  evidence (max 3). Click a row to ask Theseus.
+                </p>
+                <div
+                  class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+                >
+                  <template
+                    x-for="row in (intel.data?.coverage || [])"
+                    :key="row.factor.id"
+                  >
+                    <div
+                      class="card p-3 cursor-pointer card-hover transition"
+                      @click="askIntel('Assess our coverage of evaluation factor \\'' + row.factor.id + '\\'. List linked instructions, subfactors, and proof points; identify any gaps.')"
+                    >
+                      <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                          <div
+                            class="font-medium text-slate-100 break-words text-sm"
+                            x-text="row.factor.id"
+                          ></div>
+                          <div
+                            class="text-[11px] text-slate-500 mt-0.5"
+                            x-text="row.factor.description"
+                          ></div>
+                        </div>
+                        <span
+                          class="pill shrink-0 font-bold"
+                          :class="coverageBadgeClass(row.score)"
+                          x-text="row.score + '/3'"
+                        ></span>
+                      </div>
+                      <div
+                        class="mt-3 grid grid-cols-3 gap-1 text-[10px] font-mono"
+                      >
+                        <div class="text-center p-1.5 rounded bg-ink-900">
+                          <div class="text-slate-500">SUBS</div>
+                          <div
+                            class="text-neon-cyan text-base"
+                            x-text="row.subfactor_count"
+                          ></div>
+                        </div>
+                        <div class="text-center p-1.5 rounded bg-ink-900">
+                          <div class="text-slate-500">INSTR</div>
+                          <div
+                            class="text-neon-magenta text-base"
+                            x-text="row.instruction_count"
+                          ></div>
+                        </div>
+                        <div class="text-center p-1.5 rounded bg-ink-900">
+                          <div class="text-slate-500">EVID</div>
+                          <div
+                            class="text-neon-lime text-base"
+                            x-text="row.evidence_count"
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                  <div
+                    x-show="!(intel.data?.coverage || []).length"
+                    class="col-span-full text-center text-slate-500 py-8"
+                  >
+                    No evaluation factors extracted.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== Tab: Gaps ===== -->
+            <div
+              x-show="intel.tab === 'gaps'"
+              x-cloak
+              class="grid grid-cols-1 lg:grid-cols-3 gap-4"
+            >
+              <template x-for="bucket in gapBuckets()" :key="bucket.id">
+                <div class="card p-5">
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold" x-text="bucket.title"></h3>
+                    <span
+                      class="pill bg-neon-red/10 text-neon-red border border-neon-red/30"
+                      x-text="bucket.items.length"
+                    ></span>
+                  </div>
+                  <p
+                    class="text-xs text-slate-500 mb-3"
+                    x-text="bucket.subtitle"
+                  ></p>
+                  <div class="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+                    <template x-for="item in bucket.items" :key="item.id">
+                      <div
+                        class="text-xs bg-ink-900 border border-edge rounded p-2 cursor-pointer hover:border-neon-amber/50"
+                        @click="askIntel(bucket.askPrefix + ' \\'' + item.id + '\\'. Suggest how to close this gap.')"
+                      >
+                        <div
+                          class="font-medium text-slate-100 break-words"
+                          x-text="item.id"
+                        ></div>
+                        <div
+                          class="text-slate-500 mt-0.5"
+                          x-text="item.description"
+                        ></div>
+                      </div>
+                    </template>
+                    <div
+                      x-show="!bucket.items.length"
+                      class="text-xs text-neon-lime"
+                    >
+                      ✓ None — nothing flagged.
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </section>

@@ -396,8 +396,8 @@ _Avoid_: counting documents from Neo4j (stats reads VDB JSON files — faster, n
 `set_env_var(key, value)` writes directly to `.env` file (atomic tmp-rename), then calls `os.environ[key] = value` and `reset_settings()`. Switching workspace = `set_env_var("WORKSPACE", name)` + restart. Workspace name validation: `_SAFE_WS = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")`. Cannot delete active workspace — must switch first.
 _Avoid_: "workspace selector" (generic); "hot-swap" (switch requires a full process restart, not a live reconfigure).
 
-**UI** (`src/ui/static/index.html`, `src/ui/static/styles/theseus.css`):
-Single-page Alpine.js + Tailwind CDN frontend. No build step, no inline `<style>` block. Two files only: `index.html` (markup + Alpine `theseus()` component + inline `tailwind.config` read by CDN) and `theseus.css` (all custom CSS — `:root` token block + components). Served via FastAPI `StaticFiles`; no server restart needed for UI changes — hard-reload (Ctrl+Shift+R).
+**UI** (`src/ui/static/index.shell.html`, `src/ui/static/views/*-view.html`, `src/ui/workbench_assembler.py`, `src/ui/static/styles/theseus.css`):
+Single-page Alpine.js + Tailwind CDN frontend. No build step. The former 7.9k-line `index.html` monolith is split into a thin shell (header, sidebar, modals, script tags) plus eleven view fragments under `views/` (`dashboard`, `documents`, `graph`, `chat`, `intel`, `prompts`, `skills`, `chains`, `studio`, `activity`, `settings`). `assemble_workbench_html()` stitches markers `<!-- THESEUS_VIEW:<id> -->` at serve time; `GET /ui` routes return the assembled page. Alpine logic remains in `static/app/theseus-*-helpers.js`; `theseus.css` holds all custom CSS.
 
 Key Alpine state (all on `theseus()` object):
 
@@ -406,8 +406,8 @@ Key Alpine state (all on `theseus()` object):
 - `this.toast(msg, kind)` — toast notifications
 - `this.$refs.msgs` — scroll target for chat view
 
-**CRITICAL**: Tailwind Play CDN does NOT process `@apply` in `theseus.css`. Never write `@apply` in the external CSS file — use raw CSS with `var(--*)` token references. Color tokens: `--neon-cyan`, `--ink-900`, `--edge-strong`, `--text-300`, etc. For opacity variants, use matching `--*-rgb` triplet inside `rgba()`. Tailwind config is duplicated: `tailwind.config` inline in `index.html` (runtime, read by CDN) AND `tailwind.config.js` (IDE only, for VS Code IntelliSense) — both must stay in sync when adding custom tokens. Lucide icons must be re-initialized after dynamic markup: call `lucide.createIcons()` in `$watch` hooks.
-_Avoid_: "build step" (there is none); modifying `index.html` and forgetting to sync `tailwind.config.js` (IntelliSense breaks); using hex literals for color variants instead of `rgba(var(--*-rgb), alpha)`.
+**CRITICAL**: Tailwind Play CDN does NOT process `@apply` in `theseus.css`. Never write `@apply` in the external CSS file — use raw CSS with `var(--*)` token references. Color tokens: `--neon-cyan`, `--ink-900`, `--edge-strong`, `--text-300`, etc. For opacity variants, use matching `--*-rgb` triplet inside `rgba()`. Tailwind config is duplicated: `tailwind.config` inline in `index.shell.html` (runtime, read by CDN) AND `tailwind.config.js` (IDE only, for VS Code IntelliSense) — both must stay in sync when adding custom tokens. Lucide icons must be re-initialized after dynamic markup: call `lucide.createIcons()` in `$watch` hooks.
+_Avoid_: "build step" (there is none); editing a view fragment and forgetting the assembler contract tests in `tests/ui/test_workbench_assembler.py`; modifying the shell and forgetting to sync `tailwind.config.js` (IntelliSense breaks); using hex literals for color variants instead of `rgba(var(--*-rgb), alpha)`.
 
 **Chat** (chat session, `rag_storage/<workspace>/chats/<id>.json`):
 Persisted UI conversation stored as one JSON file per chat. `ChatStore` (`src/server/chat_store.py`) manages the lifecycle — one `ChatStore` instance per server, scoped to the active workspace dir. Chat schema: `id` (16-hex UUID), `title`, `mode` (query mode: `local`/`global`/`hybrid`/`mix`/`naive`/`bypass`), `rfp_context` (optional free-text context prepended to queries), `messages[]` (`{role, content, timestamp}`), `created_at`, `updated_at`. Key behaviors:

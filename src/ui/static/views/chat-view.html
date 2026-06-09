@@ -1,0 +1,484 @@
+          <!-- ============== CHAT ============== -->
+          <section x-show="active === 'chat'" x-cloak class="h-full">
+            <div class="flex h-[calc(100vh-3rem)]">
+              <!-- Chat list (flush-left, full-bleed) -->
+              <aside
+                class="chat-sidebar w-72 shrink-0 border-r border-edge flex flex-col"
+              >
+                <div class="p-3 border-b border-edge">
+                  <button
+                    class="btn-hero-cyan group w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-ink-950"
+                    @click="newChat()"
+                  >
+                    <i data-lucide="message-square-plus" class="w-4 h-4"></i>
+                    New chat
+                  </button>
+                </div>
+                <div class="px-3 pt-3 pb-1 flex items-center justify-between">
+                  <span
+                    class="text-[10px] font-mono uppercase tracking-[0.18em] text-slate-500"
+                    >History</span
+                  >
+                  <span
+                    class="text-[10px] font-mono text-slate-600"
+                    x-text="chats.length + (chats.length === 1 ? ' chat' : ' chats')"
+                  ></span>
+                </div>
+                <div class="flex-1 overflow-y-auto px-2 pb-3 space-y-1">
+                  <template x-for="c in chats" :key="c.id">
+                    <div
+                      class="group relative px-3 py-2.5 rounded-lg cursor-pointer text-sm transition border"
+                      :class="currentChat?.id === c.id ? 'chat-item-active' : 'border-transparent hover:bg-white/[0.04] hover:border-edge'"
+                      @click="openChat(c.id)"
+                    >
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                          <i
+                            data-lucide="message-circle"
+                            class="w-3.5 h-3.5 shrink-0"
+                            :class="currentChat?.id === c.id ? 'text-neon-cyan' : 'text-slate-500'"
+                          ></i>
+                          <div
+                            class="truncate font-medium"
+                            :class="currentChat?.id === c.id ? 'text-white' : 'text-slate-200'"
+                            x-text="c.title"
+                          ></div>
+                        </div>
+                        <button
+                          class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-neon-red transition"
+                          @click.stop="deleteChat(c.id)"
+                          title="Delete chat"
+                        >
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                      </div>
+                      <div
+                        class="text-[10px] font-mono text-slate-500 mt-1 pl-5 flex items-center gap-1.5"
+                      >
+                        <span x-text="c.message_count"></span>
+                        <span>msgs</span>
+                        <span class="text-slate-700">·</span>
+                        <span class="text-neon-cyan/60" x-text="c.mode"></span>
+                      </div>
+                    </div>
+                  </template>
+                  <div
+                    x-show="!chats.length"
+                    class="text-xs text-slate-500 px-3 py-8 text-center"
+                  >
+                    <i
+                      data-lucide="inbox"
+                      class="w-6 h-6 mx-auto mb-2 text-slate-700"
+                    ></i>
+                    <div>No saved chats yet.</div>
+                    <div class="text-[10px] mt-1 text-slate-600">
+                      Click <span class="text-neon-cyan">New chat</span> to
+                      start.
+                    </div>
+                  </div>
+                </div>
+              </aside>
+
+              <!-- Chat main -->
+              <div class="chat-canvas flex-1 flex flex-col overflow-hidden">
+                <div
+                  x-show="!currentChat"
+                  class="flex-1 flex flex-col items-center justify-center text-slate-500 text-sm gap-3"
+                >
+                  <i
+                    data-lucide="messages-square"
+                    class="w-10 h-10 text-slate-700"
+                  ></i>
+                  <div>Select or create a chat to start.</div>
+                </div>
+
+                <template x-if="currentChat">
+                  <div class="flex flex-col h-full">
+                    <!-- Header -->
+                    <div
+                      class="glass-bar px-6 py-3 border-b border-edge flex items-center justify-between"
+                    >
+                      <div class="flex-1 min-w-0">
+                        <input
+                          class="bg-transparent w-full text-sm font-semibold text-white focus:outline-none"
+                          x-model="currentChat.title"
+                          @change="renameChat()"
+                        />
+                        <div
+                          class="text-[11px] font-mono text-slate-500 flex items-center gap-2"
+                        >
+                          <span
+                            x-text="`${currentChat.messages.length} messages`"
+                          ></span>
+                          <span class="text-slate-700">·</span>
+                          <span
+                            class="inline-flex items-center gap-1 text-neon-cyan/80"
+                            :title="`Up to ${stats?.chat?.history_pairs_cap ?? 20} prior user+assistant pairs travel with each query (UI_CHAT_HISTORY_TURNS).`"
+                          >
+                            <i data-lucide="message-circle" class="w-3 h-3"></i>
+                            <span x-text="memoryLabel()"></span>
+                          </span>
+                        </div>
+                      </div>
+                      <select
+                        class="bg-ink-800 border border-edge rounded-md text-xs px-2 py-1 font-mono"
+                        x-model="currentChat.mode"
+                        @change="updateMode()"
+                      >
+                        <option value="mix">mix</option>
+                        <option value="hybrid">hybrid</option>
+                        <option value="local">local</option>
+                        <option value="global">global</option>
+                        <option value="naive">naive</option>
+                        <option value="bypass">bypass</option>
+                      </select>
+                    </div>
+
+                    <!-- Messages -->
+                    <div
+                      class="flex-1 overflow-y-auto px-6 py-5 space-y-4"
+                      x-ref="msgs"
+                      @click="handleCiteClick($event)"
+                      x-effect="currentChat && currentChat.messages.length, $nextTick(() => window.lucide && lucide.createIcons())"
+                    >
+                      <template x-for="(m, i) in currentChat.messages" :key="i">
+                        <div
+                          class="flex flex-col gap-1"
+                          :class="m.role === 'user' ? 'items-end' : 'items-start'"
+                        >
+                          <!-- Assistant identity header (avatar + label) -->
+                          <template x-if="m.role === 'assistant'">
+                            <div class="flex items-center gap-2 pl-1 mb-0.5">
+                              <span class="assistant-avatar">
+                                <i
+                                  data-lucide="brain-circuit"
+                                  class="w-3.5 h-3.5"
+                                ></i>
+                              </span>
+                              <span
+                                class="text-[10px] font-mono uppercase tracking-[0.2em] bg-clip-text text-transparent bg-gradient-to-r from-neon-magenta via-purple-400 to-neon-cyan font-bold"
+                                >Shipley Mentor</span
+                              >
+                              <span
+                                x-show="m.streaming"
+                                class="text-[9px] font-mono text-neon-cyan/70 px-1.5 py-0.5 rounded border border-neon-cyan/30 bg-neon-cyan/5"
+                                >live</span
+                              >
+                            </div>
+                          </template>
+                          <div
+                            class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm"
+                            :class="m.role === 'user' ? 'bubble-user rounded-br-md' : (m.streaming ? 'bubble-streaming rounded-bl-md markdown' : 'bubble-assistant rounded-bl-md markdown')"
+                          >
+                            <template x-if="m.role === 'assistant'">
+                              <div>
+                                <div
+                                  x-html="renderMd(m.content, i) || '&nbsp;'"
+                                ></div>
+                                <span
+                                  x-show="m.streaming"
+                                  class="inline-block w-1.5 h-4 align-text-bottom ml-0.5 bg-neon-cyan animate-pulse"
+                                ></span>
+                              </div>
+                            </template>
+                            <template x-if="m.role === 'user'">
+                              <span
+                                class="whitespace-pre-wrap"
+                                x-text="m.content"
+                              ></span>
+                            </template>
+                          </div>
+                          <!-- assistant footer: mode + timing pills -->
+                          <div
+                            x-show="m.role === 'assistant' && !m.streaming && (m.mode || m.timing)"
+                            class="flex items-center gap-2 text-[10px] uppercase tracking-wider text-slate-500 font-mono px-2"
+                          >
+                            <span
+                              x-show="m.mode"
+                              class="text-neon-cyan/70"
+                              x-text="'· ' + m.mode"
+                            ></span>
+                            <span
+                              x-show="m.timing && m.timing.ttft_ms != null"
+                              x-text="'ttft ' + (m.timing.ttft_ms / 1000).toFixed(1) + 's'"
+                            ></span>
+                            <span
+                              x-show="m.timing && m.timing.total_ms != null"
+                              x-text="'total ' + (m.timing.total_ms / 1000).toFixed(1) + 's'"
+                            ></span>
+                            <span
+                              x-show="m.timing && m.timing.char_count"
+                              x-text="m.timing.char_count + ' chars'"
+                            ></span>
+                          </div>
+                          <!-- assistant action toolbar (Copy / Regenerate / Export) -->
+                          <div
+                            x-show="m.role === 'assistant' && !m.streaming && m.content"
+                            class="msg-actions flex items-center gap-1 px-1"
+                          >
+                            <button
+                              class="msg-action-btn"
+                              @click="copyMessage(m)"
+                              title="Copy message text"
+                            >
+                              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                              <span>Copy</span>
+                            </button>
+                            <button
+                              class="msg-action-btn msg-action-regen"
+                              @click="regenerateMessage(i)"
+                              :disabled="sending || i === 0"
+                              :title="i === 0 ? 'No prior user message' : 'Re-run the previous question'"
+                            >
+                              <i
+                                data-lucide="refresh-cw"
+                                class="w-3.5 h-3.5"
+                              ></i>
+                              <span>Regenerate</span>
+                            </button>
+                            <button
+                              class="msg-action-btn msg-action-export"
+                              @click="exportMessage(m, i)"
+                              title="Download as Markdown"
+                            >
+                              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                              <span>Export</span>
+                            </button>
+                          </div>
+                          <!-- assistant Sources panel: collapsible drawer of retrieved chunks -->
+                          <div
+                            x-show="m.role === 'assistant' && m.sources && m.sources.chunks && m.sources.chunks.length"
+                            class="sources-panel w-full max-w-[85%]"
+                            :data-msg-idx="i"
+                          >
+                            <button
+                              type="button"
+                              class="sources-toggle"
+                              @click="toggleSources(i)"
+                              :aria-expanded="m.sourcesOpen ? 'true' : 'false'"
+                            >
+                              <i data-lucide="library" class="w-3.5 h-3.5"></i>
+                              <span
+                                x-text="`Sources (${m.sources.counts ? m.sources.counts.chunks : (m.sources.chunks ? m.sources.chunks.length : 0)})`"
+                              ></span>
+                              <span
+                                class="sources-meta"
+                                x-show="m.sources.counts && (m.sources.counts.entities || m.sources.counts.relationships)"
+                                x-text="`${m.sources.counts.entities || 0}E · ${m.sources.counts.relationships || 0}R`"
+                              ></span>
+                              <i
+                                data-lucide="chevron-down"
+                                class="w-3.5 h-3.5 sources-chev"
+                                :class="m.sourcesOpen ? 'sources-chev-open' : ''"
+                              ></i>
+                            </button>
+                            <div
+                              class="sources-list"
+                              x-show="m.sourcesOpen"
+                              x-transition.opacity
+                            >
+                              <template
+                                x-for="(s, si) in m.sources.chunks"
+                                :key="si"
+                              >
+                                <div
+                                  class="source-card"
+                                  :class="{ 'source-card-disabled': !s.chunk_id }"
+                                  :id="`source-${i}-${s.reference_id}`"
+                                  :data-source-ref="s.reference_id"
+                                  x-data="{ fmt: formatSource(s), loading: false, error: null }"
+                                  x-init="
+                                    if (s.chunk_id && (s.truncated || fmt.kind === 'table' || fmt.kind === 'image' || fmt.kind === 'equation')) {
+                                      loading = true;
+                                      fetchChunk(s.chunk_id).then(function(f){
+                                        if (f && f.content) {
+                                          fmt = formatSource({ ...s, preview: f.content, truncated: false });
+                                        }
+                                      }).catch(function(e){ error = e && e.message ? e.message : String(e); })
+                                        .finally(function(){ loading = false; });
+                                    }
+                                  "
+                                >
+                                  <div class="source-card-head">
+                                    <span
+                                      class="source-num"
+                                      x-text="`[${s.reference_id}]`"
+                                    ></span>
+                                    <span
+                                      class="source-kind-badge"
+                                      :class="`source-kind-${fmt.kind}`"
+                                      x-text="fmt.badge"
+                                    ></span>
+                                    <span
+                                      class="source-file"
+                                      :title="s.file_path"
+                                      x-text="basename(s.file_path) || 'unknown'"
+                                    ></span>
+                                    <span
+                                      class="source-meta"
+                                      x-show="s.char_count"
+                                      x-text="`${s.char_count} chars`"
+                                    ></span>
+                                    <button
+                                      type="button"
+                                      class="source-card-view-btn"
+                                      x-show="s.chunk_id"
+                                      @click.stop="openChunkPreview(s.chunk_id)"
+                                      :title="`View full chunk in modal — ${s.chunk_id}`"
+                                    >
+                                      <span>View full chunk</span>
+                                      <span aria-hidden="true">&#x2197;</span>
+                                    </button>
+                                  </div>
+                                  <!-- Subtitle: caption + table chip + narrative excerpt -->
+                                  <div
+                                    class="source-card-sub"
+                                    x-show="fmt.caption || fmt.body || (fmt.kind === 'table' && fmt.tableSummary)"
+                                  >
+                                    <span
+                                      class="source-card-caption"
+                                      x-show="fmt.caption"
+                                      x-text="fmt.caption"
+                                    ></span>
+                                    <span
+                                      class="source-card-tablechip"
+                                      x-show="fmt.kind === 'table' && fmt.tableSummary"
+                                      x-text="fmt.tableSummary"
+                                    ></span>
+                                    <span
+                                      class="source-card-excerpt"
+                                      x-show="fmt.body"
+                                      x-text="fmt.body"
+                                    ></span>
+                                  </div>
+                                </div>
+                              </template>
+                            </div>
+                          </div>
+                          <!-- user message toolbar (Copy + Edit) -->
+                          <div
+                            x-show="m.role === 'user'"
+                            class="msg-actions msg-actions-user flex items-center gap-1 px-1"
+                          >
+                            <button
+                              class="msg-action-btn"
+                              @click="copyMessage(m)"
+                              title="Copy message text"
+                            >
+                              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                              <span>Copy</span>
+                            </button>
+                            <button
+                              class="msg-action-btn msg-action-edit"
+                              @click="editMessage(m)"
+                              :disabled="sending"
+                              title="Load into composer to edit and resend"
+                            >
+                              <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                              <span>Edit</span>
+                            </button>
+                          </div>
+                        </div>
+                      </template>
+                      <!-- Live status line: retrieving (before iterator) -->
+                      <div
+                        x-show="sending && chatStatus.phase && chatStatus.phase !== 'generating'"
+                        class="flex items-center gap-2 text-xs text-slate-400"
+                      >
+                        <span class="dot-pulse-vivid"
+                          ><span></span><span></span><span></span
+                        ></span>
+                        <span x-text="chatStatus.label"></span>
+                      </div>
+                      <!-- Live status: thinking (iterator open, no token yet) -->
+                      <div
+                        x-show="sending && chatStatus.phase === 'generating' && (!streamLiveContent || streamLiveContent.length === 0)"
+                        class="flex items-center gap-2 text-[11px] font-mono"
+                      >
+                        <span class="dot-pulse-vivid"
+                          ><span></span><span></span><span></span
+                        ></span>
+                        <span class="text-neon-cyan/90 font-semibold"
+                          >Thinking…</span
+                        >
+                        <span
+                          class="text-slate-500"
+                          x-text="chatStatus.retrieve_ms != null ? '(context ' + (chatStatus.retrieve_ms/1000).toFixed(1) + 's · elapsed ' + thinkElapsed + 's)' : '(elapsed ' + thinkElapsed + 's)'"
+                        ></span>
+                      </div>
+                      <!-- Live status: writing (tokens flowing) -->
+                      <div
+                        x-show="sending && chatStatus.phase === 'generating' && streamLiveContent && streamLiveContent.length > 0"
+                        class="flex items-center gap-2 text-[11px] text-neon-cyan/70 font-mono"
+                      >
+                        <i data-lucide="cpu" class="w-3 h-3"></i>
+                        <span
+                          x-text="'Writing · context ' + (chatStatus.retrieve_ms != null ? (chatStatus.retrieve_ms/1000).toFixed(1) + 's' : '—') + ' · think ' + thinkElapsed + 's'"
+                        ></span>
+                      </div>
+                    </div>
+
+                    <!-- Composer -->
+                    <div class="composer-bar p-4">
+                      <div class="max-w-4xl mx-auto space-y-2">
+                        <!-- Prompt library trigger row -->
+                        <div class="flex items-center justify-between">
+                          <button
+                            type="button"
+                            class="btn-hero-magenta lib-pulse inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-[11px] font-mono uppercase tracking-wider"
+                            @click="openPromptPicker()"
+                          >
+                            <i data-lucide="library" class="w-3.5 h-3.5"></i>
+                            Prompt Library
+                            <span
+                              class="opacity-70"
+                              x-show="promptLibrary.length"
+                              x-text="'· ' + promptLibrary.length"
+                            ></span>
+                          </button>
+                          <span class="text-[10px] font-mono text-slate-600"
+                            >Enter to send · Shift+Enter for newline</span
+                          >
+                        </div>
+                        <form class="relative" @submit.prevent="sendMessage()">
+                          <textarea
+                            x-ref="composer"
+                            x-model="composer"
+                            rows="3"
+                            placeholder="Ask about Section L, traceability, win themes…"
+                            class="w-full bg-ink-900 border border-edge focus:border-neon-cyan/60 focus:shadow-glow outline-none rounded-xl px-4 py-3 pr-28 text-sm resize-none transition"
+                            @keydown.enter.prevent="if (!$event.shiftKey) sendMessage(); else composer += '\n'"
+                            @keydown.ctrl.enter.prevent="sendMessage()"
+                          ></textarea>
+                          <div class="absolute bottom-2.5 right-2.5">
+                            <template x-if="!sending">
+                              <button
+                                class="btn-hero-cyan inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold text-ink-950"
+                                :disabled="!composer.trim()"
+                              >
+                                <span>Send</span>
+                                <i
+                                  data-lucide="send-horizontal"
+                                  class="w-4 h-4"
+                                ></i>
+                              </button>
+                            </template>
+                            <template x-if="sending">
+                              <button
+                                type="button"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-neon-red/15 border border-neon-red/40 text-neon-red hover:bg-neon-red/25 transition"
+                                @click.prevent="stopMessage()"
+                              >
+                                <i data-lucide="square" class="w-4 h-4"></i>
+                                Stop
+                              </button>
+                            </template>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </section>

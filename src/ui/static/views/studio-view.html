@@ -1,0 +1,768 @@
+          <!-- ============== STUDIO (Phase 6a) ============== -->
+          <!--
+            Cross-skill final-products index. Walks /api/ui/studio (server
+            walks rag_storage/<workspace>/skill_runs/<skill>/<run_id>/
+            artifacts/* and flattens polished products). Source MD/JSON stay in
+            the run reasoning view. Each row is one rendered artifact:
+            DOCX, XLSX, PDF, HTML, PPTX, MP4, GIF, etc. Filters by skill +
+            format + free-text search; "Open Run" deep-links into the
+            existing skill-run drawer in Agent Skills.
+            Phase 6b will add an inline preview pane + reasoning view.
+          -->
+          <section x-show="active === 'studio'" x-cloak>
+            <div class="flex items-end justify-between mb-5 flex-wrap gap-3">
+              <div>
+                <h1 class="text-2xl font-bold tracking-tight">
+                  <span class="h1-gradient">Studio</span>
+                </h1>
+                <p class="text-sm text-slate-500 mt-1">
+                  Polished final products produced for the active workspace.
+                  Source MD/JSON stays in reasoning. Sourced from
+                  <code class="font-mono text-neon-cyan"
+                    >rag_storage/&lt;workspace&gt;/skill_runs/</code
+                  >
+                  — pure index, no new on-disk schema.
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  class="pill bg-ink-800 border border-edge text-slate-300 hover:text-neon-cyan hover:border-neon-cyan/50 px-3 py-1.5 text-xs"
+                  @click="loadStudio()"
+                  :disabled="studio.loading"
+                >
+                  <i
+                    data-lucide="refresh-cw"
+                    class="w-3.5 h-3.5 inline mr-1"
+                  ></i>
+                  Refresh
+                </button>
+                <button
+                  class="pill bg-ink-800 border border-edge text-slate-300 hover:text-neon-amber hover:border-neon-amber/50 px-3 py-1.5 text-xs"
+                  @click="toggleStudioTrash()"
+                >
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5 inline mr-1"></i>
+                  <span
+                    x-text="`Trash (${(studio.trash || []).length})`"
+                  ></span>
+                </button>
+              </div>
+            </div>
+
+            <div class="card p-4 mb-4 space-y-3">
+              <div
+                class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)_auto] gap-3 items-end"
+              >
+                <div>
+                  <label class="text-xs uppercase text-slate-500"
+                    >Chain Goal</label
+                  >
+                  <input
+                    type="text"
+                    placeholder="price-to-win package, proposal draft, compliance audit…"
+                    class="mt-1 w-full bg-ink-800 border border-edge text-slate-200 text-sm rounded px-3 py-2"
+                    x-model="studio.chainGoal"
+                  />
+                </div>
+                <div>
+                  <label class="text-xs uppercase text-slate-500"
+                    >Outcome</label
+                  >
+                  <input
+                    type="text"
+                    placeholder="DOCX + workbook, cited draft, risk brief…"
+                    class="mt-1 w-full bg-ink-800 border border-edge text-slate-200 text-sm rounded px-3 py-2"
+                    x-model="studio.chainOutcome"
+                  />
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="pill bg-ink-800 border border-edge text-slate-300 hover:text-neon-cyan hover:border-neon-cyan/50 px-3 py-2 text-xs"
+                    :disabled="studio.chainPlanning || !studio.chainGoal"
+                    @click="planStudioChainGoal()"
+                  >
+                    <i data-lucide="route" class="w-3.5 h-3.5"></i>
+                    <span
+                      x-text="studio.chainPlanning ? 'Planning…' : 'Plan'"
+                    ></span>
+                  </button>
+                  <button
+                    type="button"
+                    class="pill bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/20 px-3 py-2 text-xs"
+                    :disabled="studio.chainRunningGoal || !studio.chainGoal"
+                    @click="runStudioChainGoal()"
+                  >
+                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                    <span
+                      x-text="studio.chainRunningGoal ? 'Running…' : 'Run'"
+                    ></span>
+                  </button>
+                </div>
+              </div>
+              <div
+                x-show="studio.chainPlanError"
+                class="text-xs font-mono text-neon-red"
+                x-text="studio.chainPlanError"
+              ></div>
+              <div
+                x-show="studio.chainPlan"
+                class="flex flex-wrap items-center gap-2 text-xs"
+              >
+                <span
+                  class="reasoning-chip"
+                  x-text="studio.chainPlan?.spec?.name || 'skill-chain'"
+                ></span>
+                <template x-for="step in studioChainPlanSteps()" :key="step.id">
+                  <span class="reasoning-chip">
+                    <span x-text="step.skill"></span>
+                  </span>
+                </template>
+              </div>
+            </div>
+
+            <div
+              x-show="studio.error"
+              class="card border border-red-500/40 bg-red-500/5 p-3 mb-4 text-sm text-red-300"
+              x-text="studio.error"
+            ></div>
+
+            <!-- Filters -->
+            <div class="card p-4 mb-4 flex flex-wrap items-center gap-3">
+              <div class="flex items-center gap-2">
+                <label class="text-xs uppercase text-slate-500">Skill</label>
+                <select
+                  class="bg-ink-800 border border-edge text-slate-200 text-sm rounded px-2 py-1.5"
+                  x-model="studio.filterSkill"
+                >
+                  <option value="">All</option>
+                  <template x-for="s in studioSkillOptions()" :key="s">
+                    <option :value="s" x-text="s"></option>
+                  </template>
+                </select>
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="text-xs uppercase text-slate-500">Format</label>
+                <select
+                  class="bg-ink-800 border border-edge text-slate-200 text-sm rounded px-2 py-1.5"
+                  x-model="studio.filterFormat"
+                >
+                  <option value="">All</option>
+                  <template x-for="f in studioFormatOptions()" :key="f">
+                    <option :value="f" x-text="f.toUpperCase()"></option>
+                  </template>
+                </select>
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="text-xs uppercase text-slate-500">Group</label>
+                <select
+                  class="bg-ink-800 border border-edge text-slate-200 text-sm rounded px-2 py-1.5"
+                  x-model="studio.groupBy"
+                  @change="pruneStudioSelectionToFiltered()"
+                >
+                  <option value="">None</option>
+                  <option value="chain">Chain</option>
+                  <option value="skill">Skill</option>
+                  <option value="run">Run</option>
+                  <option value="date">Date</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-2 flex-1 min-w-[200px]">
+                <label class="text-xs uppercase text-slate-500">Search</label>
+                <input
+                  type="text"
+                  placeholder="filename, label, or title…"
+                  class="bg-ink-800 border border-edge text-slate-200 text-sm rounded px-2 py-1.5 flex-1"
+                  x-model="studio.search"
+                />
+              </div>
+              <span
+                class="text-xs text-slate-500 ml-auto"
+                x-text="studioFiltered().length + ' / ' + studio.deliverables.length + ' deliverables'"
+              ></span>
+            </div>
+
+            <div
+              x-show="studioSelectedCount()"
+              class="studio-selection-bar mb-4"
+            >
+              <div class="flex items-center gap-2 text-sm text-slate-300">
+                <i
+                  data-lucide="check-square"
+                  class="w-4 h-4 text-neon-cyan"
+                ></i>
+                <span x-text="studioSelectedCount() + ' selected'"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  class="btn btn-ghost text-xs px-3 py-1.5"
+                  @click="clearStudioSelection()"
+                  :disabled="studio.deleting || studio.zipping"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-ghost border border-edge text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+                  @click="downloadSelectedStudioZip()"
+                  :disabled="studio.deleting || studio.zipping"
+                >
+                  <i data-lucide="archive" class="w-3.5 h-3.5"></i>
+                  <span
+                    x-text="studio.zipping ? 'Building ZIP…' : 'Download ZIP'"
+                  ></span>
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-danger text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+                  @click="deleteSelectedStudioArtifacts()"
+                  :disabled="studio.deleting || studio.zipping"
+                >
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span
+                    x-text="studio.deleting ? 'Deleting…' : 'Delete selected'"
+                  ></span>
+                </button>
+              </div>
+            </div>
+
+            <div x-show="studio.trashOpen" class="card p-4 mb-4">
+              <div class="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <div class="text-sm font-semibold text-slate-200">
+                    Studio Trash
+                  </div>
+                  <div class="text-xs text-slate-500">
+                    Soft-deleted products. Restore puts them back in Studio.
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="pill bg-red-500/10 border border-red-500/30 text-red-200 hover:bg-red-500/20 px-3 py-1.5 text-xs"
+                    x-show="!studio.trashLoading && (studio.trash || []).length"
+                    :disabled="studio.emptyingTrash"
+                    @click="emptyStudioTrash()"
+                  >
+                    <span
+                      x-text="studio.emptyingTrash ? 'Emptying…' : 'Empty Trash'"
+                    ></span>
+                  </button>
+                  <div
+                    class="text-xs text-slate-500"
+                    x-text="(studio.trash || []).length + ' item(s)'"
+                  ></div>
+                </div>
+              </div>
+              <div x-show="studio.trashLoading" class="text-sm text-slate-500">
+                Loading trash…
+              </div>
+              <div
+                x-show="studio.trashError"
+                class="text-sm text-red-300"
+                x-text="studio.trashError"
+              ></div>
+              <div
+                x-show="!studio.trashLoading && !(studio.trash || []).length"
+                class="text-sm text-slate-500"
+              >
+                Trash empty.
+              </div>
+              <div class="space-y-2" x-show="(studio.trash || []).length">
+                <template
+                  x-for="artifact in studio.trash"
+                  :key="artifact.trash_id"
+                >
+                  <div
+                    class="studio-trash-item border border-edge rounded-lg px-3 py-3 bg-ink-900/50 flex items-start justify-between gap-3"
+                  >
+                    <div class="min-w-0 flex-1">
+                      <div
+                        class="text-sm font-semibold text-slate-200"
+                        x-text="artifact.display_name || artifact.filename"
+                      ></div>
+                      <div
+                        class="text-xs font-mono text-slate-500 mt-1"
+                        x-text="artifact.filename"
+                      ></div>
+                      <div
+                        class="text-xs text-slate-500 mt-1"
+                        x-text="`${artifact.skill} · ${artifact.run_id}`"
+                      ></div>
+                      <div
+                        class="text-xs text-slate-500 mt-1"
+                        x-text="`Trashed ${String(artifact.deleted_at || '').slice(0, 19).replace('T', ' ')}`"
+                      ></div>
+                    </div>
+                    <button
+                      type="button"
+                      class="btn btn-ghost text-xs px-3 py-1.5 shrink-0"
+                      :disabled="studio.restoringTrash === artifact.trash_id"
+                      @click="restoreTrashedStudioArtifact(artifact)"
+                    >
+                      <span
+                        x-text="studio.restoringTrash === artifact.trash_id ? 'Restoring…' : 'Restore'"
+                      ></span>
+                    </button>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Loading + empty states -->
+            <div
+              x-show="studio.loading"
+              class="card p-10 text-center text-sm text-slate-500"
+            >
+              <i
+                data-lucide="loader-2"
+                class="w-5 h-5 mx-auto mb-2 animate-spin text-neon-cyan"
+              ></i>
+              Loading deliverables…
+            </div>
+            <div
+              x-show="!studio.loading && studio.loaded && !studio.deliverables.length"
+              class="card p-10 text-center text-sm text-slate-500"
+            >
+              <i
+                data-lucide="folder-open"
+                class="w-8 h-8 mx-auto mb-3 text-slate-600"
+              ></i>
+              No final products yet for this workspace.<br />
+              Run a skill that writes or renders DOCX, XLSX, PPTX, PDF, HTML,
+              media, or image artifacts.
+            </div>
+            <div
+              x-show="!studio.loading && studioFiltered().length === 0 && studio.deliverables.length"
+              class="card p-6 text-center text-sm text-slate-500"
+            >
+              No deliverables match the current filters.
+            </div>
+
+            <!-- Deliverables table -->
+            <div
+              x-show="!studio.loading && studioFiltered().length"
+              class="card overflow-hidden"
+            >
+              <table class="studio-table w-full text-sm">
+                <thead>
+                  <tr>
+                    <th class="w-10 text-center">
+                      <input
+                        type="checkbox"
+                        class="studio-check"
+                        :checked="studioAllFilteredSelected()"
+                        @change="toggleStudioSelectAllFiltered()"
+                        title="Select all visible artifacts"
+                      />
+                    </th>
+                    <th>File</th>
+                    <th>Skill</th>
+                    <th>Format</th>
+                    <th class="text-right">Size</th>
+                    <th>Created</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template
+                    x-for="row in studioRenderableRows()"
+                    :key="row.key"
+                  >
+                    <tr
+                      :class="row.kind === 'group' ? 'studio-group-row' : (isStudioPinned(row.deliverable) ? 'studio-row studio-row-pinned' : 'studio-row')"
+                    >
+                      <template x-if="row.kind === 'group'">
+                        <td
+                          colspan="7"
+                          class="border-t border-edge bg-ink-900/85 px-4 py-3"
+                        >
+                          <div class="flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                              <div
+                                class="text-xs uppercase tracking-[0.18em] text-neon-amber"
+                                x-text="row.group.title"
+                              ></div>
+                              <div
+                                class="text-xs text-slate-500"
+                                x-text="row.group.meta"
+                              ></div>
+                            </div>
+                            <button
+                              x-show="(studio.groupBy === 'run' || studio.groupBy === 'chain') && row.group.items.length"
+                              type="button"
+                              class="btn btn-ghost text-[11px] px-2 py-1"
+                              @click="studio.groupBy === 'chain' && studioHasChain(row.group.items[0]) ? openStudioChainTrace(row.group.items[0]) : studioOpenRun(row.group.items[0])"
+                            >
+                              <span
+                                x-text="studio.groupBy === 'chain' && studioHasChain(row.group.items[0]) ? 'Open chain' : 'Open run'"
+                              ></span>
+                            </button>
+                          </div>
+                        </td>
+                      </template>
+                      <template x-if="row.kind === 'item'">
+                        <td class="text-center">
+                          <input
+                            type="checkbox"
+                            class="studio-check"
+                            :checked="!!studio.selected[studioKey(row.deliverable)]"
+                            @click.stop="toggleStudioSelection(row.deliverable)"
+                            :title="`Select ${row.deliverable.display_name || row.deliverable.filename}`"
+                          />
+                        </td>
+                      </template>
+                      <template x-if="row.kind === 'item'">
+                        <td>
+                          <button
+                            type="button"
+                            class="studio-filename-btn text-neon-cyan"
+                            @click="openStudioPreview(row.deliverable)"
+                            :title="`Preview ${row.deliverable.display_name || row.deliverable.filename}`"
+                          >
+                            <span
+                              x-text="row.deliverable.display_name || row.deliverable.filename"
+                            ></span>
+                          </button>
+                          <div
+                            x-show="studioHasChain(row.deliverable)"
+                            class="mt-1 flex flex-wrap items-center gap-1"
+                          >
+                            <button
+                              type="button"
+                              class="reasoning-chip hover:text-neon-cyan"
+                              title="Open chain trace"
+                              @click.stop="openStudioChainTrace(row.deliverable)"
+                            >
+                              <i data-lucide="workflow" class="w-3 h-3"></i>
+                              <span
+                                x-text="primaryChain(row.deliverable)?.name || 'chain'"
+                              ></span>
+                            </button>
+                            <span
+                              class="reasoning-chip"
+                              x-text="primaryChain(row.deliverable)?.step_id || 'step'"
+                            ></span>
+                          </div>
+                        </td>
+                      </template>
+                      <template x-if="row.kind === 'item'">
+                        <td>
+                          <span
+                            class="studio-pill"
+                            x-text="row.deliverable.skill"
+                          ></span>
+                        </td>
+                      </template>
+                      <template x-if="row.kind === 'item'">
+                        <td>
+                          <span
+                            class="studio-format"
+                            x-text="(row.deliverable.ext || '').toUpperCase()"
+                          ></span>
+                        </td>
+                      </template>
+                      <template x-if="row.kind === 'item'">
+                        <td
+                          class="text-right text-slate-400"
+                          x-text="formatBytes(row.deliverable.size)"
+                        ></td>
+                      </template>
+                      <template x-if="row.kind === 'item'">
+                        <td
+                          class="text-slate-400"
+                          x-text="(row.deliverable.created_at || '').slice(0, 19).replace('T', ' ')"
+                        ></td>
+                      </template>
+                      <template x-if="row.kind === 'item'">
+                        <td class="text-right">
+                          <button
+                            type="button"
+                            class="studio-action studio-anchor"
+                            :class="isStudioPinned(row.deliverable) ? 'studio-anchor-active' : ''"
+                            :title="isStudioPinned(row.deliverable) ? 'Unpin (release anchor)' : 'Pin to top (drop anchor)'"
+                            @click="toggleStudioPin(row.deliverable)"
+                          >
+                            <i data-lucide="anchor" class="w-3.5 h-3.5"></i>
+                          </button>
+                          <button
+                            type="button"
+                            x-show="studioHasChain(row.deliverable)"
+                            class="studio-action"
+                            title="Open chain trace"
+                            @click="openStudioChainTrace(row.deliverable)"
+                          >
+                            <i data-lucide="workflow" class="w-3.5 h-3.5"></i>
+                          </button>
+                          <button
+                            type="button"
+                            x-show="primaryChain(row.deliverable)?.can_resume"
+                            class="studio-action"
+                            title="Resume chain"
+                            @click="resumeStudioChain(row.deliverable)"
+                          >
+                            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                          </button>
+                          <button
+                            type="button"
+                            x-show="studioHasChain(row.deliverable)"
+                            class="studio-action"
+                            title="Rerun chain"
+                            @click="rerunStudioChain(row.deliverable)"
+                          >
+                            <i data-lucide="repeat-2" class="w-3.5 h-3.5"></i>
+                          </button>
+                          <a
+                            :href="studioDownloadHref(row.deliverable)"
+                            :download="row.deliverable.filename"
+                            class="studio-action"
+                            title="Download"
+                          >
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                          </a>
+                          <button
+                            type="button"
+                            class="studio-action"
+                            title="Why this artifact? (reasoning view)"
+                            @click="openReasoning(row.deliverable)"
+                          >
+                            <i
+                              data-lucide="brain-circuit"
+                              class="w-3.5 h-3.5"
+                            ></i>
+                          </button>
+                          <button
+                            type="button"
+                            class="studio-action"
+                            title="Open originating run"
+                            @click="studioOpenRun(row.deliverable)"
+                          >
+                            <i
+                              data-lucide="external-link"
+                              class="w-3.5 h-3.5"
+                            ></i>
+                          </button>
+                        </td>
+                      </template>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+
+            <div
+              x-show="studio.chainTraceOpen"
+              x-cloak
+              x-transition.opacity
+              class="fixed inset-0 z-[86] bg-black/70 flex items-stretch justify-end"
+              @click.self="closeStudioChainTrace()"
+            >
+              <div
+                class="w-full max-w-5xl h-full bg-ink-900 border-l border-edge-strong overflow-y-auto pt-16"
+                @click.stop
+              >
+                <div
+                  class="bg-ink-900 border-b border-edge p-4 flex items-start justify-between gap-3 sticky top-0 z-10"
+                >
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 text-xs text-slate-400">
+                      <i data-lucide="workflow" class="w-3.5 h-3.5"></i>
+                      <span>Chain trace</span>
+                    </div>
+                    <h2
+                      class="text-lg font-semibold text-slate-100 break-words mt-1"
+                      x-text="chains.current?.spec?.name || chains.current?.chain_id || 'Loading chain'"
+                    ></h2>
+                    <p
+                      class="text-xs text-slate-400 mt-1 break-all"
+                      x-text="chains.current?.chain_id || ''"
+                    ></p>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0 mt-0.5">
+                    <button
+                      type="button"
+                      class="studio-provenance-link"
+                      x-show="chains.current?.chain_id"
+                      :disabled="chains.rerunning === chains.current?.chain_id"
+                      @click="rerunChain(chains.current.chain_id)"
+                    >
+                      <span
+                        x-text="chains.rerunning === chains.current?.chain_id ? 'Rerunning…' : 'Rerun'"
+                      ></span>
+                    </button>
+                    <button
+                      type="button"
+                      class="studio-provenance-link"
+                      x-show="chainCanResume(chains.current)"
+                      :disabled="chains.resuming === chains.current?.chain_id"
+                      @click="resumeChain(chains.current.chain_id)"
+                    >
+                      <span
+                        x-text="chains.resuming === chains.current?.chain_id ? 'Resuming…' : 'Resume'"
+                      ></span>
+                    </button>
+                    <button
+                      @click="closeStudioChainTrace()"
+                      class="text-slate-400 hover:text-neon-magenta"
+                      title="Close"
+                    >
+                      <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="p-4 space-y-4">
+                  <div
+                    x-show="chains.loadingDetail"
+                    class="text-sm text-slate-400 flex items-center gap-2"
+                  >
+                    <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+                    <span>Loading chain…</span>
+                  </div>
+
+                  <template x-if="!chains.loadingDetail && chains.current">
+                    <div class="space-y-4">
+                      <div class="flex flex-wrap gap-2 text-xs">
+                        <span
+                          class="reasoning-chip border"
+                          :class="chainStatusClass(chains.current.status)"
+                          x-text="chains.current.status || 'pending'"
+                        ></span>
+                        <span
+                          class="reasoning-chip"
+                          x-show="chains.current.mode && chains.current.mode !== 'original'"
+                          x-text="chains.current.mode"
+                        ></span>
+                        <span
+                          class="reasoning-chip"
+                          x-text="chainSteps(chains.current).length + ' steps'"
+                        ></span>
+                        <span
+                          class="reasoning-chip"
+                          x-text="chainArtifactCount(chains.current) + ' artifacts'"
+                        ></span>
+                        <span
+                          class="reasoning-chip"
+                          x-show="chains.current.created_at"
+                          x-text="(chains.current.created_at || '').slice(0, 19).replace('T', ' ')"
+                        ></span>
+                      </div>
+
+                      <div
+                        x-show="chains.current.error"
+                        class="border border-neon-red/40 bg-neon-red/5 rounded-md p-3 text-xs font-mono text-neon-red"
+                        x-text="chains.current.error"
+                      ></div>
+
+                      <div
+                        x-show="chainInputRequest(chains.current)"
+                        x-init="mountChainInputPanel($el)"
+                      ></div>
+
+                      <ol class="space-y-2">
+                        <template
+                          x-for="step in chainSteps(chains.current)"
+                          :key="step.id"
+                        >
+                          <li
+                            class="bg-ink-800/60 border border-edge rounded-md p-3"
+                          >
+                            <div class="flex items-start justify-between gap-3">
+                              <div class="min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                  <span
+                                    class="pill text-[10px] border"
+                                    :class="chainStatusClass(step.status)"
+                                    x-text="step.status || 'pending'"
+                                  ></span>
+                                  <span
+                                    class="text-sm font-semibold text-slate-100"
+                                    x-text="step.id"
+                                  ></span>
+                                  <span
+                                    class="text-[10px] font-mono text-slate-500"
+                                    x-text="step.skill"
+                                  ></span>
+                                </div>
+                                <div
+                                  class="mt-2 text-[10px] font-mono text-slate-500 flex flex-wrap gap-x-2 gap-y-1"
+                                >
+                                  <span
+                                    x-show="step.elapsed_ms"
+                                    x-text="step.elapsed_ms + 'ms'"
+                                  ></span>
+                                  <span
+                                    x-show="step.run_id"
+                                    x-text="step.run_id"
+                                  ></span>
+                                  <span
+                                    x-text="((step.input_artifacts || []).length || 0) + ' in'"
+                                  ></span>
+                                  <span
+                                    x-text="((step.artifacts || []).length || 0) + ' out'"
+                                  ></span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                x-show="step.run_id"
+                                class="studio-action"
+                                title="Open child skill run"
+                                @click="openChainStepRun(step)"
+                              >
+                                <i
+                                  data-lucide="external-link"
+                                  class="w-3 h-3"
+                                ></i>
+                              </button>
+                            </div>
+                            <div
+                              x-show="step.error"
+                              class="mt-2 text-[10px] font-mono text-neon-red break-words"
+                              x-text="step.error"
+                            ></div>
+                            <div
+                              x-show="(step.input_artifacts || []).length"
+                              class="mt-2 text-[10px] font-mono text-slate-500"
+                            >
+                              <span class="text-slate-600">inputs:</span>
+                              <template
+                                x-for="artifact in step.input_artifacts"
+                                :key="artifact.step_id + ':' + artifact.filename"
+                              >
+                                <span
+                                  class="ml-1 text-neon-cyan"
+                                  x-text="artifact.filename"
+                                ></span>
+                              </template>
+                            </div>
+                            <div
+                              x-show="(step.artifacts || []).length"
+                              class="mt-2 flex flex-wrap gap-1"
+                            >
+                              <template
+                                x-for="artifact in step.artifacts"
+                                :key="artifact.name || artifact.filename"
+                              >
+                                <span
+                                  class="pill text-[10px] border border-edge bg-ink-900 text-slate-400"
+                                >
+                                  <i
+                                    :data-lucide="artifactIcon(artifact.mime, artifact.name || artifact.filename)"
+                                    class="w-3 h-3"
+                                  ></i>
+                                  <span
+                                    x-text="artifact.display_name || artifact.name || artifact.filename"
+                                  ></span>
+                                </span>
+                              </template>
+                            </div>
+                          </li>
+                        </template>
+                      </ol>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </section>

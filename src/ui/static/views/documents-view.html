@@ -1,0 +1,493 @@
+          <!-- ============== DOCUMENTS ============== -->
+          <!--
+            Layout:
+              1. Status strip — counts from /documents/status_counts +
+                 pipeline state from /documents/pipeline_status, with a
+                 Cancel Pipeline button when busy.
+              2. Upload card — drag/drop only; uploads list sits inside.
+              3. Folder Watcher card — manual scan of inputs/<workspace>/.
+              4. Processed Documents — searchable/filterable list with
+                 per-row Delete and a bulk Reprocess Failed action.
+          -->
+          <section x-show="active === 'documents'" x-cloak>
+            <div class="flex items-end justify-between mb-5 flex-wrap gap-3">
+              <div>
+                <h1 class="text-2xl font-bold tracking-tight">
+                  <span class="h1-gradient">Documents</span>
+                </h1>
+                <p class="text-sm text-slate-500 mt-1">
+                  Multimodal parsing · 33-type extraction · L↔M inference
+                </p>
+              </div>
+            </div>
+
+            <!-- ===== Status strip ===== -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div class="card card-accent card-hover accent-lime p-5">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <div
+                      class="text-[11px] uppercase tracking-[0.18em] font-mono text-slate-500"
+                    >
+                      Processed
+                    </div>
+                    <div
+                      class="mt-2 text-4xl font-semibold neon-text tabular-nums text-neon-lime"
+                      x-text="docStats.counts.processed ?? 0"
+                    ></div>
+                    <div class="mt-1 text-xs text-slate-500">
+                      extracted &amp; indexed
+                    </div>
+                  </div>
+                  <div class="icon-tile text-neon-lime">
+                    <i data-lucide="check-circle" class="w-5 h-5"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="card card-accent card-hover accent-cyan p-5">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <div
+                      class="text-[11px] uppercase tracking-[0.18em] font-mono text-slate-500"
+                    >
+                      Processing
+                    </div>
+                    <div
+                      class="mt-2 text-4xl font-semibold neon-text tabular-nums text-neon-cyan"
+                      x-text="docStats.counts.processing ?? 0"
+                    ></div>
+                    <div class="mt-1 text-xs text-slate-500">
+                      parsing &amp; extracting
+                    </div>
+                  </div>
+                  <div class="icon-tile text-neon-cyan">
+                    <i
+                      data-lucide="loader"
+                      class="w-5 h-5"
+                      :class="(docStats.counts.processing ?? 0) > 0 ? 'animate-spin' : ''"
+                    ></i>
+                  </div>
+                </div>
+              </div>
+              <div class="card card-accent card-hover accent-amber p-5">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <div
+                      class="text-[11px] uppercase tracking-[0.18em] font-mono text-slate-500"
+                    >
+                      Pending
+                    </div>
+                    <div
+                      class="mt-2 text-4xl font-semibold neon-text tabular-nums text-neon-amber"
+                      x-text="docStats.counts.pending ?? 0"
+                    ></div>
+                    <div class="mt-1 text-xs text-slate-500">queued</div>
+                  </div>
+                  <div class="icon-tile text-neon-amber">
+                    <i data-lucide="clock" class="w-5 h-5"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="card card-accent card-hover accent-red p-5">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <div
+                      class="text-[11px] uppercase tracking-[0.18em] font-mono text-slate-500"
+                    >
+                      Failed
+                    </div>
+                    <div
+                      class="mt-2 text-4xl font-semibold neon-text tabular-nums"
+                      :class="(docStats.counts.failed ?? 0) > 0 ? 'text-neon-red' : 'text-slate-600'"
+                      x-text="docStats.counts.failed ?? 0"
+                    ></div>
+                    <div class="mt-1 text-xs text-slate-500">needs retry</div>
+                  </div>
+                  <div
+                    class="icon-tile"
+                    :class="(docStats.counts.failed ?? 0) > 0 ? 'text-neon-red' : 'text-slate-600'"
+                  >
+                    <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== Pipeline state row ===== -->
+            <div
+              class="card card-accent p-4 mb-4 flex items-center justify-between flex-wrap gap-3 transition"
+              :class="docStats.pipeline.busy ? 'accent-amber' : 'accent-cyan'"
+              :style="docStats.pipeline.busy ? 'background: linear-gradient(180deg, rgba(255,176,32,0.04) 0%, rgba(17,23,42,1) 80%);' : ''"
+            >
+              <div class="flex items-center gap-3 min-w-0">
+                <div
+                  class="icon-tile shrink-0"
+                  :class="docStats.pipeline.busy ? 'text-neon-amber' : 'text-slate-500'"
+                >
+                  <span class="relative flex h-2.5 w-2.5">
+                    <span
+                      x-show="docStats.pipeline.busy"
+                      class="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-amber opacity-70"
+                    ></span>
+                    <span
+                      class="relative inline-flex rounded-full h-2.5 w-2.5"
+                      :class="docStats.pipeline.busy ? 'bg-neon-amber' : 'bg-slate-600'"
+                    ></span>
+                  </span>
+                </div>
+                <div class="min-w-0">
+                  <div
+                    class="text-[11px] uppercase tracking-[0.18em] font-mono text-slate-500"
+                  >
+                    Pipeline
+                  </div>
+                  <div
+                    class="text-sm font-semibold mt-0.5"
+                    :class="docStats.pipeline.busy ? 'text-neon-amber' : 'text-slate-300'"
+                  >
+                    <span
+                      x-text="docStats.pipeline.busy ? 'busy' : 'idle'"
+                    ></span>
+                    <span
+                      x-show="docStats.pipeline.busy && docStats.pipeline.job_name"
+                      class="ml-2 text-[11px] font-mono text-slate-400"
+                      x-text="`· ${docStats.pipeline.job_name}`"
+                    ></span>
+                  </div>
+                  <div
+                    x-show="docStats.pipeline.busy && docStats.pipeline.latest_message"
+                    class="text-[11px] font-mono text-slate-500 truncate mt-1 max-w-md"
+                    :title="docStats.pipeline.latest_message"
+                    x-text="`▸ ${docStats.pipeline.latest_message}`"
+                  ></div>
+                </div>
+                <span
+                  x-show="(uploads.filter(u => u.status === 'uploading').length || 0) > 0"
+                  class="pill bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/30 ml-2 shrink-0"
+                >
+                  <i data-lucide="upload-cloud" class="w-3 h-3"></i>
+                  <span
+                    x-text="uploads.filter(u => u.status === 'uploading').length"
+                  ></span>
+                  uploading
+                </span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <button
+                  x-show="docStats.pipeline.busy"
+                  class="btn btn-warn text-xs"
+                  @click="cancelPipeline()"
+                  :disabled="docStats.cancelling"
+                  title="Abort the current document-processing pipeline"
+                >
+                  <i data-lucide="square" class="w-3.5 h-3.5"></i>
+                  <span
+                    x-text="docStats.cancelling ? 'Cancelling…' : 'Cancel pipeline'"
+                  ></span>
+                </button>
+                <button
+                  x-show="(docStats.counts.failed ?? 0) > 0"
+                  class="btn btn-soft text-xs"
+                  @click="reprocessFailed()"
+                  :disabled="docStats.reprocessing"
+                  title="Re-queue every failed document for another pass"
+                >
+                  <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                  <span
+                    x-text="docStats.reprocessing ? 'Queuing…' : 'Reprocess failed'"
+                  ></span>
+                </button>
+              </div>
+            </div>
+
+            <!-- ===== Upload + Folder Watcher (side-by-side) ===== -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+              <!-- Upload card -->
+              <div class="card card-accent accent-cyan p-5">
+                <div class="flex items-center gap-2 mb-1">
+                  <i
+                    data-lucide="upload-cloud"
+                    class="w-4 h-4 text-neon-cyan"
+                  ></i>
+                  <h2 class="font-semibold">Upload</h2>
+                </div>
+                <p class="text-xs text-slate-500 mb-4">
+                  Drop one or many files. Each is staged and the batch is
+                  enqueued — extraction runs in the background.
+                </p>
+
+                <label
+                  class="block border-2 border-dashed border-edge-strong rounded-xl p-7 text-center cursor-pointer hover:border-neon-cyan/60 hover:bg-neon-cyan/5 transition"
+                  @dragover.prevent="$event.currentTarget.classList.add('border-neon-cyan/60','bg-neon-cyan/5')"
+                  @dragleave.prevent="$event.currentTarget.classList.remove('border-neon-cyan/60','bg-neon-cyan/5')"
+                  @drop.prevent="$event.currentTarget.classList.remove('border-neon-cyan/60','bg-neon-cyan/5'); uploadFiles($event.dataTransfer.files)"
+                >
+                  <input
+                    type="file"
+                    class="hidden"
+                    multiple
+                    @change="uploadFiles($event.target.files)"
+                  />
+                  <div class="icon-tile mx-auto mb-2">
+                    <i
+                      data-lucide="upload-cloud"
+                      class="w-5 h-5 text-neon-cyan"
+                    ></i>
+                  </div>
+                  <div class="text-sm font-medium">
+                    Click or drop files here
+                  </div>
+                  <div
+                    class="text-[11px] font-mono text-slate-500 mt-1 tracking-wider"
+                  >
+                    PDF · DOCX · XLSX · PPTX · MD · TXT
+                  </div>
+                </label>
+
+                <div class="mt-4 space-y-2" x-show="uploads.length">
+                  <template x-for="u in uploads" :key="u.id">
+                    <div
+                      class="text-xs flex items-center gap-2 font-mono bg-ink-900/60 border border-edge rounded px-2 py-1.5"
+                    >
+                      <i
+                        :data-lucide="u.status === 'done' ? 'check-circle' : (u.status === 'error' ? 'alert-circle' : 'loader')"
+                        class="w-3.5 h-3.5"
+                        :class="{'text-neon-lime': u.status === 'done', 'text-neon-red': u.status === 'error', 'text-neon-cyan animate-spin': u.status === 'uploading'}"
+                      ></i>
+                      <span class="truncate flex-1" x-text="u.name"></span>
+                      <span
+                        class="text-slate-500"
+                        x-text="u.msg || u.status"
+                      ></span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Folder Watcher card -->
+              <div class="card card-accent accent-amber p-5">
+                <div class="flex items-center gap-2 mb-1">
+                  <i
+                    data-lucide="folder-search"
+                    class="w-4 h-4 text-neon-amber"
+                  ></i>
+                  <h2 class="font-semibold">Folder Watcher</h2>
+                </div>
+                <p class="text-xs text-slate-500 mb-4">
+                  Scan
+                  <code
+                    class="text-neon-amber"
+                    x-text="`inputs/${stats.workspace || '<workspace>'}/`"
+                  ></code>
+                  for new files dropped outside the browser. Useful for bulk
+                  staging from a network share or git checkout.
+                </p>
+
+                <div
+                  class="bg-ink-900/60 border border-edge rounded-lg p-4 mb-3"
+                >
+                  <div
+                    class="text-[11px] uppercase tracking-wider font-mono text-slate-500 mb-2"
+                  >
+                    How it works
+                  </div>
+                  <ol
+                    class="text-xs text-slate-400 space-y-1 list-decimal list-inside"
+                  >
+                    <li>
+                      Stage files below <span class="text-slate-500">or</span>
+                      drop into
+                      <code class="text-neon-amber"
+                        >inputs/&lt;workspace&gt;/</code
+                      >
+                    </li>
+                    <li>Click <span class="text-slate-200">Scan now</span></li>
+                    <li>Server enqueues + extracts each new file</li>
+                  </ol>
+                </div>
+
+                <!-- In-browser staging uploader (no immediate processing) -->
+                <div
+                  class="border border-dashed border-edge rounded-lg p-4 mb-3 text-center transition cursor-pointer hover:border-neon-amber/60 hover:bg-neon-amber/5"
+                  @dragover.prevent="$event.currentTarget.classList.add('border-neon-amber/60','bg-neon-amber/5')"
+                  @dragleave.prevent="$event.currentTarget.classList.remove('border-neon-amber/60','bg-neon-amber/5')"
+                  @drop.prevent="$event.currentTarget.classList.remove('border-neon-amber/60','bg-neon-amber/5'); stageFiles($event.dataTransfer.files)"
+                  @click="$refs.stageFileInput.click()"
+                >
+                  <input
+                    type="file"
+                    multiple
+                    x-ref="stageFileInput"
+                    class="hidden"
+                    @change="stageFiles($event.target.files)"
+                  />
+                  <i
+                    data-lucide="upload-cloud"
+                    class="w-5 h-5 text-neon-amber mx-auto mb-1"
+                  ></i>
+                  <div class="text-xs text-slate-300">
+                    Drop or click to <span class="text-neon-amber">stage</span>
+                    files
+                  </div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">
+                    Saved to <code>inputs/&lt;workspace&gt;/</code> — does
+                    <span class="text-slate-300">not</span> trigger extraction
+                  </div>
+                </div>
+
+                <!-- Recently staged file list -->
+                <div
+                  x-show="stagedUploads && stagedUploads.length"
+                  class="bg-ink-900/60 border border-edge rounded-lg p-2 mb-3 max-h-32 overflow-y-auto space-y-1"
+                >
+                  <template x-for="s in stagedUploads" :key="s.id">
+                    <div class="flex items-center gap-2 text-[11px] font-mono">
+                      <i
+                        :data-lucide="s.status === 'staged' ? 'check-circle' : (s.status === 'error' ? 'alert-circle' : 'loader')"
+                        class="w-3.5 h-3.5"
+                        :class="{'text-neon-amber': s.status === 'staged', 'text-neon-red': s.status === 'error', 'text-neon-cyan animate-spin': s.status === 'staging'}"
+                      ></i>
+                      <span class="truncate flex-1" x-text="s.name"></span>
+                      <span
+                        class="text-slate-500"
+                        x-text="s.msg || s.status"
+                      ></span>
+                    </div>
+                  </template>
+                </div>
+
+                <button
+                  class="btn btn-warn w-full"
+                  @click="scanRfp()"
+                  :disabled="docStats.scanning"
+                >
+                  <i data-lucide="folder-search" class="w-4 h-4"></i>
+                  <span
+                    x-text="docStats.scanning ? 'Scanning…' : 'Scan now'"
+                  ></span>
+                </button>
+              </div>
+            </div>
+
+            <!-- ===== Processed Documents ===== -->
+            <div class="card card-accent accent-magenta p-5">
+              <div
+                class="flex items-center justify-between mb-3 flex-wrap gap-3"
+              >
+                <div class="flex items-center gap-2">
+                  <i data-lucide="files" class="w-4 h-4 text-neon-magenta"></i>
+                  <h2 class="font-semibold">Processed Documents</h2>
+                  <span
+                    class="text-[11px] font-mono text-slate-500"
+                    x-text="`(${filteredDocuments().length} of ${documents.length})`"
+                  ></span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input
+                    type="search"
+                    x-model="docFilter.query"
+                    placeholder="Filter file path…"
+                    class="bg-ink-900/60 border border-edge rounded-lg px-3 py-1.5 text-xs font-mono w-48 focus:border-neon-magenta/60 outline-none"
+                  />
+                  <select
+                    x-model="docFilter.status"
+                    class="bg-ink-900/60 border border-edge rounded-lg px-3 py-1.5 text-xs font-mono focus:border-neon-magenta/60 outline-none"
+                  >
+                    <option value="">all statuses</option>
+                    <option value="processed">processed</option>
+                    <option value="processing">processing</option>
+                    <option value="pending">pending</option>
+                    <option value="failed">failed</option>
+                  </select>
+                </div>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead
+                    class="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-mono bg-ink-900/40"
+                  >
+                    <tr class="border-b border-edge-strong">
+                      <th class="text-left py-2.5 px-3">File</th>
+                      <th class="text-left py-2.5 px-3">Status</th>
+                      <th class="text-left py-2.5 px-3">Chunks</th>
+                      <th class="text-left py-2.5 px-3">Created</th>
+                      <th class="py-2.5 px-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="d in filteredDocuments()" :key="d.id">
+                      <tr
+                        class="border-b border-edge/40 hover:bg-neon-cyan/5 transition"
+                      >
+                        <td
+                          class="py-2.5 px-3 truncate max-w-[260px]"
+                          :title="d.file_path || d.id"
+                          x-text="d.file_path || d.id"
+                        ></td>
+                        <td class="py-2.5 px-3">
+                          <span
+                            class="status-pill"
+                            :class="{
+                              'is-processed': d.status === 'processed',
+                              'is-processing': d.status === 'processing',
+                              'is-pending': d.status === 'pending',
+                              'is-failed': d.status === 'failed',
+                            }"
+                            x-text="d.status"
+                          ></span>
+                        </td>
+                        <td
+                          class="py-2.5 px-3 font-mono tabular-nums"
+                          x-text="d.chunks_count ?? '—'"
+                        ></td>
+                        <td
+                          class="py-2.5 px-3 font-mono text-xs text-slate-500"
+                          x-text="(d.created_at || '').slice(0,16).replace('T',' ')"
+                        ></td>
+                        <td class="py-2.5 px-3 text-right">
+                          <div class="inline-flex items-center gap-2">
+                            <button
+                              class="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-neon-cyan transition"
+                              @click="askAbout(d)"
+                              title="Open a chat focused on this document"
+                            >
+                              <i
+                                data-lucide="message-square"
+                                class="w-3.5 h-3.5"
+                              ></i>
+                              <span>Ask</span>
+                            </button>
+                            <button
+                              class="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-neon-red transition"
+                              @click="deleteDocument(d)"
+                              :disabled="docStats.deletingId === d.id"
+                              title="Permanently remove this document and its derived data"
+                            >
+                              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                              <span
+                                x-text="docStats.deletingId === d.id ? 'Deleting…' : 'Delete'"
+                              ></span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </template>
+                    <tr x-show="!filteredDocuments().length">
+                      <td
+                        colspan="5"
+                        class="py-10 text-center text-slate-500 text-sm"
+                      >
+                        <i
+                          data-lucide="inbox"
+                          class="w-6 h-6 mx-auto mb-2 text-slate-600"
+                        ></i>
+                        <div
+                          x-text="documents.length ? 'No documents match the current filter.' : 'No documents yet. Upload an RFP to get started.'"
+                        ></div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>

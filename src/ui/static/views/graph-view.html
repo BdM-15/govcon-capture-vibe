@@ -1,0 +1,323 @@
+          <!-- ============== KNOWLEDGE GRAPH ============== -->
+          <section x-show="active === 'graph'" x-cloak class="h-full">
+            <div class="flex gap-4 h-[calc(100vh-9rem)]">
+              <!-- Left rail: search + filter + legend -->
+              <div class="w-64 shrink-0 card p-3 flex flex-col overflow-hidden">
+                <div class="space-y-2">
+                  <label
+                    class="text-[11px] uppercase tracking-wider font-mono text-slate-500"
+                    >Seed Label</label
+                  >
+                  <div class="relative">
+                    <input
+                      type="text"
+                      x-model="graph.labelQuery"
+                      @input.debounce.300ms="searchLabels()"
+                      @focus="graph.showLabelDropdown = true"
+                      @blur="setTimeout(() => graph.showLabelDropdown = false, 200)"
+                      placeholder="* (everything) or type…"
+                      class="w-full bg-ink-900 border border-edge focus:border-neon-cyan/60 outline-none rounded-lg px-3 py-2 text-sm font-mono"
+                    />
+                    <div
+                      x-show="graph.showLabelDropdown && graph.labelOptions.length"
+                      class="absolute z-30 mt-1 w-full max-h-60 overflow-y-auto card p-1 text-xs"
+                    >
+                      <template x-for="opt in graph.labelOptions" :key="opt">
+                        <div
+                          class="px-2 py-1 hover:bg-neon-cyan/10 hover:text-neon-cyan cursor-pointer rounded font-mono truncate"
+                          @mousedown="graph.label = opt; graph.labelQuery = opt; graph.showLabelDropdown = false; loadGraph()"
+                          x-text="opt"
+                        ></div>
+                      </template>
+                    </div>
+                  </div>
+                  <button
+                    class="btn btn-primary w-full justify-center text-xs"
+                    @click="graph.label = graph.labelQuery || '*'; loadGraph()"
+                  >
+                    <i data-lucide="search" class="w-3.5 h-3.5"></i> Load graph
+                  </button>
+                </div>
+
+                <div class="mt-4 space-y-3">
+                  <div>
+                    <label
+                      class="text-[11px] uppercase tracking-wider font-mono text-slate-500 flex justify-between"
+                    >
+                      <span>Max Nodes</span
+                      ><span
+                        class="text-neon-cyan"
+                        x-text="graph.maxNodes"
+                      ></span>
+                    </label>
+                    <input
+                      type="range"
+                      min="100"
+                      max="5000"
+                      step="100"
+                      x-model.number="graph.maxNodes"
+                      class="w-full accent-neon-cyan"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      class="text-[11px] uppercase tracking-wider font-mono text-slate-500 flex justify-between"
+                    >
+                      <span>Max Depth</span
+                      ><span
+                        class="text-neon-cyan"
+                        x-text="graph.maxDepth"
+                      ></span>
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      step="1"
+                      x-model.number="graph.maxDepth"
+                      class="w-full accent-neon-cyan"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      class="text-[11px] uppercase tracking-wider font-mono text-slate-500 flex justify-between"
+                    >
+                      <span>Min Confidence</span
+                      ><span
+                        class="text-neon-magenta"
+                        x-text="graph.minConfidence.toFixed(2)"
+                      ></span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      x-model.number="graph.minConfidence"
+                      @input="applyFilters()"
+                      class="w-full accent-neon-magenta"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      class="text-[11px] uppercase tracking-wider font-mono text-slate-500"
+                      >Layout</label
+                    >
+                    <select
+                      x-model="graph.layout"
+                      @change="relayout()"
+                      class="w-full bg-ink-800 border border-edge rounded-md text-xs px-2 py-1 font-mono"
+                    >
+                      <option>fcose</option>
+                      <option>cose</option>
+                      <option>concentric</option>
+                      <option>breadthfirst</option>
+                      <option>circle</option>
+                      <option>grid</option>
+                    </select>
+                  </div>
+                  <div class="flex gap-1">
+                    <button
+                      class="btn btn-ghost border border-edge flex-1 justify-center text-xs"
+                      @click="fitGraph()"
+                    >
+                      <i data-lucide="maximize" class="w-3.5 h-3.5"></i> Fit
+                    </button>
+                    <button
+                      class="btn btn-ghost border border-edge flex-1 justify-center text-xs"
+                      @click="exportPng()"
+                    >
+                      <i data-lucide="download" class="w-3.5 h-3.5"></i> PNG
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="mt-4 flex-1 overflow-y-auto pr-1">
+                  <div
+                    class="text-[11px] uppercase tracking-wider font-mono text-slate-500 mb-1.5"
+                  >
+                    Entity types
+                  </div>
+                  <div class="space-y-0.5">
+                    <template
+                      x-for="[type, count] in graph.typeCounts"
+                      :key="type"
+                    >
+                      <div
+                        class="flex items-center gap-2 text-[11px] font-mono cursor-pointer hover:text-white"
+                        :class="graph.hiddenTypes.includes(type) ? 'opacity-40' : ''"
+                        @click="toggleTypeFilter(type)"
+                      >
+                        <span
+                          class="w-3 h-3 rounded-sm shrink-0"
+                          :style="`background:${entityColor(type)}`"
+                        ></span>
+                        <span class="truncate flex-1" x-text="type"></span>
+                        <span class="text-slate-500" x-text="count"></span>
+                      </div>
+                    </template>
+                    <div
+                      x-show="!graph.typeCounts.length"
+                      class="text-slate-500 text-xs px-1"
+                    >
+                      Load a graph to see types.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Center: Cytoscape canvas -->
+              <div class="flex-1 card relative overflow-hidden">
+                <div
+                  class="absolute top-2 left-3 z-20 flex items-center gap-2 text-[11px] font-mono text-slate-500"
+                >
+                  <span
+                    x-show="graph.loading"
+                    class="text-neon-cyan flex items-center gap-1.5"
+                  >
+                    <span class="dot-pulse"
+                      ><span></span><span></span><span></span
+                    ></span>
+                    loading…
+                  </span>
+                  <span x-show="!graph.loading && graph.stats.nodes">
+                    <span
+                      class="text-neon-cyan"
+                      x-text="graph.stats.visibleNodes"
+                    ></span
+                    >/<span x-text="graph.stats.nodes"></span> nodes ·
+                    <span
+                      class="text-neon-magenta"
+                      x-text="graph.stats.visibleEdges"
+                    ></span
+                    >/<span x-text="graph.stats.edges"></span> edges
+                    <span
+                      x-show="graph.stats.truncated"
+                      class="ml-2 text-neon-amber"
+                      >⚠ truncated</span
+                    >
+                  </span>
+                </div>
+                <div x-ref="cy" class="absolute inset-0"></div>
+                <div
+                  x-show="!graph.stats.nodes && !graph.loading"
+                  class="absolute inset-0 flex items-center justify-center text-slate-500 text-sm pointer-events-none"
+                >
+                  <div class="text-center">
+                    <i
+                      data-lucide="git-fork"
+                      class="w-12 h-12 mx-auto text-neon-magenta opacity-40"
+                    ></i>
+                    <div class="mt-3">
+                      Type a label or use
+                      <span class="text-neon-cyan font-mono">*</span> to load
+                      the graph.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: detail panel -->
+              <div
+                class="w-80 shrink-0 card p-4 overflow-y-auto"
+                x-show="graph.selected"
+              >
+                <template x-if="graph.selected">
+                  <div>
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <div
+                          class="pill mb-1"
+                          :style="`background:${entityColor(graph.selected.type)}22; color:${entityColor(graph.selected.type)}; border:1px solid ${entityColor(graph.selected.type)}55`"
+                          x-text="graph.selected.type"
+                        ></div>
+                        <h3
+                          class="font-semibold neon-text break-words"
+                          x-text="graph.selected.id"
+                        ></h3>
+                      </div>
+                      <button
+                        class="btn btn-ghost text-slate-500"
+                        @click="graph.selected = null"
+                      >
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                    <p
+                      class="mt-3 text-xs text-slate-400 whitespace-pre-wrap"
+                      x-text="graph.selected.description || '(no description)'"
+                    ></p>
+
+                    <div class="mt-4 space-y-1 text-[11px] font-mono">
+                      <template x-for="[k,v] in graph.selectedProps" :key="k">
+                        <div class="flex gap-2">
+                          <span
+                            class="text-slate-500 w-24 shrink-0"
+                            x-text="k"
+                          ></span
+                          ><span
+                            class="text-slate-300 break-all"
+                            x-text="v"
+                          ></span>
+                        </div>
+                      </template>
+                    </div>
+
+                    <div class="mt-4 flex gap-2">
+                      <button
+                        class="btn btn-primary text-xs flex-1 justify-center"
+                        @click="askAboutEntity(graph.selected)"
+                      >
+                        <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                        Ask about this
+                      </button>
+                      <button
+                        class="btn btn-ghost border border-edge text-xs"
+                        @click="loadGraphFromNode(graph.selected.id)"
+                        title="Re-center on this node"
+                      >
+                        <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+
+                    <div class="mt-5">
+                      <div
+                        class="text-[11px] uppercase tracking-wider font-mono text-slate-500 mb-2"
+                      >
+                        Source chunks
+                      </div>
+                      <div
+                        x-show="graph.chunksLoading"
+                        class="text-xs text-slate-500"
+                      >
+                        Loading…
+                      </div>
+                      <div class="space-y-2" x-show="!graph.chunksLoading">
+                        <template x-for="c in graph.chunks" :key="c.chunk_id">
+                          <div
+                            class="text-xs bg-ink-900 border border-edge rounded p-2"
+                          >
+                            <div
+                              class="font-mono text-[10px] text-slate-500 mb-1 truncate"
+                              x-text="c.file_path || c.chunk_id"
+                            ></div>
+                            <div
+                              class="text-slate-300 whitespace-pre-wrap"
+                              x-text="c.snippet"
+                            ></div>
+                          </div>
+                        </template>
+                        <div
+                          x-show="!graph.chunks.length"
+                          class="text-xs text-slate-500"
+                        >
+                          No chunks indexed for this entity.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </section>

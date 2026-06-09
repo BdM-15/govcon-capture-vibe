@@ -1,0 +1,1335 @@
+          <!-- ============== SETTINGS ============== -->
+          <!--
+            Collapsible accordion layout. Each <details class="acc"> renders a
+            card-styled disclosure. The first three (Workspace, Tech Stack,
+            Server Control) are open by default; Query Tuning and
+            Danger Zone are collapsed to keep the page short on first load.
+          -->
+          <section
+            x-show="active === 'settings'"
+            x-cloak
+            class="space-y-5 max-w-3xl"
+          >
+            <!-- Section header -->
+            <div class="flex items-end justify-between flex-wrap gap-3">
+              <div>
+                <h1 class="text-2xl font-bold tracking-tight">
+                  <span class="h1-gradient">Settings</span>
+                </h1>
+                <p class="text-sm text-slate-500 mt-1">
+                  Workspace, tech stack, query tuning, server control, and
+                  destructive cleanup actions.
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  class="btn btn-ghost text-xs"
+                  @click="settingsExpandAll()"
+                  title="Open every section"
+                >
+                  <i data-lucide="chevrons-down" class="w-3.5 h-3.5"></i>
+                  Expand all
+                </button>
+                <button
+                  class="btn btn-ghost text-xs"
+                  @click="settingsCollapseAll()"
+                  title="Close every section"
+                >
+                  <i data-lucide="chevrons-up" class="w-3.5 h-3.5"></i>
+                  Collapse all
+                </button>
+              </div>
+            </div>
+
+            <!-- ===== Workspace ===== -->
+            <details class="acc accent-cyan" data-acc-key="workspace" open>
+              <summary>
+                <div class="flex items-center gap-3 min-w-0">
+                  <i
+                    data-lucide="chevron-right"
+                    class="acc-chevron w-4 h-4"
+                  ></i>
+                  <i
+                    data-lucide="layers"
+                    class="w-4 h-4 text-neon-cyan shrink-0"
+                  ></i>
+                  <div class="min-w-0">
+                    <div class="font-semibold">Active Workspace</div>
+                    <div
+                      class="text-[11px] font-mono text-slate-500 truncate"
+                      x-text="(stats.workspace || '—') + ' · ' + (stats.documents ?? 0) + ' docs · ' + (stats.entities ?? 0) + ' entities'"
+                    ></div>
+                  </div>
+                </div>
+                <button
+                  class="btn btn-primary text-xs"
+                  @click.stop.prevent="openWorkspaceModal()"
+                >
+                  <i data-lucide="repeat" class="w-3.5 h-3.5"></i>
+                  Switch / Create
+                </button>
+              </summary>
+              <div class="acc-body">
+                <p class="text-xs text-slate-500 mb-4">
+                  Switching restarts the server. The UI reconnects
+                  automatically.
+                </p>
+                <dl class="grid grid-cols-3 gap-y-3 text-sm font-mono">
+                  <dt class="text-slate-500">workspace</dt>
+                  <dd
+                    class="col-span-2 text-neon-cyan"
+                    x-text="stats.workspace"
+                  ></dd>
+                  <dt class="text-slate-500">working_dir</dt>
+                  <dd
+                    class="col-span-2 text-slate-400 break-all"
+                    x-text="stats.working_dir"
+                  ></dd>
+                  <dt class="text-slate-500">documents</dt>
+                  <dd class="col-span-2" x-text="stats.documents"></dd>
+                  <dt class="text-slate-500">entities</dt>
+                  <dd class="col-span-2" x-text="stats.entities"></dd>
+                  <dt class="text-slate-500">relationships</dt>
+                  <dd class="col-span-2" x-text="stats.relationships"></dd>
+                  <dt class="text-slate-500">chunks</dt>
+                  <dd class="col-span-2" x-text="stats.chunks"></dd>
+                  <dt class="text-slate-500">chats</dt>
+                  <dd class="col-span-2" x-text="stats.chats"></dd>
+                </dl>
+              </div>
+            </details>
+
+            <!-- ===== Server Control ===== -->
+            <details class="acc accent-amber" data-acc-key="server" open>
+              <summary>
+                <div class="flex items-center gap-3 min-w-0">
+                  <i
+                    data-lucide="chevron-right"
+                    class="acc-chevron w-4 h-4"
+                  ></i>
+                  <i
+                    data-lucide="power"
+                    class="w-4 h-4 text-neon-amber shrink-0"
+                  ></i>
+                  <div class="min-w-0">
+                    <div class="font-semibold">Server Control</div>
+                    <div
+                      class="text-[11px] font-mono text-slate-500 truncate"
+                      x-text="`Theseus ${stats.version || '?'} · restart · cache`"
+                    ></div>
+                  </div>
+                </div>
+                <div class="summary-actions" @click.stop>
+                  <button
+                    class="btn btn-soft text-xs"
+                    @click="clearLlmCache()"
+                    :disabled="serverOps.clearingCache"
+                    title="POST /documents/clear_cache — forces all subsequent queries to re-call the LLM."
+                  >
+                    <i data-lucide="eraser" class="w-3.5 h-3.5"></i>
+                    <span
+                      x-text="serverOps.clearingCache ? 'Clearing…' : 'Clear LLM cache'"
+                    ></span>
+                  </button>
+                  <button
+                    class="btn btn-soft text-xs"
+                    @click="clearAllDocuments()"
+                    :disabled="serverOps.clearingDocs"
+                    title="DELETE /documents — wipe all documents in this workspace (graph + vectors + KV)."
+                  >
+                    <i data-lucide="file-x-2" class="w-3.5 h-3.5"></i>
+                    <span
+                      x-text="serverOps.clearingDocs ? 'Clearing…' : 'Clear documents'"
+                    ></span>
+                  </button>
+                  <button
+                    class="btn btn-warn text-xs"
+                    @click="restartServer()"
+                    :disabled="restarting"
+                  >
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                    <span
+                      x-text="restarting ? 'Restarting…' : 'Restart server'"
+                    ></span>
+                  </button>
+                </div>
+              </summary>
+              <div class="acc-body">
+                <p class="text-xs text-slate-500 mb-4 max-w-2xl">
+                  <span class="text-slate-400">Clear LLM cache</span> drops
+                  cached responses so the next query re-calls the LLM.
+                  <span class="text-slate-400">Clear documents</span> wipes
+                  every document in this workspace (graph, vectors, KV) but
+                  keeps the workspace alive — useful when iterating on prompts.
+                  <span class="text-slate-400">Restart server</span> gracefully
+                  re-execs the python process; use after editing
+                  <code class="text-neon-amber">.env</code>, swapping models, or
+                  installing dependencies. The browser reconnects automatically.
+                </p>
+              </div>
+            </details>
+
+            <!-- ===== Query Tuning (LightRAG retrieval params) ===== -->
+            <details class="acc accent-cyan" data-acc-key="query">
+              <summary>
+                <div class="flex items-center gap-3 min-w-0">
+                  <i
+                    data-lucide="chevron-right"
+                    class="acc-chevron w-4 h-4"
+                  ></i>
+                  <i
+                    data-lucide="sliders-horizontal"
+                    class="w-4 h-4 text-neon-cyan shrink-0"
+                  ></i>
+                  <div class="min-w-0">
+                    <div class="font-semibold">Query Tuning</div>
+                    <div
+                      class="text-[11px] font-mono text-slate-500 truncate"
+                      x-text="querySettings.loaded ? `mode=${querySettings.values.mode} · top_k=${querySettings.values.top_k} · chunk_top_k=${querySettings.values.chunk_top_k} · rerank=${querySettings.values.enable_rerank ? 'on' : 'off'}` : 'loading…'"
+                    ></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2" @click.stop>
+                  <button
+                    class="btn btn-ghost text-xs"
+                    @click="resetQuerySettings()"
+                    :disabled="!querySettings.loaded || querySettings.saving"
+                    title="Reset to .env defaults"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    Reset
+                  </button>
+                  <button
+                    class="btn btn-primary text-xs"
+                    @click="saveQuerySettings()"
+                    :disabled="!querySettings.loaded || querySettings.saving"
+                  >
+                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                    <span
+                      x-text="querySettings.saving ? 'Saving…' : 'Save'"
+                    ></span>
+                  </button>
+                </div>
+              </summary>
+              <div class="acc-body">
+                <p class="text-xs text-slate-500 mb-4 max-w-xl">
+                  Tunes how Capture Chat retrieves context from the knowledge
+                  graph. Mirrors the LightRAG WebUI panel and adds a reranker
+                  score threshold. Saved per workspace; takes effect on the next
+                  query.
+                </p>
+                <template x-if="!querySettings.loaded">
+                  <div class="text-xs text-slate-500 font-mono">loading…</div>
+                </template>
+
+                <template x-if="querySettings.loaded">
+                  <div class="space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Default Mode (new chats)</span
+                        >
+                        <select
+                          x-model="querySettings.values.mode"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                        >
+                          <option value="mix">mix</option>
+                          <option value="hybrid">hybrid</option>
+                          <option value="local">local</option>
+                          <option value="global">global</option>
+                          <option value="naive">naive</option>
+                          <option value="bypass">bypass</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">
+                          KG Top K
+                          <span class="text-slate-600"
+                            >· entities/relations</span
+                          >
+                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="500"
+                          x-model.number="querySettings.values.top_k"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">
+                          Chunk Top K
+                          <span class="text-slate-600">· text chunks</span>
+                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="500"
+                          x-model.number="querySettings.values.chunk_top_k"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                        />
+                      </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Max Entity Tokens</span
+                        >
+                        <input
+                          type="number"
+                          min="100"
+                          max="200000"
+                          x-model.number="querySettings.values.max_entity_tokens"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Max Relation Tokens</span
+                        >
+                        <input
+                          type="number"
+                          min="100"
+                          max="200000"
+                          x-model.number="querySettings.values.max_relation_tokens"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Max Total Tokens</span
+                        >
+                        <input
+                          type="number"
+                          min="100"
+                          max="500000"
+                          x-model.number="querySettings.values.max_total_tokens"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                        />
+                      </label>
+                    </div>
+
+                    <div
+                      class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end"
+                    >
+                      <label
+                        class="flex items-center gap-2 text-sm font-mono select-none"
+                      >
+                        <input
+                          type="checkbox"
+                          x-model="querySettings.values.enable_rerank"
+                          class="accent-neon-amber"
+                        />
+                        <span>Enable Rerank</span>
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">
+                          Min Rerank Score
+                          <span class="text-slate-600"
+                            >· 0.0 = pass-through</span
+                          >
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          x-model.number="querySettings.values.min_rerank_score"
+                          :disabled="!querySettings.values.enable_rerank"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none disabled:opacity-40"
+                        />
+                      </label>
+                    </div>
+
+                    <div
+                      class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm font-mono"
+                    >
+                      <label class="flex items-center gap-2 select-none">
+                        <input
+                          type="checkbox"
+                          x-model="querySettings.values.stream"
+                          class="accent-neon-cyan"
+                        />
+                        <span>Stream Response</span>
+                      </label>
+                      <label class="flex items-center gap-2 select-none">
+                        <input
+                          type="checkbox"
+                          x-model="querySettings.values.only_need_context"
+                          class="accent-neon-magenta"
+                        />
+                        <span>Only Need Context</span>
+                      </label>
+                      <label class="flex items-center gap-2 select-none">
+                        <input
+                          type="checkbox"
+                          x-model="querySettings.values.only_need_prompt"
+                          class="accent-neon-magenta"
+                        />
+                        <span>Only Need Prompt</span>
+                      </label>
+                    </div>
+
+                    <label class="block">
+                      <span class="text-xs text-slate-400 font-mono">
+                        Additional Output Prompt
+                        <span class="text-slate-600"
+                          >· appended to LLM instructions</span
+                        >
+                      </span>
+                      <textarea
+                        x-model="querySettings.values.user_prompt"
+                        rows="3"
+                        class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none resize-y"
+                        placeholder="Optional: extra instructions appended to every response (formatting, tone, constraints)…"
+                      ></textarea>
+                    </label>
+                  </div>
+                </template>
+              </div>
+            </details>
+
+            <!-- ===== Agent Skills Retrieval ===== -->
+            <details class="acc accent-amber" data-acc-key="skills">
+              <summary>
+                <div class="flex items-center gap-3 min-w-0">
+                  <i
+                    data-lucide="chevron-right"
+                    class="acc-chevron w-4 h-4"
+                  ></i>
+                  <i
+                    data-lucide="bot"
+                    class="w-4 h-4 text-neon-amber shrink-0"
+                  ></i>
+                  <div class="min-w-0">
+                    <div class="font-semibold">Agent Skills Retrieval</div>
+                    <div
+                      class="text-[11px] font-mono text-slate-500 truncate"
+                      x-text="skillSettings.loaded ? `mode=${skillSettings.values.retrieval_mode} · top_k=${skillSettings.values.retrieval_top_k} · entities/type=${skillSettings.values.max_entities_per_type} · chunks/entity=${skillSettings.values.max_chunks_per_entity}` : 'loading…'"
+                    ></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2" @click.stop>
+                  <button
+                    class="btn btn-ghost text-xs"
+                    @click="resetSkillSettings()"
+                    :disabled="!skillSettings.loaded || skillSettings.saving"
+                    title="Reset to .env defaults"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    Reset
+                  </button>
+                  <button
+                    class="btn btn-primary text-xs"
+                    @click="saveSkillSettings()"
+                    :disabled="!skillSettings.loaded || skillSettings.saving"
+                  >
+                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                    <span
+                      x-text="skillSettings.saving ? 'Saving…' : 'Save'"
+                    ></span>
+                  </button>
+                </div>
+              </summary>
+              <div class="acc-body">
+                <p class="text-xs text-slate-500 mb-4 max-w-xl">
+                  Controls the briefing book and retrieval pipeline used when
+                  any agent skill is invoked against this workspace. Skills go
+                  through the same chat-grade hybrid retrieval as Capture Chat
+                  (LightRAG <code>aquery_data</code>), then the result is
+                  packaged with verbatim source chunks and KG relationships.
+                  Saved per workspace; takes effect on the next skill run.
+                  Tools-mode hard caps live in the global section below and are
+                  backed by <code>.env</code>.
+                </p>
+                <template x-if="!skillSettings.loaded">
+                  <div class="text-xs text-slate-500 font-mono">loading…</div>
+                </template>
+
+                <template x-if="skillSettings.loaded">
+                  <div class="space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">
+                          Retrieval Mode
+                          <span class="text-slate-600"
+                            >· same options as chat</span
+                          >
+                        </span>
+                        <select
+                          x-model="skillSettings.values.retrieval_mode"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none"
+                        >
+                          <option value="hybrid">
+                            hybrid (entity + relation)
+                          </option>
+                          <option value="local">local (entity-anchored)</option>
+                          <option value="global">
+                            global (relation-anchored)
+                          </option>
+                          <option value="mix">mix (KG + naive)</option>
+                          <option value="naive">
+                            naive (chunk vector only)
+                          </option>
+                          <option value="off">
+                            off (Phase 1.5 bulk slice)
+                          </option>
+                        </select>
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">
+                          Retrieval Top K
+                          <span class="text-slate-600"
+                            >· max ranked entities</span
+                          >
+                        </span>
+                        <input
+                          type="number"
+                          min="5"
+                          max="500"
+                          x-model.number="skillSettings.values.retrieval_top_k"
+                          :disabled="skillSettings.values.retrieval_mode === 'off'"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none disabled:opacity-40"
+                        />
+                      </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">
+                          Entities per Type
+                          <span class="text-slate-600"
+                            >· cap on each bucket</span
+                          >
+                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="500"
+                          x-model.number="skillSettings.values.max_entities_per_type"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">
+                          Source Chunks per Entity
+                          <span class="text-slate-600"
+                            >· verbatim RFP text</span
+                          >
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="10"
+                          x-model.number="skillSettings.values.max_chunks_per_entity"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">
+                          KG Edges per Entity
+                          <span class="text-slate-600"
+                            >· in + out, deduped</span
+                          >
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="50"
+                          x-model.number="skillSettings.values.max_relationships_per_entity"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none"
+                        />
+                      </label>
+                    </div>
+
+                    <div
+                      class="text-[11px] text-slate-500 leading-relaxed bg-ink-900/40 border border-edge rounded-lg px-3 py-2 font-mono"
+                    >
+                      <div>
+                        <span class="text-neon-amber">mode=hybrid</span> mirrors
+                        the chat: ranks entities + relations + chunks against
+                        the user prompt and skill description. Tighter prompts
+                        produce tighter slices.
+                      </div>
+                      <div class="mt-1">
+                        <span class="text-neon-amber">mode=off</span> falls back
+                        to the Phase 1.5 bulk slice (file order, entity_types
+                        only) — useful for diagnosing whether retrieval is
+                        helping or hurting.
+                      </div>
+                      <div class="mt-1">
+                        This panel tunes retrieval. It does not own hard stop
+                        limits like turns, LLM timeout, or MCP timeout.
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </details>
+
+            <details class="acc accent-magenta" data-acc-key="skill-runtime">
+              <summary>
+                <div class="flex items-center gap-3 min-w-0">
+                  <i
+                    data-lucide="chevron-right"
+                    class="acc-chevron w-4 h-4"
+                  ></i>
+                  <i
+                    data-lucide="timer-reset"
+                    class="w-4 h-4 text-neon-magenta shrink-0"
+                  ></i>
+                  <div class="min-w-0">
+                    <div class="font-semibold">Global Skill Runtime Caps</div>
+                    <div
+                      class="text-[11px] font-mono text-slate-500 truncate"
+                      x-text="skillRuntimeSettings.loaded ? `turns=${skillRuntimeSettings.values.max_turns} · llm=${skillRuntimeSettings.values.llm_timeout_seconds}s · mcp=${skillRuntimeSettings.values.mcp_tool_call_timeout}s · tool=${skillRuntimeSettings.values.max_tool_result_chars} chars` : 'loading…'"
+                    ></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2" @click.stop>
+                  <button
+                    class="btn btn-ghost text-xs"
+                    @click="resetSkillRuntimeSettings()"
+                    :disabled="!skillRuntimeSettings.loaded || skillRuntimeSettings.saving"
+                    title="Reset global tools-mode caps"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    Reset
+                  </button>
+                  <button
+                    class="btn btn-primary text-xs"
+                    @click="saveSkillRuntimeSettings()"
+                    :disabled="!skillRuntimeSettings.loaded || skillRuntimeSettings.saving"
+                  >
+                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                    <span
+                      x-text="skillRuntimeSettings.saving ? 'Saving…' : 'Save'"
+                    ></span>
+                  </button>
+                </div>
+              </summary>
+              <div class="acc-body">
+                <p class="text-xs text-slate-500 mb-4 max-w-2xl">
+                  Global tools-mode ceilings for agent skills. Backed by
+                  <code>.env</code>, shared across all workspaces, and used by
+                  competitive-intel, compliance-auditor, price-to-win, and other
+                  tools-mode skills. Use this for hard stop budgets.
+                </p>
+                <template x-if="!skillRuntimeSettings.loaded">
+                  <div class="text-xs text-slate-500 font-mono">loading…</div>
+                </template>
+                <template x-if="skillRuntimeSettings.loaded">
+                  <div class="space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Max Turns</span
+                        >
+                        <input
+                          type="number"
+                          min="1"
+                          max="500"
+                          x-model.number="skillRuntimeSettings.values.max_turns"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >LLM Timeout (s)</span
+                        >
+                        <input
+                          type="number"
+                          min="1"
+                          max="3600"
+                          x-model.number="skillRuntimeSettings.values.llm_timeout_seconds"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >MCP Handshake (s)</span
+                        >
+                        <input
+                          type="number"
+                          min="0.1"
+                          max="3600"
+                          step="0.1"
+                          x-model.number="skillRuntimeSettings.values.mcp_handshake_timeout"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >MCP Tool Call (s)</span
+                        >
+                        <input
+                          type="number"
+                          min="0.1"
+                          max="3600"
+                          step="0.1"
+                          x-model.number="skillRuntimeSettings.values.mcp_tool_call_timeout"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >MCP Shutdown (s)</span
+                        >
+                        <input
+                          type="number"
+                          min="0.1"
+                          max="3600"
+                          step="0.1"
+                          x-model.number="skillRuntimeSettings.values.mcp_shutdown_timeout"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Tool Result Chars</span
+                        >
+                        <input
+                          type="number"
+                          min="500"
+                          max="2000000"
+                          x-model.number="skillRuntimeSettings.values.max_tool_result_chars"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Max Read Bytes</span
+                        >
+                        <input
+                          type="number"
+                          min="1000"
+                          max="5000000"
+                          x-model.number="skillRuntimeSettings.values.max_read_bytes"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Max Write Bytes</span
+                        >
+                        <input
+                          type="number"
+                          min="1000"
+                          max="20000000"
+                          x-model.number="skillRuntimeSettings.values.max_write_bytes"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Script Timeout (s)</span
+                        >
+                        <input
+                          type="number"
+                          min="1"
+                          max="86400"
+                          x-model.number="skillRuntimeSettings.values.max_script_seconds"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >KG Entities / Type</span
+                        >
+                        <input
+                          type="number"
+                          min="1"
+                          max="5000"
+                          x-model.number="skillRuntimeSettings.values.max_kg_entities_per_type"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >KG Chunks</span
+                        >
+                        <input
+                          type="number"
+                          min="1"
+                          max="5000"
+                          x-model.number="skillRuntimeSettings.values.max_kg_chunks"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Chunks / Entity</span
+                        >
+                        <input
+                          type="number"
+                          min="0"
+                          max="500"
+                          x-model.number="skillRuntimeSettings.values.max_kg_chunks_per_entity"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <label class="block md:col-span-1">
+                        <span class="text-xs text-slate-400 font-mono"
+                          >Relationships / Entity</span
+                        >
+                        <input
+                          type="number"
+                          min="0"
+                          max="500"
+                          x-model.number="skillRuntimeSettings.values.max_kg_relationships_per_entity"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                      </label>
+                    </div>
+
+                    <div
+                      class="text-[11px] text-slate-500 leading-relaxed bg-ink-900/40 border border-edge rounded-lg px-3 py-2 font-mono"
+                    >
+                      <div>
+                        Use this panel for hard ceilings: turns, timeouts, tool
+                        truncation, KG caps.
+                      </div>
+                      <div class="mt-1">
+                        Use
+                        <span class="text-neon-magenta"
+                          >Agent Skills Retrieval</span
+                        >
+                        above for per-workspace retrieval tuning only.
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </details>
+
+            <!-- ===== MCP Servers (Phase 4e) ===== -->
+            <details class="acc accent-cyan" data-acc-key="mcps">
+              <summary>
+                <div class="flex items-center gap-3 min-w-0">
+                  <i
+                    data-lucide="chevron-right"
+                    class="acc-chevron w-4 h-4"
+                  ></i>
+                  <i
+                    data-lucide="plug"
+                    class="w-4 h-4 text-neon-cyan shrink-0"
+                  ></i>
+                  <div class="min-w-0">
+                    <div class="font-semibold">MCP Servers</div>
+                    <div
+                      class="text-[11px] font-mono text-slate-500 truncate"
+                      x-text="mcps.loaded ? `${mcps.items.length} vendored · ${mcps.items.filter(m => m.missing_env.length === 0).length} ready` : 'loading…'"
+                    ></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2" @click.stop>
+                  <button
+                    class="btn btn-ghost text-xs"
+                    @click="loadMcps()"
+                    :disabled="mcps.loading"
+                    title="Re-scan tools/mcps/"
+                  >
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    Refresh
+                  </button>
+                </div>
+              </summary>
+              <div class="acc-body">
+                <p class="text-xs text-slate-500 mb-4 max-w-2xl">
+                  Vendored Model Context Protocol servers under
+                  <code class="text-neon-cyan">tools/mcps/</code> are exposed to
+                  agent skills that opt in via
+                  <code class="text-neon-cyan">metadata.mcps:</code> in their
+                  SKILL.md frontmatter. No-key MCPs (USAspending, eCFR, GSA
+                  CALC+, GSA Per Diem, Federal Register) work out of the box;
+                  key-gated MCPs need the API keys set below. Saving keys
+                  rewrites <code class="text-neon-amber">.env</code> and
+                  triggers a graceful server restart.
+                </p>
+                <template x-if="!mcps.loaded">
+                  <div class="text-xs text-slate-500 font-mono">loading…</div>
+                </template>
+                <template x-if="mcps.loaded && mcps.items.length === 0">
+                  <div
+                    class="text-xs text-slate-500 font-mono bg-ink-900/40 border border-edge rounded-lg px-3 py-3"
+                  >
+                    No MCP manifests found under
+                    <code>tools/mcps/</code>. Vendor one through the standard
+                    Phase 4f pattern.
+                  </div>
+                </template>
+                <template x-if="mcps.loaded && mcps.items.length > 0">
+                  <div class="space-y-3">
+                    <template x-for="m in mcps.items" :key="m.name">
+                      <div
+                        class="bg-ink-900/60 border border-edge rounded-lg p-4 space-y-3"
+                      >
+                        <div
+                          class="flex items-start justify-between gap-3 flex-wrap"
+                        >
+                          <div class="min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                              <code
+                                class="text-sm text-neon-cyan font-bold"
+                                x-text="m.name"
+                              ></code>
+                              <span
+                                class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border"
+                                :class="m.missing_env.length === 0 ? 'border-neon-lime/40 text-neon-lime' : 'border-neon-amber/40 text-neon-amber'"
+                                x-text="m.missing_env.length === 0 ? 'ready' : 'needs ' + m.missing_env.length + ' key(s)'"
+                              ></span>
+                            </div>
+                            <div
+                              class="text-[11px] text-slate-400 leading-relaxed max-w-3xl"
+                              x-text="m.description"
+                            ></div>
+                          </div>
+                          <button
+                            class="btn btn-ghost text-xs shrink-0"
+                            @click="testMcp(m.name)"
+                            :disabled="mcps.testing[m.name] || m.missing_env.length > 0"
+                            :title="m.missing_env.length > 0 ? 'Set required keys first' : 'Spawn subprocess + handshake + tools/list'"
+                          >
+                            <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+                            <span
+                              x-text="mcps.testing[m.name] ? 'Testing…' : 'Test connection'"
+                            ></span>
+                          </button>
+                        </div>
+
+                        <template x-if="mcps.testResult[m.name]">
+                          <div
+                            class="text-[11px] font-mono px-3 py-2 rounded border"
+                            :class="mcps.testResult[m.name].ok ? 'border-neon-lime/40 bg-neon-lime/5 text-neon-lime' : 'border-neon-magenta/40 bg-neon-magenta/5 text-neon-magenta'"
+                          >
+                            <template x-if="mcps.testResult[m.name].ok">
+                              <div>
+                                ✓ handshake ok ·
+                                <span
+                                  x-text="mcps.testResult[m.name].tool_count"
+                                ></span>
+                                tools advertised:
+                                <span
+                                  class="text-slate-400"
+                                  x-text="mcps.testResult[m.name].sample_tools.join(', ')"
+                                ></span>
+                              </div>
+                            </template>
+                            <template x-if="!mcps.testResult[m.name].ok">
+                              <div
+                                x-text="'✗ ' + (mcps.testResult[m.name].error || 'unknown error')"
+                              ></div>
+                            </template>
+                          </div>
+                        </template>
+
+                        <template
+                          x-if="(m.env_required.length + m.env_optional.length) > 0"
+                        >
+                          <div class="space-y-2">
+                            <template
+                              x-for="env in [...m.env_required.map(e => ({...e, required: true})), ...m.env_optional.map(e => ({...e, required: false}))]"
+                              :key="env.name"
+                            >
+                              <div class="flex items-center gap-2">
+                                <label class="block flex-1 min-w-0">
+                                  <span
+                                    class="text-[10px] text-slate-400 font-mono uppercase tracking-wider flex items-center gap-2"
+                                  >
+                                    <code x-text="env.name"></code>
+                                    <span
+                                      class="text-[9px] px-1.5 py-0.5 rounded border"
+                                      :class="env.required ? 'border-neon-magenta/40 text-neon-magenta' : 'border-edge text-slate-500'"
+                                      x-text="env.required ? 'required' : 'optional'"
+                                    ></span>
+                                    <span
+                                      class="text-[9px] text-slate-600"
+                                      x-show="env.set"
+                                      x-text="'currently: ' + env.masked"
+                                    ></span>
+                                  </span>
+                                  <input
+                                    type="password"
+                                    :placeholder="env.set ? '(leave blank to keep current value)' : 'paste API key…'"
+                                    x-model="mcps.drafts[m.name + ':' + env.name]"
+                                    class="mt-1 w-full bg-ink-900/80 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                                  />
+                                </label>
+                              </div>
+                            </template>
+                            <div class="flex justify-end">
+                              <button
+                                class="btn btn-primary text-xs"
+                                @click="saveMcpKeys(m.name)"
+                                :disabled="mcps.saving[m.name]"
+                              >
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                                <span
+                                  x-text="mcps.saving[m.name] ? 'Saving + restarting…' : 'Save keys + restart'"
+                                ></span>
+                              </button>
+                            </div>
+                          </div>
+                        </template>
+
+                        <div
+                          class="text-[10px] font-mono text-slate-600 flex flex-wrap gap-x-4 gap-y-1 pt-2 border-t border-edge/40"
+                        >
+                          <span
+                            >command:
+                            <code
+                              class="text-slate-500"
+                              x-text="m.command.join(' ')"
+                            ></code
+                          ></span>
+                          <span
+                            >license:
+                            <code
+                              class="text-slate-500"
+                              x-text="m.license || '—'"
+                            ></code
+                          ></span>
+                          <span
+                            >vendored:
+                            <code
+                              class="text-slate-500"
+                              x-text="m.vendored_at || '—'"
+                            ></code
+                          ></span>
+                          <span x-show="m.vendored_from"
+                            ><a
+                              :href="m.vendored_from"
+                              target="_blank"
+                              class="text-neon-cyan hover:underline"
+                              >upstream ↗</a
+                            ></span
+                          >
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </details>
+
+            <!-- ===== Models & Storage ===== -->
+            <details class="acc accent-magenta" data-acc-key="models" open>
+              <summary>
+                <div class="flex items-center gap-3 min-w-0">
+                  <i
+                    data-lucide="chevron-right"
+                    class="acc-chevron w-4 h-4"
+                  ></i>
+                  <i
+                    data-lucide="layers"
+                    class="w-4 h-4 text-neon-magenta shrink-0"
+                  ></i>
+                  <div class="min-w-0">
+                    <div class="font-semibold">Tech Stack</div>
+                    <div
+                      class="text-[11px] font-mono text-slate-500 truncate"
+                      x-text="`lightrag v${stats.stack?.lightrag || '?'} · ${stats.models?.extraction || '—'} · ${stats.graph_storage || '—'}`"
+                    ></div>
+                  </div>
+                </div>
+                <span class="text-[10px] font-mono text-slate-600"
+                  >read-only</span
+                >
+              </summary>
+              <div class="acc-body space-y-6">
+                <!-- Libraries -->
+                <div>
+                  <h4
+                    class="text-[11px] uppercase tracking-wider font-mono text-slate-500 mb-3"
+                  >
+                    Libraries
+                  </h4>
+                  <div
+                    class="grid grid-cols-2 md:grid-cols-3 gap-3 text-[11px] font-mono"
+                  >
+                    <div
+                      class="bg-ink-900/60 border border-edge rounded-lg p-3"
+                    >
+                      <div
+                        class="text-slate-500 uppercase tracking-wider text-[10px] mb-1"
+                      >
+                        lightrag native
+                      </div>
+                      <div
+                        class="text-neon-cyan tabular-nums"
+                        x-text="stats.stack?.lightrag ? 'v' + stats.stack.lightrag : '—'"
+                      ></div>
+                    </div>
+                    <div
+                      class="bg-ink-900/60 border border-edge rounded-lg p-3"
+                    >
+                      <div
+                        class="text-slate-500 uppercase tracking-wider text-[10px] mb-1"
+                      >
+                        mineru
+                      </div>
+                      <div
+                        class="text-neon-lime tabular-nums"
+                        x-text="stats.stack?.mineru ? 'v' + stats.stack.mineru : '—'"
+                      ></div>
+                    </div>
+                    <div
+                      class="bg-ink-900/60 border border-edge rounded-lg p-3"
+                    >
+                      <div
+                        class="text-slate-500 uppercase tracking-wider text-[10px] mb-1"
+                      >
+                        transformers
+                      </div>
+                      <div
+                        class="text-neon-amber tabular-nums"
+                        x-text="stats.stack?.transformers ? 'v' + stats.stack.transformers : '—'"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Models -->
+                <div>
+                  <h4
+                    class="text-[11px] uppercase tracking-wider font-mono text-slate-500 mb-3"
+                  >
+                    Models
+                  </h4>
+                  <dl class="grid grid-cols-3 gap-y-2 text-sm font-mono">
+                    <dt class="text-slate-500">extract</dt>
+                    <dd
+                      class="col-span-2 text-neon-cyan truncate"
+                      x-text="stats.models?.extraction || '—'"
+                    ></dd>
+                    <dt class="text-slate-500">reason</dt>
+                    <dd
+                      class="col-span-2 text-neon-magenta truncate"
+                      x-text="stats.models?.reasoning || '—'"
+                    ></dd>
+                    <dt class="text-slate-500">embed</dt>
+                    <dd
+                      class="col-span-2 text-neon-lime truncate"
+                      x-text="stats.models?.embedding || '—'"
+                    ></dd>
+                    <dt class="text-slate-500">vlm</dt>
+                    <dd
+                      class="col-span-2 text-neon-cyan truncate"
+                      x-text="stats.models?.vlm || '—'"
+                    ></dd>
+                    <dt class="text-slate-500">rerank</dt>
+                    <dd
+                      class="col-span-2 truncate"
+                      :class="stats.models?.rerank ? 'text-neon-amber' : 'text-slate-600'"
+                      x-text="stats.models?.rerank || 'disabled'"
+                    ></dd>
+                  </dl>
+                </div>
+                <!-- Storage -->
+                <div>
+                  <h4
+                    class="text-[11px] uppercase tracking-wider font-mono text-slate-500 mb-3"
+                  >
+                    Storage
+                  </h4>
+                  <dl class="grid grid-cols-3 gap-y-2 text-sm font-mono">
+                    <dt class="text-slate-500">graph</dt>
+                    <dd
+                      class="col-span-2 text-neon-magenta"
+                      x-text="stats.storage?.graph || stats.graph_storage || '—'"
+                    ></dd>
+                    <dt class="text-slate-500">vector</dt>
+                    <dd
+                      class="col-span-2 text-neon-cyan"
+                      x-text="stats.storage?.vector || '—'"
+                    ></dd>
+                    <dt class="text-slate-500">kv</dt>
+                    <dd
+                      class="col-span-2 text-neon-cyan"
+                      x-text="stats.storage?.kv || '—'"
+                    ></dd>
+                    <dt class="text-slate-500">doc_status</dt>
+                    <dd
+                      class="col-span-2 text-neon-cyan"
+                      x-text="stats.storage?.doc_status || '—'"
+                    ></dd>
+                  </dl>
+                </div>
+              </div>
+            </details>
+
+            <!-- ============== DANGER ZONE — workspace deletion ============== -->
+            <!--
+              Per-workspace cleanup + clean-slate reset. Uses helpers from
+              tools/workspace_cleanup.py through /api/ui/workspaces/inventory
+              and /api/ui/workspaces/{name}/delete. Deleting source documents
+              (inputs/) is irrecoverable and gated by a separate type-to-confirm.
+            -->
+            <details class="acc accent-red danger" data-acc-key="danger">
+              <summary>
+                <div class="flex items-center gap-3 min-w-0">
+                  <i
+                    data-lucide="chevron-right"
+                    class="acc-chevron w-4 h-4"
+                  ></i>
+                  <i
+                    data-lucide="alert-octagon"
+                    class="w-4 h-4 text-neon-red shrink-0"
+                  ></i>
+                  <div class="min-w-0">
+                    <div class="font-semibold text-neon-red">Danger Zone</div>
+                    <div class="text-[11px] font-mono text-slate-500 truncate">
+                      Delete workspaces · wipe everything
+                    </div>
+                  </div>
+                </div>
+                <button
+                  class="btn btn-soft text-xs"
+                  @click.stop.prevent="loadWorkspaceInventory()"
+                  :disabled="dangerZone.loading"
+                >
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                  <span
+                    x-text="dangerZone.loading ? 'Scanning…' : 'Refresh'"
+                  ></span>
+                </button>
+              </summary>
+              <div class="acc-body">
+                <p class="text-xs text-slate-500 mb-4 max-w-2xl">
+                  Permanently remove a workspace's knowledge graph, derived
+                  storage, or original source documents. The currently active
+                  workspace cannot be deleted — switch to another workspace
+                  first.
+                </p>
+
+                <template x-if="!dangerZone.loaded && !dangerZone.loading">
+                  <div class="text-center py-6 text-slate-500 text-sm">
+                    <i
+                      data-lucide="hard-drive"
+                      class="w-6 h-6 mx-auto mb-2 text-slate-700"
+                    ></i>
+                    Click <span class="text-slate-300">Refresh</span> to scan
+                    rag_storage, Neo4j, and inputs/ for workspaces.
+                  </div>
+                </template>
+
+                <template
+                  x-if="dangerZone.loaded && !dangerZone.workspaces.length"
+                >
+                  <div class="text-center py-6 text-slate-500 text-sm">
+                    No workspaces found.
+                  </div>
+                </template>
+
+                <template
+                  x-if="dangerZone.loaded && dangerZone.workspaces.length"
+                >
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm font-mono">
+                      <thead>
+                        <tr
+                          class="text-[10px] uppercase tracking-wider text-slate-500 border-b border-edge"
+                        >
+                          <th class="text-left py-2 pr-3">Workspace</th>
+                          <th class="text-right py-2 px-3">Neo4j nodes</th>
+                          <th class="text-right py-2 px-3">rag_storage</th>
+                          <th class="text-right py-2 px-3">inputs/</th>
+                          <th class="text-right py-2 pl-3"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template
+                          x-for="ws in dangerZone.workspaces"
+                          :key="ws.name"
+                        >
+                          <tr
+                            class="border-b border-edge/40 hover:bg-white/[0.02]"
+                          >
+                            <td class="py-2 pr-3">
+                              <span
+                                class="text-slate-200"
+                                x-text="ws.name"
+                              ></span>
+                              <span
+                                x-show="ws.is_active"
+                                class="ml-2 pill bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/40"
+                                >active</span
+                              >
+                            </td>
+                            <td
+                              class="py-2 px-3 text-right tabular-nums"
+                              :class="ws.neo4j_nodes ? 'text-neon-magenta' : 'text-slate-600'"
+                              x-text="ws.neo4j_nodes ? ws.neo4j_nodes.toLocaleString() : '—'"
+                            ></td>
+                            <td
+                              class="py-2 px-3 text-right tabular-nums"
+                              :class="ws.storage_mb !== null ? 'text-neon-cyan' : 'text-slate-600'"
+                              x-text="ws.storage_mb !== null ? ws.storage_mb + ' MB' : '—'"
+                            ></td>
+                            <td
+                              class="py-2 px-3 text-right tabular-nums"
+                              :class="ws.inputs_files ? 'text-neon-amber' : 'text-slate-600'"
+                              x-text="ws.inputs_files ? ws.inputs_files + ' f / ' + ws.inputs_mb + ' MB' : '—'"
+                            ></td>
+                            <td class="py-2 pl-3 text-right">
+                              <button
+                                class="btn btn-danger text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+                                :disabled="ws.is_active"
+                                :title="ws.is_active ? 'Switch to another workspace first' : 'Delete this workspace'"
+                                @click="openDeleteModal(ws)"
+                              >
+                                <i
+                                  data-lucide="trash-2"
+                                  class="w-3.5 h-3.5"
+                                ></i>
+                                <span>Delete…</span>
+                              </button>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </template>
+
+                <!-- Wipe-all clean-slate panel -->
+                <div class="mt-6 pt-5 border-t border-edge/60">
+                  <div class="flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                      <h4
+                        class="font-semibold text-sm flex items-center gap-2 text-neon-red"
+                      >
+                        <i data-lucide="biohazard" class="w-4 h-4"></i>
+                        Clean Slate — Wipe ALL Workspaces
+                      </h4>
+                      <p class="text-xs text-slate-500 mt-1 max-w-2xl">
+                        Deletes the selected buckets across every workspace and
+                        restarts the server. The active workspace folder is
+                        recreated empty so the next boot succeeds.
+                      </p>
+                    </div>
+                    <button
+                      class="btn btn-danger text-xs"
+                      @click="openWipeAllModal()"
+                      :disabled="!dangerZone.loaded || !dangerZone.workspaces.length"
+                    >
+                      <i data-lucide="biohazard" class="w-3.5 h-3.5"></i>
+                      <span>Wipe everything…</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </section>

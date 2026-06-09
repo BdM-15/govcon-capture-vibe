@@ -1,0 +1,1025 @@
+          <!-- ============== AGENT SKILLS ============== -->
+          <!--
+            Dual-use Agent Skills page. Skills live in .github/skills/ and are
+            read by both VS Code/Copilot AND this UI via /api/ui/skills.
+            Cards open a detail drawer; "Run" composes a skill prompt with a
+            workspace entity slice and dispatches it to the configured LLM.
+          -->
+          <section x-show="active === 'skills'" x-cloak>
+            <div class="flex items-end justify-between mb-5 flex-wrap gap-3">
+              <div>
+                <h1 class="text-2xl font-bold tracking-tight">
+                  <span class="h1-gradient">Agent Skills</span>
+                </h1>
+                <p class="text-sm text-slate-500 mt-1">
+                  Discoverable, installable, invocable agent skills — the same
+                  files Copilot reads from
+                  <code class="font-mono text-neon-cyan">.github/skills/</code>.
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  class="pill bg-ink-800 border border-edge text-slate-300 hover:text-neon-cyan hover:border-neon-cyan/50 px-3 py-1.5 text-xs"
+                  @click="loadSkills(true)"
+                  :disabled="skills.loading"
+                >
+                  <i
+                    data-lucide="refresh-cw"
+                    class="w-3.5 h-3.5 inline mr-1"
+                  ></i>
+                  Refresh
+                </button>
+                <button
+                  class="pill bg-neon-magenta/10 border border-neon-magenta/40 text-neon-magenta hover:bg-neon-magenta/20 px-3 py-1.5 text-xs"
+                  @click="skills.installModal = true"
+                >
+                  <i data-lucide="download" class="w-3.5 h-3.5 inline mr-1"></i>
+                  Install from GitHub
+                </button>
+              </div>
+            </div>
+
+            <div
+              x-show="skills.error"
+              class="card border border-red-500/40 bg-red-500/5 p-3 mb-4 text-sm text-red-300"
+              x-text="skills.error"
+            ></div>
+
+            <div
+              x-show="!skills.loading && skills.items.length === 0"
+              class="text-sm text-slate-500 italic"
+            >
+              No skills discovered. Check that
+              <code class="font-mono">.github/skills/</code> exists.
+            </div>
+
+            <!-- Phase 4j: taxonomy filter rail (Persona / Phase / Capability) -->
+            <div x-show="skills.items.length > 0" class="filter-rail mb-5">
+              <div class="filter-rail-rows">
+                <div class="filter-rail-row">
+                  <span class="filter-axis-label filter-axis-label-magenta">
+                    <i data-lucide="users" class="w-3 h-3"></i>Persona
+                  </span>
+                  <template
+                    x-for="p in skillPersonaFilterConfig()"
+                    :key="'pe-' + p.id"
+                  >
+                    <button
+                      class="filter-pill"
+                      :class="skills.activePersonas.includes(p.id) ? 'filter-pill-active-magenta' : ''"
+                      @click="toggleSkillPersona(p.id)"
+                    >
+                      <span x-text="p.label"></span>
+                      <span
+                        class="filter-pill-count"
+                        x-text="skillsCountForPersona(p.id)"
+                      ></span>
+                    </button>
+                  </template>
+                </div>
+                <div class="filter-rail-row">
+                  <span class="filter-axis-label filter-axis-label-cyan">
+                    <i data-lucide="git-branch" class="w-3 h-3"></i>Phase
+                  </span>
+                  <template x-for="p in skillPhaseConfig()" :key="'ph-' + p.id">
+                    <button
+                      class="filter-pill"
+                      :class="skills.activePhases.includes(p.id) ? 'filter-pill-active-cyan' : ''"
+                      @click="toggleSkillPhase(p.id)"
+                    >
+                      <span x-text="p.label"></span>
+                      <span
+                        class="filter-pill-count"
+                        x-text="skillsCountForPhase(p.id)"
+                      ></span>
+                    </button>
+                  </template>
+                </div>
+                <div class="filter-rail-row">
+                  <span class="filter-axis-label filter-axis-label-amber">
+                    <i data-lucide="zap" class="w-3 h-3"></i>Capability
+                  </span>
+                  <template
+                    x-for="c in skillCapabilityConfig()"
+                    :key="'cap-' + c.id"
+                  >
+                    <button
+                      class="filter-pill"
+                      :class="skills.activeCapabilities.includes(c.id) ? 'filter-pill-active-amber' : ''"
+                      @click="toggleSkillCapability(c.id)"
+                    >
+                      <span x-text="c.label"></span>
+                      <span
+                        class="filter-pill-count"
+                        x-text="skillsCountForCapability(c.id)"
+                      ></span>
+                    </button>
+                  </template>
+                </div>
+              </div>
+              <!-- Right-side meta cluster: search + live count + clear button -->
+              <div class="filter-rail-meta">
+                <div class="filter-rail-search">
+                  <i
+                    data-lucide="search"
+                    class="w-3.5 h-3.5 filter-rail-search-icon"
+                  ></i>
+                  <input
+                    type="text"
+                    class="filter-rail-search-input"
+                    placeholder="Search skills…"
+                    x-model="skills.searchQuery"
+                    @input.debounce.150ms="$nextTick(() => lucide.createIcons())"
+                  />
+                  <button
+                    x-show="skills.searchQuery"
+                    class="filter-rail-search-clear"
+                    @click="skills.searchQuery = ''; $nextTick(() => lucide.createIcons())"
+                    title="Clear search"
+                  >
+                    <i data-lucide="x" class="w-3 h-3"></i>
+                  </button>
+                </div>
+                <div class="filter-rail-count">
+                  <span class="filter-rail-count-label">Showing</span>
+                  <span
+                    class="filter-rail-count-value"
+                    :class="skillsFiltered().length < skills.items.length ? 'is-filtered' : ''"
+                    x-text="skillsFiltered().length"
+                  ></span>
+                  <span class="filter-rail-count-sep">of</span>
+                  <span
+                    class="filter-rail-count-total"
+                    x-text="skills.items.length"
+                  ></span>
+                </div>
+                <button
+                  x-show="skills.activePersonas.length || skills.activePhases.length || skills.activeCapabilities.length || skills.searchQuery"
+                  class="filter-pill filter-pill-clear"
+                  @click="clearSkillFilters()"
+                >
+                  <i data-lucide="x" class="w-3 h-3"></i>Clear
+                </button>
+              </div>
+            </div>
+
+            <!-- Meta / utility skills section -->
+            <div x-show="skillsFilteredMeta().length > 0" class="mb-6">
+              <div class="flex items-center gap-3 mb-3">
+                <span
+                  class="text-[10px] font-mono uppercase tracking-widest text-neon-cyan/70"
+                  >Utility &amp; Infrastructure</span
+                >
+                <div class="flex-1 h-px bg-neon-cyan/20"></div>
+                <span
+                  class="text-[10px] font-mono text-slate-600"
+                  x-text="skillsFilteredMeta().length"
+                ></span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <template x-for="s in skillsFilteredMeta()" :key="s.name">
+                  <div
+                    class="card card-accent accent-cyan p-4 flex flex-col gap-3 cursor-pointer card-hover border-neon-cyan/40"
+                    @click="openSkill(s.name)"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <i
+                          data-lucide="sparkles"
+                          class="w-4 h-4 flex-shrink-0 text-neon-cyan"
+                        ></i>
+                        <h3
+                          class="text-sm font-semibold text-slate-100 leading-snug truncate"
+                          x-text="s.name"
+                        ></h3>
+                      </div>
+                      <span
+                        x-show="s.capability"
+                        class="pill whitespace-nowrap text-[10px] bg-ink-800 text-neon-cyan border border-neon-cyan/40"
+                        x-text="s.capability"
+                      ></span>
+                    </div>
+                    <div
+                      class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
+                      x-text="personaLabel(s.personas_primary)"
+                    ></div>
+                    <p
+                      class="text-xs text-slate-400 leading-snug line-clamp-3"
+                      x-text="s.description"
+                    ></p>
+                    <div
+                      x-show="s.personas_secondary && s.personas_secondary.length"
+                      class="text-[10px] text-slate-500"
+                    >
+                      <span class="text-slate-600">also for:</span>
+                      <template
+                        x-for="(p, idx) in s.personas_secondary"
+                        :key="'sec-' + s.name + '-' + p"
+                      >
+                        <span>
+                          <span
+                            class="text-slate-400"
+                            x-text="personaLabel(p)"
+                          ></span
+                          ><span x-show="idx < s.personas_secondary.length - 1"
+                            >,
+                          </span>
+                        </span>
+                      </template>
+                    </div>
+                    <div
+                      class="flex items-center gap-2 text-[10px] font-mono text-slate-500 mt-auto"
+                    >
+                      <span x-text="'v' + (s.version || '0.0.0')"></span>
+                      <span
+                        x-show="s.source === 'installed'"
+                        class="text-neon-magenta"
+                        >installed</span
+                      >
+                      <span
+                        x-show="s.status"
+                        class="text-amber-400"
+                        x-text="s.status"
+                      ></span>
+                      <span class="ml-auto" x-show="s.has_references"
+                        >refs</span
+                      >
+                      <span x-show="s.has_assets || s.has_templates"
+                        >assets</span
+                      >
+                      <span x-show="s.has_scripts">scripts</span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Domain skills section -->
+            <div x-show="skillsFilteredDomain().length > 0" class="mb-2">
+              <div class="flex items-center gap-3 mb-3">
+                <span
+                  class="text-[10px] font-mono uppercase tracking-widest text-neon-magenta/70"
+                  >Domain Skills</span
+                >
+                <div class="flex-1 h-px bg-neon-magenta/20"></div>
+                <span
+                  class="text-[10px] font-mono text-slate-600"
+                  x-text="skillsFilteredDomain().length"
+                ></span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <template x-for="s in skillsFilteredDomain()" :key="s.name">
+                  <div
+                    class="card card-accent accent-magenta p-4 flex flex-col gap-3 cursor-pointer card-hover border-neon-magenta/30"
+                    @click="openSkill(s.name)"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <i
+                          data-lucide="wand-2"
+                          class="w-4 h-4 flex-shrink-0 text-neon-magenta"
+                        ></i>
+                        <h3
+                          class="text-sm font-semibold text-slate-100 leading-snug truncate"
+                          x-text="s.name"
+                        ></h3>
+                      </div>
+                      <span
+                        x-show="s.capability"
+                        class="pill whitespace-nowrap text-[10px] bg-ink-800 text-neon-magenta border border-neon-magenta/40"
+                        x-text="s.capability"
+                      ></span>
+                    </div>
+                    <div
+                      class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
+                      x-text="personaLabel(s.personas_primary)"
+                    ></div>
+                    <p
+                      class="text-xs text-slate-400 leading-snug line-clamp-3"
+                      x-text="s.description"
+                    ></p>
+                    <div
+                      x-show="s.personas_secondary && s.personas_secondary.length"
+                      class="text-[10px] text-slate-500"
+                    >
+                      <span class="text-slate-600">also for:</span>
+                      <template
+                        x-for="(p, idx) in s.personas_secondary"
+                        :key="'sec-' + s.name + '-' + p"
+                      >
+                        <span>
+                          <span
+                            class="text-slate-400"
+                            x-text="personaLabel(p)"
+                          ></span
+                          ><span x-show="idx < s.personas_secondary.length - 1"
+                            >,
+                          </span>
+                        </span>
+                      </template>
+                    </div>
+                    <div
+                      class="flex items-center gap-2 text-[10px] font-mono text-slate-500 mt-auto"
+                    >
+                      <span x-text="'v' + (s.version || '0.0.0')"></span>
+                      <span
+                        x-show="s.source === 'installed'"
+                        class="text-neon-magenta"
+                        >installed</span
+                      >
+                      <span
+                        x-show="s.status"
+                        class="text-amber-400"
+                        x-text="s.status"
+                      ></span>
+                      <span class="ml-auto" x-show="s.has_references"
+                        >refs</span
+                      >
+                      <span x-show="s.has_assets || s.has_templates"
+                        >assets</span
+                      >
+                      <span x-show="s.has_scripts">scripts</span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <div
+              x-show="skills.items.length > 0 && skillsFiltered().length === 0"
+              class="card p-6 text-center text-sm text-slate-500"
+            >
+              No skills match the current filters.
+              <button
+                class="text-neon-cyan ml-2 underline"
+                @click="clearSkillFilters()"
+              >
+                Clear filters
+              </button>
+            </div>
+
+            <!-- Skill detail drawer -->
+            <div
+              x-show="skills.detailOpen"
+              x-cloak
+              x-transition.opacity
+              class="fixed inset-0 z-[80] bg-black/70 flex items-stretch justify-end"
+              @click.self="skills.detailOpen = false"
+            >
+              <div
+                class="w-full max-w-2xl h-full bg-ink-900 border-l border-edge-strong overflow-y-auto pt-16"
+                @click.stop
+              >
+                <div
+                  class="bg-ink-900 border-b border-edge p-4 flex items-start justify-between gap-3"
+                >
+                  <div class="min-w-0 flex-1">
+                    <h2
+                      class="text-lg font-semibold text-slate-100 break-words"
+                      x-text="skills.current?.name"
+                    ></h2>
+                    <p
+                      class="text-xs text-slate-400 mt-1 whitespace-pre-wrap"
+                      x-text="skills.current?.description"
+                    ></p>
+                  </div>
+                  <button
+                    @click="skills.detailOpen = false"
+                    class="shrink-0 text-slate-400 hover:text-neon-magenta mt-0.5"
+                  >
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                  </button>
+                </div>
+
+                <div class="p-4 space-y-4">
+                  <div class="flex flex-wrap gap-2 text-[10px] font-mono">
+                    <span
+                      class="pill border border-edge bg-ink-800 text-slate-400"
+                      x-text="'v' + (skills.current?.version || '0.0.0')"
+                    ></span>
+                    <span
+                      class="pill border border-edge bg-ink-800 text-slate-400"
+                      x-text="skills.current?.category"
+                    ></span>
+                    <span
+                      x-show="skills.current?.license"
+                      class="pill border border-edge bg-ink-800 text-slate-400"
+                      x-text="skills.current?.license"
+                    ></span>
+                    <span
+                      x-show="skills.current?.upstream"
+                      class="pill border border-edge bg-ink-800 text-neon-cyan"
+                      x-text="'upstream: ' + skills.current?.upstream"
+                    ></span>
+                    <span
+                      x-show="skills.current?.source === 'installed'"
+                      class="pill border border-neon-magenta/40 bg-neon-magenta/10 text-neon-magenta"
+                      >installed</span
+                    >
+                  </div>
+
+                  <div>
+                    <label class="text-xs font-mono text-slate-400 mb-1 block"
+                      >User Prompt (optional)</label
+                    >
+                    <textarea
+                      x-model="skills.invokePrompt"
+                      rows="3"
+                      placeholder="Describe what you want this skill to do (or leave empty for defaults)…"
+                      class="w-full bg-ink-800 border border-edge focus:border-neon-magenta/60 outline-none rounded-lg px-3 py-2 text-sm font-mono"
+                    ></textarea>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <button
+                      @click="invokeSkill()"
+                      :disabled="skills.invoking"
+                      class="pill bg-neon-magenta/10 border border-neon-magenta/40 text-neon-magenta hover:bg-neon-magenta/20 px-4 py-2 text-xs"
+                    >
+                      <i data-lucide="play" class="w-3.5 h-3.5 inline mr-1"></i>
+                      <span
+                        x-text="skills.invoking ? 'Running…' : 'Run on Active Workspace'"
+                      ></span>
+                    </button>
+                    <button
+                      x-show="skills.current?.source === 'installed'"
+                      @click="uninstallSkill()"
+                      class="pill bg-red-500/10 border border-red-500/40 text-red-300 hover:bg-red-500/20 px-3 py-2 text-xs"
+                    >
+                      <i
+                        data-lucide="trash-2"
+                        class="w-3.5 h-3.5 inline mr-1"
+                      ></i>
+                      Uninstall
+                    </button>
+                  </div>
+
+                  <div x-show="skills.invokeResult">
+                    <h3 class="text-xs font-mono text-slate-400 mb-1">
+                      Output
+                    </h3>
+                    <pre
+                      class="bg-ink-800 border border-edge rounded-lg p-3 text-xs text-slate-200 whitespace-pre-wrap font-mono max-h-96 overflow-auto"
+                      x-text="skills.invokeResult"
+                    ></pre>
+                    <p class="text-[10px] text-slate-500 mt-1 font-mono">
+                      Entities used:
+                      <span
+                        x-text="(skills.invokeMeta?.entities_used || []).join(', ') || '(none)'"
+                      ></span>
+                      ·
+                      <span
+                        x-text="skills.invokeMeta?.elapsed_ms + 'ms'"
+                      ></span>
+                      <template x-if="skills.invokeMeta?.finish_reason">
+                        <span>
+                          ·
+                          <span
+                            class="text-neon-amber"
+                            x-text="'stop=' + skills.invokeMeta.finish_reason"
+                          ></span>
+                        </span>
+                      </template>
+                      <template x-if="skills.invokeMeta?.run_id">
+                        <span>
+                          ·
+                          <span
+                            class="text-neon-cyan"
+                            x-text="skills.invokeMeta.run_id"
+                          ></span>
+                        </span>
+                      </template>
+                    </p>
+                    <p
+                      x-show="skills.invokeMeta?.run_dir"
+                      class="text-[10px] text-slate-500 mt-1 font-mono break-all"
+                    >
+                      Saved to:
+                      <span
+                        class="text-slate-400"
+                        x-text="skills.invokeMeta?.run_dir"
+                      ></span>
+                    </p>
+                  </div>
+
+                  <div
+                    x-show="skillRunInputRequest(skills.run)"
+                    x-effect="if (skillRunInputRequest(skills.run)) mountSkillRunInputPanel($el)"
+                  ></div>
+
+                  <div x-show="skills.detailOpen">
+                    <div class="flex items-center justify-between mb-1">
+                      <h3 class="text-xs font-mono text-slate-400">
+                        Recent Runs
+                        <span
+                          class="text-slate-600"
+                          x-text="'(' + skills.runs.length + ')'"
+                        ></span>
+                      </h3>
+                      <div class="flex items-center gap-3">
+                        <button
+                          @click="toggleSkillRunTrash()"
+                          class="text-[10px] text-slate-500 hover:text-neon-cyan font-mono"
+                        >
+                          <i data-lucide="archive" class="w-3 h-3 inline"></i>
+                          trash
+                          <span
+                            x-text="'(' + skills.runTrash.length + ')'"
+                            class="text-slate-600"
+                          ></span>
+                        </button>
+                        <button
+                          @click="loadSkillRuns(skills.current?.name); loadSkillRunTrash(skills.current?.name)"
+                          class="text-[10px] text-slate-500 hover:text-neon-cyan font-mono"
+                        >
+                          <i
+                            data-lucide="refresh-cw"
+                            class="w-3 h-3 inline"
+                          ></i>
+                          refresh
+                        </button>
+                      </div>
+                    </div>
+                    <div
+                      x-show="skills.runsLoading"
+                      class="text-[10px] font-mono text-slate-500"
+                    >
+                      Loading runs…
+                    </div>
+                    <div
+                      x-show="!skills.runsLoading && skills.runs.length === 0"
+                      class="text-[10px] font-mono text-slate-600 italic"
+                    >
+                      No saved runs for this skill in the active workspace yet.
+                    </div>
+                    <ul class="space-y-1">
+                      <template x-for="run in skills.runs" :key="run.run_id">
+                        <li
+                          class="bg-ink-800/60 border border-edge rounded-md p-2 text-[11px] font-mono hover:border-neon-cyan/40 transition-colors"
+                        >
+                          <div class="flex items-start justify-between gap-2">
+                            <button
+                              @click="loadSkillRun(skills.current?.name, run.run_id)"
+                              class="text-left flex-1 min-w-0"
+                            >
+                              <div class="flex items-center gap-2">
+                                <div
+                                  class="text-neon-cyan truncate"
+                                  x-text="run.run_id"
+                                ></div>
+                                <span
+                                  x-show="run.can_resume"
+                                  class="pill text-[9px] border border-neon-amber/40 bg-neon-amber/10 text-neon-amber"
+                                  >awaiting input</span
+                                >
+                              </div>
+                              <div
+                                class="text-slate-400 mt-0.5 truncate"
+                                x-text="run.prompt_preview || '(skill defaults)'"
+                              ></div>
+                              <div class="text-slate-600 mt-0.5">
+                                <span x-text="run.created_at"></span>
+                                ·
+                                <span
+                                  x-text="(run.elapsed_ms || 0) + 'ms'"
+                                ></span>
+                                ·
+                                <span
+                                  x-text="(run.response_chars || 0) + ' chars'"
+                                ></span>
+                              </div>
+                            </button>
+                            <button
+                              @click="deleteSkillRun(skills.current?.name, run.run_id)"
+                              class="text-slate-600 hover:text-neon-amber"
+                              title="Move run to trash"
+                            >
+                              <i data-lucide="archive" class="w-3 h-3"></i>
+                            </button>
+                          </div>
+                        </li>
+                      </template>
+                    </ul>
+                    <div
+                      class="mt-3 pt-3 border-t border-edge"
+                      x-show="skills.runTrashOpen"
+                    >
+                      <div class="flex items-center justify-between mb-1">
+                        <h4
+                          class="text-[10px] font-mono uppercase tracking-[0.16em] text-slate-500"
+                        >
+                          Run Trash
+                        </h4>
+                        <span
+                          class="text-[10px] font-mono text-slate-600"
+                          x-text="'(' + skills.runTrash.length + ')'"
+                        ></span>
+                        <button
+                          x-show="!skills.runTrashLoading && skills.runTrash.length"
+                          @click="emptySkillRunTrash(skills.current?.name)"
+                          class="ml-auto text-[10px] font-mono text-neon-red/80 hover:text-neon-red border border-neon-red/40 hover:border-neon-red rounded px-1.5 py-0.5"
+                          title="Permanently delete every trashed run for this skill"
+                        >
+                          Empty Trash
+                        </button>
+                      </div>
+                      <div
+                        x-show="skills.runTrashLoading"
+                        class="text-[10px] font-mono text-slate-500"
+                      >
+                        Loading trash…
+                      </div>
+                      <div
+                        x-show="!skills.runTrashLoading && skills.runTrash.length === 0"
+                        class="text-[10px] font-mono text-slate-600 italic"
+                      >
+                        Run trash empty.
+                      </div>
+                      <ul
+                        class="space-y-1"
+                        x-show="!skills.runTrashLoading && skills.runTrash.length"
+                      >
+                        <template
+                          x-for="run in skills.runTrash"
+                          :key="run.trash_id"
+                        >
+                          <li
+                            class="bg-ink-900/50 border border-edge rounded-md p-2 text-[11px] font-mono"
+                          >
+                            <div class="flex items-start justify-between gap-2">
+                              <div class="flex-1 min-w-0">
+                                <div
+                                  class="text-neon-amber truncate"
+                                  x-text="run.run_id"
+                                ></div>
+                                <div
+                                  class="text-slate-400 mt-0.5 truncate"
+                                  x-text="run.prompt_preview || '(skill defaults)'"
+                                ></div>
+                                <div class="text-slate-600 mt-0.5">
+                                  trashed
+                                  <span
+                                    x-text="(run.deleted_at || '').slice(0, 19).replace('T', ' ')"
+                                  ></span>
+                                  ·
+                                  <span
+                                    x-text="(run.artifact_count || 0) + ' artifacts'"
+                                  ></span>
+                                </div>
+                              </div>
+                              <button
+                                @click="restoreSkillRun(skills.current?.name, run.trash_id)"
+                                class="text-slate-500 hover:text-neon-cyan"
+                                :disabled="skills.restoringRunTrash === run.trash_id"
+                                title="Restore run"
+                              >
+                                <i data-lucide="undo-2" class="w-3 h-3"></i>
+                              </button>
+                            </div>
+                          </li>
+                        </template>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <!-- Artifacts download panel (any run that wrote files) -->
+                  <template
+                    x-if="skills.run && (skills.run.artifacts || []).length"
+                  >
+                    <div class="skill-artifacts-panel">
+                      <div class="skill-artifacts-head">
+                        <i data-lucide="download" class="w-3 h-3"></i>
+                        <span>Artifacts</span>
+                        <span
+                          class="skill-transcript-count"
+                          x-text="'(' + skills.run.artifacts.length + ')'"
+                        ></span>
+                      </div>
+                      <ul class="skill-artifacts-list">
+                        <template
+                          x-for="f in skills.run.artifacts"
+                          :key="f.name"
+                        >
+                          <li>
+                            <a
+                              :href="'/api/ui/skills/' + encodeURIComponent(skills.current?.name) + '/runs/' + encodeURIComponent(skills.run.run_id) + '/artifacts/' + encodeURIComponent(f.name)"
+                              :download="f.name"
+                              class="skill-artifact-link"
+                            >
+                              <i
+                                :data-lucide="artifactIcon(f.mime, f.name)"
+                                class="w-3 h-3"
+                              ></i>
+                              <span class="min-w-0 flex flex-col">
+                                <span x-text="f.display_name || f.name"></span>
+                                <span
+                                  x-show="f.display_name && f.display_name !== f.name"
+                                  class="text-[11px] text-slate-500 font-mono"
+                                  x-text="f.name"
+                                ></span>
+                              </span>
+                            </a>
+                            <span
+                              class="skill-transcript-size"
+                              x-text="formatBytes(parseInt(f.size, 10) || 0) + ' · ' + (f.mime || 'application/octet-stream')"
+                            ></span>
+                            <button
+                              type="button"
+                              class="studio-action"
+                              title="Why this artifact? (reasoning view)"
+                              @click="openReasoning({ skill: skills.current?.name, run_id: skills.run.run_id, filename: f.name, display_name: f.display_name || '', title: (f.display_name || skills.run.title || ''), created_at: skills.run.created_at || '' })"
+                            >
+                              <i
+                                data-lucide="brain-circuit"
+                                class="w-3 h-3"
+                              ></i>
+                            </button>
+                          </li>
+                        </template>
+                      </ul>
+                    </div>
+                  </template>
+
+                  <!-- Transcript drawer (tools-mode runs only) -->
+                  <template
+                    x-if="skills.run && (skills.run.transcript || []).length"
+                  >
+                    <div class="skill-transcript">
+                      <button
+                        type="button"
+                        class="skill-transcript-toggle"
+                        @click="skills.transcriptOpen = !skills.transcriptOpen; $nextTick(() => lucide.createIcons())"
+                      >
+                        <i
+                          :data-lucide="skills.transcriptOpen ? 'chevron-down' : 'chevron-right'"
+                          class="w-3 h-3"
+                        ></i>
+                        <span>Transcript</span>
+                        <span
+                          class="skill-transcript-count"
+                          x-text="'(' + skills.run.transcript.length + ' steps · ' + (skills.run.tool_outputs || []).length + ' artifacts)'"
+                        ></span>
+                      </button>
+                      <div
+                        x-show="skills.transcriptOpen"
+                        x-cloak
+                        class="skill-transcript-body"
+                      >
+                        <template
+                          x-for="(step, idx) in skills.run.transcript"
+                          :key="idx"
+                        >
+                          <div
+                            class="skill-transcript-step"
+                            :class="step.kind === 'tool' ? 'is-tool' : 'is-assistant'"
+                          >
+                            <div
+                              class="skill-transcript-head"
+                              @click="skills.transcriptExpanded[idx] = !skills.transcriptExpanded[idx]"
+                            >
+                              <span
+                                class="skill-transcript-kind"
+                                x-text="step.kind"
+                              ></span>
+                              <span
+                                class="skill-transcript-turn"
+                                x-text="'turn ' + (step.turn ?? '?')"
+                              ></span>
+                              <template x-if="step.kind === 'tool'">
+                                <span
+                                  class="skill-transcript-name"
+                                  x-text="step.name"
+                                ></span>
+                              </template>
+                              <template
+                                x-if="step.kind === 'assistant' && (step.tool_calls || []).length"
+                              >
+                                <span
+                                  class="skill-transcript-name"
+                                  x-text="'→ ' + step.tool_calls.map(t => t.name).join(', ')"
+                                ></span>
+                              </template>
+                              <span
+                                class="skill-transcript-elapsed"
+                                x-text="(step.elapsed_ms != null ? Math.round(step.elapsed_ms) + 'ms' : '')"
+                              ></span>
+                            </div>
+                            <div
+                              x-show="skills.transcriptExpanded[idx]"
+                              x-cloak
+                              class="skill-transcript-detail"
+                            >
+                              <template x-if="step.kind === 'tool'">
+                                <div>
+                                  <div class="skill-transcript-label">
+                                    arguments
+                                  </div>
+                                  <pre x-text="step.arguments || '{}'"></pre>
+                                  <div class="skill-transcript-label">
+                                    result preview
+                                  </div>
+                                  <pre
+                                    x-text="step.result_preview || '(empty)'"
+                                  ></pre>
+                                </div>
+                              </template>
+                              <template x-if="step.kind === 'assistant'">
+                                <div>
+                                  <template x-if="step.content">
+                                    <div>
+                                      <div class="skill-transcript-label">
+                                        content
+                                      </div>
+                                      <pre x-text="step.content"></pre>
+                                    </div>
+                                  </template>
+                                  <template
+                                    x-if="(step.tool_calls || []).length"
+                                  >
+                                    <div>
+                                      <div class="skill-transcript-label">
+                                        tool_calls
+                                      </div>
+                                      <pre
+                                        x-text="JSON.stringify(step.tool_calls, null, 2)"
+                                      ></pre>
+                                    </div>
+                                  </template>
+                                  <template x-if="step.usage">
+                                    <div>
+                                      <div class="skill-transcript-label">
+                                        usage
+                                      </div>
+                                      <pre
+                                        x-text="JSON.stringify(step.usage, null, 2)"
+                                      ></pre>
+                                    </div>
+                                  </template>
+                                </div>
+                              </template>
+                            </div>
+                          </div>
+                        </template>
+                        <template x-if="(skills.run.tool_outputs || []).length">
+                          <div class="skill-transcript-artifacts">
+                            <div class="skill-transcript-label">
+                              tool_outputs/
+                            </div>
+                            <ul>
+                              <template
+                                x-for="f in skills.run.tool_outputs"
+                                :key="f.name"
+                              >
+                                <li>
+                                  <span
+                                    class="font-mono"
+                                    x-text="f.name"
+                                  ></span>
+                                  <span
+                                    class="skill-transcript-size"
+                                    x-text="'(' + f.size + ' B)'"
+                                  ></span>
+                                </li>
+                              </template>
+                            </ul>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+
+                  <div>
+                    <h3 class="text-xs font-mono text-slate-400 mb-1">
+                      SKILL.md
+                    </h3>
+                    <pre
+                      class="bg-ink-800 border border-edge rounded-lg p-3 text-xs text-slate-300 whitespace-pre-wrap max-h-96 overflow-auto"
+                      x-text="skills.current?.body_md"
+                    ></pre>
+                  </div>
+
+                  <template x-if="(skills.current?.references || []).length">
+                    <div>
+                      <h3 class="text-xs font-mono text-slate-400 mb-1">
+                        References
+                      </h3>
+                      <ul class="text-xs text-slate-300 space-y-1">
+                        <template
+                          x-for="r in skills.current.references"
+                          :key="r.name"
+                        >
+                          <li class="font-mono">
+                            · <span x-text="r.name"></span>
+                          </li>
+                        </template>
+                      </ul>
+                    </div>
+                  </template>
+
+                  <template x-if="(skills.current?.assets || []).length">
+                    <div>
+                      <h3 class="text-xs font-mono text-slate-400 mb-1">
+                        Assets
+                      </h3>
+                      <ul class="text-xs text-slate-300 space-y-1">
+                        <template
+                          x-for="a in skills.current.assets"
+                          :key="a.name"
+                        >
+                          <li class="font-mono">
+                            · <span x-text="a.name"></span>
+                          </li>
+                        </template>
+                      </ul>
+                    </div>
+                  </template>
+
+                  <template x-if="(skills.current?.templates || []).length">
+                    <div>
+                      <h3 class="text-xs font-mono text-slate-400 mb-1">
+                        Templates
+                        <span
+                          class="text-[10px] text-amber-400/70 font-normal"
+                          title="Open Skills spec renamed templates/ to assets/"
+                          >(deprecated)</span
+                        >
+                      </h3>
+                      <ul class="text-xs text-slate-300 space-y-1">
+                        <template
+                          x-for="t in skills.current.templates"
+                          :key="t.name"
+                        >
+                          <li class="font-mono">
+                            · <span x-text="t.name"></span>
+                          </li>
+                        </template>
+                      </ul>
+                    </div>
+                  </template>
+
+                  <template x-if="(skills.current?.scripts || []).length">
+                    <div>
+                      <h3 class="text-xs font-mono text-slate-400 mb-1">
+                        Scripts
+                      </h3>
+                      <ul class="text-xs text-slate-300 space-y-1">
+                        <template
+                          x-for="s in skills.current.scripts"
+                          :key="s.name"
+                        >
+                          <li class="font-mono">
+                            · <span x-text="s.name"></span>
+                          </li>
+                        </template>
+                      </ul>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <!-- Install modal -->
+            <div
+              x-show="skills.installModal"
+              x-cloak
+              x-transition.opacity
+              class="fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4"
+              @click.self="skills.installModal = false"
+            >
+              <div
+                class="card bg-ink-900 border border-edge-strong w-full max-w-md p-5"
+              >
+                <h2 class="text-lg font-semibold text-slate-100 mb-3">
+                  Install Skill from GitHub
+                </h2>
+                <p class="text-xs text-slate-400 mb-3">
+                  Paste a GitHub repo URL. The repo must contain a
+                  <code class="font-mono text-neon-cyan">SKILL.md</code> at its
+                  root.
+                </p>
+                <input
+                  type="url"
+                  x-model="skills.installUrl"
+                  placeholder="https://github.com/org/repo"
+                  class="w-full bg-ink-800 border border-edge focus:border-neon-magenta/60 outline-none rounded-lg px-3 py-2 text-sm font-mono mb-3"
+                />
+                <div class="flex justify-end gap-2">
+                  <button
+                    @click="skills.installModal = false"
+                    class="pill bg-ink-800 border border-edge text-slate-300 px-3 py-1.5 text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    @click="installSkill()"
+                    :disabled="skills.installing || !skills.installUrl"
+                    class="pill bg-neon-magenta/10 border border-neon-magenta/40 text-neon-magenta px-3 py-1.5 text-xs"
+                  >
+                    <span
+                      x-text="skills.installing ? 'Installing…' : 'Install'"
+                    ></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
