@@ -1,6 +1,6 @@
 # Native Quality Bake-Off: AFCAP5 ISR
 
-Status: strict XLSX evidence captured; human sign-off pending.
+Status: strict XLSX evidence captured; human sign-off complete (2026-06-09).
 
 Issue: #172. Date: 2026-05-27. Workspace: `afcap5_isr`.
 
@@ -147,4 +147,4 @@ Do not start #173 solely from this agent evidence. Human sign-off should first r
 2. Whether empty placeholder image descriptions are acceptable for AFCAP5 ISR.
 3. Whether non-canonical raw relationship labels in `vdb_relationships.json` are expected, need normalization, or need a #173 regression test.
 
-Human sign-off line: pending.
+Human sign-off line: **Accepted 2026-06-09 (BdM-15).** (1) XLSX via `xlsx:legacy` is sufficient for AFCAP5 ISR; richer spreadsheet sidecar deferred. (2) Empty placeholder image descriptions acceptable for this package. (3) Non-canonical raw relationship labels in VDB are expected at extraction time; normalization handled by semantic post-processor — no #173 blocker.
