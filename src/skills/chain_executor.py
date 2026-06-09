@@ -1,12 +1,10 @@
-"""LangGraph-backed execution for Theseus skill chains."""
+"""Sequential execution for Theseus skill chains."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Optional, TypedDict
-
-from langgraph.graph import END, START, StateGraph
+from typing import Any, Awaitable, Callable, Optional
 
 from src.skills.chain_models import (
     ChainArtifactRef,
@@ -18,11 +16,6 @@ from src.skills.chain_models import (
     utc_now_iso,
 )
 from src.skills.skill_models import SkillInvocationResult
-
-
-class ChainExecutionState(TypedDict, total=False):
-    chain: dict[str, Any]
-    blocked: bool
 
 
 InvokeSkillCallable = Callable[..., Awaitable[SkillInvocationResult]]
@@ -84,8 +77,8 @@ class SkillChainExecutor:
         )
         self._run_store.write_chain_run(chain_dir, initial.model_dump())
 
-        graph = self._build_graph(
-            spec=spec,
+        return await self._run_steps(
+            initial,
             chain_dir=chain_dir,
             workspace=workspace,
             workspace_root=workspace_root,
@@ -96,10 +89,6 @@ class SkillChainExecutor:
             retrieve_fn=retrieve_fn,
             runtime_mode_override=runtime_mode_override,
         )
-        final_state = await graph.ainvoke(
-            {"chain": initial.model_dump(), "blocked": False}
-        )
-        return ChainRunState.model_validate(final_state["chain"])
 
     async def resume(
         self,
@@ -125,8 +114,8 @@ class SkillChainExecutor:
             resume_notes=resume_notes,
         )
         self._run_store.write_chain_run(chain_dir, resume_state.model_dump())
-        graph = self._build_graph(
-            spec=resume_state.spec,
+        return await self._run_steps(
+            resume_state,
             chain_dir=chain_dir,
             workspace=resume_state.workspace,
             workspace_root=workspace_root,
@@ -137,53 +126,10 @@ class SkillChainExecutor:
             retrieve_fn=retrieve_fn,
             runtime_mode_override=runtime_mode_override,
         )
-        final_state = await graph.ainvoke(
-            {"chain": resume_state.model_dump(), "blocked": False}
-        )
-        return ChainRunState.model_validate(final_state["chain"])
 
-    def _build_graph(
+    async def _run_steps(
         self,
-        *,
-        spec: ChainSpec,
-        chain_dir: Path,
-        workspace: str,
-        workspace_root: Path,
-        llm: Callable[[str], Awaitable[str]],
-        entity_payload: dict[str, Any],
-        max_payload_chars: Optional[int],
-        slice_fn: Optional[Callable[..., dict[str, Any]]],
-        retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]],
-        runtime_mode_override: Optional[str],
-    ):
-        builder: StateGraph[ChainExecutionState] = StateGraph(ChainExecutionState)
-
-        previous_node = START
-        for step in spec.steps:
-            node_name = step.id
-            builder.add_node(
-                node_name,
-                self._step_node(
-                    step,
-                    chain_dir=chain_dir,
-                    workspace=workspace,
-                    workspace_root=workspace_root,
-                    llm=llm,
-                    entity_payload=entity_payload,
-                    max_payload_chars=max_payload_chars,
-                    slice_fn=slice_fn,
-                    retrieve_fn=retrieve_fn,
-                    runtime_mode_override=runtime_mode_override,
-                ),
-            )
-            builder.add_edge(previous_node, node_name)
-            previous_node = node_name
-        builder.add_edge(previous_node, END)
-        return builder.compile()
-
-    def _step_node(
-        self,
-        step: ChainStepSpec,
+        chain: ChainRunState,
         *,
         chain_dir: Path,
         workspace: str,
@@ -194,19 +140,19 @@ class SkillChainExecutor:
         slice_fn: Optional[Callable[..., dict[str, Any]]],
         retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]],
         runtime_mode_override: Optional[str],
-    ):
-        async def _run(state: ChainExecutionState) -> ChainExecutionState:
-            chain = ChainRunState.model_validate(state["chain"])
+    ) -> ChainRunState:
+        blocked = False
+        for step in chain.spec.steps:
             if chain.steps[step.id].status in {"completed", "partial"}:
-                return {"chain": chain.model_dump(), "blocked": False}
+                continue
 
-            if state.get("blocked"):
+            if blocked:
                 chain.steps[step.id].status = "skipped"
                 chain.steps[step.id].error = "chain blocked by earlier failure"
                 chain.updated_at = utc_now_iso()
                 self._finalize_if_terminal(chain, chain.updated_at)
                 self._run_store.write_chain_run(chain_dir, chain.model_dump())
-                return {"chain": chain.model_dump(), "blocked": True}
+                continue
 
             missing = [
                 dep
@@ -215,13 +161,16 @@ class SkillChainExecutor:
             ]
             if missing:
                 chain.steps[step.id].status = "skipped"
-                chain.steps[step.id].error = "dependency not completed: " + ", ".join(missing)
+                chain.steps[step.id].error = (
+                    "dependency not completed: " + ", ".join(missing)
+                )
                 chain.status = "failed"
                 chain.error = chain.steps[step.id].error
                 chain.updated_at = utc_now_iso()
                 self._finalize_if_terminal(chain, chain.updated_at)
                 self._run_store.write_chain_run(chain_dir, chain.model_dump())
-                return {"chain": chain.model_dump(), "blocked": chain.spec.stop_on_error}
+                blocked = chain.spec.stop_on_error
+                continue
 
             step_run = chain.steps[step.id]
             input_artifacts, contract_errors = self._resolve_input_artifacts(chain, step)
@@ -231,11 +180,14 @@ class SkillChainExecutor:
                 step_run.error = "; ".join(contract_errors)
                 step_run.finished_at = utc_now_iso()
                 chain.status = "failed"
-                chain.error = f"step {step.id} artifact contract failed: {step_run.error}"
+                chain.error = (
+                    f"step {step.id} artifact contract failed: {step_run.error}"
+                )
                 chain.updated_at = step_run.finished_at
                 self._finalize_if_terminal(chain, step_run.finished_at)
                 self._run_store.write_chain_run(chain_dir, chain.model_dump())
-                return {"chain": chain.model_dump(), "blocked": chain.spec.stop_on_error}
+                blocked = chain.spec.stop_on_error
+                continue
 
             step_run.status = "running"
             step_run.started_at = utc_now_iso()
@@ -266,7 +218,8 @@ class SkillChainExecutor:
                 chain.updated_at = step_run.finished_at
                 self._finalize_if_terminal(chain, step_run.finished_at)
                 self._run_store.write_chain_run(chain_dir, chain.model_dump())
-                return {"chain": chain.model_dump(), "blocked": chain.spec.stop_on_error}
+                blocked = chain.spec.stop_on_error
+                continue
 
             step_run.status = "completed"
             step_run.run_id = result.run_id
@@ -276,7 +229,9 @@ class SkillChainExecutor:
             step_run.elapsed_ms = result.elapsed_ms
             step_run.finished_at = utc_now_iso()
             if result.run_id:
-                detail = self._run_store.get_run(workspace_root, step.skill, result.run_id)
+                detail = self._run_store.get_run(
+                    workspace_root, step.skill, result.run_id
+                )
                 if detail:
                     step_run.artifacts = list(detail.get("artifacts") or [])
             step_run.missing_inputs = self._extract_missing_inputs(result.response)
@@ -286,9 +241,8 @@ class SkillChainExecutor:
             chain.updated_at = step_run.finished_at
             self._finalize_if_terminal(chain, step_run.finished_at)
             self._run_store.write_chain_run(chain_dir, chain.model_dump())
-            return {"chain": chain.model_dump(), "blocked": False}
 
-        return _run
+        return chain
 
     @staticmethod
     def _reset_for_resume(

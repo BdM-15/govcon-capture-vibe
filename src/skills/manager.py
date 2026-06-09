@@ -441,7 +441,7 @@ class SkillManager:
         source_chain_id: str = "",
         mode: str = "original",
     ) -> ChainRunState:
-        """Run a deterministic multi-skill chain through LangGraph."""
+        """Run a deterministic multi-skill chain through SkillChainExecutor."""
         if workspace_root is None:
             workspace_root = _REPO_ROOT / "rag_storage" / workspace
         executor = SkillChainExecutor(

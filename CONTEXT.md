@@ -146,7 +146,7 @@ Singleton that discovers, installs, and invokes agent skills. Discovery: walks `
 
 Runtime mode resolution order: `runtime_mode_override` arg → `SKILL_RUNTIME_MODE` env var → skill frontmatter `metadata.runtime` → default `legacy`.
 
-Skill chaining: tools-mode skills can call `invoke_skill(child_name, child_prompt)` as a tool. Max depth = 1 (one child per parent, no recursion). Cycle detection prevents `A→B→A`. `SkillManager.invoke_chain()` runs deterministic multi-skill sequences via `SkillChainExecutor` (LangGraph).
+Skill chaining: two entry points share `SkillManager.invoke()` as the execution seam. (1) Tools-mode skills call `invoke_skill(child_name, child_prompt)` — max depth = 1, cycle detection prevents `A→B→A`. (2) Studio/HTTP chains call `SkillManager.invoke_chain()` → `SkillChainExecutor`, which runs `ChainSpec` steps sequentially with artifact handoff. Planner (`SkillChainPlanner`) is HTTP-only; the `invoke_skill` tool does not use it.
 _Avoid_: "skill runner" (ambiguous — both runners exist); "skill pipeline" (see Flagged ambiguities).
 
 **LLM chat client** (`src/skills/llm_chat.py`):
@@ -252,7 +252,7 @@ HTTP API surface for skill invocation, runs management, and settings. Three regi
 _Avoid_: "skill API" (three separate registration functions exist — be specific); "runtime_mode" (means legacy vs tools); "run" without qualifying it's a `SkillRunMetadata` record under `skill_runs/`.
 
 **SkillChainExecutor** (`src/skills/chain_executor.py`):
-LangGraph-backed executor for deterministic multi-skill chains. Called by `SkillManager.invoke_chain()` when the planner (or explicit API call) needs a fixed sequence of skills rather than a single-skill invocation. Uses a `StateGraph` with one node per chain step; steps share a `ChainRunState` carried through `ChainExecutionState`. Key contract:
+Sequential executor for deterministic multi-skill chains. Called by `SkillManager.invoke_chain()` when the planner (or explicit API call) needs a fixed sequence of skills rather than a single-skill invocation. Walks `ChainSpec.steps` in order, persisting `ChainRunState` after each step. Key contract:
 
 - `invoke(spec, ...)` → runs a new `ChainSpec` (list of `ChainStepSpec`s) from scratch
 - `resume(chain, from_step_id=...)` → re-executes from a specific step after user supplies missing inputs
