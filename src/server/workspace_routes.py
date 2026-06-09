@@ -676,82 +676,17 @@ async def load_graph_neo4j(
     }
 
 
-def load_graph_networkx(
-    workspace: str,
-    max_nodes: int,
-    entity_type: str | None,
-    *,
-    working_dir: Path,
-) -> dict[str, Any]:
-    """Read graph_chunk_entity_relation.graphml and build UI payload."""
-    import networkx as nx
-
-    graphml = working_dir / workspace / "graph_chunk_entity_relation.graphml"
-    if not graphml.exists():
-        return {
-            "backend": "networkx",
-            "workspace": workspace,
-            "nodes": [],
-            "edges": [],
-            "total_nodes": 0,
-            "returned_nodes": 0,
-            "returned_edges": 0,
-            "is_truncated": False,
-        }
-
-    graph = nx.read_graphml(str(graphml))
-    if entity_type:
-        keep = [
-            node
-            for node, data in graph.nodes(data=True)
-            if str(data.get("entity_type", "")).lower() == entity_type.lower()
-        ]
-        graph = graph.subgraph(keep).copy()
-
-    total = graph.number_of_nodes()
-    if total > max_nodes:
-        top = sorted(graph.degree(), key=lambda item: item[1], reverse=True)[:max_nodes]
-        keep = [node for node, _ in top]
-        graph = graph.subgraph(keep).copy()
-
-    nodes_payload: list[dict[str, Any]] = []
-    for node, data in graph.nodes(data=True):
-        props = json_safe(dict(data))
-        nodes_payload.append(
-            {
-                "id": str(node),
-                "labels": [str(props.get("entity_id", node))],
-                "properties": {**props, "_degree": int(graph.degree(node))},
-            }
-        )
-
-    edges_payload: list[dict[str, Any]] = []
-    for index, (source, target, data) in enumerate(graph.edges(data=True)):
-        props = json_safe(dict(data))
-        relationship_type = (
-            props.pop("relationship_type", None)
-            or props.get("keywords")
-            or "RELATED_TO"
-        )
-        edges_payload.append(
-            {
-                "id": str(index),
-                "source": str(source),
-                "target": str(target),
-                "type": str(relationship_type),
-                "properties": props,
-            }
-        )
-
+def empty_graph_snapshot(workspace: str, *, backend: str) -> dict[str, Any]:
+    """Return an empty Cytoscape payload when Neo4j is not the active graph backend."""
     return {
-        "backend": "networkx",
+        "backend": backend,
         "workspace": workspace,
-        "nodes": nodes_payload,
-        "edges": edges_payload,
-        "total_nodes": int(total),
-        "returned_nodes": len(nodes_payload),
-        "returned_edges": len(edges_payload),
-        "is_truncated": total > len(nodes_payload),
+        "nodes": [],
+        "edges": [],
+        "total_nodes": 0,
+        "returned_nodes": 0,
+        "returned_edges": 0,
+        "is_truncated": False,
     }
 
 
@@ -854,11 +789,9 @@ def register_graph_routes(
             if "neo4j" in backend:
                 payload = await load_graph_neo4j(workspace, cap, entity_type)
             else:
-                payload = load_graph_networkx(
+                payload = empty_graph_snapshot(
                     workspace,
-                    cap,
-                    entity_type,
-                    working_dir=working_dir(),
+                    backend=backend or "local",
                 )
             return JSONResponse(payload)
         except Exception as exc:  # noqa: BLE001
@@ -1260,7 +1193,7 @@ __all__ = [
     "discover_workspaces",
     "json_safe",
     "load_entity_chunks",
-    "load_graph_networkx",
+    "empty_graph_snapshot",
     "load_graph_neo4j",
     "load_vdb",
     "now_iso",
