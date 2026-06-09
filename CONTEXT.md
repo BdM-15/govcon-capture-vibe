@@ -244,6 +244,10 @@ HTTP API surface for skill invocation, runs management, and settings. Three regi
 - `register_skill_settings_ui_routes`: `GET/PUT/POST /api/ui/settings/skills` (briefing-book params: `max_entities_per_type`, `max_chunks_per_entity`, `max_relationships_per_entity`, `retrieval_mode`, `retrieval_top_k`) and `GET/PUT/POST /api/ui/settings/skills/runtime` (tools-mode ceiling params persisted to `.env` via `set_env_var`).
 - `register_skill_invoke_ui_routes`: `POST /api/ui/skills/{name}/invoke` + `POST /api/ui/skills/{name}/runs/{run_id}/resume` + chain invoke/plan endpoints + `GET/POST` runs management + Studio artifact endpoints.
 
+**Studio routes** (`src/server/studio_routes.py`): thin HTTP adapters for `/api/ui/studio/*` — list deliverables, trash/restore artifacts, bulk ZIP download. Delegate to `SkillRunStore` directly (not `SkillManager` pass-through). Wired from `register_skill_ui_routes()`.
+
+**Run store modules** (`src/skills/run_index.py`, `run_projections.py`, `runs.py`): `SkillRunIndex` owns disk-walking under `skill_runs/`; `run_projections` projects envelopes into UI summary/detail payloads; `SkillRunStore` owns persistence, trash lifecycle, chain ledgers, and Studio artifact semantics.
+
 **Invoke flow** (`POST /api/ui/skills/{name}/invoke`): determine `effective_mode` via `resolve_skill_runtime_mode(frontmatter_mode)` → if `"tools"` mode, pass empty `entity_payload={}` and bound `slice_fn`/`retrieve_fn` closures (capped to payload limits) — the tool loop fetches KG data lazily. If `"legacy"` mode, eagerly build the briefing book (retrieval → slice → attach to `entity_payload`) before calling `mgr.invoke()`. Response shape: `{skill, workspace, response, entities_used, warnings, elapsed_ms, prompt_tokens_estimate, run_id, run_dir, finish_reason, runtime_mode, retrieval}`.
 
 **Resume flow** (`POST /api/ui/skills/{name}/runs/{run_id}/resume`): loads existing run, checks `can_resume` flag (HTTP 409 if not), merges `user_addendum` + `answers` dict, re-invokes with `user_supplied_context.resume_notes` in the entity payload.

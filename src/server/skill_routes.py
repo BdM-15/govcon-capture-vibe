@@ -1,16 +1,13 @@
 """Agent-skill UI routes for Project Theseus."""
 
 import asyncio
-import io
 import json
 import logging
 from pathlib import Path
-import zipfile
-from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Optional
 
 from fastapi import Body, FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from src.core import get_settings
@@ -78,46 +75,6 @@ class SkillRuntimeSettingsUpdate(BaseModel):
     max_kg_chunks: Optional[int] = Field(default=None, ge=1, le=5_000)
     max_kg_chunks_per_entity: Optional[int] = Field(default=None, ge=0, le=500)
     max_kg_relationships_per_entity: Optional[int] = Field(default=None, ge=0, le=500)
-
-
-class StudioArtifactDeleteItem(BaseModel):
-    """One artifact selected for deletion from Studio."""
-
-    skill: str = Field(..., min_length=1, max_length=128)
-    run_id: str = Field(..., min_length=1, max_length=128)
-    filename: str = Field(..., min_length=1, max_length=255)
-
-
-class StudioArtifactDeletePayload(BaseModel):
-    """Bulk deletion request for Studio artifacts."""
-
-    artifacts: list[StudioArtifactDeleteItem] = Field(..., min_length=1, max_length=200)
-
-
-class StudioArtifactZipPayload(BaseModel):
-    """Bulk download request for Studio artifacts."""
-
-    artifacts: list[StudioArtifactDeleteItem] = Field(..., min_length=1, max_length=200)
-
-
-class StudioTrashRestoreItem(BaseModel):
-    """One trashed artifact selected for restore."""
-
-    trash_id: str = Field(..., min_length=1, max_length=255)
-
-
-class StudioTrashRestorePayload(BaseModel):
-    """Bulk restore request for trashed Studio artifacts."""
-
-    artifacts: list[StudioTrashRestoreItem] = Field(..., min_length=1, max_length=200)
-
-
-def _zip_segment(value: str, fallback: str) -> str:
-    cleaned = "".join(
-        char if char.isalnum() or char in {"-", "_", "."} else "_"
-        for char in value.strip()
-    ).strip("._")
-    return (cleaned[:96] or fallback)
 
 
 def _run_dir_for_skill_run(workspace_root: Path, skill_name: str, run_id: str) -> Path | None:
@@ -1125,7 +1082,7 @@ def register_skill_run_ui_routes(
     workspace_dir: Callable[[], Path],
     manager_factory: Callable[[], Any] = get_skill_manager,
 ) -> None:
-    """Register skill run, artifact, chunk-preview, and Studio endpoints."""
+    """Register skill run, artifact, and chunk-preview endpoints."""
 
     @app.get("/api/ui/skills/{name}/runs", tags=["theseus-ui"])
     async def list_skill_runs_route(name: str, limit: int = 50) -> JSONResponse:
@@ -1356,153 +1313,6 @@ def register_skill_run_ui_routes(
             filename=path.name,
         )
 
-    @app.get("/api/ui/studio", tags=["theseus-ui"])
-    async def list_studio_deliverables_route(limit: int = 500) -> JSONResponse:
-        mgr = manager_factory()
-        deliverables = await asyncio.to_thread(
-            mgr.list_deliverables,
-            workspace_dir(),
-            limit,
-        )
-        return JSONResponse(
-            {
-                "workspace": get_settings().workspace,
-                "count": len(deliverables),
-                "deliverables": deliverables,
-            }
-        )
-
-    @app.get("/api/ui/studio/trash", tags=["theseus-ui"])
-    async def list_studio_trash_route(limit: int = 200) -> JSONResponse:
-        mgr = manager_factory()
-        artifacts = await asyncio.to_thread(
-            mgr.list_trashed_artifacts,
-            workspace_dir(),
-            limit,
-        )
-        return JSONResponse(
-            {
-                "workspace": get_settings().workspace,
-                "count": len(artifacts),
-                "artifacts": artifacts,
-            }
-        )
-
-    @app.post("/api/ui/studio/artifacts.zip", tags=["theseus-ui"])
-    async def zip_studio_artifacts_route(
-        payload: StudioArtifactZipPayload = Body(...),
-    ) -> Response:
-        mgr = manager_factory()
-        refs = [item.model_dump() for item in payload.artifacts]
-
-        def _build_zip() -> tuple[bytes, list[dict[str, str]], list[dict[str, str]]]:
-            buffer = io.BytesIO()
-            included: list[dict[str, str]] = []
-            missing: list[dict[str, str]] = []
-            with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-                for ref in refs:
-                    path = mgr.get_artifact_path(
-                        workspace_dir(),
-                        ref["skill"],
-                        ref["run_id"],
-                        ref["filename"],
-                    )
-                    if path is None:
-                        missing.append(ref)
-                        continue
-                    archive_name = "/".join(
-                        [
-                            _zip_segment(ref["skill"], "skill"),
-                            _zip_segment(ref["run_id"], "run"),
-                            path.name,
-                        ]
-                    )
-                    archive.write(path, archive_name)
-                    included.append({**ref, "archive_path": archive_name})
-                archive.writestr(
-                    "manifest.json",
-                    json.dumps(
-                        {
-                            "workspace": get_settings().workspace,
-                            "included": included,
-                            "missing": missing,
-                        },
-                        indent=2,
-                    ),
-                )
-            return buffer.getvalue(), included, missing
-
-        content, included, missing = await asyncio.to_thread(_build_zip)
-        if not included:
-            raise HTTPException(404, "No selected artifacts could be found for ZIP download")
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        filename = f"theseus-studio-products-{stamp}.zip"
-        return Response(
-            content,
-            media_type="application/zip",
-            headers={
-                "Content-Disposition": f'attachment; filename="{filename}"',
-                "X-Theseus-Zip-Count": str(len(included)),
-                "X-Theseus-Zip-Missing": str(len(missing)),
-            },
-        )
-
-    @app.delete("/api/ui/studio/artifacts", tags=["theseus-ui"])
-    async def delete_studio_artifacts_route(
-        payload: StudioArtifactDeletePayload = Body(...),
-    ) -> JSONResponse:
-        mgr = manager_factory()
-        result = await asyncio.to_thread(
-            mgr.trash_artifacts,
-            workspace_dir(),
-            [item.model_dump() for item in payload.artifacts],
-        )
-        return JSONResponse(
-            {
-                "trashed": result["trashed"],
-                "missing": result["missing"],
-                "trashed_count": len(result["trashed"]),
-                "missing_count": len(result["missing"]),
-            }
-        )
-
-    @app.post("/api/ui/studio/trash/restore", tags=["theseus-ui"])
-    async def restore_studio_artifacts_route(
-        payload: StudioTrashRestorePayload = Body(...),
-    ) -> JSONResponse:
-        mgr = manager_factory()
-        result = await asyncio.to_thread(
-            mgr.restore_trashed_artifacts,
-            workspace_dir(),
-            [item.trash_id for item in payload.artifacts],
-        )
-        return JSONResponse(
-            {
-                "restored": result["restored"],
-                "missing": result["missing"],
-                "conflicts": result["conflicts"],
-                "restored_count": len(result["restored"]),
-                "missing_count": len(result["missing"]),
-                "conflict_count": len(result["conflicts"]),
-            }
-        )
-
-    @app.delete("/api/ui/studio/trash", tags=["theseus-ui"])
-    async def empty_studio_trash_route() -> JSONResponse:
-        mgr = manager_factory()
-        result = await asyncio.to_thread(
-            mgr.purge_trashed_artifacts,
-            workspace_dir(),
-        )
-        return JSONResponse(
-            {
-                "workspace": get_settings().workspace,
-                "purged": result["purged"],
-                "skipped": result["skipped"],
-            }
-        )
-
-
 def register_skill_ui_routes(
     app: FastAPI,
     *,
@@ -1537,6 +1347,9 @@ def register_skill_ui_routes(
         workspace_dir=workspace_dir,
         manager_factory=get_skill_manager,
     )
+    from src.server.studio_routes import register_studio_ui_routes
+
+    register_studio_ui_routes(app, workspace_dir=workspace_dir)
 
 
 __all__ = [

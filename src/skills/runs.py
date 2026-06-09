@@ -10,30 +10,27 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from src.skills.run_metadata import (
-    STUDIO_EXTRA_MIME,
     list_run_artifacts,
-    list_tool_outputs,
     normalize_artifact_products,
     parse_run_envelope,
     read_artifact_manifest,
-    read_run_metadata,
-    read_run_transcript,
     resolve_artifact_display_name,
     resolve_artifact_mime,
-    is_studio_deliverable,
     slugify_for_filename,
     write_artifact_manifest,
 )
 from src.skills.chain_contracts import CONTRACT_REGISTRY
+from src.skills.run_index import (
+    SkillRunIndex,
+    list_deliverables_under_base,
+    list_runs_under_base,
+    read_run_under_base,
+)
+from src.skills.run_projections import project_run_detail_payload
 
 _SAFE_RUN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")
 _SAFE_CHAIN_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[a-z0-9_-]+$")
 _TRASH_SAFE_ID = re.compile(r"^[0-9]{8}_[0-9]{6}_[0-9]{6}_[a-z0-9._-]+$")
-_QUESTION_PREFIX = re.compile(r"^q(?:uestion)?\s*\d*\s*[:.)-]\s*(.+)$", re.IGNORECASE)
-
-
-def _normalize_interaction_line(text: str) -> str:
-    return re.sub(r"\s+", " ", str(text or "").strip().strip("*_` ")).strip()
 
 
 def _contract_products(skill_name: str) -> list[str]:
@@ -41,344 +38,6 @@ def _contract_products(skill_name: str) -> list[str]:
     if not contract:
         return []
     return sorted(contract.produces)
-
-
-def _extract_missing_inputs(response: str) -> list[str]:
-    lines = str(response or "").splitlines()
-    collecting = False
-    missing: list[str] = []
-    seen: set[str] = set()
-    for raw in lines:
-        stripped = raw.strip()
-        lowered = stripped.lower()
-        if "exact gaps" in lowered or "missing inputs" in lowered:
-            collecting = True
-            continue
-        if collecting and stripped.startswith(("- ", "* ")):
-            cleaned = stripped[2:].strip()
-            if cleaned and cleaned not in seen:
-                seen.add(cleaned)
-                missing.append(cleaned)
-            continue
-        if collecting and stripped and not stripped.startswith(("- ", "* ")):
-            break
-    if missing:
-        return missing
-    generic_markers = ("gap identified", "missing input", "missing inputs")
-    if any(marker in str(response or "").lower() for marker in generic_markers):
-        return ["See response for exact gaps."]
-    return []
-
-
-def _extract_follow_up_question(response: str) -> str:
-    lines = str(response or "").splitlines()
-    for index, raw in enumerate(lines[:40]):
-        line = _normalize_interaction_line(raw)
-        if not line:
-            continue
-        question = ""
-        matched = _QUESTION_PREFIX.match(line)
-        if matched:
-            question = _normalize_interaction_line(matched.group(1))
-        elif "?" in line:
-            question = line.split("?", 1)[0].strip() + "?"
-        if not question or not question.endswith("?"):
-            continue
-        next_nonempty = ""
-        for follow in lines[index + 1 : index + 6]:
-            next_nonempty = _normalize_interaction_line(follow)
-            if next_nonempty:
-                break
-        if matched or next_nonempty.lower().startswith("recommended:"):
-            return question
-    return ""
-
-
-def _extract_missing_outputs(artifacts: list[dict[str, Any]]) -> list[str]:
-    missing: list[str] = []
-    seen: set[str] = set()
-    for artifact in artifacts:
-        if str(artifact.get("render_status") or "").strip().lower() != "failed":
-            continue
-        for target in artifact.get("render_targets") or []:
-            text = str(target or "").strip()
-            ext = text.rsplit(".", 1)[-1].lower() if "." in text else ""
-            if ext and ext not in seen:
-                seen.add(ext)
-                missing.append(ext)
-    return missing
-
-
-def _normalize_input_request(request: Any, *, skill: str = "") -> dict[str, Any]:
-    if not isinstance(request, dict):
-        return {}
-    missing_inputs = [
-        str(item).strip()
-        for item in (request.get("missing_inputs") or [])
-        if str(item).strip()
-    ]
-    questions = [
-        item for item in (request.get("questions") or []) if isinstance(item, dict)
-    ]
-    prompt = str(request.get("prompt") or "").strip()
-    title = str(request.get("title") or "").strip()
-    kind = str(request.get("kind") or "").strip().lower()
-    skill_name = str(request.get("skill") or skill).strip()
-    needed = bool(request.get("needed")) or bool(missing_inputs or questions or prompt)
-    if not needed:
-        return {}
-    normalized: dict[str, Any] = {"needed": True}
-    if kind:
-        normalized["kind"] = kind
-    if title:
-        normalized["title"] = title
-    if prompt:
-        normalized["prompt"] = prompt
-    if skill_name:
-        normalized["skill"] = skill_name
-    if missing_inputs:
-        normalized["missing_inputs"] = missing_inputs
-    if questions:
-        normalized["questions"] = questions
-    return normalized
-
-
-def _build_run_input_request(payload: dict[str, Any]) -> dict[str, Any]:
-    explicit = _normalize_input_request(
-        payload.get("input_request"),
-        skill=str(payload.get("skill") or ""),
-    )
-    if explicit:
-        return explicit
-    response = str(payload.get("response") or "")
-    missing_inputs = _extract_missing_inputs(response)
-    if not missing_inputs:
-        question = _extract_follow_up_question(response)
-        if not question:
-            return {}
-        return {
-            "needed": True,
-            "kind": "question",
-            "title": "Question",
-            "skill": str(payload.get("skill") or ""),
-            "prompt": question,
-            "missing_inputs": [question],
-        }
-    return {
-        "needed": True,
-        "kind": "missing_input",
-        "title": "Missing Input",
-        "skill": str(payload.get("skill") or ""),
-        "missing_inputs": missing_inputs,
-    }
-
-
-def _project_run_summary_payload(payload: dict[str, Any], response: str) -> dict[str, Any]:
-    projected = dict(payload)
-    metadata = dict(projected.get("metadata") or {})
-    projected["metadata"] = metadata
-    if metadata.get("user_prompt"):
-        projected["user_prompt"] = metadata["user_prompt"]
-    input_request = _build_run_input_request({**projected, "response": response})
-    projected["input_request"] = input_request
-    projected["missing_inputs"] = list(input_request.get("missing_inputs") or [])
-    projected["status"] = "interrupted" if input_request else "completed"
-    projected["can_resume"] = bool(input_request)
-    return projected
-
-
-def _project_run_detail_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    projected = dict(payload)
-    metadata = dict(projected.get("metadata") or {})
-    projected["metadata"] = metadata
-    if metadata.get("user_prompt"):
-        projected["user_prompt"] = metadata["user_prompt"]
-    input_request = _build_run_input_request(projected)
-    missing_outputs = _extract_missing_outputs(list(projected.get("artifacts") or []))
-    projected["input_request"] = input_request
-    projected["missing_inputs"] = list(input_request.get("missing_inputs") or [])
-    projected["missing_outputs"] = missing_outputs
-    projected["status"] = "interrupted" if input_request else "completed"
-    projected["can_resume"] = bool(input_request)
-    return projected
-
-
-class SkillRunIndex:
-    """Own disk-walking and detail reads under a ``skill_runs/`` root."""
-
-    def __init__(self, base: Path) -> None:
-        self._base = base
-
-    def _targets(self, *, skill_name: Optional[str] = None) -> list[Path]:
-        if not self._base.is_dir():
-            return []
-        if skill_name:
-            return [self._base / skill_name]
-        return [path for path in self._base.iterdir() if path.is_dir()]
-
-    def _iter_run_dirs(self, *, skill_name: Optional[str] = None):
-        for skill_root in self._targets(skill_name=skill_name):
-            if not skill_root.is_dir():
-                continue
-            for run_dir in skill_root.iterdir():
-                if run_dir.is_dir():
-                    yield skill_root.name, run_dir
-
-    def _trash_root(self, workspace_root: Path) -> Path:
-        return Path(workspace_root) / ".trash" / "studio_artifacts"
-
-    def _trash_item_dir(self, workspace_root: Path, trash_id: str) -> Optional[Path]:
-        if not _TRASH_SAFE_ID.fullmatch(trash_id):
-            return None
-        trash_root = self._trash_root(workspace_root).resolve()
-        item_dir = (trash_root / trash_id).resolve()
-        try:
-            item_dir.relative_to(trash_root)
-        except ValueError:
-            return None
-        return item_dir
-
-    def _trash_meta_path(self, workspace_root: Path, trash_id: str) -> Optional[Path]:
-        item_dir = self._trash_item_dir(workspace_root, trash_id)
-        if item_dir is None:
-            return None
-        return item_dir / "meta.json"
-
-    def _read_trash_meta(self, workspace_root: Path, trash_id: str) -> Optional[dict[str, Any]]:
-        meta_path = self._trash_meta_path(workspace_root, trash_id)
-        if meta_path is None or not meta_path.is_file():
-            return None
-        try:
-            payload = json.loads(meta_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return None
-        if not isinstance(payload, dict):
-            return None
-        payload["trash_id"] = trash_id
-        return payload
-
-    def list_runs(
-        self,
-        *,
-        skill_name: Optional[str] = None,
-        limit: int = 50,
-    ) -> list[dict[str, Any]]:
-        runs: list[dict[str, Any]] = []
-        for derived_skill_name, run_dir in self._iter_run_dirs(skill_name=skill_name):
-            envelope = run_dir / "run.md"
-            response_path = run_dir / "response.md"
-            if not envelope.exists():
-                continue
-            meta = parse_run_envelope(envelope.read_text(encoding="utf-8"))
-            meta["run_id"] = meta.get("run_id") or run_dir.name
-            meta["skill"] = meta.get("skill") or derived_skill_name
-            if response_path.exists():
-                try:
-                    meta["response_chars"] = response_path.stat().st_size
-                except OSError:
-                    pass
-            response = ""
-            if response_path.exists():
-                try:
-                    response = response_path.read_text(encoding="utf-8")
-                except OSError:
-                    response = ""
-            runs.append(_project_run_summary_payload(meta, response))
-        runs.sort(key=lambda run: run.get("created_at", ""), reverse=True)
-        return runs[:limit]
-
-    def read_run(
-        self,
-        skill_name: str,
-        run_id: str,
-        *,
-        is_safe_run_id: Callable[[str], bool],
-    ) -> Optional[dict[str, Any]]:
-        if not is_safe_run_id(run_id):
-            return None
-        run_dir = self._base / skill_name / run_id
-        if not run_dir.is_dir():
-            return None
-        envelope_path = run_dir / "run.md"
-        response_path = run_dir / "response.md"
-        prompt_path = run_dir / "prompt.md"
-        meta = (
-            parse_run_envelope(envelope_path.read_text(encoding="utf-8"))
-            if envelope_path.exists()
-            else {}
-        )
-        return {
-            "run_id": run_id,
-            "skill": skill_name,
-            "run_dir": str(run_dir.resolve()),
-            "metadata": meta,
-            "response": response_path.read_text(encoding="utf-8")
-            if response_path.exists()
-            else "",
-            "prompt": prompt_path.read_text(encoding="utf-8")
-            if prompt_path.exists()
-            else "",
-            "artifacts": list_run_artifacts(
-                run_dir,
-                default_products=_contract_products(skill_name),
-            ),
-            "transcript": read_run_transcript(run_dir),
-            "tool_outputs": list_tool_outputs(run_dir),
-        }
-
-    def list_deliverables(
-        self,
-        *,
-        is_safe_run_id: Callable[[str], bool],
-        limit: int = 500,
-    ) -> list[dict[str, Any]]:
-        rows: list[dict[str, Any]] = []
-        for skill_name, run_dir in self._iter_run_dirs():
-            if not is_safe_run_id(run_dir.name):
-                continue
-            artifacts_dir = run_dir / "artifacts"
-            if not artifacts_dir.is_dir():
-                continue
-
-            meta = read_run_metadata(run_dir)
-            manifest = read_artifact_manifest(run_dir)
-            created_at = meta.get("created_at") or ""
-            title = meta.get("title")
-
-            for artifact in sorted(artifacts_dir.iterdir()):
-                if not artifact.is_file():
-                    continue
-                if not is_studio_deliverable(artifact.name):
-                    continue
-                try:
-                    stat = artifact.stat()
-                except OSError:
-                    continue
-                rel = artifact.relative_to(artifacts_dir).as_posix()
-                products = normalize_artifact_products(
-                    (manifest.get(rel) or {}).get("products")
-                ) or _contract_products(skill_name)
-                rows.append(
-                    {
-                        "skill": skill_name,
-                        "run_id": run_dir.name,
-                        "filename": artifact.name,
-                        "display_name": resolve_artifact_display_name(
-                            artifact.name,
-                            manifest.get(rel),
-                        ),
-                        "mime": resolve_artifact_mime(artifact.name),
-                        "size": stat.st_size,
-                        "created_at": created_at
-                        or datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
-                        "title": title,
-                        "ext": artifact.suffix.lstrip(".").lower(),
-                        "products": products,
-                    }
-                )
-
-        rows.sort(key=lambda row: row.get("created_at", ""), reverse=True)
-        return rows[:limit]
 
 
 def build_legacy_run_envelope(
@@ -459,44 +118,6 @@ def build_tools_run_envelope(
     )
 
 
-def list_runs_under_base(
-    base: Path,
-    *,
-    skill_name: Optional[str] = None,
-    limit: int = 50,
-) -> list[dict[str, Any]]:
-    """List persisted skill runs, newest first."""
-    return SkillRunIndex(base).list_runs(skill_name=skill_name, limit=limit)
-
-
-def read_run_under_base(
-    base: Path,
-    *,
-    skill_name: str,
-    run_id: str,
-    is_safe_run_id: Callable[[str], bool],
-) -> Optional[dict[str, Any]]:
-    """Read one persisted run by skill + run id."""
-    return SkillRunIndex(base).read_run(
-        skill_name,
-        run_id,
-        is_safe_run_id=is_safe_run_id,
-    )
-
-
-def list_deliverables_under_base(
-    base: Path,
-    *,
-    is_safe_run_id: Callable[[str], bool],
-    limit: int = 500,
-) -> list[dict[str, Any]]:
-    """Flatten every artifact across every skill run into one feed."""
-    return SkillRunIndex(base).list_deliverables(
-        is_safe_run_id=is_safe_run_id,
-        limit=limit,
-    )
-
-
 class SkillRunStore:
     """Filesystem store for skill run envelopes, outputs, and artifacts."""
 
@@ -566,7 +187,7 @@ class SkillRunStore:
 
     @classmethod
     def project_run_payload(cls, payload: dict[str, Any]) -> dict[str, Any]:
-        return _project_run_detail_payload(payload)
+        return project_run_detail_payload(payload)
 
     @classmethod
     def project_chain_payload(cls, payload: dict[str, Any]) -> dict[str, Any]:

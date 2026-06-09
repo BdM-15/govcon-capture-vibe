@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.server.skill_routes import register_skill_run_ui_routes
+from src.server.studio_routes import register_studio_ui_routes
 from src.skills.runs import SkillRunStore
 from src.skills.skill_emitters import auto_emit_artifacts
 from src.skills.skill_models import Skill, SkillFrontmatter
@@ -235,6 +236,7 @@ def test_run_tools_skill_auto_emit_deliverables_reach_studio_route(tmp_path: Pat
 
     app = FastAPI()
     register_skill_run_ui_routes(app, workspace_dir=lambda: tmp_path)
+    register_studio_ui_routes(app, workspace_dir=lambda: tmp_path)
     response = TestClient(app).get("/api/ui/studio")
 
     assert response.status_code == 200
