@@ -80,9 +80,9 @@ def test_build_startup_banner_items_reports_native_pipeline_health() -> None:
         entity_count=33,
         relationship_count=35,
         colors=_Colors,
-        version_resolver=lambda pkg: {"mineru": "1.2.3", "lightrag-hku": "1.5.0rc3"}[pkg],
+        version_resolver=lambda pkg: {"mineru": "1.2.3", "lightrag-hku": "1.5.2"}[pkg],
         pipeline_health=NativePipelineHealth(
-            lightrag_version="1.5.0rc3",
+            lightrag_version="1.5.2",
             native_pipeline_available=True,
             roles=["extract", "keyword", "query", "vlm"],
             storage={
@@ -115,7 +115,7 @@ def test_build_startup_banner_items_reports_native_pipeline_health() -> None:
     assert "Parser Routing" in labels
     assert "MinerU Mode" in labels
     assert "Parser Workers" in labels
-    assert "1.5.0rc3" in values
+    assert "1.5.2" in values
     assert "extract, keyword, query, vlm" in values
     assert "JsonKVStorage" in values
     assert "pdf:mineru-ite,docx:native-ite" in values
