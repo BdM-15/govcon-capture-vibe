@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     # LightRAG knowledge graph engine (explicit pin for native multimodal and Neo4j workspace features)
-    "lightrag-hku>=1.5.0rc3",
+    "lightrag-hku>=1.5.2",
     # MinerU 3.x multimodal document parsing for LightRAG parser routing
     "mineru[core]>=3.0.9",
     # Cloud LLM access (xAI Grok via OpenAI-compatible API)
@@ -78,7 +78,7 @@ explicit = true
 # Override torch/torchvision to use CUDA 12.4 builds
 torch = { index = "pytorch-cu124" }
 torchvision = { index = "pytorch-cu124" }
-lightrag-hku = { git = "https://github.com/HKUDS/LightRAG.git", rev = "33b067ffadf1eee2655a7efe9c72de4f8c25cbab" }
+lightrag-hku = { git = "https://github.com/HKUDS/LightRAG.git", rev = "fa213a85f8adf9461ed6de2b311da1fd2ce363f9" }
 
 [dependency-groups]
 dev = [

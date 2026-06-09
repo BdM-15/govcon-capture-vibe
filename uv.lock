@@ -954,7 +954,7 @@ requires-dist = [
     { name = "huggingface-hub", specifier = ">=0.34.0,<1.0.0" },
     { name = "instructor", specifier = ">=1.15.0" },
     { name = "langgraph", specifier = ">=1.1.10" },
-    { name = "lightrag-hku", git = "https://github.com/HKUDS/LightRAG.git?rev=33b067ffadf1eee2655a7efe9c72de4f8c25cbab" },
+    { name = "lightrag-hku", git = "https://github.com/HKUDS/LightRAG.git?rev=fa213a85f8adf9461ed6de2b311da1fd2ce363f9" },
     { name = "mineru", extras = ["core"], specifier = ">=3.0.9" },
     { name = "neo4j", specifier = ">=5.0.0" },
     { name = "openai", specifier = ">=2.0.0,<3.0.0" },
@@ -1588,8 +1588,8 @@ wheels = [
 
 [[package]]
 name = "lightrag-hku"
-version = "1.5.0"
-source = { git = "https://github.com/HKUDS/LightRAG.git?rev=33b067ffadf1eee2655a7efe9c72de4f8c25cbab#33b067ffadf1eee2655a7efe9c72de4f8c25cbab" }
+version = "1.5.2"
+source = { git = "https://github.com/HKUDS/LightRAG.git?rev=fa213a85f8adf9461ed6de2b311da1fd2ce363f9#fa213a85f8adf9461ed6de2b311da1fd2ce363f9" }
 dependencies = [
     { name = "aiohttp" },
     { name = "configparser" },
