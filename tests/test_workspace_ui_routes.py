@@ -5,12 +5,8 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.server.workspace_routes import (
-    discover_workspaces,
-    register_workspace_ui_routes,
-    safe_count_json_keys,
-    set_env_var,
-)
+from src.server.workspace_maintenance import discover_workspaces, safe_count_json_keys, set_env_var
+from src.server.workspace_ui_routes import register_workspace_ui_routes
 
 
 def _client(
@@ -168,13 +164,13 @@ def test_inventory_delete_wipe_and_restart_routes_are_injected(tmp_path) -> None
 
 
 def test_set_env_var_updates_env_file_and_process_env(tmp_path, monkeypatch) -> None:
-    import src.server.workspace_routes as workspace_routes
+    import src.server.workspace_maintenance as workspace_maintenance
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(workspace_routes, "reset_settings", lambda: None)
+    monkeypatch.setattr(workspace_maintenance, "reset_settings", lambda: None)
     (tmp_path / ".env").write_text("KEEP=1\nWORKSPACE=old\n# WORKSPACE=comment\n", encoding="utf-8")
 
     set_env_var("WORKSPACE", "new")
 
     assert (tmp_path / ".env").read_text(encoding="utf-8") == "KEEP=1\nWORKSPACE=new\n# WORKSPACE=comment\n"
-    assert workspace_routes.os.environ["WORKSPACE"] == "new"
+    assert workspace_maintenance.os.environ["WORKSPACE"] == "new"

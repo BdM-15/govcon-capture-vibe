@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
-from src.server import workspace_routes as maintenance_module
-from src.server.workspace_routes import WorkspaceMaintenance
+from src.server import workspace_maintenance as maintenance_module
+from src.server.workspace_maintenance import WorkspaceMaintenance
 
 
 def test_workspace_maintenance_inventory_aggregates_sources(monkeypatch) -> None:

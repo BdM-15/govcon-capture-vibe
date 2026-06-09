@@ -3,7 +3,7 @@ import json
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.server.workspace_routes import load_entity_chunks, register_entity_chunk_routes
+from src.server.entity_chunk_routes import load_entity_chunks, register_entity_chunk_routes
 
 
 def test_load_entity_chunks_reads_name_variants_limits_and_shapes_previews(tmp_path) -> None:

@@ -71,14 +71,11 @@ from src.server.admin_routes import (
 from src.server.document_routes import register_processing_log_routes
 from src.server.prompt_library import register_prompt_library_routes
 from src.server.skill_routes import register_skill_ui_routes
-from src.server.workspace_routes import (
-    register_entity_chunk_routes,
-    register_graph_routes,
-    register_intelligence_routes,
-    register_workspace_ui_routes,
-    self_restart as _self_restart,
-    set_env_var as _set_env_var,
-)
+from src.server.entity_chunk_routes import register_entity_chunk_routes
+from src.server.graph_routes import register_graph_routes
+from src.server.intelligence_routes import register_intelligence_routes
+from src.server.workspace_maintenance import self_restart as _self_restart, set_env_var as _set_env_var
+from src.server.workspace_ui_routes import register_workspace_ui_routes
 
 logger = logging.getLogger(__name__)
 

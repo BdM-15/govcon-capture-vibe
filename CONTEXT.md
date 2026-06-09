@@ -375,8 +375,14 @@ _Avoid_: calling the adapter a wrapper runtime for a separate ingestion stack; T
 `GET /api/ui/mcps` — lists vendored MCP servers from `tools/mcps/` with env-var status (secret values masked: first 4 + last 2 chars). `POST /api/ui/mcps/{name}/keys` — update MCP env vars (`_SAFE_MCP_NAME`, `_SAFE_ENV_KEY` regex guards) and optionally restart. `POST /api/ui/mcps/{name}/test` — test MCP connection.
 _Avoid_: counting documents from Neo4j (stats reads VDB JSON files — faster, no connection required).
 
-**Workspace management** (`src/server/workspace_routes.py`):
-Routes for creating, switching, inspecting, and deleting workspaces. `WorkspaceMaintenance` (deep module) implements discovery and deletion; `discover_workspaces(working_dir)` finds folders under `rag_storage/` that contain any of `kv_store_doc_status.json`, `vdb_entities.json`, `vdb_chunks.json`.
+**Workspace modules** (split from former `workspace_routes.py` god file):
+- `workspace_maintenance.py` — `WorkspaceMaintenance` deep module: discovery, inventory, delete, wipe, `safe_count_json_keys`
+- `workspace_ui_routes.py` — workspace list/switch/inventory/delete/restart HTTP adapters
+- `graph_routes.py` — Cytoscape graph snapshot + GraSS style endpoint
+- `entity_chunk_routes.py` — entity drill-down chunk previews
+- `intelligence_routes.py` — RFP L↔M matrix / traceability rollup
+
+`discover_workspaces(working_dir)` finds folders under `rag_storage/` that contain any of `kv_store_doc_status.json`, `vdb_entities.json`, `vdb_chunks.json`.
 
 | Route                                   | Effect                                                                                                                              |
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
