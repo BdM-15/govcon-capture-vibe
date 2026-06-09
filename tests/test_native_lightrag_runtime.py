@@ -152,7 +152,7 @@ def test_build_native_lightrag_runtime_constructs_direct_lightrag_and_health() -
         get_default_catalog=lambda: SimpleNamespace(render_part_d=lambda: "PART D"),
         make_rerank_func=lambda: "rerank-func",
         native_pipeline_available_fn=lambda: True,
-        version_resolver=lambda pkg: {"lightrag-hku": "1.5.0rc3"}[pkg],
+        version_resolver=lambda pkg: {"lightrag-hku": "1.5.2"}[pkg],
     )
 
     assert runtime.adapter.lightrag.kwargs["working_dir"] == "./rag_storage"
@@ -165,7 +165,7 @@ def test_build_native_lightrag_runtime_constructs_direct_lightrag_and_health() -
     assert runtime.adapter.llm_model_func == "modal-llm"
     assert runtime.adapter.vision_model_func == "vision-llm"
     assert runtime.health.native_pipeline_available is True
-    assert runtime.health.lightrag_version == "1.5.0rc3"
+    assert runtime.health.lightrag_version == "1.5.2"
     assert runtime.health.storage == {
         "kv": "JsonKVStorage",
         "vector": "NanoVectorDBStorage",
@@ -200,7 +200,7 @@ def test_build_native_lightrag_runtime_applies_parser_routing_to_lightrag_kwargs
         get_default_catalog=lambda: SimpleNamespace(render_part_d=lambda: "PART D"),
         make_rerank_func=lambda: None,
         native_pipeline_available_fn=lambda: True,
-        version_resolver=lambda pkg: "1.5.0rc3",
+        version_resolver=lambda pkg: "1.5.2",
         configure_native_parser_environment_fn=lambda settings: parser_health,
     )
 
@@ -229,7 +229,7 @@ def test_build_native_lightrag_runtime_installs_chunk_guardrails() -> None:
         get_default_catalog=lambda: SimpleNamespace(render_part_d=lambda: "PART D"),
         make_rerank_func=lambda: None,
         native_pipeline_available_fn=lambda: True,
-        version_resolver=lambda pkg: "1.5.0rc3",
+        version_resolver=lambda pkg: "1.5.2",
         install_chunk_guardrails_fn=lambda: calls.append("installed"),
     )
 
