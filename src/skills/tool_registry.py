@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Awaitable, Callable
 
-from src.skills.tool_competitive_intel import tool_collect_competitive_obligation_intel
+from src.skills.skill_local_tools import load_skill_tool_module
 from src.skills.tool_filesystem import tool_read_file, tool_run_script, tool_write_file
 from src.skills.tool_kg import tool_kg_chunks, tool_kg_entities, tool_kg_query
 from src.skills.tool_skill_chain import tool_invoke_skill
@@ -30,7 +31,11 @@ class ToolSpec:
         }
 
 
-def build_tool_specs(*, skill_name: str | None = None) -> list[ToolSpec]:
+def build_tool_specs(
+    *,
+    skill_name: str | None = None,
+    skill_dir: Path | None = None,
+) -> list[ToolSpec]:
     """Return the core tool registry plus any skill-specific helpers."""
     specs = [
         ToolSpec(
@@ -261,7 +266,8 @@ def build_tool_specs(*, skill_name: str | None = None) -> list[ToolSpec]:
         ),
     ]
 
-    if skill_name == "competitive-intel":
+    if skill_name == "competitive-intel" and skill_dir is not None:
+        obligation_tools = load_skill_tool_module(skill_dir, "competitive_intel_tools")
         specs.append(
             ToolSpec(
                 name="collect_competitive_obligation_intel",
@@ -296,7 +302,7 @@ def build_tool_specs(*, skill_name: str | None = None) -> list[ToolSpec]:
                     "required": ["contract_number"],
                     "additionalProperties": False,
                 },
-                handler=tool_collect_competitive_obligation_intel,
+                handler=obligation_tools.tool_collect_competitive_obligation_intel,
             )
         )
 

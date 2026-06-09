@@ -10,11 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from src.skills.run_metadata import read_artifact_manifest, write_artifact_manifest
+from src.skills.skill_local_tools import load_skill_tool_module
 from src.skills.skill_models import Skill
-from src.skills.tool_competitive_intel import (
-    build_competitive_intel_brief_markdown,
-    build_competitive_intel_product_title,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -220,11 +217,17 @@ def _brief_source_path(
         if isinstance(payload, dict) and payload.get("obligations"):
             out = artifacts_dir / f"{base}_brief.md"
             out.write_text(
-                build_competitive_intel_brief_markdown(payload, title),
+                _competitive_intel_helpers(skill).build_competitive_intel_brief_markdown(
+                    payload, title
+                ),
                 encoding="utf-8",
             )
             return out
     return None
+
+
+def _competitive_intel_helpers(skill: Skill):
+    return load_skill_tool_module(Path(skill.path), "competitive_intel_tools")
 
 
 def _descriptive_profile_title(
@@ -238,7 +241,9 @@ def _descriptive_profile_title(
     for source in _xlsx_source_paths(skill, artifacts_dir, profile):
         payload = _load_json(source)
         if isinstance(payload, dict) and payload.get("obligations"):
-            return build_competitive_intel_product_title(payload)
+            return _competitive_intel_helpers(skill).build_competitive_intel_product_title(
+                payload
+            )
     return fallback_title
 
 

@@ -2,9 +2,16 @@ import asyncio
 import json
 from pathlib import Path
 
-from src.skills.tool_competitive_intel import tool_collect_competitive_obligation_intel
+from src.skills.skill_local_tools import load_skill_tool_module
 from src.skills.tool_registry import build_tool_specs
 from src.skills.tool_types import ToolContext
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_CI_SKILL_DIR = _REPO_ROOT / ".github" / "skills" / "competitive-intel"
+_ci_tools = load_skill_tool_module(_CI_SKILL_DIR, "competitive_intel_tools")
+tool_collect_competitive_obligation_intel = (
+    _ci_tools.tool_collect_competitive_obligation_intel
+)
 
 
 class _FakeSession:
@@ -44,7 +51,13 @@ def _ctx(tmp_path: Path, responses) -> ToolContext:
 
 
 def test_build_tool_specs_adds_competitive_intel_collector_only_for_skill() -> None:
-    competitive_tools = {spec.name for spec in build_tool_specs(skill_name="competitive-intel")}
+    competitive_tools = {
+        spec.name
+        for spec in build_tool_specs(
+            skill_name="competitive-intel",
+            skill_dir=_CI_SKILL_DIR,
+        )
+    }
     generic_tools = {spec.name for spec in build_tool_specs(skill_name="proposal-generator")}
 
     assert "collect_competitive_obligation_intel" in competitive_tools

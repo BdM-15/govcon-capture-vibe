@@ -1,10 +1,16 @@
 from pathlib import Path
 import json
+import shutil
 import subprocess
 
 from src.skills.skill_emitters import auto_emit_artifacts
+from src.skills.skill_local_tools import load_skill_tool_module
 from src.skills.skill_models import Skill, SkillFrontmatter
-from src.skills.tool_competitive_intel import build_competitive_intel_brief_markdown
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_CI_SKILL_DIR = _REPO_ROOT / ".github" / "skills" / "competitive-intel"
+_ci_tools = load_skill_tool_module(_CI_SKILL_DIR, "competitive_intel_tools")
+build_competitive_intel_brief_markdown = _ci_tools.build_competitive_intel_brief_markdown
 
 
 def _skill(tmp_path: Path) -> Skill:
@@ -29,6 +35,10 @@ def _office_skill(tmp_path: Path) -> Skill:
 def _competitive_intel_skill(tmp_path: Path) -> Skill:
     skill_dir = tmp_path / "competitive-intel"
     (skill_dir / "assets").mkdir(parents=True)
+    shutil.copy(
+        _CI_SKILL_DIR / "competitive_intel_tools.py",
+        skill_dir / "competitive_intel_tools.py",
+    )
     return Skill(
         name="competitive-intel",
         path=str(skill_dir),
