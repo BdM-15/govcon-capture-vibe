@@ -107,9 +107,9 @@ ARTIFACT_SKILLS = {
     "competitive-intel",
 }
 
-# Skills declared as ``runtime: legacy`` in frontmatter — they don't produce
-# the same transcript shape. Skip the transcript-call assertion for these.
-LEGACY_SKILLS = {"huashu-design"}
+# Skills that don't produce the standard tools-mode transcript shape.
+# Skip the transcript-call assertion for these.
+LEGACY_SKILLS: set[str] = set()
 
 # Pure utility skills that don't (and shouldn't) consult the workspace KG.
 # They operate on inputs handed to them by other skills (e.g. renderers takes

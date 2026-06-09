@@ -10,7 +10,7 @@ metadata:
   category: govcon-platform
   version: 1.0.0
   status: active
-  runtime: legacy
+  runtime: tools
 ---
 
 # Workload Analyzer
