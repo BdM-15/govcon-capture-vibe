@@ -211,6 +211,21 @@ class ChatMessageCreate(BaseModel):
     """Body for chat message endpoints."""
 
     content: str = Field(..., min_length=1, max_length=20000)
+    mode: str | None = Field(
+        default=None,
+        max_length=20,
+        description="Optional per-message query mode override (e.g. bypass for one send).",
+    )
+
+
+def resolve_message_mode(chat: dict[str, Any], payload: ChatMessageCreate) -> str:
+    """Effective query mode for one message — payload override or chat default."""
+    if payload.mode is not None:
+        mode = payload.mode.strip()
+        if mode not in VALID_QUERY_MODES:
+            raise HTTPException(400, f"Unsupported mode: {mode}")
+        return mode
+    return str(chat.get("mode") or "mix")
 
 
 def trim_sources(data: dict) -> dict:
@@ -311,17 +326,21 @@ def register_chat_routes(
     async def post_message(chat_id: str, payload: ChatMessageCreate) -> JSONResponse:
         """Append user message, invoke RAG query, persist assistant reply."""
         chat = chat_store.read(chat_id)
-        user_msg = {
+        chat_default = str(chat.get("mode") or "mix")
+        mode = resolve_message_mode(chat, payload)
+        user_msg: dict[str, Any] = {
             "role": "user",
             "content": payload.content,
             "ts": now(),
+            "mode": mode,
         }
+        if mode != chat_default:
+            user_msg["mode_override"] = True
         chat["messages"].append(user_msg)
 
         history = chat_store.build_history(chat, exclude_last=True)
         overrides = query_settings.build_overrides()
         sources_payload: dict | None = None
-        mode = chat.get("mode", "mix")
         answer: str | Any = ""
         try:
             if query_llm_func is not None:
@@ -378,25 +397,39 @@ def register_chat_routes(
     ) -> StreamingResponse:
         """Stream assistant reply token-by-token via SSE."""
         chat = chat_store.read(chat_id)
-        user_msg = {
+        chat_default = str(chat.get("mode") or "mix")
+        mode = resolve_message_mode(chat, payload)
+        user_msg: dict[str, Any] = {
             "role": "user",
             "content": payload.content,
             "ts": now(),
+            "mode": mode,
         }
+        if mode != chat_default:
+            user_msg["mode_override"] = True
         chat["messages"].append(user_msg)
         if chat.get("title") in (None, "", "New chat") and len(chat["messages"]) <= 1:
             chat_store.maybe_autotitle(chat, payload.content)
         chat_store.write(chat)
 
         history = chat_store.build_history(chat, exclude_last=True)
-        mode = chat.get("mode", "mix")
         overrides = query_settings.build_overrides()
 
         async def event_stream() -> AsyncIterator[str]:
             yield "event: open\ndata: {}\n\n"
+            if mode == "bypass":
+                initial_status = {
+                    "phase": "bypass",
+                    "label": "Bypass — no workspace retrieval…",
+                }
+            else:
+                initial_status = {
+                    "phase": "retrieving",
+                    "label": "Retrieving context…",
+                }
             yield (
                 "event: status\ndata: "
-                + json.dumps({"phase": "retrieving", "label": "Retrieving context…"})
+                + json.dumps(initial_status)
                 + "\n\n"
             )
             collected: list[str] = []

@@ -30,6 +30,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     chats: [],
     currentChat: null,
     composer: "",
+    composerBypassOnce: false,
     sending: false,
     chatStatus: { phase: null, label: "", retrieve_ms: null },
     chatAbort: null,
