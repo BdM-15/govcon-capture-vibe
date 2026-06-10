@@ -8,9 +8,9 @@ from fastapi.responses import JSONResponse
 
 PROMPT_LIBRARY: list[dict[str, str]] = [
     # ═════════════════ Phase 4 — Proposal Planning ═════════════════
-    # ── Discovery & orientation (tiered workflow entry points) ──
+    # ── Discovery & orientation (depth/format live in each prompt, not system persona) ──
     {"phase": "4", "category": "Discovery", "title": "Scope & services primer",
-     "prompt": "Provide an overview of the scope and services for this contract. Use an educational tone in plain language; expand acronyms on first use. Stay grounded in retrieved document terminology and facts — cite with [N]. Explain structure: contract type, periods, CLINs or task areas, major deliverables, and key performance mechanisms. Assume an intelligent reader who is new to this specific procurement. Prioritize clarity and completeness over brevity. End with 3-5 grounded 'Explore next' follow-up questions. Do not append unsolicited win themes or capture strategy."},
+     "prompt": "Provide an overview of the scope and services for this contract. Use an educational tone in plain language; expand acronyms on first use. Stay grounded in retrieved document terminology and facts — cite with [N]. Explain structure: contract type, periods, task/service areas (walk major PWS/SOW sections with substantive paragraphs per area — not one-line bullets), major deliverables, and key performance mechanisms. CLINs are supporting structure only; prioritize what the contractor must perform. Assume a reader new to this procurement who is not a domain SME. Prioritize clarity and completeness over brevity. End with 3-5 grounded 'Explore next' follow-up questions. Do not append unsolicited win themes or capture strategy."},
     {"phase": "4", "category": "Discovery", "title": "Site & location inventory",
      "prompt": "Summarize all sites and locations in scope. Organize by country, then region. Note counts where the documents support them. Identify geographic clusters, OCONUS vs CONUS concentration, and any site-specific appendix patterns. Flag data gaps. Cite every factual claim with [N]."},
     {"phase": "4", "category": "Discovery", "title": "Topic deep-dive",
@@ -116,6 +116,8 @@ PROMPT_LIBRARY: list[dict[str, str]] = [
 # Suggested prompt library route (Shipley phases 4-6)
 #
 # Design rules:
+#  - Response depth and format (lookup vs elaboration vs strategic vs forensic)
+#    belong HERE in each starter prompt — not as rigid tiers in the system persona.
 #  - Pattern-based, not keyword-based: prompts assume Theseus has indexed the
 #    RFP's structure (sections, requirements, eval criteria, deliverables) and
 #    refer to those abstractions rather than literal headings.

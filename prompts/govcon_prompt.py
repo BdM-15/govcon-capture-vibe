@@ -66,6 +66,12 @@ v7.1   - Forbid space/comma-joined canonical types in keywords field.
 
 Changelog:
 ----------
+v3.7.0 (Jun 2026) - Restore #69 query core; move depth tiers to prompt library (issue #192)
+  - Removed rigid Response Depth tiers from system prompt (were compressing scope overviews)
+  - Restored #69 strategic analysis approach and "prefer thoroughness over brevity" for walkthroughs
+  - Kept v3.1-v3.3 guardrails: Phase 4-6 scope, inline [N], UCF/non-UCF entities, ontology vs fact, templates
+  - Depth/format guidance now lives in prompt-library starters (e.g. scope primer, forensic, deep-dive)
+
 v3.6.0 (Jun 2026) - Tiered strategic analyst query persona (issue #192)
   - Restored #69 strategic-analyst grounding balance (interpret + recommend when warranted)
   - Added explicit Response Depth tiers: lookup, elaboration, strategic, forensic
