@@ -1274,6 +1274,12 @@ details.acc .summary-actions {
     )
     1;
 }
+.composer-input-row .composer-textarea {
+  width: 100%;
+}
+.composer-bypass-toggle input:checked + span {
+  color: var(--neon-amber);
+}
 
 /* New-chat / send hero button: shimmering gradient */
 .btn-hero-cyan {

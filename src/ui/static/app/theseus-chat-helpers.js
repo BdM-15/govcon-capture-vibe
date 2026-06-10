@@ -77,16 +77,34 @@ const theseusResetChatStreamState = function theseusResetChatStreamState(app) {
   }
 };
 
-const theseusBeginChatSend = function theseusBeginChatSend(app, content) {
+const theseusResolveSendMode = function theseusResolveSendMode(app) {
+  const chatMode = app.currentChat?.mode || "mix";
+  if (app.composerBypassOnce) {
+    return { mode: "bypass", modeOverride: chatMode !== "bypass" };
+  }
+  return { mode: chatMode, modeOverride: false };
+};
+
+const theseusBeginChatSend = function theseusBeginChatSend(
+  app,
+  content,
+  sendMeta = {},
+) {
+  const { mode = app.currentChat?.mode || "mix", modeOverride = false } =
+    sendMeta;
   app.composer = "";
+  app.composerBypassOnce = false;
   app.sending = true;
   theseusResetChatStreamState(app);
 
-  app.currentChat.messages.push({
+  const userMsg = {
     role: "user",
     content,
     ts: new Date().toISOString(),
-  });
+    mode,
+  };
+  if (modeOverride) userMsg.mode_override = true;
+  app.currentChat.messages.push(userMsg);
   app.currentChat.messages.push({
     role: "assistant",
     content: "",
@@ -130,7 +148,13 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
 
   const content = app.composer.trim();
   const chatId = app.currentChat.id;
-  let live = theseusBeginChatSend(app, content);
+  const sendMeta = theseusResolveSendMode(app);
+  let live = theseusBeginChatSend(app, content, sendMeta);
+
+  const payload = { content };
+  if (sendMeta.modeOverride) {
+    payload.mode = sendMeta.mode;
+  }
 
   const controller = new AbortController();
   app.chatAbort = controller;
@@ -138,7 +162,7 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
     const resp = await fetch(`/api/ui/chats/${chatId}/messages/stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify(payload),
       signal: controller.signal,
     });
     if (!resp.ok || !resp.body) {

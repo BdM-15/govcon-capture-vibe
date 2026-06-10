@@ -205,6 +205,15 @@
                               ></span>
                             </template>
                           </div>
+                          <div
+                            x-show="m.role === 'user' && m.mode === 'bypass'"
+                            class="flex items-center gap-2 px-2 text-[10px] font-mono uppercase tracking-wider"
+                          >
+                            <span
+                              class="pill bg-neon-amber/10 text-neon-amber border border-neon-amber/35"
+                              x-text="m.mode_override ? 'bypass · this message' : 'bypass'"
+                            ></span>
+                          </div>
                           <!-- assistant footer: mode + timing pills -->
                           <div
                             x-show="m.role === 'assistant' && !m.streaming && (m.mode || m.timing)"
@@ -458,10 +467,11 @@
                     </div>
 
                     <!-- Composer -->
-                    <div class="composer-bar p-4">
-                      <div class="max-w-4xl mx-auto space-y-2">
-                        <!-- Prompt library trigger row -->
-                        <div class="flex items-center justify-between">
+                    <div class="composer-bar px-6 py-4">
+                      <div class="w-full space-y-2.5">
+                        <div
+                          class="flex items-center justify-between gap-3 flex-wrap"
+                        >
                           <button
                             type="button"
                             class="btn-hero-magenta lib-pulse inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-[11px] font-mono uppercase tracking-wider"
@@ -475,24 +485,47 @@
                               x-text="'· ' + promptLibrary.length"
                             ></span>
                           </button>
-                          <span class="text-[10px] font-mono text-slate-600"
-                            >Enter to send · Shift+Enter for newline</span
+                          <div
+                            class="flex items-center gap-3 flex-wrap justify-end"
                           >
+                            <label
+                              class="composer-bypass-toggle inline-flex items-center gap-2 text-[11px] font-mono text-slate-400 cursor-pointer select-none"
+                              :class="composerBypassOnce ? 'text-neon-amber' : ''"
+                              title="Skip workspace retrieval for the next message only"
+                            >
+                              <input
+                                type="checkbox"
+                                class="rounded border-edge bg-ink-900 text-neon-amber focus:ring-neon-amber/40"
+                                x-model="composerBypassOnce"
+                                :disabled="sending || currentChat.mode === 'bypass'"
+                              />
+                              <span>Bypass this message</span>
+                            </label>
+                            <span class="text-[10px] font-mono text-slate-600"
+                              >Enter to send · Shift+Enter for newline</span
+                            >
+                          </div>
                         </div>
-                        <form class="relative" @submit.prevent="sendMessage()">
+                        <form
+                          class="composer-input-row flex items-stretch gap-3"
+                          @submit.prevent="sendMessage()"
+                        >
                           <textarea
                             x-ref="composer"
                             x-model="composer"
                             rows="3"
                             placeholder="Ask about Section L, traceability, win themes…"
-                            class="w-full bg-ink-900 border border-edge focus:border-neon-cyan/60 focus:shadow-glow outline-none rounded-xl px-4 py-3 pr-28 text-sm resize-none transition"
+                            class="composer-textarea flex-1 min-w-0 bg-ink-900 border border-edge focus:border-neon-cyan/60 focus:shadow-glow outline-none rounded-xl px-4 py-3 text-sm resize-y min-h-[5.5rem] transition"
                             @keydown.enter.prevent="if (!$event.shiftKey) sendMessage(); else composer += '\n'"
                             @keydown.ctrl.enter.prevent="sendMessage()"
                           ></textarea>
-                          <div class="absolute bottom-2.5 right-2.5">
+                          <div
+                            class="composer-send-col flex flex-col justify-end shrink-0"
+                          >
                             <template x-if="!sending">
                               <button
-                                class="btn-hero-cyan inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold text-ink-950"
+                                type="submit"
+                                class="btn-hero-cyan inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold text-ink-950 min-w-[6.5rem] disabled:opacity-40 disabled:cursor-not-allowed"
                                 :disabled="!composer.trim()"
                               >
                                 <span>Send</span>
@@ -505,7 +538,7 @@
                             <template x-if="sending">
                               <button
                                 type="button"
-                                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-neon-red/15 border border-neon-red/40 text-neon-red hover:bg-neon-red/25 transition"
+                                class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold bg-neon-red/15 border border-neon-red/40 text-neon-red hover:bg-neon-red/25 transition min-w-[6.5rem]"
                                 @click.prevent="stopMessage()"
                               >
                                 <i data-lucide="square" class="w-4 h-4"></i>

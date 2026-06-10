@@ -288,3 +288,47 @@ def test_streaming_message_route_uses_single_query_llm_pass(tmp_path) -> None:
     assistant = client.get(f"/api/ui/chats/{chat_id}").json()["messages"][1]
     assert assistant["content"] == "single pass"
     assert assistant["sources"]["chunks"][0]["file_path"] == "one-pass.pdf"
+
+
+def test_stream_message_accepts_per_message_bypass_override(tmp_path) -> None:
+    query_llm_calls: list[tuple[Any, ...]] = []
+
+    async def query_llm_func(text, mode, history, stream, overrides):
+        query_llm_calls.append((text, mode, history, stream, overrides))
+        return _native_sources_llm_result(stream=False, answer="external synthesis")
+
+    client, _ = _client(tmp_path, query_llm_func=query_llm_func)
+    created = client.post("/api/ui/chats", json={"title": "Bypass once", "mode": "mix"})
+    chat_id = created.json()["id"]
+
+    response = client.post(
+        f"/api/ui/chats/{chat_id}/messages/stream",
+        json={"content": "Research incumbent tax posture", "mode": "bypass"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert "Bypass" in response.text or "bypass" in response.text
+    assert query_llm_calls == [
+        ("Research incumbent tax posture", "bypass", [], True, {"top_k": 7}),
+    ]
+
+    full = client.get(f"/api/ui/chats/{chat_id}").json()
+    assert full["mode"] == "mix"
+    user = full["messages"][0]
+    assistant = full["messages"][1]
+    assert user["mode"] == "bypass"
+    assert user["mode_override"] is True
+    assert assistant["mode"] == "bypass"
+
+
+def test_message_mode_override_rejects_invalid_mode(tmp_path) -> None:
+    client, _ = _client(tmp_path)
+    created = client.post("/api/ui/chats", json={"title": "Bad mode", "mode": "mix"})
+    chat_id = created.json()["id"]
+
+    response = client.post(
+        f"/api/ui/chats/{chat_id}/messages/stream",
+        json={"content": "Hello", "mode": "not-a-mode"},
+    )
+
+    assert response.status_code == 400, response.text
