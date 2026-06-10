@@ -66,6 +66,13 @@ v7.1   - Forbid space/comma-joined canonical types in keywords field.
 
 Changelog:
 ----------
+v3.8.0 (Jun 2026) - Compose query prompts on LightRAG formatting spine (issue #192)
+  - `prompts/govcon/query_compose.py` loads LightRAG `rag_response` / `naive_rag_response` and
+    preserves sections 3–6 (Markdown formatting, `{response_type}`, references) verbatim
+  - GovCon domain blocks (role, Phase 4–6 scope, UCF awareness, grounding guardrails, `[N]` citations)
+    are additive — no duplicate format rules or anti-markdown constraints
+  - Depth/topic guidance remains in prompt-library starters only
+
 v3.7.0 (Jun 2026) - Restore #69 query core; move depth tiers to prompt library (issue #192)
   - Removed rigid Response Depth tiers from system prompt (were compressing scope overviews)
   - Restored #69 strategic analysis approach and "prefer thoroughness over brevity" for walkthroughs

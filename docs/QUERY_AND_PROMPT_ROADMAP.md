@@ -1,6 +1,6 @@
 # Query & Prompt Roadmap (parked work after #192)
 
-**Status:** Parked follow-on work after #192. Query persona v3.7.0 restores #69 core; depth tiers moved to prompt library. Branch `192-query-prompt-tone`.
+**Status:** Parked follow-on work after #192. Query persona v3.8.0 composes on LightRAG formatting spine; depth/topic in prompt library. Branch `192-query-prompt-tone`.
 **Tracker:** GitHub issue #184  
 **Last updated:** 2026-06-10
 
@@ -23,9 +23,13 @@ Tiered/conditional query persona: **grounded retrieval + reasoning as SME collea
 | Consultant drift | v3.0 mandatory implication-per-fact, Shipley glossary lecture, unprompted pattern dumps | No |
 | v3.5.0 over-correction | answer-first analyst, no unsolicited strategy | Revisit — may be too thin |
 
-### Response depth (prompt library, not system persona — v3.7.0)
+### Query prompt composition (v3.8.0)
 
-Depth and format live in **prompt-library starters**, not rigid tiers in the system prompt. v3.7.0 restores #69 core (thoroughness, strategic analysis) with v3.1–v3.3 guardrails.
+`prompts/govcon/query_compose.py` loads LightRAG `rag_response` / `naive_rag_response` and preserves the formatting spine (§3 Markdown + `{response_type}`, references). GovCon domain blocks are additive. See `tests/test_query_prompt_compose.py`.
+
+### Response depth (prompt library, not system persona)
+
+Depth and topic live in **prompt-library starters**. System persona carries domain guardrails only.
 
 1. **Lookup / comprehension** — scope primer, site inventory (library prompts).
 2. **Elaboration** — topic deep-dive `{topic}`.
