@@ -2,7 +2,7 @@
 
 **Ontology-Based RAG for Final RFP Capture & Proposal Intelligence**
 
-[![Version](https://img.shields.io/badge/version-1.9.0-blue.svg)](https://github.com/BdM-15/proj-theseus)
+[![Version](https://img.shields.io/badge/version-1.9.1-blue.svg)](https://github.com/BdM-15/proj-theseus)
 [![Python](https://img.shields.io/badge/python-3.13+-green.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
 
@@ -536,6 +536,6 @@ MIT License - See [LICENSE](LICENSE) for details.
 ---
 
 **Last Updated**: April 2026  
-**Version**: 1.9.0
+**Version**: 1.9.1
 **Status**: Production capture workbench — Neo4j storage, multimodal ingest, Shipley-mentor querying, 12 dual-use Agent Skills + 8 federal-data MCPs, Studio cross-skill artifact library  
 **Processing cost**: ~$2 per ~425-page RFP (xAI Grok + OpenAI embeddings)
