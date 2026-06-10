@@ -19,6 +19,9 @@ dependencies = [
     # Server framework
     "fastapi>=0.118.0",
     "uvicorn>=0.37.0",
+    # LightRAG native DOCX parser (lightrag.parser.docx) requires defusedxml;
+    # it is only an optional extra on lightrag-hku[api], not pulled transitively.
+    "defusedxml>=0.7.0,<1.0.0",
     # Configuration management
     "python-dotenv>=1.0.0",
     # Authentication (required by lightrag-hku API server)
