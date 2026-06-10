@@ -14,54 +14,157 @@
                     New chat
                   </button>
                 </div>
-                <div class="px-3 pt-3 pb-1 flex items-center justify-between">
+                <div class="px-3 pt-2 pb-2">
+                  <label class="chat-sidebar-search">
+                    <i data-lucide="search" class="chat-sidebar-search-icon"></i>
+                    <input
+                      type="search"
+                      class="chat-sidebar-search-input"
+                      placeholder="Search chats…"
+                      x-model="chatHistory.filter"
+                      autocomplete="off"
+                    />
+                    <button
+                      type="button"
+                      class="chat-sidebar-search-clear"
+                      x-show="chatHistory.filter"
+                      @click="chatHistory.filter = ''"
+                      title="Clear search"
+                    >
+                      <i data-lucide="x" class="w-3 h-3"></i>
+                    </button>
+                  </label>
+                </div>
+                <div class="px-3 pt-1 pb-1 flex items-center justify-between">
                   <span
                     class="text-[10px] font-mono uppercase tracking-[0.18em] text-slate-500"
                     >History</span
                   >
                   <span
                     class="text-[10px] font-mono text-slate-600"
-                    x-text="chats.length + (chats.length === 1 ? ' chat' : ' chats')"
+                    x-text="chatHistory.filter
+                      ? filteredChats().length + ' of ' + chats.length
+                      : chats.length + (chats.length === 1 ? ' chat' : ' chats')"
                   ></span>
                 </div>
                 <div class="flex-1 overflow-y-auto px-2 pb-3 space-y-1">
-                  <template x-for="c in chats" :key="c.id">
+                  <template x-for="c in filteredChats()" :key="c.id">
                     <div
-                      class="group relative px-3 py-2.5 rounded-lg cursor-pointer text-sm transition border"
-                      :class="currentChat?.id === c.id ? 'chat-item-active' : 'border-transparent hover:bg-white/[0.04] hover:border-edge'"
-                      @click="openChat(c.id)"
+                      class="group relative rounded-lg text-sm transition border"
+                      :class="[
+                        chatHistory.deletePendingId === c.id ? 'chat-item-delete-pending' : 'cursor-pointer',
+                        currentChat?.id === c.id && chatHistory.deletePendingId !== c.id ? 'chat-item-active' : 'border-transparent hover:bg-white/[0.04] hover:border-edge',
+                      ]"
+                      @click="chatHistory.deletePendingId === c.id || chatHistory.editingId === c.id ? null : openChat(c.id)"
                     >
-                      <div class="flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-2 min-w-0 flex-1">
-                          <i
-                            data-lucide="message-circle"
-                            class="w-3.5 h-3.5 shrink-0"
-                            :class="currentChat?.id === c.id ? 'text-neon-cyan' : 'text-slate-500'"
-                          ></i>
-                          <div
-                            class="truncate font-medium"
-                            :class="currentChat?.id === c.id ? 'text-white' : 'text-slate-200'"
-                            x-text="c.title"
-                          ></div>
+                      <div
+                        x-show="chatHistory.deletePendingId === c.id"
+                        class="chat-delete-confirm px-3 py-2.5"
+                        @click.stop
+                      >
+                        <span class="chat-delete-confirm-label">Delete this chat?</span>
+                        <div class="chat-delete-confirm-actions">
+                          <button
+                            type="button"
+                            class="chat-delete-confirm-btn chat-delete-confirm-cancel"
+                            @click="cancelDeleteChat()"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            class="chat-delete-confirm-btn chat-delete-confirm-delete"
+                            @click="confirmDeleteChat(c.id)"
+                          >
+                            Delete
+                          </button>
                         </div>
-                        <button
-                          class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-neon-red transition"
-                          @click.stop="deleteChat(c.id)"
-                          title="Delete chat"
-                        >
-                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                        </button>
                       </div>
                       <div
-                        class="text-[10px] font-mono text-slate-500 mt-1 pl-5 flex items-center gap-1.5"
+                        x-show="chatHistory.deletePendingId !== c.id"
+                        class="px-3 py-2.5"
                       >
-                        <span x-text="c.message_count"></span>
-                        <span>msgs</span>
-                        <span class="text-slate-700">·</span>
-                        <span class="text-neon-cyan/60" x-text="c.mode"></span>
+                        <div class="flex items-center justify-between gap-2">
+                          <div class="flex items-center gap-2 min-w-0 flex-1">
+                            <i
+                              data-lucide="message-circle"
+                              class="w-3.5 h-3.5 shrink-0"
+                              :class="currentChat?.id === c.id ? 'text-neon-cyan' : 'text-slate-500'"
+                            ></i>
+                            <input
+                              x-show="chatHistory.editingId === c.id"
+                              class="chat-sidebar-rename-input"
+                              :data-chat-rename-input="c.id"
+                              x-model="chatHistory.editingTitle"
+                              @click.stop
+                              @keydown.enter.prevent="saveSidebarRename(c.id)"
+                              @keydown.escape.prevent="cancelRenameChat()"
+                              @blur="saveSidebarRename(c.id)"
+                            />
+                            <div
+                              x-show="chatHistory.editingId !== c.id"
+                              class="truncate font-medium"
+                              :class="currentChat?.id === c.id ? 'text-white' : 'text-slate-200'"
+                              x-text="c.title"
+                            ></div>
+                          </div>
+                          <div
+                            x-show="chatHistory.editingId !== c.id"
+                            class="chat-item-actions"
+                          >
+                            <button
+                              type="button"
+                              class="chat-item-action-btn"
+                              @click.stop="startRenameChat(c)"
+                              title="Rename chat"
+                            >
+                              <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button
+                              type="button"
+                              class="chat-item-action-btn chat-item-action-delete"
+                              @click.stop="requestDeleteChat(c.id)"
+                              title="Delete chat"
+                            >
+                              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <div
+                          x-show="chatHistory.editingId !== c.id"
+                          class="text-[10px] font-mono text-slate-500 mt-1 pl-5 flex items-center gap-1.5 flex-wrap"
+                        >
+                          <span x-text="c.message_count"></span>
+                          <span>msgs</span>
+                          <span class="text-slate-700">·</span>
+                          <span class="text-neon-cyan/60" x-text="c.mode"></span>
+                          <span class="text-slate-700" x-show="c.updated_at">·</span>
+                          <span
+                            x-show="c.updated_at"
+                            class="text-slate-600"
+                            x-text="chatRelativeTime(c.updated_at)"
+                          ></span>
+                        </div>
                       </div>
                     </div>
                   </template>
+                  <div
+                    x-show="chats.length && !filteredChats().length"
+                    class="text-xs text-slate-500 px-3 py-8 text-center"
+                  >
+                    <i
+                      data-lucide="search-x"
+                      class="w-6 h-6 mx-auto mb-2 text-slate-700"
+                    ></i>
+                    <div>No chats match your search.</div>
+                    <button
+                      type="button"
+                      class="text-[10px] mt-2 text-neon-cyan hover:underline"
+                      @click="chatHistory.filter = ''"
+                    >
+                      Clear filter
+                    </button>
+                  </div>
                   <div
                     x-show="!chats.length"
                     class="text-xs text-slate-500 px-3 py-8 text-center"
@@ -99,11 +202,18 @@
                       class="glass-bar px-6 py-3 border-b border-edge flex items-center justify-between"
                     >
                       <div class="flex-1 min-w-0">
-                        <input
-                          class="bg-transparent w-full text-sm font-semibold text-white focus:outline-none"
-                          x-model="currentChat.title"
-                          @change="renameChat()"
-                        />
+                        <label class="chat-header-title">
+                          <input
+                            class="chat-header-title-input"
+                            x-model="currentChat.title"
+                            placeholder="Chat title"
+                            @keydown.enter.prevent="$event.target.blur()"
+                            @blur="renameChat()"
+                          />
+                          <span class="chat-header-title-hint" title="Click to rename">
+                            <i data-lucide="pencil" class="w-3 h-3"></i>
+                          </span>
+                        </label>
                         <div
                           class="text-[11px] font-mono text-slate-500 flex items-center gap-2"
                         >

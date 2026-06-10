@@ -14,6 +14,7 @@ window.theseusNewChat = async function theseusNewChat(app, rfpContext = null) {
 
 window.theseusOpenChat = async function theseusOpenChat(app, id) {
   try {
+    window.theseusClearChatHistoryUi(app);
     app.currentChat = await app.api(`/api/ui/chats/${id}`);
     window.theseusRenderMdCache = {};
   } catch (error) {
@@ -21,21 +22,147 @@ window.theseusOpenChat = async function theseusOpenChat(app, id) {
   }
 };
 
+window.theseusChatRelativeTime = function theseusChatRelativeTime(iso) {
+  if (!iso) return "";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const diffMs = Date.now() - then;
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+};
+
+window.theseusFilteredChats = function theseusFilteredChats(app) {
+  const query = (app.chatHistory?.filter || "").trim().toLowerCase();
+  if (!query) return app.chats || [];
+  return (app.chats || []).filter((chat) => {
+    const title = (chat.title || "").toLowerCase();
+    const mode = (chat.mode || "").toLowerCase();
+    return title.includes(query) || mode.includes(query);
+  });
+};
+
+window.theseusClearChatHistoryUi = function theseusClearChatHistoryUi(app) {
+  if (!app.chatHistory) return;
+  app.chatHistory.deletePendingId = null;
+  app.chatHistory.editingId = null;
+  app.chatHistory.editingTitle = "";
+};
+
+window.theseusRequestDeleteChat = function theseusRequestDeleteChat(app, id) {
+  window.theseusClearChatHistoryUi(app);
+  app.chatHistory.deletePendingId = id;
+};
+
+window.theseusCancelDeleteChat = function theseusCancelDeleteChat(app) {
+  app.chatHistory.deletePendingId = null;
+};
+
+window.theseusConfirmDeleteChat = async function theseusConfirmDeleteChat(
+  app,
+  id,
+) {
+  try {
+    await app.api(`/api/ui/chats/${id}`, { method: "DELETE" });
+    if (app.currentChat?.id === id) app.currentChat = null;
+    app.chatHistory.deletePendingId = null;
+    await app.loadChats();
+    await app.loadStats();
+    app.toast("Chat deleted");
+  } catch (error) {
+    app.toast("Delete failed: " + error.message, "error");
+  }
+};
+
 window.theseusDeleteChat = async function theseusDeleteChat(app, id) {
-  if (!confirm("Delete this chat?")) return;
-  await app.api(`/api/ui/chats/${id}`, { method: "DELETE" });
-  if (app.currentChat?.id === id) app.currentChat = null;
-  await app.loadChats();
-  await app.loadStats();
+  window.theseusRequestDeleteChat(app, id);
+};
+
+window.theseusStartRenameChat = function theseusStartRenameChat(app, chat) {
+  if (!chat) return;
+  window.theseusClearChatHistoryUi(app);
+  app.chatHistory.editingId = chat.id;
+  app.chatHistory.editingTitle = chat.title || "";
+  app.$nextTick(() => {
+    const input = document.querySelector(
+      `[data-chat-rename-input="${chat.id}"]`,
+    );
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  });
+};
+
+window.theseusCancelRenameChat = function theseusCancelRenameChat(app) {
+  app.chatHistory.editingId = null;
+  app.chatHistory.editingTitle = "";
+};
+
+window.theseusSaveChatTitle = async function theseusSaveChatTitle(
+  app,
+  chatId,
+  title,
+) {
+  const nextTitle = (title || "").trim();
+  if (!nextTitle) {
+    app.toast("Title cannot be empty", "error");
+    return false;
+  }
+  const existing = (app.chats || []).find((chat) => chat.id === chatId);
+  if (existing && (existing.title || "").trim() === nextTitle) {
+    app.chatHistory.editingId = null;
+    app.chatHistory.editingTitle = "";
+    if (app.currentChat?.id === chatId) {
+      app.currentChat.title = nextTitle;
+    }
+    return true;
+  }
+  try {
+    await app.api(`/api/ui/chats/${chatId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ title: nextTitle }),
+    });
+    if (app.currentChat?.id === chatId) {
+      app.currentChat.title = nextTitle;
+    }
+    app.chatHistory.editingId = null;
+    app.chatHistory.editingTitle = "";
+    await app.loadChats();
+    return true;
+  } catch (error) {
+    app.toast("Rename failed: " + error.message, "error");
+    return false;
+  }
+};
+
+window.theseusSaveSidebarRename = async function theseusSaveSidebarRename(
+  app,
+  chatId,
+) {
+  if (app.chatHistory.editingId !== chatId) return false;
+  return window.theseusSaveChatTitle(
+    app,
+    chatId,
+    app.chatHistory.editingTitle,
+  );
 };
 
 window.theseusRenameChat = async function theseusRenameChat(app) {
   if (!app.currentChat) return;
-  await app.api(`/api/ui/chats/${app.currentChat.id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ title: app.currentChat.title }),
-  });
-  await app.loadChats();
+  await window.theseusSaveChatTitle(
+    app,
+    app.currentChat.id,
+    app.currentChat.title,
+  );
 };
 
 window.theseusUpdateChatMode = async function theseusUpdateChatMode(app) {

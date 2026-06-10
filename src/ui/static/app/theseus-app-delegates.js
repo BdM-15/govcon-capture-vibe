@@ -644,8 +644,40 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusOpenChat(this, id);
     },
 
+    filteredChats() {
+      return window.theseusFilteredChats(this);
+    },
+
+    chatRelativeTime(iso) {
+      return window.theseusChatRelativeTime(iso);
+    },
+
+    requestDeleteChat(id) {
+      return window.theseusRequestDeleteChat(this, id);
+    },
+
+    cancelDeleteChat() {
+      return window.theseusCancelDeleteChat(this);
+    },
+
+    async confirmDeleteChat(id) {
+      return window.theseusConfirmDeleteChat(this, id);
+    },
+
     async deleteChat(id) {
       return window.theseusDeleteChat(this, id);
+    },
+
+    startRenameChat(chat) {
+      return window.theseusStartRenameChat(this, chat);
+    },
+
+    cancelRenameChat() {
+      return window.theseusCancelRenameChat(this);
+    },
+
+    async saveSidebarRename(chatId) {
+      return window.theseusSaveSidebarRename(this, chatId);
     },
 
     async renameChat() {
