@@ -781,7 +781,9 @@
                     :disabled="chatHandoff.sending || !chatHandoff.quote?.trim()"
                   >
                     <i data-lucide="git-branch" class="w-3.5 h-3.5"></i>
-                    <span x-text="chatHandoff.sending ? 'Starting…' : 'Start branch'"></span>
+                    <span
+                      x-text="chatHandoff.sending ? (chatHandoff.packaging ? 'Packaging insight…' : 'Starting…') : 'Start branch'"
+                    ></span>
                   </button>
                 </div>
               </div>

@@ -151,7 +151,24 @@ def build_startup_banner_items(
         ),
         ("", ""),
         ("Extract  (LightRAG)", f"{colors.CYAN}{settings.extraction_llm_name}{colors.RESET}"),
-        ("Keyword  (LightRAG)", f"{colors.CYAN}{settings.keyword_llm_name}{colors.RESET}"),
+        (
+            "Keyword  (LightRAG)",
+            (
+                f"{colors.CYAN}{settings.keyword_llm_name}{colors.RESET}"
+                + (
+                    f"  {colors.DIM}·  ollama @ {getattr(settings, 'ollama_host', 'http://localhost:11434')}{colors.RESET}"
+                    if getattr(settings, "keyword_uses_ollama", False)
+                    else ""
+                )
+            ),
+        ),
+        (
+            "Ollama   (local)",
+            (
+                f"{colors.GREEN}{getattr(settings, 'ollama_model', 'qwen3.5:9b')}{colors.RESET}"
+                f"  {colors.DIM}·  {getattr(settings, 'ollama_host', 'http://localhost:11434')}{colors.RESET}"
+            ),
+        ),
         ("VLM      (LightRAG)", f"{colors.CYAN}{settings.vlm_llm_name}{colors.RESET}"),
         ("Query    (LightRAG)", f"{colors.MAGENTA}{settings.reasoning_llm_name}{colors.RESET}"),
         ("Post-Process", f"{colors.YELLOW}{settings.post_processing_llm_name}{colors.RESET}"),
@@ -351,6 +368,29 @@ async def initialize_theseus_rag_runtime(
 
     configure_lightrag_args_fn()
     settings = get_settings_fn()
+    try:
+        from src.server.ollama_llm import warmup_ollama
+
+        ollama_status = await warmup_ollama(settings)
+        if ollama_status.get("ok"):
+            logger.info(
+                "✅ Ollama ready: model=%s host=%s",
+                ollama_status.get("model"),
+                ollama_status.get("host"),
+            )
+        elif ollama_status.get("available"):
+            logger.warning(
+                "⚠️ Ollama reachable but warmup failed: %s",
+                ollama_status.get("error", "unknown"),
+            )
+        else:
+            logger.info(
+                "ℹ️ Ollama not available at %s — handoff compose will use mechanical fallback",
+                ollama_status.get("host"),
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Ollama warmup skipped: %s", exc)
+
     native_runtime = await initialize_native_lightrag_fn(
         settings,
         graph_storage=getattr(global_args_obj, "graph_storage", None),

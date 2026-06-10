@@ -37,6 +37,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     chatHandoff: {
       open: false,
       sending: false,
+      packaging: false,
       messageIndex: null,
       quote: "",
       quoteIsSelection: false,

@@ -91,19 +91,54 @@ window.theseusConfirmInsightHandoff = async function theseusConfirmInsightHandof
   if (!app.currentChat) return;
 
   app.chatHandoff.sending = true;
+  app.chatHandoff.packaging = true;
   const handoff = { ...app.chatHandoff };
   const sourceChat = app.currentChat;
 
   try {
     const mode = window.theseusHandoffMode(sourceChat.mode);
-    const title = window.theseusHandoffTitleFromQuote(handoff.quote);
-    const seed = window.theseusBuildHandoffSeed({
+    let title = window.theseusHandoffTitleFromQuote(handoff.quote);
+    let seed = window.theseusBuildHandoffSeed({
       sourceTitle: handoff.sourceChatTitle,
       messageIndex: handoff.messageIndex,
       quote: handoff.quote,
       framingQuestion: handoff.framingQuestion,
       priorQuestion: handoff.priorUserQuestion,
     });
+
+    try {
+      app.chatHandoff.packaging = true;
+      const packed = await app.api("/api/ui/chats/handoff/compose", {
+        method: "POST",
+        body: JSON.stringify({
+          source_chat_id: handoff.sourceChatId,
+          message_index: handoff.messageIndex,
+          quote: handoff.quote,
+          framing_question: handoff.framingQuestion || null,
+          prior_user_question: handoff.priorUserQuestion || null,
+          source_chat_title: handoff.sourceChatTitle || null,
+        }),
+      });
+      if (packed?.seed_prompt) {
+        seed = packed.seed_prompt;
+        if (packed.title) title = packed.title;
+      }
+      if (packed && packed.composed === false && packed.fallback_reason) {
+        app.toast("Used basic handoff seed (local packer fallback)", "info");
+      }
+    } catch (composeError) {
+      const composeStatus = Number.parseInt(
+        String(composeError?.message || "").split(" ")[0],
+        10,
+      );
+      if (composeStatus === 503) {
+        app.toast("Local packer offline — using basic handoff seed", "info");
+      } else if (composeStatus !== 404) {
+        throw composeError;
+      }
+    } finally {
+      app.chatHandoff.packaging = false;
+    }
 
     const chat = await app.api("/api/ui/chats", {
       method: "POST",
@@ -128,6 +163,7 @@ window.theseusConfirmInsightHandoff = async function theseusConfirmInsightHandof
     app.toast("Started grounded insight thread");
   } catch (error) {
     app.chatHandoff.sending = false;
+    app.chatHandoff.packaging = false;
     app.toast(`Handoff failed: ${error.message}`, "error");
   }
 };

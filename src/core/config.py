@@ -108,7 +108,28 @@ class Settings(BaseSettings):
     keyword_llm_name: str = Field(
         default="grok-4-1-fast-non-reasoning",
         validation_alias="KEYWORD_LLM_MODEL",
-        description="Non-reasoning model for query-time keyword extraction (LightRAG `keyword` role)"
+        description="Non-reasoning model for query-time keyword extraction (LightRAG `keyword` role). "
+                    "When KEYWORD_LLM_BINDING=ollama, this is the local Ollama model tag (e.g. qwen3.5:9b)."
+    )
+    keyword_llm_binding: str = Field(
+        default="openai",
+        validation_alias="KEYWORD_LLM_BINDING",
+        description="Provider for LightRAG `keyword` role: openai (xAI Grok) or ollama (local OpenAI-compat)"
+    )
+    ollama_host: str = Field(
+        default="http://localhost:11434",
+        validation_alias="OLLAMA_HOST",
+        description="Ollama HTTP base URL for local UI curation and optional keyword extraction"
+    )
+    ollama_model: str = Field(
+        default="qwen3.5:9b",
+        validation_alias="OLLAMA_MODEL",
+        description="Default local Ollama model for insight handoff packaging and UI curation"
+    )
+    ollama_temperature: float = Field(
+        default=0.3,
+        validation_alias="OLLAMA_TEMPERATURE",
+        description="Temperature for local Ollama calls (handoff compose, keyword when binding=ollama)"
     )
     vlm_llm_name: str = Field(
         default="grok-4-1-fast-non-reasoning",
@@ -465,6 +486,16 @@ class Settings(BaseSettings):
     def llm_api_key(self) -> Optional[str]:
         """Alias for llm_binding_api_key."""
         return self.llm_binding_api_key
+
+    @property
+    def ollama_openai_base_url(self) -> str:
+        """OpenAI-compatible chat/completions base for Ollama."""
+        return f"{self.ollama_host.rstrip('/')}/v1"
+
+    @property
+    def keyword_uses_ollama(self) -> bool:
+        """True when LightRAG keyword role should route to local Ollama."""
+        return self.keyword_llm_binding.strip().lower() == "ollama"
 
     # ═══════════════════════════════════════════════════════════════════════════
     # HELPER METHODS for backward compatibility with MAX_ASYNC

@@ -4,8 +4,10 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.server import chat_routes
 from src.server.chat_routes import register_chat_routes, trim_sources
 from src.server.chat_store import ChatStore
+from src.server.handoff_compose import HandoffComposeResult
 
 
 class _QuerySettings:
@@ -13,11 +15,16 @@ class _QuerySettings:
         return {"top_k": 7}
 
 
+class _Settings:
+    ollama_model = "qwen3.5:9b"
+
+
 def _client(
     tmp_path,
     *,
     query_func=None,
     query_llm_func=None,
+    settings_provider=None,
 ) -> tuple[TestClient, list[tuple[Any, ...]]]:
     calls: list[tuple[Any, ...]] = []
 
@@ -38,6 +45,7 @@ def _client(
         query_func=query_func or default_query_func,
         query_llm_func=query_llm_func,
         now=lambda: "now",
+        settings_provider=settings_provider or (lambda: _Settings()),
     )
     return TestClient(app), calls
 
@@ -352,6 +360,73 @@ def test_create_chat_persists_handoff_metadata(tmp_path) -> None:
     assert full.json()["handoff_from"]["chat_id"] == source_id
     assert full.json()["mode"] == "hybrid"
     assert full.json()["rfp_context"] == "MCPP"
+
+
+def test_handoff_compose_returns_packed_seed(monkeypatch, tmp_path) -> None:
+    client, _ = _client(tmp_path)
+    source = client.post("/api/ui/chats", json={"title": "Source", "mode": "mix"})
+    source_id = source.json()["id"]
+    full = client.get(f"/api/ui/chats/{source_id}").json()
+    client.post(
+        f"/api/ui/chats/{source_id}/messages",
+        json={"content": "What is NET 30 risk?"},
+    )
+    full = client.get(f"/api/ui/chats/{source_id}").json()
+    assistant_index = len(full["messages"]) - 1
+
+    async def fake_compose(payload, *, settings):
+        return HandoffComposeResult(
+            title="NET 30 cash risk",
+            focus_summary="Payment terms vs receivables",
+            claims_to_ground=["NET 30 clause exists"],
+            seed_prompt="Packed seed for grounded branch",
+            composed=True,
+            model="qwen3.5:9b",
+        )
+
+    monkeypatch.setattr(chat_routes, "compose_insight_handoff", fake_compose)
+
+    response = client.post(
+        "/api/ui/chats/handoff/compose",
+        json={
+            "source_chat_id": source_id,
+            "message_index": assistant_index,
+            "quote": "NET 30 payment terms create cash-flow risk",
+            "framing_question": "Walk me through evidence",
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["composed"] is True
+    assert body["seed_prompt"] == "Packed seed for grounded branch"
+    assert body["title"] == "NET 30 cash risk"
+
+
+def test_handoff_compose_503_when_ollama_unavailable(monkeypatch, tmp_path) -> None:
+    client, _ = _client(tmp_path)
+    source = client.post("/api/ui/chats", json={"title": "Source", "mode": "mix"})
+    source_id = source.json()["id"]
+    client.post(
+        f"/api/ui/chats/{source_id}/messages",
+        json={"content": "Question"},
+    )
+    full = client.get(f"/api/ui/chats/{source_id}").json()
+    assistant_index = len(full["messages"]) - 1
+
+    async def unavailable(payload, *, settings):
+        raise RuntimeError("Ollama is not reachable")
+
+    monkeypatch.setattr(chat_routes, "compose_insight_handoff", unavailable)
+
+    response = client.post(
+        "/api/ui/chats/handoff/compose",
+        json={
+            "source_chat_id": source_id,
+            "message_index": assistant_index,
+            "quote": "Some insight",
+        },
+    )
+    assert response.status_code == 503, response.text
 
 
 def test_message_mode_override_rejects_invalid_mode(tmp_path) -> None:
