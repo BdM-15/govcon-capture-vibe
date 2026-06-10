@@ -629,32 +629,73 @@ window.theseusCopyToClipboard = async function theseusCopyToClipboard(
   });
 };
 
+const THESEUS_CHUNK_FETCH_MAX = 4;
+
+window.theseusAcquireChunkFetchSlot = function theseusAcquireChunkFetchSlot(
+  queue,
+) {
+  if (!queue) return Promise.resolve();
+  if (queue.active < THESEUS_CHUNK_FETCH_MAX) {
+    queue.active += 1;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    queue.waiters.push(resolve);
+  });
+};
+
+window.theseusReleaseChunkFetchSlot = function theseusReleaseChunkFetchSlot(
+  queue,
+) {
+  if (!queue) return;
+  const next = queue.waiters.shift();
+  if (next) {
+    next();
+    return;
+  }
+  queue.active = Math.max(0, queue.active - 1);
+};
+
 window.theseusFetchChunk = async function theseusFetchChunk(app, chunkId) {
   if (!chunkId) throw new Error("missing chunk id");
   const hit = app._chunkCache[chunkId];
   if (hit) return hit;
 
-  const response = await fetch("/api/ui/chunks/" + encodeURIComponent(chunkId));
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error("Chunk not found in this workspace");
-    }
-    throw new Error("HTTP " + response.status);
+  if (!app._chunkFetchQueue) {
+    app._chunkFetchQueue = { active: 0, waiters: [] };
+  }
+  await window.theseusAcquireChunkFetchSlot(app._chunkFetchQueue);
+  const cached = app._chunkCache[chunkId];
+  if (cached) {
+    window.theseusReleaseChunkFetchSlot(app._chunkFetchQueue);
+    return cached;
   }
 
-  const payload = await response.json();
-  const record = {
-    chunk_id: chunkId,
-    file_path: payload.file_path,
-    full_doc_id: payload.full_doc_id,
-    chunk_order_index: payload.chunk_order_index,
-    tokens: payload.tokens,
-    length: payload.length || 0,
-    content: payload.content || "",
-    view: window.theseusFormatSource({ preview: payload.content || "" }),
-  };
-  app._chunkCache[chunkId] = record;
-  return record;
+  try {
+    const response = await fetch("/api/ui/chunks/" + encodeURIComponent(chunkId));
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("Chunk not found in this workspace");
+      }
+      throw new Error("HTTP " + response.status);
+    }
+
+    const payload = await response.json();
+    const record = {
+      chunk_id: chunkId,
+      file_path: payload.file_path,
+      full_doc_id: payload.full_doc_id,
+      chunk_order_index: payload.chunk_order_index,
+      tokens: payload.tokens,
+      length: payload.length || 0,
+      content: payload.content || "",
+      view: window.theseusFormatSource({ preview: payload.content || "" }),
+    };
+    app._chunkCache[chunkId] = record;
+    return record;
+  } finally {
+    window.theseusReleaseChunkFetchSlot(app._chunkFetchQueue);
+  }
 };
 
 window.theseusOpenChunkPreview = async function theseusOpenChunkPreview(

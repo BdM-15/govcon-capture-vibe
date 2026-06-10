@@ -15,6 +15,7 @@ window.theseusNewChat = async function theseusNewChat(app, rfpContext = null) {
 window.theseusOpenChat = async function theseusOpenChat(app, id) {
   try {
     app.currentChat = await app.api(`/api/ui/chats/${id}`);
+    window.theseusRenderMdCache = {};
   } catch (error) {
     app.toast("Could not open chat", "error");
   }
@@ -60,8 +61,14 @@ window.theseusStopMessage = function theseusStopMessage(app) {
 };
 
 const theseusResetChatStreamState = function theseusResetChatStreamState(app) {
-  app.chatStatus = { phase: null, label: "", retrieve_ms: null };
+  app.chatStatus = {
+    phase: null,
+    label: "",
+    retrieve_ms: null,
+    source_counts: null,
+  };
   app.streamLiveContent = "";
+  app.streamLiveHtml = "";
   app.thinkElapsed = 0;
   app.thinkStartedAt = null;
   if (app.thinkTimer) {
@@ -142,6 +149,34 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
     const decoder = new TextDecoder();
     let buffer = "";
     let scrollPending = false;
+    let pendingTokenText = "";
+    let tokenFlushRaf = null;
+    let streamContent = "";
+    let streamMdTimer = null;
+    const liveMsgIdx = () =>
+      app.currentChat?.messages ? app.currentChat.messages.length - 1 : 0;
+    const finalizeRenderedHtml = (text, msgIdx) => {
+      if (!text) return "";
+      if (window.theseusRenderMdCache) {
+        Object.keys(window.theseusRenderMdCache).forEach((key) => {
+          if (key.startsWith(`${msgIdx}:`)) delete window.theseusRenderMdCache[key];
+        });
+      }
+      return window.theseusRenderMd(text, msgIdx);
+    };
+    const scheduleStreamMarkdown = () => {
+      if (streamMdTimer != null) return;
+      streamMdTimer = setTimeout(() => {
+        streamMdTimer = null;
+        if (!streamContent) {
+          app.streamLiveHtml = "";
+          return;
+        }
+        app.streamLiveHtml = window.theseusRenderMd(streamContent, null, {
+          light: true,
+        });
+      }, 400);
+    };
     const scheduleScroll = () => {
       if (scrollPending) return;
       scrollPending = true;
@@ -150,6 +185,20 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
         const el = app.$refs.msgs;
         if (el) el.scrollTop = el.scrollHeight;
       });
+    };
+    const flushPendingTokens = () => {
+      tokenFlushRaf = null;
+      if (!pendingTokenText) return;
+      streamContent += pendingTokenText;
+      pendingTokenText = "";
+      app.streamLiveContent = streamContent;
+      scheduleStreamMarkdown();
+      scheduleScroll();
+    };
+    const queueTokenText = (text) => {
+      pendingTokenText += text;
+      if (tokenFlushRaf != null) return;
+      tokenFlushRaf = requestAnimationFrame(flushPendingTokens);
     };
 
     while (true) {
@@ -184,8 +233,12 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
               parsed.retrieve_ms != null
                 ? parsed.retrieve_ms
                 : app.chatStatus.retrieve_ms,
+            source_counts: parsed.source_counts || app.chatStatus.source_counts,
           };
-          if (parsed.phase === "generating" && !app.thinkTimer) {
+          if (
+            (parsed.phase === "generating" || parsed.phase === "reasoning") &&
+            !app.thinkTimer
+          ) {
             app.thinkStartedAt = Date.now();
             app.thinkTimer = setInterval(() => {
               app.thinkElapsed = Math.floor(
@@ -197,51 +250,79 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
         }
 
         if (event === "sources") {
-          live = theseusReplaceLiveChatMessage(app, live, {
-            sources: parsed,
-            sourcesOpen: false,
-          });
           continue;
         }
 
         if (event === "token" && parsed.text) {
-          live = theseusReplaceLiveChatMessage(app, live, {
-            content: (live.content || "") + parsed.text,
-          });
-          app.streamLiveContent = live.content;
-          scheduleScroll();
+          queueTokenText(parsed.text);
           continue;
         }
 
         if (event === "error") {
+          flushPendingTokens();
+          const errorBody =
+            streamContent +
+            `\n\n\u26A0\uFE0F ${parsed.message || "stream error"}`;
           live = theseusReplaceLiveChatMessage(app, live, {
-            content:
-              (live.content || "") +
-              `\n\n\u26A0\uFE0F ${parsed.message || "stream error"}`,
+            content: errorBody,
+            streaming: false,
+            renderedHtml: finalizeRenderedHtml(errorBody, liveMsgIdx()),
           });
           app.toast("Query failed", "error");
           continue;
         }
 
         if (event === "done") {
+          if (tokenFlushRaf != null) {
+            cancelAnimationFrame(tokenFlushRaf);
+            tokenFlushRaf = null;
+          }
+          if (streamMdTimer != null) {
+            clearTimeout(streamMdTimer);
+            streamMdTimer = null;
+          }
+          flushPendingTokens();
+          const finalContent = parsed.assistant?.content || "";
+          const streamedContent = streamContent || "";
+          let body = streamedContent;
+          if (
+            finalContent &&
+            (!streamedContent ||
+              streamedContent.length < finalContent.length * 0.95)
+          ) {
+            body = finalContent;
+          }
+          const msgIdx = liveMsgIdx();
           const updated = {
             streaming: false,
+            streamHtml: null,
+            content: body,
+            renderedHtml: finalizeRenderedHtml(body, msgIdx),
           };
-          if (parsed.assistant?.content) {
-            updated.content = parsed.assistant.content;
-            updated.mode = parsed.assistant.mode;
-            updated.timing = parsed.assistant.timing || parsed.timing;
+          if (parsed.assistant?.mode) updated.mode = parsed.assistant.mode;
+          if (parsed.assistant?.timing || parsed.timing) {
+            updated.timing = parsed.assistant?.timing || parsed.timing;
           }
           if (parsed.assistant?.sources) {
             updated.sources = parsed.assistant.sources;
+            updated.renderedHtml = finalizeRenderedHtml(body, msgIdx);
           }
           live = theseusReplaceLiveChatMessage(app, live, updated);
         }
       }
     }
+    flushPendingTokens();
+    if (live.streaming !== false && streamContent) {
+      const msgIdx = liveMsgIdx();
+      live = theseusReplaceLiveChatMessage(app, live, {
+        streaming: false,
+        content: streamContent,
+        renderedHtml: finalizeRenderedHtml(streamContent, msgIdx),
+      });
+    }
     await app.loadChats();
   } catch (error) {
-    let failureContent = live.content || "";
+    let failureContent = streamContent || live.content || "";
     if (error?.name === "AbortError") {
       failureContent += "\n\n_(stopped)_";
     } else {
@@ -249,11 +330,17 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
         failureContent || `\u26A0\uFE0F ${error?.message || "stream failed"}`;
       app.toast("Query failed", "error");
     }
+    const msgIdx = liveMsgIdx();
     live = theseusReplaceLiveChatMessage(app, live, {
       content: failureContent,
       streaming: false,
+      renderedHtml: finalizeRenderedHtml(failureContent, msgIdx),
     });
   } finally {
+    if (streamMdTimer != null) {
+      clearTimeout(streamMdTimer);
+      streamMdTimer = null;
+    }
     theseusFinishChatSend(app);
   }
 };

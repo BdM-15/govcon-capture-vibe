@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.server.chat_routes import (
+    DEFAULT_RESPONSE_TYPE,
     QuerySettingsStore,
     register_query_settings_routes,
 )
@@ -43,6 +44,7 @@ def test_query_settings_store_defaults_use_env_and_settings(
     assert defaults["chunk_top_k"] == 8
     assert defaults["enable_rerank"] is False
     assert defaults["min_rerank_score"] == 0.2
+    assert defaults["response_type"] == DEFAULT_RESPONSE_TYPE
 
 
 def test_query_settings_store_defaults_fallback_for_invalid_env(
@@ -81,8 +83,19 @@ def test_query_settings_store_builds_query_overrides(tmp_path: Path) -> None:
 
     assert overrides["top_k"] == 3
     assert overrides["min_rerank_score"] == 0.42
+    assert overrides["response_type"] == DEFAULT_RESPONSE_TYPE
     assert "mode" not in overrides
     assert "stream" not in overrides
+
+
+def test_query_settings_store_honors_ui_max_total_tokens(
+    tmp_path: Path,
+) -> None:
+    store = _store(tmp_path)
+    store.write({**store.defaults(), "max_total_tokens": 200_000})
+
+    assert store.read()["max_total_tokens"] == 200_000
+    assert store.build_overrides()["max_total_tokens"] == 200_000
 
 
 def test_query_settings_routes_update_and_reset(

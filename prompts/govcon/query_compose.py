@@ -31,32 +31,18 @@ def _split_step_and_grounding(step_and_grounding: str) -> tuple[str, str]:
     return step_and_grounding[:idx].rstrip(), step_and_grounding[idx:].rstrip()
 
 
-def _enhance_references_format(formatting_tail: str) -> str:
-    extra = (
-        "  - Place inline `[N]` citation markers next to each factual claim; "
-        "`N` must match the corresponding entry in `### References`.\n"
-        "  - When page numbers or section references are available in the retrieved "
-        "context, include them in reference list entries "
-        '(e.g., "[1] PWS Section C.2.5, p.12").\n'
-    )
-    anchor = "  - The Document Title in the citation must retain its original language."
-    if anchor not in formatting_tail:
-        return formatting_tail
-    return formatting_tail.replace(anchor, extra + anchor, 1)
-
-
 RAG_STEP_ADDENDUM = """
-  - Place inline `[N]` markers next to factual claims; numbers must match `### References`.
   - Apply GovCon domain expertise to interpret retrieved facts when the question benefits from explanation — separate cited facts from framework reasoning.
   - For exploratory queries, prioritize Knowledge Graph entities related to the question (requirements, work_scope_item, evaluation_factor, deliverable) rather than generic methodology lectures.
   - When the user follows up on a prior turn, develop that thread without restarting from scratch.
-  - Do not append unsolicited win-theme lectures or capture strategy unless the user asks for strategy, evaluation alignment, or win themes."""
+  - Do not append unsolicited win-theme lectures or capture strategy unless the user asks for strategy, evaluation alignment, or win themes.
+  - Do not append follow-up question lists, "Explore next" blocks, or suggested next prompts in the response body."""
 
 NAIVE_STEP_ADDENDUM = """
-  - Place inline `[N]` markers next to factual claims; numbers must match `### References`.
   - Apply GovCon domain expertise to interpret retrieved facts when the question benefits from explanation — separate cited facts from framework reasoning.
   - When the user follows up on a prior turn, develop that thread without restarting from scratch.
-  - Do not append unsolicited win-theme lectures or capture strategy unless the user asks for strategy, evaluation alignment, or win themes."""
+  - Do not append unsolicited win-theme lectures or capture strategy unless the user asks for strategy, evaluation alignment, or win themes.
+  - Do not append follow-up question lists, "Explore next" blocks, or suggested next prompts in the response body."""
 
 _GOVCON_GROUNDING_ADDENDUM = """
   - You ARE encouraged to reason about, interpret, and draw strategic implications from retrieved facts when the question benefits from analysis.
@@ -69,7 +55,6 @@ _GOVCON_GROUNDING_ADDENDUM = """
   - **Template placeholders:** Customer templates (CLIN cost worksheets, staffing matrices, etc.) may contain example dollar amounts and quantities that are NOT normative. When a chunk shows placeholder signals (`$0.00`, "example", "for illustration"), flag it: "**Template — extract structure, not values.**" Never weave placeholder values into strategic narratives.
   - **Pattern recognition** (when the question asks about compliance, traceability, evaluation alignment, or risks): surface contradictions between proposal_instruction and evaluation_factor entities; flag evaluation weight vs page-limit mismatches or template placeholders when the Context shows them."""
 
-
 def compose_govcon_rag_response(
     lightrag_template: str,
     *,
@@ -77,12 +62,11 @@ def compose_govcon_rag_response(
     goal_block: str,
     step_addendum: str,
 ) -> str:
-    """Build a GovCon query prompt: domain preamble + LightRAG formatting spine."""
+    """Build a GovCon query prompt: domain blocks + LightRAG instructions unchanged."""
     step_and_grounding, formatting_tail, context_footer = _split_instructions(
         lightrag_template
     )
     step_block, grounding_block = _split_step_and_grounding(step_and_grounding)
-    formatting_tail = _enhance_references_format(formatting_tail)
 
     instructions = "\n\n".join(
         [

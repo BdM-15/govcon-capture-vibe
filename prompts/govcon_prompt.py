@@ -66,6 +66,40 @@ v7.1   - Forbid space/comma-joined canonical types in keywords field.
 
 Changelog:
 ----------
+v3.9.7 (Jun 2026) - Post-context format anchor for query prompts (issue #192)
+  - Format contract appended after `{context_data}` so rules stay salient after 200k retrieval
+
+v3.9.6 (Jun 2026) - Structure normalizer for prose-heavy answers (issue #192)
+  - Server + renderer promote plain section lines (`Section 1.0 –`) and major themes to headings
+  - System compose: mandatory ## / bullets for multi-topic answers (not library prompts)
+
+v3.9.5 (Jun 2026) - References fallback + heading color separation (issue #192)
+  - Server appends `### References` from retrieved sources when the model omits it
+  - Renderer promotes plain section titles to `##` for cyan theme styling
+  - h2/h3 CSS: cyan section rails + magenta subheads
+
+v3.9.4 (Jun 2026) - Drop in-response Explore next (issue #192)
+  - Removed from scope primer; follow-up prompts belong in UI, not answer body
+  - References is unambiguously the final section (no follow-up block before it)
+
+v3.9.3 (Jun 2026) - Formatting stays in system settings, not prompt library (issue #192)
+  - Reverted scope primer to content-only; no ##/bullet instructions in library prompts
+  - Response Format picker in query settings (`response_type`); Additional Output Prompt unchanged
+  - System compose still owns LightRAG §3 Markdown + [N] + References ordering
+
+v3.9.2 (Jun 2026) - Structure + citations must coexist (issue #192)
+  - Formatting rules in query_compose (not library); renderer handles circled digits (①②)
+
+v3.9.1 (Jun 2026) - References section ordering + scope primer citations (issue #192)
+  - Scope primer: Explore next before References; References must be final section
+  - Query compose: explicit section-order rule when user requests follow-up questions
+
+v3.9.0 (Jun 2026) - Structured Markdown response_type + citation hardening (issue #192)
+  - UI query defaults now set `response_type` to structured Markdown instead of LightRAG's
+    implicit "Multiple Paragraphs" (which flattened headings/bullets)
+  - `query_compose.py` clarifies Markdown wins over presentation style; forbids bare citation numbers
+  - Chat renderer upgrades bare trailing citation digits (e.g. "...fact. 1") to cite chips
+
 v3.8.0 (Jun 2026) - Compose query prompts on LightRAG formatting spine (issue #192)
   - `prompts/govcon/query_compose.py` loads LightRAG `rag_response` / `naive_rag_response` and
     preserves sections 3–6 (Markdown formatting, `{response_type}`, references) verbatim

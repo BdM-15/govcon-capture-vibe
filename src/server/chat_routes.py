@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -15,16 +16,19 @@ from pydantic import BaseModel, Field
 
 from src.core.env import env_int
 from src.server.chat_store import ChatStore
+from src.server.query_bridge import QueryLlmFunc, stream_bundle_from_llm_result
 from src.server.reasoning_filter import ThinkStripper, strip_think
 
 logger = logging.getLogger(__name__)
 
 VALID_QUERY_MODES = {"local", "global", "hybrid", "naive", "mix", "bypass"}
 
+# LightRAG §3 already requires Markdown; this avoids the default
+# "Multiple Paragraphs" wording that conflicts with headings and bullets.
+DEFAULT_RESPONSE_TYPE = "Markdown"
+
 # QueryParam fields forwarded to the bridge. `min_rerank_score` is applied
 # directly to the LightRAG instance, and `mode` / `stream` are per-chat.
-# `response_type` is intentionally omitted because upstream LightRAG WebUI
-# dropped the picker and uses QueryParam's default.
 QUERY_PARAM_FIELDS = (
     "top_k",
     "chunk_top_k",
@@ -34,10 +38,12 @@ QUERY_PARAM_FIELDS = (
     "enable_rerank",
     "only_need_context",
     "only_need_prompt",
+    "response_type",
     "user_prompt",
 )
 
 _SOURCE_PREVIEW_CHARS = 800
+_SSE_KEEPALIVE_INTERVAL_S = 2.0
 
 QueryFunc = Callable[
     [str, str, list[dict], bool, dict],
@@ -47,6 +53,7 @@ QueryDataFunc = Callable[
     [str, str, list[dict], dict],
     Awaitable[dict],
 ]
+QueryLlmFunc = QueryLlmFunc
 
 
 class QuerySettingsUpdate(BaseModel):
@@ -63,6 +70,7 @@ class QuerySettingsUpdate(BaseModel):
     only_need_context: bool | None = None
     only_need_prompt: bool | None = None
     stream: bool | None = None
+    response_type: str | None = Field(default=None, max_length=200)
     user_prompt: str | None = Field(default=None, max_length=20000)
 
 
@@ -93,6 +101,7 @@ class QuerySettingsStore:
             "only_need_context": False,
             "only_need_prompt": False,
             "stream": True,
+            "response_type": DEFAULT_RESPONSE_TYPE,
             "user_prompt": "",
         }
 
@@ -256,7 +265,7 @@ def register_chat_routes(
     chat_store: ChatStore,
     query_settings: Any,
     query_func: QueryFunc,
-    data_func: QueryDataFunc | None,
+    query_llm_func: QueryLlmFunc | None = None,
     now: Callable[[], str],
 ) -> None:
     """Register persistent chat CRUD plus chat message routes."""
@@ -313,37 +322,35 @@ def register_chat_routes(
         overrides = query_settings.build_overrides()
         sources_payload: dict | None = None
         mode = chat.get("mode", "mix")
-        if data_func is not None and mode != "bypass":
-            try:
-                data_result = await data_func(
+        answer: str | Any = ""
+        try:
+            if query_llm_func is not None:
+                llm_result = await query_llm_func(
                     payload.content,
                     mode,
                     history,
+                    False,
                     overrides,
                 )
-                if isinstance(data_result, dict) and data_result.get("status") == "success":
-                    sources_payload = trim_sources(data_result.get("data", {}))
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "Sources pre-flight failed for chat %s: %s",
-                    chat_id,
-                    exc,
+                bundle = stream_bundle_from_llm_result(llm_result)
+                sources_payload = bundle.sources_payload
+                answer = bundle.result
+            else:
+                answer = await query_func(
+                    payload.content,
+                    mode,
+                    history,
+                    False,
+                    overrides,
                 )
-        try:
-            answer = await query_func(
-                payload.content,
-                mode,
-                history,
-                False,
-                overrides,
-            )
         except Exception as exc:  # noqa: BLE001
             logger.exception("Query failed for chat %s: %s", chat_id, exc)
             answer = f"⚠️ Query failed: {exc}"
 
+        answer_text = strip_think(str(answer))
         assistant_msg = {
             "role": "assistant",
-            "content": strip_think(str(answer)),
+            "content": answer_text,
             "ts": now(),
             "mode": mode,
         }
@@ -400,52 +407,128 @@ def register_chat_routes(
             error_message: str | None = None
             sources_payload: dict | None = None
             try:
-                if data_func is not None and mode != "bypass":
-                    try:
-                        data_result = await data_func(
+                if query_llm_func is not None:
+                    query_task = asyncio.create_task(
+                        query_llm_func(
                             payload.content,
                             mode,
                             history,
+                            True,
                             overrides,
                         )
-                        if isinstance(data_result, dict) and data_result.get("status") == "success":
-                            sources_payload = trim_sources(data_result.get("data", {}))
-                            yield (
-                                "event: sources\ndata: "
-                                + json.dumps(sources_payload)
-                                + "\n\n"
+                    )
+                    while True:
+                        try:
+                            llm_result = await asyncio.wait_for(
+                                asyncio.shield(query_task),
+                                timeout=_SSE_KEEPALIVE_INTERVAL_S,
                             )
-                    except Exception as exc:  # noqa: BLE001
-                        logger.warning(
-                            "Sources pre-flight failed for chat %s: %s",
-                            chat_id,
-                            exc,
-                        )
-                result = await query_func(payload.content, mode, history, True, overrides)
+                            break
+                        except asyncio.TimeoutError:
+                            yield ": keepalive\n\n"
+                    bundle = stream_bundle_from_llm_result(llm_result)
+                    sources_payload = bundle.sources_payload
+                    result = bundle.result
+                else:
+                    result = await query_func(
+                        payload.content,
+                        mode,
+                        history,
+                        True,
+                        overrides,
+                    )
                 retrieve_ms = int((time.perf_counter() - start) * 1000)
+                generating_status: dict[str, Any] = {
+                    "phase": "generating",
+                    "label": "Generating response…",
+                    "retrieve_ms": retrieve_ms,
+                }
+                if sources_payload and sources_payload.get("counts"):
+                    generating_status["source_counts"] = sources_payload["counts"]
                 yield (
                     "event: status\ndata: "
-                    + json.dumps(
-                        {
-                            "phase": "generating",
-                            "label": "Generating response…",
-                            "retrieve_ms": retrieve_ms,
-                        }
-                    )
+                    + json.dumps(generating_status)
                     + "\n\n"
                 )
                 if hasattr(result, "__aiter__"):
-                    async for chunk in result:
-                        if not chunk:
-                            continue
-                        text = stripper.feed(str(chunk))
-                        if not text:
-                            continue
-                        if first_token is None:
-                            first_token = time.perf_counter()
-                        collected.append(text)
-                        token_count += 1
-                        yield f"event: token\ndata: {json.dumps({'text': text})}\n\n"
+                    chunk_queue: asyncio.Queue[Any] = asyncio.Queue()
+
+                    async def _pump_llm_chunks() -> None:
+                        try:
+                            async for chunk in result:
+                                await chunk_queue.put(chunk)
+                        finally:
+                            await chunk_queue.put(None)
+
+                    pump_task = asyncio.create_task(_pump_llm_chunks())
+                    reasoning_announced = False
+                    try:
+                        while True:
+                            try:
+                                chunk = await asyncio.wait_for(
+                                    chunk_queue.get(),
+                                    timeout=_SSE_KEEPALIVE_INTERVAL_S,
+                                )
+                            except asyncio.TimeoutError:
+                                if stripper.in_think and not reasoning_announced:
+                                    reasoning_announced = True
+                                    yield (
+                                        "event: status\ndata: "
+                                        + json.dumps(
+                                            {
+                                                "phase": "reasoning",
+                                                "label": "Reasoning…",
+                                                "retrieve_ms": retrieve_ms,
+                                            }
+                                        )
+                                        + "\n\n"
+                                    )
+                                yield ": keepalive\n\n"
+                                continue
+                            if chunk is None:
+                                break
+                            if not chunk:
+                                continue
+                            text = stripper.feed(str(chunk))
+                            if stripper.in_think and not reasoning_announced:
+                                reasoning_announced = True
+                                yield (
+                                    "event: status\ndata: "
+                                    + json.dumps(
+                                        {
+                                            "phase": "reasoning",
+                                            "label": "Reasoning…",
+                                            "retrieve_ms": retrieve_ms,
+                                        }
+                                    )
+                                    + "\n\n"
+                                )
+                            if not text:
+                                continue
+                            if reasoning_announced:
+                                reasoning_announced = False
+                                yield (
+                                    "event: status\ndata: "
+                                    + json.dumps(
+                                        {
+                                            "phase": "generating",
+                                            "label": "Writing response…",
+                                            "retrieve_ms": retrieve_ms,
+                                        }
+                                    )
+                                    + "\n\n"
+                                )
+                            if first_token is None:
+                                first_token = time.perf_counter()
+                            collected.append(text)
+                            token_count += 1
+                            yield (
+                                f"event: token\ndata: {json.dumps({'text': text})}\n\n"
+                            )
+                            await asyncio.sleep(0)
+                    finally:
+                        if not pump_task.done():
+                            pump_task.cancel()
                     tail = stripper.flush()
                     if tail:
                         if first_token is None:
@@ -470,7 +553,7 @@ def register_chat_routes(
             ttft_ms = int((first_token - start) * 1000) if first_token else None
             generate_ms = int((end - first_token) * 1000) if first_token else None
 
-            full_text = "".join(collected)
+            full_text = strip_think("".join(collected))
             timing = {
                 "total_ms": total_ms,
                 "ttft_ms": ttft_ms,
@@ -495,6 +578,13 @@ def register_chat_routes(
             latest["updated_at"] = now()
             chat_store.write(latest)
 
+            if full_text and "### references" not in full_text.lower():
+                logger.warning(
+                    "[chat] response missing ### References section (mode=%s chars=%s)",
+                    mode,
+                    len(full_text),
+                )
+
             logger.info(
                 "[chat] mode=%s ttft=%sms total=%sms chunks=%s chars=%s%s",
                 mode,
@@ -505,11 +595,15 @@ def register_chat_routes(
                 f" error={error_message!r}" if error_message else "",
             )
 
+            done_assistant = dict(assistant_msg)
+            if token_count > 0 and full_text:
+                # Client already assembled streamed text; omit duplicate body.
+                done_assistant.pop("content", None)
             yield (
                 "event: done\ndata: "
                 + json.dumps(
                     {
-                        "assistant": assistant_msg,
+                        "assistant": done_assistant,
                         "chat": chat_store.summary(latest),
                         "timing": timing,
                     }
@@ -537,6 +631,7 @@ __all__ = [
     "ThinkStripper",
     "register_chat_routes",
     "register_query_settings_routes",
+    "DEFAULT_RESPONSE_TYPE",
     "strip_think",
     "trim_sources",
 ]

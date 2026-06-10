@@ -90,6 +90,7 @@ class TheseusRAGRuntime:
 class UIQueryBridges:
     query: Callable[[str, str, list[dict], bool, dict | None], Awaitable[Any]]
     query_data: Callable[[str, str, list[dict], dict | None], Awaitable[Any]]
+    query_llm: Callable[[str, str, list[dict], bool, dict | None], Awaitable[Any]]
     llm: Callable[[str], Awaitable[str]]
 
 
@@ -388,6 +389,9 @@ def _prepare_ui_query_overrides(
             logger.warning("Failed setting min_rerank_score=%r: %s", min_score, exc)
 
     param_kwargs = {key: value for key, value in overrides.items() if key in valid_fields}
+    from src.server.chat_routes import DEFAULT_RESPONSE_TYPE
+
+    param_kwargs.setdefault("response_type", DEFAULT_RESPONSE_TYPE)
     if param_kwargs or min_score is not None:
         logger.info(
             "Query tunables: %s",
@@ -472,6 +476,35 @@ def make_ui_query_bridges(
             if rerank_token is not None:
                 reset_active_min_rerank_score(rerank_token)
 
+    async def _ui_query_llm(
+        text: str,
+        mode: str,
+        history: list[dict],
+        stream: bool,
+        overrides: dict | None = None,
+    ):
+        from src.extraction.govcon_reranker import reset_active_min_rerank_score
+
+        param_kwargs, rerank_token = _prepare_ui_query_overrides(
+            rag_instance,
+            overrides,
+            logger=logger,
+            valid_fields=valid_fields,
+        )
+        try:
+            return await rag_instance.lightrag.aquery_llm(
+                text,
+                param=query_param_factory(
+                    mode=mode,
+                    stream=stream,
+                    conversation_history=history or [],
+                    **param_kwargs,
+                ),
+            )
+        finally:
+            if rerank_token is not None:
+                reset_active_min_rerank_score(rerank_token)
+
     async def _ui_llm(prompt: str) -> str:
         llm = getattr(rag_instance.lightrag, "llm_model_func", None)
         if llm is None:
@@ -479,7 +512,12 @@ def make_ui_query_bridges(
         result = await llm(prompt, system_prompt=None, history_messages=[])
         return result if isinstance(result, str) else str(result)
 
-    return UIQueryBridges(query=_ui_query, query_data=_ui_query_data, llm=_ui_llm)
+    return UIQueryBridges(
+        query=_ui_query,
+        query_data=_ui_query_data,
+        query_llm=_ui_query_llm,
+        llm=_ui_llm,
+    )
 
 
 @contextmanager
@@ -569,7 +607,13 @@ def build_server_runtime(
     register_custom_ingestion_routes_fn(app, rag_instance, logger=logger)
 
     ui_bridges = make_ui_query_bridges_fn(rag_instance, logger=logger)
-    register_ui_fn(app, ui_bridges.query, ui_bridges.query_data, llm_func=ui_bridges.llm)
+    register_ui_fn(
+        app,
+        ui_bridges.query,
+        ui_bridges.query_data,
+        query_llm_func=ui_bridges.query_llm,
+        llm_func=ui_bridges.llm,
+    )
 
     graph_storage = (
         global_args_obj.graph_storage

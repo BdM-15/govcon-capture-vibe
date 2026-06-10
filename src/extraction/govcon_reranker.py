@@ -14,6 +14,7 @@ Module-level singleton: model loaded once on first query, reused for server life
 
 from __future__ import annotations
 
+import asyncio
 import contextvars
 import logging
 import time
@@ -116,7 +117,7 @@ async def govcon_rerank_func(
 
     rerank_start = time.perf_counter()
     pairs = [(query, text or "") for text in documents]
-    scores = reranker.compute_score(pairs, normalize=True)
+    scores = await asyncio.to_thread(reranker.compute_score, pairs, normalize=True)
     # FlagReranker returns a single float for one pair, list for many — normalize
     if isinstance(scores, float):
         scores = [scores]

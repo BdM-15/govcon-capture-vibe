@@ -298,8 +298,23 @@ window.theseusStudioDownloadHref = function theseusStudioDownloadHref(
   );
 };
 
-window.theseusRenderMd = function theseusRenderMd(text, msgIdx) {
+const THESEUS_EXPAND_BARE_CITE_DIGITS = (digits) => {
+  if (digits.length <= 1) return [digits];
+  const parts = digits.split("");
+  if (parts.every((d) => d >= "1" && d <= "5")) return parts;
+  return [digits];
+};
+
+window.theseusRenderMd = function theseusRenderMd(text, msgIdx, options) {
   if (!text) return "";
+  const light = Boolean(options && options.light);
+  const cacheKey =
+    !light && msgIdx != null
+      ? `${msgIdx}:${text.length}:${text.charCodeAt(0) || 0}:${text.charCodeAt(text.length - 1) || 0}`
+      : "";
+  if (cacheKey && window.theseusRenderMdCache?.[cacheKey]) {
+    return window.theseusRenderMdCache[cacheKey];
+  }
   try {
     const html = window.marked
       ? window.marked.parse(text, { breaks: true, gfm: true })
@@ -309,7 +324,12 @@ window.theseusRenderMd = function theseusRenderMd(text, msgIdx) {
           ADD_ATTR: ["data-cite", "data-msg-idx", "data-cite-anchor"],
         })
       : html;
-    return window.theseusEnhanceCitations(safe, msgIdx);
+    const rendered = light ? safe : window.theseusEnhanceCitations(safe, msgIdx);
+    if (cacheKey) {
+      if (!window.theseusRenderMdCache) window.theseusRenderMdCache = {};
+      window.theseusRenderMdCache[cacheKey] = rendered;
+    }
+    return rendered;
   } catch (_) {
     return text;
   }
@@ -344,18 +364,20 @@ window.theseusEnhanceCitations = function theseusEnhanceCitations(html, msgIdx) 
       let node = refHeading.nextElementSibling;
       while (node) {
         if (/^H[1-6]$/.test(node.tagName)) break;
-        const items = node.querySelectorAll ? node.querySelectorAll("li") : [];
-        items.forEach((item) => {
-          const match = (item.textContent || "").match(/^\s*\[(\d+)\]/);
+        const registerRefLine = (element, text) => {
+          const match = (text || "").match(/^\s*\[(\d+)\]/);
           if (!match) return;
-
           const refNumber = match[1];
           const anchorId = `cite-${idx}-${refNumber}`;
-          item.setAttribute("id", anchorId);
-          item.setAttribute("data-cite-anchor", refNumber);
-          item.classList.add("cite-target");
+          element.setAttribute("id", anchorId);
+          element.setAttribute("data-cite-anchor", refNumber);
+          element.classList.add("cite-target");
           refMap[refNumber] = anchorId;
-        });
+        };
+        const items = node.querySelectorAll ? node.querySelectorAll("li") : [];
+        items.forEach((item) => registerRefLine(item, item.textContent || ""));
+        const paras = node.querySelectorAll ? node.querySelectorAll("p") : [];
+        paras.forEach((para) => registerRefLine(para, para.textContent || ""));
         node = node.nextElementSibling;
       }
     }
@@ -394,42 +416,105 @@ window.theseusEnhanceCitations = function theseusEnhanceCitations(html, msgIdx) 
     let currentNode;
     while ((currentNode = walker.nextNode())) targets.push(currentNode);
 
-    const citeRe = /\[\s*(\d+(?:\s*,\s*\d+)*)\s*\]/g;
-    targets.forEach((node) => {
+    const appendCiteChip = (frag, number) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "cite-chip";
+      btn.setAttribute("data-cite", number);
+      btn.setAttribute("data-msg-idx", String(idx));
+      btn.title = refMap[number]
+        ? `Jump to reference [${number}]`
+        : `Citation [${number}] (no matching reference)`;
+      if (!refMap[number]) btn.classList.add("cite-chip-orphan");
+      btn.textContent = number;
+      frag.appendChild(btn);
+    };
+
+    const replaceCitationsInNode = (node, pattern, extractNumbers, { prefix = "" } = {}) => {
       const text = node.nodeValue;
       const frag = document.createDocumentFragment();
       let last = 0;
       let match;
-      citeRe.lastIndex = 0;
-      while ((match = citeRe.exec(text)) !== null) {
+      pattern.lastIndex = 0;
+      while ((match = pattern.exec(text)) !== null) {
         if (match.index > last) {
           frag.appendChild(document.createTextNode(text.slice(last, match.index)));
         }
-
-        const numbers = match[1].split(",").map((part) => part.trim());
+        if (prefix) frag.appendChild(document.createTextNode(prefix));
+        const numbers = extractNumbers(match);
         numbers.forEach((number, numberIndex) => {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "cite-chip";
-          btn.setAttribute("data-cite", number);
-          btn.setAttribute("data-msg-idx", String(idx));
-          btn.title = refMap[number]
-            ? `Jump to reference [${number}]`
-            : `Citation [${number}] (no matching reference)`;
-          if (!refMap[number]) btn.classList.add("cite-chip-orphan");
-          btn.textContent = number;
-          frag.appendChild(btn);
+          appendCiteChip(frag, number);
           if (numberIndex < numbers.length - 1) {
             frag.appendChild(document.createTextNode(" "));
           }
         });
         last = match.index + match[0].length;
       }
-
       if (last < text.length) {
         frag.appendChild(document.createTextNode(text.slice(last)));
       }
       node.parentNode.replaceChild(frag, node);
+    };
+
+    const citeRe = /\[\s*(\d+(?:\s*,\s*\d+)*)\s*\]/g;
+    targets.forEach((node) => {
+      replaceCitationsInNode(node, citeRe, (match) =>
+        match[1].split(",").map((part) => part.trim()),
+      );
+    });
+
+    // Models sometimes emit bare trailing numbers (e.g. "...systems. 12" for [1][2]).
+    const bareCiteRe =
+      /(?<=[.!?)])(?<!\d)\s+(\d{1,4})(?=\s+[A-Z"(]|\s*$)/g;
+    const bareTailCiteRe = /(?<=[A-Za-z])\s+(\d{1,4})$/;
+    const bareWalker = document.createTreeWalker(wrap, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        if (!node.parentNode) return NodeFilter.FILTER_REJECT;
+        if (skipParents.has(node.parentNode.nodeName)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        if (inRefSection(node)) return NodeFilter.FILTER_REJECT;
+        const value = node.nodeValue || "";
+        bareCiteRe.lastIndex = 0;
+        if (bareCiteRe.test(value) || bareTailCiteRe.test(value)) {
+          bareCiteRe.lastIndex = 0;
+          bareTailCiteRe.lastIndex = 0;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+        return NodeFilter.FILTER_REJECT;
+      },
+    });
+    const bareTargets = [];
+    while ((currentNode = bareWalker.nextNode())) bareTargets.push(currentNode);
+    bareTargets.forEach((node) => {
+      replaceCitationsInNode(node, bareCiteRe, (match) =>
+        THESEUS_EXPAND_BARE_CITE_DIGITS(match[1] || ""),
+      );
+      replaceCitationsInNode(node, bareTailCiteRe, (match) =>
+        THESEUS_EXPAND_BARE_CITE_DIGITS(match[1] || ""),
+      );
+    });
+
+    // Unicode circled digits (①②) — some models use these instead of [N].
+    const circledCiteRe = /[\u2460-\u2473]/g;
+    const circledWalker = document.createTreeWalker(wrap, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        if (!node.parentNode) return NodeFilter.FILTER_REJECT;
+        if (skipParents.has(node.parentNode.nodeName)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        if (inRefSection(node)) return NodeFilter.FILTER_REJECT;
+        if (!circledCiteRe.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+        circledCiteRe.lastIndex = 0;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    const circledTargets = [];
+    while ((currentNode = circledWalker.nextNode())) circledTargets.push(currentNode);
+    circledTargets.forEach((node) => {
+      replaceCitationsInNode(node, circledCiteRe, (match) => [
+        String(match[0].charCodeAt(0) - 0x245f),
+      ]);
     });
 
     return wrap.innerHTML;

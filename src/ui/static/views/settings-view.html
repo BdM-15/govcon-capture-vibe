@@ -312,6 +312,18 @@
                         />
                       </label>
                     </div>
+                    <p class="text-[11px] text-slate-500 font-mono leading-relaxed">
+                      Token budget (LightRAG): entities and relations are capped
+                      separately first, then
+                      <span class="text-slate-400">Max Total</span>
+                      is the full prompt envelope — system prompt + KG context
+                      (entities + relations) + your question + text chunks. Raising
+                      Max Total mainly adds room for chunks on large graphs. This is
+                      <span class="text-slate-400">input</span>
+                      budget; answer length is controlled by
+                      <span class="text-slate-400">LLM_MAX_OUTPUT_TOKENS</span>
+                      in .env (currently your Grok 4.3 output cap).
+                    </p>
 
                     <div
                       class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end"
@@ -376,16 +388,36 @@
 
                     <label class="block">
                       <span class="text-xs text-slate-400 font-mono">
+                        Response Format
+                        <span class="text-slate-600"
+                          >· LightRAG `{response_type}` (§3 Markdown still applies)</span
+                        >
+                      </span>
+                      <select
+                        x-model="querySettings.values.response_type"
+                        class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                      >
+                        <option value="Markdown">Markdown (default)</option>
+                        <option value="Multiple Paragraphs">
+                          Multiple Paragraphs
+                        </option>
+                        <option value="Bullet Points">Bullet Points</option>
+                        <option value="Single Paragraph">Single Paragraph</option>
+                      </select>
+                    </label>
+
+                    <label class="block">
+                      <span class="text-xs text-slate-400 font-mono">
                         Additional Output Prompt
                         <span class="text-slate-600"
-                          >· appended to LLM instructions</span
+                          >· appended to LLM instructions ({user_prompt})</span
                         >
                       </span>
                       <textarea
                         x-model="querySettings.values.user_prompt"
                         rows="3"
                         class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none resize-y"
-                        placeholder="Optional: extra instructions appended to every response (formatting, tone, constraints)…"
+                        placeholder="Optional: extra instructions appended to every response…"
                       ></textarea>
                     </label>
                   </div>
