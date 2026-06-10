@@ -72,7 +72,7 @@
     class="font-sans antialiased scanline"
     @keydown.window.ctrl.k.prevent="openPalette()"
     @keydown.window.meta.k.prevent="openPalette()"
-    @keydown.window.escape="palette.open=false; wsModal.open=false; promptPicker.open=false"
+    @keydown.window.escape="palette.open=false; wsModal.open=false; promptPicker.open=false; promptEditor.open=false"
   >
     <!-- ========================== TOP COMMAND BAR ========================== -->
     <header
@@ -1429,7 +1429,7 @@
                 ></span>
               </div>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <template x-for="p in phase.items" :key="'pick-' + p.title">
+                <template x-for="p in phase.items" :key="'pick-' + (p.id || p.title)">
                   <button
                     type="button"
                     class="text-left p-3 rounded-lg border border-edge bg-ink-900/60 hover:border-neon-cyan/40 hover:bg-neon-cyan/5 transition group"
@@ -1575,6 +1575,204 @@
             <i data-lucide="plus" class="w-4 h-4"></i>
             <span>Create &amp; Switch</span>
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================== PROMPT EDITOR MODAL ========================== -->
+    <div
+      x-show="promptEditor.open"
+      x-cloak
+      class="fixed inset-0 z-[62] bg-ink-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+      @click.self="closePromptEditor()"
+    >
+      <div
+        class="w-full max-w-3xl modal-canvas rounded-2xl overflow-hidden flex flex-col max-h-[88vh]"
+      >
+        <div
+          class="px-5 py-4 glass-section-bar flex items-center justify-between shrink-0"
+        >
+          <div>
+            <h3 class="font-semibold flex items-center gap-2">
+              <i data-lucide="library" class="w-4 h-4 text-neon-magenta"></i>
+              <span
+                class="h1-gradient"
+                x-text="promptEditor.isNew ? 'New prompt starter' : 'Edit prompt starter'"
+              ></span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Depth and topic live here — not in system persona. Use
+              <span class="font-mono text-slate-400">{topic}</span> placeholders.
+            </p>
+          </div>
+          <button
+            class="btn btn-ghost text-slate-500"
+            @click="closePromptEditor()"
+          >
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div class="p-5 overflow-y-auto space-y-4 flex-1">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label class="block text-xs text-slate-500">
+              Phase
+              <select
+                x-model="promptEditor.draft.phase"
+                class="mt-1 w-full bg-ink-900 border border-edge focus:border-neon-cyan/60 outline-none rounded-lg px-3 py-2 text-sm font-mono"
+              >
+                <option value="4">4 — Planning</option>
+                <option value="5">5 — Development</option>
+                <option value="6">6 — Color reviews</option>
+              </select>
+            </label>
+            <label class="block text-xs text-slate-500 sm:col-span-2">
+              Category
+              <input
+                x-model="promptEditor.draft.category"
+                list="prompt-category-options"
+                placeholder="Discovery, Strategy, Writing…"
+                class="mt-1 w-full bg-ink-900 border border-edge focus:border-neon-cyan/60 outline-none rounded-lg px-3 py-2 text-sm"
+              />
+              <datalist id="prompt-category-options">
+                <template x-for="cat in promptCategories()" :key="'cat-' + cat">
+                  <option :value="cat"></option>
+                </template>
+              </datalist>
+            </label>
+          </div>
+
+          <label class="block text-xs text-slate-500">
+            Title
+            <input
+              x-model="promptEditor.draft.title"
+              placeholder="Scope & services primer"
+              class="mt-1 w-full bg-ink-900 border border-edge focus:border-neon-cyan/60 outline-none rounded-lg px-3 py-2 text-sm"
+            />
+          </label>
+
+          <label class="block text-xs text-slate-500">
+            Prompt text
+            <textarea
+              x-model="promptEditor.draft.prompt"
+              rows="12"
+              placeholder="Describe what the model should do. Require [N] citations for facts…"
+              class="mt-1 w-full bg-ink-900 border border-edge focus:border-neon-cyan/60 outline-none rounded-lg px-3 py-2 text-sm font-mono leading-relaxed resize-y min-h-[200px]"
+            ></textarea>
+          </label>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-[11px] font-mono text-slate-500 mr-1"
+              >Placeholders:</span
+            >
+            <template
+              x-for="token in promptPlaceholders()"
+              :key="'ph-' + token"
+            >
+              <button
+                type="button"
+                class="pill bg-ink-800 text-slate-400 border border-edge hover:border-neon-cyan/40 hover:text-neon-cyan text-[10px] font-mono"
+                @click="promptEditor.draft.prompt = (promptEditor.draft.prompt || '') + (promptEditor.draft.prompt ? ' ' : '') + token"
+              >
+                <span x-text="token"></span>
+              </button>
+            </template>
+          </div>
+
+          <div class="rounded-lg border border-edge bg-ink-900/60 p-3 space-y-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <span class="text-xs font-semibold text-slate-300"
+                >AI refine</span
+              >
+              <span class="text-[11px] text-slate-500"
+                >Review output before saving</span
+              >
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="btn btn-ghost text-xs"
+                :disabled="promptEditor.refining"
+                @click="refinePromptDraft('clarity')"
+              >
+                Clarity
+              </button>
+              <button
+                type="button"
+                class="btn btn-ghost text-xs"
+                :disabled="promptEditor.refining"
+                @click="refinePromptDraft('shorter')"
+              >
+                Shorter
+              </button>
+              <button
+                type="button"
+                class="btn btn-ghost text-xs"
+                :disabled="promptEditor.refining"
+                @click="refinePromptDraft('citations')"
+              >
+                Citations
+              </button>
+              <button
+                type="button"
+                class="btn btn-ghost text-xs"
+                :disabled="promptEditor.refining"
+                @click="refinePromptDraft('structure')"
+              >
+                Structure
+              </button>
+              <span
+                x-show="promptEditor.refining"
+                class="text-[11px] font-mono text-neon-cyan self-center"
+                >Refining…</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="px-5 py-3 border-t border-edge flex items-center justify-between gap-2 shrink-0 flex-wrap"
+        >
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="btn btn-ghost text-xs text-neon-red"
+              x-show="!promptEditor.isNew"
+              @click="deletePromptEntry(promptEditor.draft)"
+            >
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span
+                x-text="promptEditor.draft.source === 'user' ? 'Delete' : 'Hide'"
+              ></span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost text-xs"
+              x-show="!promptEditor.isNew"
+              @click="duplicatePromptEntry(promptEditor.draft)"
+            >
+              <i data-lucide="copy-plus" class="w-3.5 h-3.5"></i>
+              Duplicate
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="btn btn-ghost text-xs"
+              @click="closePromptEditor()"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn-hero-cyan inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold text-ink-950 disabled:opacity-40"
+              :disabled="promptEditor.saving"
+              @click="savePromptEditor()"
+            >
+              <i data-lucide="save" class="w-4 h-4"></i>
+              <span x-text="promptEditor.saving ? 'Saving…' : 'Save'"></span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

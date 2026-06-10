@@ -592,6 +592,50 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusPickerPhases(this);
     },
 
+    promptCategories() {
+      return window.theseusPromptCategories();
+    },
+
+    promptPlaceholders() {
+      return window.theseusPromptPlaceholders();
+    },
+
+    openPromptEditor(prompt = null) {
+      return window.theseusOpenPromptEditor(this, prompt);
+    },
+
+    closePromptEditor() {
+      return window.theseusClosePromptEditor(this);
+    },
+
+    async savePromptEditor() {
+      return window.theseusSavePromptEditor(this);
+    },
+
+    async deletePromptEntry(prompt) {
+      return window.theseusDeletePromptEntry(this, prompt);
+    },
+
+    async duplicatePromptEntry(prompt) {
+      return window.theseusDuplicatePromptEntry(this, prompt);
+    },
+
+    async resetPromptLibrary() {
+      return window.theseusResetPromptLibrary(this);
+    },
+
+    async importPromptLibrary(file) {
+      return window.theseusImportPromptLibrary(this, file);
+    },
+
+    exportPromptLibrary() {
+      return window.theseusExportPromptLibrary(this);
+    },
+
+    async refinePromptDraft(action) {
+      return window.theseusRefinePromptDraft(this, action);
+    },
+
     async newChat(rfpContext = null) {
       return window.theseusNewChat(this, rfpContext);
     },
