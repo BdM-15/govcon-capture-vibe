@@ -394,7 +394,7 @@
                               :disabled="sending"
                               title="Branch this insight into a new grounded chat"
                             >
-                              <i data-lucide="git-branch-plus" class="w-3.5 h-3.5"></i>
+                              <i data-lucide="git-branch" class="w-3.5 h-3.5"></i>
                               <span>Focus</span>
                             </button>
                             <button
@@ -712,7 +712,7 @@
                   class="px-5 py-4 glass-section-bar flex items-center justify-between gap-4 border-b border-edge"
                 >
                   <div class="flex items-center gap-3 min-w-0">
-                    <i data-lucide="git-branch-plus" class="w-5 h-5 text-purple-400 shrink-0"></i>
+                    <i data-lucide="git-branch" class="w-5 h-5 text-purple-400 shrink-0"></i>
                     <div class="min-w-0">
                       <h3 class="font-semibold text-sm">Focus in new chat</h3>
                       <p class="text-[11px] text-slate-500 mt-0.5">
@@ -780,7 +780,7 @@
                     @click="confirmInsightHandoff()"
                     :disabled="chatHandoff.sending || !chatHandoff.quote?.trim()"
                   >
-                    <i data-lucide="git-branch-plus" class="w-3.5 h-3.5"></i>
+                    <i data-lucide="git-branch" class="w-3.5 h-3.5"></i>
                     <span x-text="chatHandoff.sending ? 'Starting…' : 'Start branch'"></span>
                   </button>
                 </div>
