@@ -167,6 +167,7 @@ window.theseusLoadPromptLibrary = async function theseusLoadPromptLibrary(app) {
   try {
     const response = await app.api("/api/ui/prompt-library");
     window.theseusApplyPromptLibraryResponse(app, response);
+    window.theseusAfterRender(app);
   } catch {
     app.promptLibrary = [];
     app.promptLibraryMeta = { customized: false, workspace: "" };

@@ -28,6 +28,7 @@ const theseusHandleActiveChange = function theseusHandleActiveChange(app) {
   if (app.active === "skills" && !app.skills.loaded) app.loadSkills();
   if (app.active === "chains" && !app.chains.loaded) app.loadChains();
   if (app.active === "studio" && !app.studio.loaded) app.loadStudio();
+  if (app.active === "prompts") window.theseusAfterRender(app);
 };
 
 const theseusWatchAfterRender = function theseusWatchAfterRender(app, paths) {
@@ -52,6 +53,9 @@ window.theseusInit = async function theseusInit(app) {
     "wsModal.open",
     "wsModal.items",
     "promptPicker.query",
+    "promptLibrary",
+    "promptFilter",
+    "promptFilterMine",
     "restarting",
     "reasoning.open",
     "reasoning.expanded",

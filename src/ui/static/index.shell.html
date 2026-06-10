@@ -1429,7 +1429,7 @@
                 ></span>
               </div>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <template x-for="p in phase.items" :key="'pick-' + p.title">
+                <template x-for="p in phase.items" :key="'pick-' + (p.id || p.title)">
                   <button
                     type="button"
                     class="text-left p-3 rounded-lg border border-edge bg-ink-900/60 hover:border-neon-cyan/40 hover:bg-neon-cyan/5 transition group"
