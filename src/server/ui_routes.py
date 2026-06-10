@@ -77,7 +77,7 @@ from src.server.admin_routes import (
     ui_chat_history_pairs,
 )
 from src.server.document_routes import register_processing_log_routes
-from src.server.prompt_library import register_prompt_library_routes
+from src.server.prompt_library import PromptLibraryStore, register_prompt_library_routes
 from src.server.skill_routes import register_skill_ui_routes
 from src.server.entity_chunk_routes import register_entity_chunk_routes
 from src.server.graph_routes import register_graph_routes
@@ -136,6 +136,7 @@ class UIRouteContext:
     set_env_var: Callable[[str, str], None]
     schedule_restart: Callable[[float], None]
     query_settings: Any
+    prompt_library: Any
     chat_store: Any
 
 
@@ -150,6 +151,7 @@ def build_ui_route_context(
     set_env_var_func: Callable[[str, str], None],
     restart_func: Callable[[], None],
     query_settings_cls=QuerySettingsStore,
+    prompt_library_cls=PromptLibraryStore,
     chat_store_cls=ChatStore,
     call_later: Callable[[float, Callable[[], None]], None] | None = None,
 ) -> UIRouteContext:
@@ -161,6 +163,7 @@ def build_ui_route_context(
         workspace_dir=workspace_dir,
         settings_provider=settings_provider,
     )
+    prompt_library = prompt_library_cls(workspace_dir=workspace_dir)
     chat_store = chat_store_cls(
         workspace_dir=workspace_dir,
         now=now,
@@ -179,6 +182,7 @@ def build_ui_route_context(
         set_env_var=lambda key, value: set_env_var_func(key, value),
         schedule_restart=lambda delay: call_later(delay, restart_func),
         query_settings=query_settings,
+        prompt_library=prompt_library,
         chat_store=chat_store,
     )
 
@@ -205,7 +209,12 @@ def _register_feature_routes(
     )
 
     register_processing_log_routes(app)
-    register_prompt_library_routes(app)
+    register_prompt_library_routes(
+        app,
+        workspace_name=context.workspace_name,
+        store=context.prompt_library,
+        llm_func=llm_func,
+    )
 
     register_chat_routes(
         app,

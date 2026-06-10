@@ -2,8 +2,37 @@
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+import json
+import logging
+import uuid
+from pathlib import Path
+from typing import Any, Awaitable, Callable
+
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
+
+LlmFunc = Callable[[str], Awaitable[str]]
+
+_SHIPPED_NAMESPACE = uuid.UUID("8f4e3c2a-9b1d-4e5f-a6c7-d8e9f0a1b2c3")
+VALID_PHASES = frozenset({"4", "5", "6"})
+REFINE_ACTIONS = frozenset({"clarity", "shorter", "citations", "structure"})
+
+REFINE_SYSTEM = """You refine GovCon capture/proposal prompt starters for a RAG workbench.
+Rules:
+- Preserve intent, placeholders like {topic}, {focus}, {section_or_task}, and Shipley phase context.
+- Keep prompts grounded: require [N] citations for factual claims where appropriate.
+- Do NOT add markdown formatting instructions (handled elsewhere).
+- Return ONLY the revised prompt text — no preamble, no quotes, no explanation."""
+
+REFINE_USER_TEMPLATES = {
+    "clarity": "Improve clarity and plain-language readability. Expand acronyms on first use where helpful.\n\nPrompt:\n{prompt}",
+    "shorter": "Tighten this prompt: remove redundancy, keep all requirements and placeholders.\n\nPrompt:\n{prompt}",
+    "citations": "Strengthen citation discipline: every factual claim must cite retrieved evidence with [N]. Keep length similar.\n\nPrompt:\n{prompt}",
+    "structure": "Improve structure with a clear ordered outline (bullets or numbered steps) while keeping the same task scope.\n\nPrompt:\n{prompt}",
+}
 
 
 PROMPT_LIBRARY: list[dict[str, str]] = [
@@ -112,31 +141,380 @@ PROMPT_LIBRARY: list[dict[str, str]] = [
      "prompt": "Final pre-submission sweep: confirm every proposal_instruction (UCF Section L or equivalent) is answered, every evaluation_factor (UCF Section M or equivalent — including adjectival or LPTA schemes) is addressed, every page limit is met, every required artifact (volumes, certifications, reps & certs, pricing, model contract, oral slides) is named, every cross-reference is intact, and every page footer/header complies with format constraints."},
 ]
 
-# ---------------------------------------------------------------------------
-# Suggested prompt library route (Shipley phases 4-6)
-#
-# Design rules:
-#  - Response depth and format (lookup vs elaboration vs strategic vs forensic)
-#    belong HERE in each starter prompt — not as rigid tiers in the system persona.
-#  - Pattern-based, not keyword-based: prompts assume Theseus has indexed the
-#    RFP's structure (sections, requirements, eval criteria, deliverables) and
-#    refer to those abstractions rather than literal headings.
-#  - Agnostic: no company, customer, agency, or program names. Use neutral
-#    placeholders like {topic}, {section_or_task}, {capability}, {discriminator},
-#    {requirement_id}, {volume_or_section}.
-#  - Adaptable: each prompt works against any RFP the user has loaded into the
-#    active workspace.
-#  - Shipley-aligned: phases mirror Theseus's final-RFP scope:
-#    4 (Planning), 5 (Development), 6 (Color Reviews & Submittal).
-# ---------------------------------------------------------------------------
+
+def shipped_prompt_id(phase: str, category: str, title: str) -> str:
+    """Stable id for a shipped starter (deterministic across workspaces)."""
+    key = f"{phase}|{category}|{title}"
+    return str(uuid.uuid5(_SHIPPED_NAMESPACE, key))
 
 
-def register_prompt_library_routes(app: FastAPI) -> None:
-    """Register the curated suggested-prompt catalog endpoint."""
+def _normalize_shipped(entry: dict[str, str]) -> dict[str, str]:
+    phase = str(entry["phase"]).strip()
+    category = str(entry["category"]).strip()
+    title = str(entry["title"]).strip()
+    prompt = str(entry["prompt"]).strip()
+    return {
+        "id": shipped_prompt_id(phase, category, title),
+        "phase": phase,
+        "category": category,
+        "title": title,
+        "prompt": prompt,
+        "source": "shipped",
+    }
+
+
+def shipped_defaults() -> list[dict[str, str]]:
+    """Return shipped catalog with stable ids."""
+    return [_normalize_shipped(entry) for entry in PROMPT_LIBRARY]
+
+
+class PromptEntryCreate(BaseModel):
+    phase: str = Field(min_length=1, max_length=4)
+    category: str = Field(min_length=1, max_length=80)
+    title: str = Field(min_length=1, max_length=160)
+    prompt: str = Field(min_length=1, max_length=20000)
+
+
+class PromptEntryUpdate(BaseModel):
+    phase: str | None = Field(default=None, max_length=4)
+    category: str | None = Field(default=None, max_length=80)
+    title: str | None = Field(default=None, max_length=160)
+    prompt: str | None = Field(default=None, max_length=20000)
+
+
+class PromptImportPayload(BaseModel):
+    prompts: list[PromptEntryCreate] = Field(min_length=1, max_length=200)
+
+
+class PromptRefinePayload(BaseModel):
+    prompt: str = Field(min_length=1, max_length=20000)
+    action: str = Field(default="clarity", max_length=32)
+
+
+class PromptLibraryStore:
+    """Per-workspace prompt library overrides layered on shipped defaults."""
+
+    def __init__(self, *, workspace_dir: Callable[[], Path]) -> None:
+        self._workspace_dir = workspace_dir
+
+    def path(self) -> Path:
+        return self._workspace_dir() / "ui_prompt_library.json"
+
+    def defaults(self) -> list[dict[str, str]]:
+        entries = shipped_defaults()
+        entries.sort(key=self._entry_sort_key)
+        return entries
+
+    def _empty_overrides(self) -> dict[str, Any]:
+        return {"hidden": [], "overrides": {}, "custom": []}
+
+    def read_raw(self) -> dict[str, Any]:
+        path = self.path()
+        if not path.exists():
+            return self._empty_overrides()
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Failed reading %s, using empty overrides: %s", path, exc)
+            return self._empty_overrides()
+        if not isinstance(loaded, dict):
+            return self._empty_overrides()
+        hidden = loaded.get("hidden") if isinstance(loaded.get("hidden"), list) else []
+        overrides = loaded.get("overrides") if isinstance(loaded.get("overrides"), dict) else {}
+        custom = loaded.get("custom") if isinstance(loaded.get("custom"), list) else []
+        return {"hidden": hidden, "overrides": overrides, "custom": custom}
+
+    def customized(self) -> bool:
+        return self.path().exists()
+
+    def _validate_phase(self, phase: str) -> None:
+        if phase not in VALID_PHASES:
+            raise ValueError(f"Unsupported phase: {phase}")
+
+    def _entry_sort_key(self, entry: dict[str, str]) -> tuple[str, str, str]:
+        return (entry.get("phase", ""), entry.get("category", ""), entry.get("title", ""))
+
+    def read(self) -> list[dict[str, str]]:
+        """Merge shipped defaults with workspace overrides."""
+        raw = self.read_raw()
+        hidden = {str(item) for item in raw["hidden"]}
+        overrides: dict[str, Any] = raw["overrides"]
+        merged: list[dict[str, str]] = []
+
+        for entry in self.defaults():
+            entry_id = entry["id"]
+            if entry_id in hidden:
+                continue
+            patch = overrides.get(entry_id)
+            if isinstance(patch, dict):
+                merged.append({
+                    **entry,
+                    "phase": str(patch.get("phase", entry["phase"])).strip(),
+                    "category": str(patch.get("category", entry["category"])).strip(),
+                    "title": str(patch.get("title", entry["title"])).strip(),
+                    "prompt": str(patch.get("prompt", entry["prompt"])).strip(),
+                    "source": "shipped",
+                })
+            else:
+                merged.append(dict(entry))
+
+        for item in raw["custom"]:
+            if not isinstance(item, dict):
+                continue
+            phase = str(item.get("phase", "")).strip()
+            category = str(item.get("category", "")).strip()
+            title = str(item.get("title", "")).strip()
+            prompt = str(item.get("prompt", "")).strip()
+            entry_id = str(item.get("id") or uuid.uuid4())
+            if not (phase and category and title and prompt):
+                continue
+            merged.append({
+                "id": entry_id,
+                "phase": phase,
+                "category": category,
+                "title": title,
+                "prompt": prompt,
+                "source": "user",
+            })
+
+        merged.sort(key=self._entry_sort_key)
+        return merged
+
+    def write_raw(self, data: dict[str, Any]) -> None:
+        path = self.path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(path)
+
+    def _find_entry(self, entry_id: str) -> tuple[dict[str, str], str]:
+        for entry in self.read():
+            if entry["id"] == entry_id:
+                return entry, entry["source"]
+        raise KeyError(entry_id)
+
+    def add(self, payload: PromptEntryCreate) -> dict[str, str]:
+        phase = payload.phase.strip()
+        self._validate_phase(phase)
+        raw = self.read_raw()
+        entry = {
+            "id": str(uuid.uuid4()),
+            "phase": phase,
+            "category": payload.category.strip(),
+            "title": payload.title.strip(),
+            "prompt": payload.prompt.strip(),
+            "source": "user",
+        }
+        raw["custom"].append(entry)
+        self.write_raw(raw)
+        return entry
+
+    def update(self, entry_id: str, payload: PromptEntryUpdate) -> dict[str, str]:
+        updates = payload.model_dump(exclude_none=True)
+        if not updates:
+            raise ValueError("No fields to update")
+        if "phase" in updates:
+            self._validate_phase(str(updates["phase"]).strip())
+
+        raw = self.read_raw()
+        shipped_ids = {item["id"] for item in self.defaults()}
+
+        if entry_id in shipped_ids:
+            current = next(item for item in self.defaults() if item["id"] == entry_id)
+            patch = dict(raw["overrides"].get(entry_id, {}))
+            for key in ("phase", "category", "title", "prompt"):
+                if key in updates:
+                    patch[key] = str(updates[key]).strip()
+            raw["overrides"][entry_id] = patch
+            self.write_raw(raw)
+            merged = next(item for item in self.read() if item["id"] == entry_id)
+            return merged
+
+        for idx, item in enumerate(raw["custom"]):
+            if not isinstance(item, dict) or str(item.get("id")) != entry_id:
+                continue
+            for key in ("phase", "category", "title", "prompt"):
+                if key in updates:
+                    item[key] = str(updates[key]).strip()
+            raw["custom"][idx] = item
+            self.write_raw(raw)
+            return {
+                "id": entry_id,
+                "phase": str(item["phase"]).strip(),
+                "category": str(item["category"]).strip(),
+                "title": str(item["title"]).strip(),
+                "prompt": str(item["prompt"]).strip(),
+                "source": "user",
+            }
+
+        raise KeyError(entry_id)
+
+    def delete(self, entry_id: str) -> None:
+        raw = self.read_raw()
+        shipped_ids = {item["id"] for item in self.defaults()}
+
+        if entry_id in shipped_ids:
+            if entry_id not in raw["hidden"]:
+                raw["hidden"].append(entry_id)
+            raw["overrides"].pop(entry_id, None)
+            self.write_raw(raw)
+            return
+
+        before = len(raw["custom"])
+        raw["custom"] = [
+            item for item in raw["custom"]
+            if not (isinstance(item, dict) and str(item.get("id")) == entry_id)
+        ]
+        if len(raw["custom"]) == before:
+            raise KeyError(entry_id)
+        self.write_raw(raw)
+
+    def duplicate(self, entry_id: str) -> dict[str, str]:
+        source_entry, _ = self._find_entry(entry_id)
+        title = source_entry["title"]
+        if not title.endswith(" (copy)"):
+            title = f"{title} (copy)"
+        payload = PromptEntryCreate(
+            phase=source_entry["phase"],
+            category=source_entry["category"],
+            title=title,
+            prompt=source_entry["prompt"],
+        )
+        return self.add(payload)
+
+    def import_entries(self, entries: list[PromptEntryCreate]) -> list[dict[str, str]]:
+        created: list[dict[str, str]] = []
+        for item in entries:
+            created.append(self.add(item))
+        return created
+
+    def reset(self) -> list[dict[str, str]]:
+        path = self.path()
+        if path.exists():
+            path.unlink()
+        return self.defaults()
+
+
+def register_prompt_library_routes(
+    app: FastAPI,
+    *,
+    workspace_name: Callable[[], str],
+    store: PromptLibraryStore,
+    llm_func: LlmFunc | None = None,
+) -> None:
+    """Register prompt library CRUD endpoints."""
+
+    def _library_payload() -> dict[str, Any]:
+        return {
+            "workspace": workspace_name(),
+            "prompts": store.read(),
+            "defaults": store.defaults(),
+            "customized": store.customized(),
+        }
 
     @app.get("/api/ui/prompt-library", tags=["theseus-ui"])
-    async def ui_prompt_library() -> JSONResponse:
-        """Return the curated Shipley phase 4-6 suggested-prompt catalog."""
-        return JSONResponse({"prompts": PROMPT_LIBRARY})
+    async def get_prompt_library() -> JSONResponse:
+        """Return merged shipped + workspace prompt starters."""
+        return JSONResponse(_library_payload())
+
+    @app.post("/api/ui/prompt-library", tags=["theseus-ui"])
+    async def create_prompt_library_entry(payload: PromptEntryCreate) -> JSONResponse:
+        """Add a user-created starter for the active workspace."""
+        try:
+            entry = store.add(payload)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        except OSError as exc:
+            raise HTTPException(500, f"Failed writing prompt library: {exc}") from exc
+        return JSONResponse({"entry": entry, **_library_payload()})
+
+    @app.put("/api/ui/prompt-library/{entry_id}", tags=["theseus-ui"])
+    async def update_prompt_library_entry(
+        entry_id: str,
+        payload: PromptEntryUpdate,
+    ) -> JSONResponse:
+        """Update a shipped override or user-created starter."""
+        try:
+            entry = store.update(entry_id, payload)
+        except KeyError as exc:
+            raise HTTPException(404, f"Unknown prompt id: {entry_id}") from exc
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        except OSError as exc:
+            raise HTTPException(500, f"Failed writing prompt library: {exc}") from exc
+        return JSONResponse({"entry": entry, **_library_payload()})
+
+    @app.delete("/api/ui/prompt-library/{entry_id}", tags=["theseus-ui"])
+    async def delete_prompt_library_entry(entry_id: str) -> JSONResponse:
+        """Hide a shipped starter or remove a user-created one."""
+        try:
+            store.delete(entry_id)
+        except KeyError as exc:
+            raise HTTPException(404, f"Unknown prompt id: {entry_id}") from exc
+        except OSError as exc:
+            raise HTTPException(500, f"Failed writing prompt library: {exc}") from exc
+        return JSONResponse(_library_payload())
+
+    @app.post("/api/ui/prompt-library/{entry_id}/duplicate", tags=["theseus-ui"])
+    async def duplicate_prompt_library_entry(entry_id: str) -> JSONResponse:
+        """Duplicate any starter into an editable user copy."""
+        try:
+            entry = store.duplicate(entry_id)
+        except KeyError as exc:
+            raise HTTPException(404, f"Unknown prompt id: {entry_id}") from exc
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        except OSError as exc:
+            raise HTTPException(500, f"Failed writing prompt library: {exc}") from exc
+        return JSONResponse({"entry": entry, **_library_payload()})
+
+    @app.post("/api/ui/prompt-library/import", tags=["theseus-ui"])
+    async def import_prompt_library(payload: PromptImportPayload) -> JSONResponse:
+        """Import an array of starters as user entries."""
+        try:
+            created = store.import_entries(payload.prompts)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        except OSError as exc:
+            raise HTTPException(500, f"Failed writing prompt library: {exc}") from exc
+        return JSONResponse({"imported": created, **_library_payload()})
+
+    @app.post("/api/ui/prompt-library/reset", tags=["theseus-ui"])
+    async def reset_prompt_library() -> JSONResponse:
+        """Restore shipped defaults for the active workspace."""
+        try:
+            store.reset()
+        except OSError as exc:
+            raise HTTPException(500, f"Failed resetting prompt library: {exc}") from exc
+        return JSONResponse(_library_payload())
+
+    @app.post("/api/ui/prompt-library/refine", tags=["theseus-ui"])
+    async def refine_prompt_library_entry(payload: PromptRefinePayload) -> JSONResponse:
+        """AI-assisted prompt refinement (clarity, shorter, citations, structure)."""
+        action = payload.action.strip().lower()
+        if action not in REFINE_ACTIONS:
+            raise HTTPException(400, f"Unsupported refine action: {payload.action}")
+        if llm_func is None:
+            raise HTTPException(503, "LLM not available for prompt refinement")
+
+        user_prompt = REFINE_USER_TEMPLATES[action].format(prompt=payload.prompt.strip())
+        llm_prompt = f"{REFINE_SYSTEM}\n\n{user_prompt}"
+        try:
+            refined = await llm_func(llm_prompt)
+        except Exception as exc:
+            logger.exception("Prompt refine failed")
+            raise HTTPException(500, f"Refine failed: {exc}") from exc
+
+        text = refined.strip() if isinstance(refined, str) else str(refined).strip()
+        if not text:
+            raise HTTPException(500, "Refine returned empty text")
+        return JSONResponse({"prompt": text, "action": action})
 
 
+__all__ = [
+    "PROMPT_LIBRARY",
+    "PromptLibraryStore",
+    "register_prompt_library_routes",
+    "shipped_defaults",
+    "shipped_prompt_id",
+]
