@@ -21,26 +21,32 @@ def test_resolve_ollama_model_uses_settings_default(monkeypatch) -> None:
     assert ollama_llm.resolve_ollama_model(settings) == "qwen3.5:9b"
 
 
-def test_warmup_ollama_sync_marks_ready_when_generate_succeeds(monkeypatch) -> None:
+def test_warmup_ollama_sync_marks_ready_when_models_warm(monkeypatch) -> None:
     settings = SimpleNamespace(
         ollama_model="qwen3.5:9b",
         ollama_host="http://localhost:11434",
-        keyword_llm_binding="ollama",
-        keyword_llm_name="qwen3.5:9b",
+        keyword_llm_name="qwen2.5:7b-instruct",
         keyword_uses_ollama=True,
     )
     monkeypatch.setattr(
         ollama_llm,
         "list_available_models",
-        lambda host, timeout=2.0: ["qwen3.5:9b"],
+        lambda host, timeout=2.0: ["qwen3.5:9b", "qwen2.5:7b-instruct"],
     )
-    monkeypatch.setattr(ollama_llm, "_generate_sync", lambda **kwargs: "ready")
+    warmed: list[str] = []
+    monkeypatch.setattr(
+        ollama_llm,
+        "_warmup_model_sync",
+        lambda *, host, model, timeout: warmed.append(model),
+    )
 
     status = ollama_llm.warmup_ollama_sync(settings)
 
     assert status["ok"] is True
     assert status["state"] == "ready"
     assert status["model"] == "qwen3.5:9b"
+    assert status["keyword_model"] == "qwen2.5:7b-instruct"
+    assert warmed == ["qwen3.5:9b", "qwen2.5:7b-instruct"]
 
 
 def test_format_ollama_banner_line_shows_ready_state() -> None:

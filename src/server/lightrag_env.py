@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 
 
 def apply_cross_provider_role_env_defaults(environ: dict[str, str] | None = None) -> None:
-    """Ensure per-role host/api-key env vars exist when a role binding differs from base LLM.
+    """Delegate to repo-root bootstrap (safe before/after src is on sys.path)."""
+    root = Path(__file__).resolve().parents[2]
+    root_str = str(root)
+    if root_str not in sys.path:
+        sys.path.insert(0, root_str)
+    from theseus_bootstrap_env import apply_theseus_env_defaults
 
-    LightRAG's ``api/config.py`` exits at import when e.g. ``KEYWORD_LLM_BINDING=ollama``
-    while ``LLM_BINDING=openai`` without ``KEYWORD_LLM_BINDING_API_KEY``.
-    """
-    env = os.environ if environ is None else environ
-
-    if env.get("KEYWORD_LLM_BINDING", "").strip().lower() == "ollama":
-        env.setdefault("KEYWORD_LLM_BINDING_HOST", env.get("OLLAMA_HOST", "http://localhost:11434"))
-        env.setdefault("KEYWORD_LLM_BINDING_API_KEY", "ollama")
+    apply_theseus_env_defaults(environ)

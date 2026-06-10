@@ -41,14 +41,9 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-# LightRAG validates per-role bindings at import time. When keyword routes to
-# Ollama while LLM_BINDING=openai, it requires role-specific host + api key env vars.
-if os.getenv("KEYWORD_LLM_BINDING", "").strip().lower() == "ollama":
-    os.environ.setdefault(
-        "KEYWORD_LLM_BINDING_HOST",
-        os.getenv("OLLAMA_HOST", "http://localhost:11434"),
-    )
-    os.environ.setdefault("KEYWORD_LLM_BINDING_API_KEY", "ollama")
+from theseus_bootstrap_env import apply_theseus_env_defaults
+
+apply_theseus_env_defaults()
 
 # Import LightRAG before adding src to path. This prevents local modules from shadowing the pip package.
 from lightrag.api.lightrag_server import create_app as _verify_lightrag_import
@@ -222,7 +217,10 @@ def manage_ollama_startup(settings) -> dict:
     host = status.get("host", "http://localhost:11434")
     model = status.get("model", getattr(settings, "ollama_model", "qwen3.5:9b"))
     if status.get("ok"):
-        print(f"✅ Ollama ready: {model} @ {host}\n")
+        line = f"✅ Ollama ready: {model} @ {host}"
+        if status.get("keyword_uses_ollama"):
+            line += f" · keyword={status.get('keyword_model')}"
+        print(f"{line}\n")
     elif status.get("available"):
         print(
             f"⚠️  Ollama reachable at {host} but warmup failed: "

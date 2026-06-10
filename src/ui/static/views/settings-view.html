@@ -1159,7 +1159,7 @@
                     <dt class="text-slate-500">keyword</dt>
                     <dd
                       class="col-span-2 text-neon-cyan truncate"
-                      x-text="(stats.models?.keyword || '—') + (stats.ollama?.keyword_binding === 'ollama' ? ' · ollama' : '')"
+                      x-text="(stats.models?.keyword || '—') + (stats.ollama?.keyword_uses_ollama ? ' · local' : '')"
                     ></dd>
                     <dt class="text-slate-500">vlm</dt>
                     <dd

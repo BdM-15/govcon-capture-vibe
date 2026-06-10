@@ -23,7 +23,7 @@ def _settings() -> SimpleNamespace:
         extraction_llm_name="extract-model",
         reasoning_llm_name="reason-model",
         keyword_llm_name="qwen3.5:9b",
-        keyword_llm_binding="ollama",
+        theseus_keyword_use_ollama=True,
         embedding_model="embed-model",
         vlm_llm_name="vlm-model",
         rerank_model="rerank-model",
@@ -107,7 +107,7 @@ def test_gather_stats_includes_ollama_warmup_status(tmp_path) -> None:
             "host": "http://localhost:11434",
             "available": ["qwen3.5:9b"],
             "warmed_at": "2026-06-10T12:00:00",
-            "keyword_binding": "ollama",
+            "keyword_uses_ollama": True,
             "keyword_model": "qwen3.5:9b",
         }
     )

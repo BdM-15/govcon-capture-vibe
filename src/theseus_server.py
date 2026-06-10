@@ -160,7 +160,7 @@ def build_startup_banner_items(
             (
                 f"{colors.CYAN}{settings.keyword_llm_name}{colors.RESET}"
                 + (
-                    f"  {colors.DIM}·  ollama @ {getattr(settings, 'ollama_host', 'http://localhost:11434')}{colors.RESET}"
+                    f"  {colors.DIM}·  local @ {settings.ollama_openai_base_url}{colors.RESET}"
                     if getattr(settings, "keyword_uses_ollama", False)
                     else ""
                 )

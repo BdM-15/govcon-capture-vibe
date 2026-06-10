@@ -217,7 +217,7 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
         query_max_tokens,
         QUERY_TIMEOUT,
     )
-    keyword_binding = "ollama" if keyword_uses_ollama else "openai"
+    keyword_binding = "openai-compat" if keyword_uses_ollama else "openai"
     logger.info(
         "   keyword  → %s  max_tokens=%6d  timeout=%ss  binding=%s host=%s",
         f"{keyword_model:40s}",

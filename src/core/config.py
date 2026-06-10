@@ -109,12 +109,12 @@ class Settings(BaseSettings):
         default="grok-4-1-fast-non-reasoning",
         validation_alias="KEYWORD_LLM_MODEL",
         description="Non-reasoning model for query-time keyword extraction (LightRAG `keyword` role). "
-                    "When KEYWORD_LLM_BINDING=ollama, this is the local Ollama model tag (e.g. qwen3.5:9b)."
+                    "When THESEUS_KEYWORD_USE_OLLAMA=true, use a local instruct tag (e.g. qwen2.5:7b-instruct)."
     )
-    keyword_llm_binding: str = Field(
-        default="openai",
-        validation_alias="KEYWORD_LLM_BINDING",
-        description="Provider for LightRAG `keyword` role: openai (xAI Grok) or ollama (local OpenAI-compat)"
+    theseus_keyword_use_ollama: bool = Field(
+        default=False,
+        validation_alias="THESEUS_KEYWORD_USE_OLLAMA",
+        description="Route LightRAG keyword role to local Ollama via OpenAI-compat /v1 (not native ollama binding)",
     )
     ollama_host: str = Field(
         default="http://localhost:11434",
@@ -494,8 +494,8 @@ class Settings(BaseSettings):
 
     @property
     def keyword_uses_ollama(self) -> bool:
-        """True when LightRAG keyword role should route to local Ollama."""
-        return self.keyword_llm_binding.strip().lower() == "ollama"
+        """True when LightRAG keyword role should route to local Ollama OpenAI-compat."""
+        return bool(self.theseus_keyword_use_ollama)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # HELPER METHODS for backward compatibility with MAX_ASYNC

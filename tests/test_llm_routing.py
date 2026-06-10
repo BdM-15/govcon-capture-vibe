@@ -162,7 +162,7 @@ def test_keyword_role_routes_to_ollama_when_binding_enabled(monkeypatch) -> None
     monkeypatch.setattr(llm_routing, "openai_complete_if_cache", fake_complete)
     settings = _Settings()
     settings.keyword_uses_ollama = True
-    settings.keyword_llm_name = "qwen3.5:9b"
+    settings.keyword_llm_name = "qwen2.5:7b-instruct"
     routing = llm_routing.build_role_llm_routing(
         settings,
         xai_api_key="xai-key",
@@ -171,9 +171,9 @@ def test_keyword_role_routes_to_ollama_when_binding_enabled(monkeypatch) -> None
 
     asyncio.run(routing.role_llm_configs["keyword"].func("keywords please"))
 
-    assert calls == [("qwen3.5:9b", "http://localhost:11434/v1", "ollama")]
+    assert calls == [("qwen2.5:7b-instruct", "http://localhost:11434/v1", "ollama")]
     assert routing.role_llm_configs["keyword"].metadata == {
-        "model": "qwen3.5:9b",
+        "model": "qwen2.5:7b-instruct",
         "host": "http://localhost:11434/v1",
-        "binding": "ollama",
+        "binding": "openai-compat",
     }
