@@ -75,16 +75,10 @@ def is_ollama_available(settings: Any, *, timeout: float = 2.0) -> bool:
 
 
 def _warmup_text_from_payload(payload: dict[str, Any]) -> str:
-    message = payload.get("message") if isinstance(payload.get("message"), dict) else {}
-    for key in ("content", "response"):
-        text = str(payload.get(key) or message.get(key) or "").strip()
-        if text:
-            return text
-    for key in ("thinking",):
-        text = str(payload.get(key) or message.get(key) or "").strip()
-        if text:
-            return text
-    raise RuntimeError("Ollama warmup returned empty content")
+    try:
+        return _text_from_chat_payload(payload)
+    except RuntimeError as exc:
+        raise RuntimeError("Ollama warmup returned empty content") from exc
 
 
 def _chat_sync(
@@ -165,6 +159,25 @@ def warmup_ollama_sync(settings: Any, *, timeout: float = 90.0) -> dict[str, Any
     return info
 
 
+def _text_from_chat_payload(payload: dict[str, Any]) -> str:
+    """Extract assistant text from Ollama /api/chat or OpenAI-compat payloads."""
+    message = payload.get("message") if isinstance(payload.get("message"), dict) else {}
+    choices = payload.get("choices") or []
+    if choices and isinstance(choices[0], dict):
+        choice_message = choices[0].get("message") or {}
+        if isinstance(choice_message, dict):
+            message = {**message, **choice_message}
+    for key in ("content", "response"):
+        text = str(payload.get(key) or message.get(key) or "").strip()
+        if text:
+            return text
+    for key in ("thinking",):
+        text = str(payload.get(key) or message.get(key) or "").strip()
+        if text:
+            return text
+    raise RuntimeError("Ollama returned empty content")
+
+
 async def ollama_chat(
     messages: list[dict[str, str]],
     *,
@@ -173,8 +186,9 @@ async def ollama_chat(
     temperature: float | None = None,
     max_tokens: int = 1200,
     timeout: float = 45.0,
+    use_native_api: bool = False,
 ) -> str:
-    """Async chat completion against Ollama's OpenAI-compatible endpoint."""
+    """Async chat completion against Ollama (/api/chat or OpenAI-compatible /v1)."""
     import httpx
 
     chosen = resolve_ollama_model(settings, model=model)
@@ -183,35 +197,37 @@ async def ollama_chat(
         if temperature is not None
         else float(getattr(settings, "ollama_temperature", 0.3))
     )
-    base = getattr(settings, "ollama_openai_base_url", None) or (
-        f"{getattr(settings, 'ollama_host', 'http://localhost:11434').rstrip('/')}/v1"
-    )
-    payload = {
-        "model": chosen,
-        "messages": messages,
-        "temperature": temp,
-        "max_tokens": max_tokens,
-        "stream": False,
-    }
+    host = getattr(settings, "ollama_host", "http://localhost:11434").rstrip("/")
+    if use_native_api:
+        payload = {
+            "model": chosen,
+            "messages": messages,
+            "stream": False,
+            "options": {"temperature": temp, "num_predict": max_tokens},
+        }
+        url = f"{host}/api/chat"
+        headers = {"Content-Type": "application/json"}
+    else:
+        base = getattr(settings, "ollama_openai_base_url", None) or f"{host}/v1"
+        payload = {
+            "model": chosen,
+            "messages": messages,
+            "temperature": temp,
+            "max_tokens": max_tokens,
+            "stream": False,
+        }
+        url = f"{base.rstrip('/')}/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {OLLAMA_API_KEY}",
+        }
     async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.post(
-            f"{base.rstrip('/')}/chat/completions",
-            json=payload,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {OLLAMA_API_KEY}",
-            },
-        )
+        response = await client.post(url, json=payload, headers=headers)
         response.raise_for_status()
         data = response.json()
-    choices = data.get("choices") or []
-    if not choices:
-        raise RuntimeError("Ollama returned no choices")
-    message = choices[0].get("message") or {}
-    text = str(message.get("content") or "").strip()
-    if not text:
-        raise RuntimeError("Ollama returned empty content")
-    return text
+    if not isinstance(data, dict):
+        raise RuntimeError("Ollama returned invalid JSON payload")
+    return _text_from_chat_payload(data)
 
 
 async def warmup_ollama(settings: Any) -> dict[str, Any]:

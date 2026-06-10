@@ -49,6 +49,17 @@ def test_warmup_ollama_sync_marks_ready_when_models_warm(monkeypatch) -> None:
     assert warmed == ["qwen3.5:9b", "qwen2.5:7b-instruct"]
 
 
+def test_text_from_chat_payload_accepts_thinking_field() -> None:
+    payload = {
+        "message": {
+            "role": "assistant",
+            "content": "",
+            "thinking": '{"title":"Volume II","seed_prompt":"Expand Volume II."}',
+        }
+    }
+    assert "Expand Volume II." in ollama_llm._text_from_chat_payload(payload)
+
+
 def test_format_ollama_banner_line_shows_ready_state() -> None:
     class _Colors:
         CYAN = "<c>"

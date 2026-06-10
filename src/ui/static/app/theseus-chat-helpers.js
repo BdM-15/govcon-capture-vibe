@@ -131,11 +131,16 @@ window.theseusConfirmInsightHandoff = async function theseusConfirmInsightHandof
         String(composeError?.message || "").split(" ")[0],
         10,
       );
-      if (composeStatus === 503) {
-        app.toast("Local packer offline — using basic handoff seed", "info");
-      } else if (composeStatus !== 404) {
+      if (composeStatus === 404) {
         throw composeError;
       }
+      const offline = composeStatus === 503;
+      app.toast(
+        offline
+          ? "Local packer offline — using basic handoff seed"
+          : "Local packer unavailable — using basic handoff seed",
+        "info",
+      );
     } finally {
       app.chatHandoff.packaging = false;
     }

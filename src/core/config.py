@@ -131,6 +131,11 @@ class Settings(BaseSettings):
         validation_alias="OLLAMA_TEMPERATURE",
         description="Temperature for local Ollama calls (handoff compose, keyword when binding=ollama)"
     )
+    ollama_compose_timeout: float = Field(
+        default=120.0,
+        validation_alias="OLLAMA_COMPOSE_TIMEOUT",
+        description="Seconds to wait for local Ollama insight handoff packaging (qwen3.5 can be slow on first load)",
+    )
     vlm_llm_name: str = Field(
         default="grok-4-1-fast-non-reasoning",
         validation_alias="VLM_LLM_MODEL",

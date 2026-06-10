@@ -135,6 +135,13 @@ def _compose_user_prompt(payload: HandoffComposeInput) -> str:
     return "\n".join(lines)
 
 
+def _compose_timeout(settings: Any) -> float:
+    raw = getattr(settings, "ollama_compose_timeout", None)
+    if raw is not None:
+        return float(raw)
+    return 120.0
+
+
 async def compose_insight_handoff(
     payload: HandoffComposeInput,
     *,
@@ -144,16 +151,32 @@ async def compose_insight_handoff(
     if not is_ollama_available(settings):
         raise RuntimeError("Ollama is not reachable")
     model = resolve_ollama_model(settings)
-    raw = await ollama_chat(
-        [
-            {"role": "system", "content": _compose_system_prompt()},
-            {"role": "user", "content": _compose_user_prompt(payload)},
-        ],
-        settings=settings,
-        model=model,
-        max_tokens=1400,
-        timeout=60.0,
-    )
+    try:
+        import httpx
+
+        raw = await ollama_chat(
+            [
+                {"role": "system", "content": _compose_system_prompt()},
+                {"role": "user", "content": _compose_user_prompt(payload)},
+            ],
+            settings=settings,
+            model=model,
+            max_tokens=1400,
+            timeout=_compose_timeout(settings),
+            use_native_api=True,
+        )
+    except (httpx.TimeoutException, httpx.HTTPError, RuntimeError, OSError) as exc:
+        fallback = mechanical_handoff_seed(payload)
+        reason = "timeout" if isinstance(exc, httpx.TimeoutException) else f"ollama_error:{exc}"
+        return HandoffComposeResult(
+            title=fallback.title,
+            focus_summary=fallback.focus_summary,
+            claims_to_ground=fallback.claims_to_ground,
+            seed_prompt=fallback.seed_prompt,
+            composed=False,
+            model=model,
+            fallback_reason=reason,
+        )
     try:
         parsed = _parse_compose_json(raw, payload)
         return HandoffComposeResult(
