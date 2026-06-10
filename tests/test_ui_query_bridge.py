@@ -16,6 +16,9 @@ class _FakeLogger:
     def __init__(self):
         self.messages = []
 
+    def info(self, message, *args):
+        self.messages.append(message % args)
+
     def warning(self, message, *args):
         self.messages.append(message % args)
 

@@ -14,6 +14,7 @@ Module-level singleton: model loaded once on first query, reused for server life
 
 from __future__ import annotations
 
+import contextvars
 import logging
 import time
 from typing import Any
@@ -22,9 +23,33 @@ from src.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
+# Per-query override from UI Query Tuning (set by make_ui_query_bridges).
+_active_min_rerank_score: contextvars.ContextVar[float | None] = contextvars.ContextVar(
+    "govcon_active_min_rerank_score",
+    default=None,
+)
+
 # Singleton state — loaded lazily by _get_reranker() on first query
 _reranker_instance: Any = None
 _reranker_model_name: str | None = None
+
+
+def set_active_min_rerank_score(score: float | None) -> contextvars.Token[float | None]:
+    """Bind the workspace/UI min rerank threshold for the current query."""
+    return _active_min_rerank_score.set(score)
+
+
+def reset_active_min_rerank_score(token: contextvars.Token[float | None]) -> None:
+    """Restore the prior min rerank threshold after a query completes."""
+    _active_min_rerank_score.reset(token)
+
+
+def resolve_min_rerank_score() -> float:
+    """Return per-query UI override when set, else global settings default."""
+    active = _active_min_rerank_score.get()
+    if active is not None:
+        return float(active)
+    return float(get_settings().min_rerank_score)
 
 
 def _get_reranker() -> Any:
@@ -76,7 +101,7 @@ async def govcon_rerank_func(
         query: User query string.
         documents: List of chunk text strings (already extracted by LightRAG).
         top_n: If set, return only the top N highest-scoring entries.
-        **kwargs: Ignored (LightRAG may pass extra context).
+        **kwargs: Ignored (LightRAG does not pass min_rerank_score; use set_active_min_rerank_score).
 
     Returns:
         List of `{"index": int, "relevance_score": float}` dicts sorted by score
@@ -96,7 +121,7 @@ async def govcon_rerank_func(
     if isinstance(scores, float):
         scores = [scores]
 
-    min_score = settings.min_rerank_score
+    min_score = resolve_min_rerank_score()
     all_scores = [(i, float(s)) for i, s in enumerate(scores)]
     all_scores.sort(key=lambda r: r[1], reverse=True)
     pre_filter_top = all_scores[0][1] if all_scores else 0.0

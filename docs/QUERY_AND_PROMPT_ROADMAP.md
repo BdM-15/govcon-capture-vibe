@@ -71,6 +71,22 @@ Bypass prompts should **not** include `[PASTE THESEUS OUTPUT HERE]`. Wording exa
 
 > Using the conversation above as grounded RFP context, research {external_topic}. Label (A) from prior messages, (B) from external sources, (C) synthesis. Do not contradict cited facts from earlier turns.
 
+### Rerank threshold wiring (fixed in #192 follow-up)
+
+`govcon_rerank_func` previously filtered using global `.env` `MIN_RERANK_SCORE` only, ignoring per-workspace UI `min_rerank_score`. The UI bridge now binds the workspace value via `set_active_min_rerank_score()` for each query and logs `Query tunables: {...}` at INFO.
+
+LightRAG still applies a second filter in `utils.py` using `lightrag.min_rerank_score` (also set by the bridge).
+
+### Mix-mode token budget (why "9 sources" is normal)
+
+Retrieval stages are not the same as final LLM context:
+
+1. Merge many candidate chunks (e.g. 65)
+2. Rerank + `chunk_top_k` cap (e.g. 30)
+3. **Token budget**: `max_total_tokens` minus system prompt minus KG entities/relations → remaining room for text chunks (often single digits on large graphs)
+
+`max_total_tokens` is input budget, not output length. Raising it (and clicking **Save** in Query Tuning) increases chunk slots; lowering `top_k` on overview queries also helps.
+
 ### Parked UX (#89 adjacent): per-send bypass
 
 **Request:** Option to select bypass **before Send** on a single message, without changing whole-chat mode.

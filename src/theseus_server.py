@@ -20,6 +20,7 @@ Workflow:
 # LightRAG's dataclass field defaults evaluate os.getenv() at import time:
 #   chunk_token_size: int = field(default=int(os.getenv("CHUNK_SIZE", 1200)))
 # If .env isn't loaded first, it uses the hardcoded 1200 default
+import contextvars
 import os
 import sys
 from contextlib import contextmanager
@@ -365,6 +366,43 @@ async def initialize_theseus_rag_runtime(
     )
 
 
+def _prepare_ui_query_overrides(
+    rag_instance: Any,
+    overrides: dict | None,
+    *,
+    logger: Any,
+    valid_fields: set[str],
+) -> tuple[dict[str, Any], contextvars.Token[float | None] | None]:
+    """Apply per-query UI tunables to LightRAG and the govcon reranker."""
+    from src.extraction.govcon_reranker import set_active_min_rerank_score
+
+    overrides = dict(overrides or {})
+    rerank_token: contextvars.Token[float | None] | None = None
+    min_score = overrides.pop("min_rerank_score", None)
+    if min_score is not None:
+        try:
+            score = float(min_score)
+            rag_instance.lightrag.min_rerank_score = score
+            rerank_token = set_active_min_rerank_score(score)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed setting min_rerank_score=%r: %s", min_score, exc)
+
+    param_kwargs = {key: value for key, value in overrides.items() if key in valid_fields}
+    if param_kwargs or min_score is not None:
+        logger.info(
+            "Query tunables: %s",
+            {
+                **param_kwargs,
+                **(
+                    {"min_rerank_score": float(min_score)}
+                    if min_score is not None
+                    else {}
+                ),
+            },
+        )
+    return param_kwargs, rerank_token
+
+
 def make_ui_query_bridges(
     rag_instance: Any,
     *,
@@ -384,23 +422,27 @@ def make_ui_query_bridges(
         stream: bool,
         overrides: dict | None = None,
     ):
-        overrides = dict(overrides or {})
-        min_score = overrides.pop("min_rerank_score", None)
-        if min_score is not None:
-            try:
-                rag_instance.lightrag.min_rerank_score = float(min_score)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Failed setting min_rerank_score=%r: %s", min_score, exc)
-        param_kwargs = {key: value for key, value in overrides.items() if key in valid_fields}
-        return await rag_instance.lightrag.aquery(
-            text,
-            param=query_param_factory(
-                mode=mode,
-                stream=stream,
-                conversation_history=history or [],
-                **param_kwargs,
-            ),
+        from src.extraction.govcon_reranker import reset_active_min_rerank_score
+
+        param_kwargs, rerank_token = _prepare_ui_query_overrides(
+            rag_instance,
+            overrides,
+            logger=logger,
+            valid_fields=valid_fields,
         )
+        try:
+            return await rag_instance.lightrag.aquery(
+                text,
+                param=query_param_factory(
+                    mode=mode,
+                    stream=stream,
+                    conversation_history=history or [],
+                    **param_kwargs,
+                ),
+            )
+        finally:
+            if rerank_token is not None:
+                reset_active_min_rerank_score(rerank_token)
 
     async def _ui_query_data(
         text: str,
@@ -408,23 +450,27 @@ def make_ui_query_bridges(
         history: list[dict],
         overrides: dict | None = None,
     ):
-        overrides = dict(overrides or {})
-        min_score = overrides.pop("min_rerank_score", None)
-        if min_score is not None:
-            try:
-                rag_instance.lightrag.min_rerank_score = float(min_score)
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Failed setting min_rerank_score=%r: %s", min_score, exc)
-        param_kwargs = {key: value for key, value in overrides.items() if key in valid_fields}
-        param_kwargs.pop("stream", None)
-        return await rag_instance.lightrag.aquery_data(
-            text,
-            param=query_param_factory(
-                mode=mode,
-                conversation_history=history or [],
-                **param_kwargs,
-            ),
+        from src.extraction.govcon_reranker import reset_active_min_rerank_score
+
+        param_kwargs, rerank_token = _prepare_ui_query_overrides(
+            rag_instance,
+            overrides,
+            logger=logger,
+            valid_fields=valid_fields,
         )
+        param_kwargs.pop("stream", None)
+        try:
+            return await rag_instance.lightrag.aquery_data(
+                text,
+                param=query_param_factory(
+                    mode=mode,
+                    conversation_history=history or [],
+                    **param_kwargs,
+                ),
+            )
+        finally:
+            if rerank_token is not None:
+                reset_active_min_rerank_score(rerank_token)
 
     async def _ui_llm(prompt: str) -> str:
         llm = getattr(rag_instance.lightrag, "llm_model_func", None)
