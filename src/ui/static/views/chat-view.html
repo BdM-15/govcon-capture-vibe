@@ -5,16 +5,7 @@
               <aside
                 class="chat-sidebar w-72 shrink-0 border-r border-edge flex flex-col"
               >
-                <div class="p-3 border-b border-edge">
-                  <button
-                    class="btn-hero-cyan group w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-ink-950"
-                    @click="newChat()"
-                  >
-                    <i data-lucide="message-square-plus" class="w-4 h-4"></i>
-                    New chat
-                  </button>
-                </div>
-                <div class="px-3 pt-2 pb-2">
+                <div class="px-3 pt-3 pb-2">
                   <label class="chat-sidebar-search">
                     <i data-lucide="search" class="chat-sidebar-search-icon"></i>
                     <input
@@ -175,8 +166,8 @@
                     ></i>
                     <div>No saved chats yet.</div>
                     <div class="text-[10px] mt-1 text-slate-600">
-                      Click <span class="text-neon-cyan">New chat</span> to
-                      start.
+                      Use <span class="text-neon-cyan">New chat</span> in the
+                      header to start.
                     </div>
                   </div>
                 </div>
@@ -185,14 +176,40 @@
               <!-- Chat main -->
               <div class="chat-canvas flex-1 flex flex-col overflow-hidden">
                 <div
-                  x-show="!currentChat"
+                  x-show="!currentChat && chats.length"
                   class="flex-1 flex flex-col items-center justify-center text-slate-500 text-sm gap-3"
                 >
-                  <i
-                    data-lucide="messages-square"
-                    class="w-10 h-10 text-slate-700"
-                  ></i>
-                  <div>Select or create a chat to start.</div>
+                  <span class="dot-pulse-vivid"
+                    ><span></span><span></span><span></span
+                  ></span>
+                  <div class="font-mono text-xs">Opening your latest chat…</div>
+                </div>
+                <div
+                  x-show="!currentChat && !chats.length"
+                  class="chat-welcome flex-1 flex flex-col items-center justify-center px-6 py-10"
+                >
+                  <div class="chat-welcome-card text-center max-w-md">
+                    <span class="assistant-avatar chat-welcome-avatar mx-auto mb-4">
+                      <i data-lucide="brain-circuit" class="w-5 h-5"></i>
+                    </span>
+                    <h2
+                      class="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-neon-magenta via-purple-400 to-neon-cyan"
+                    >
+                      Shipley Mentor
+                    </h2>
+                    <p class="text-sm text-slate-400 mt-2 leading-relaxed">
+                      Ask about Section L, traceability, win themes, and your
+                      workspace knowledge base.
+                    </p>
+                    <button
+                      type="button"
+                      class="btn-hero-cyan inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-ink-950 mt-6"
+                      @click="newChat()"
+                    >
+                      <i data-lucide="message-square-plus" class="w-4 h-4"></i>
+                      Start your first chat
+                    </button>
+                  </div>
                 </div>
 
                 <template x-if="currentChat">

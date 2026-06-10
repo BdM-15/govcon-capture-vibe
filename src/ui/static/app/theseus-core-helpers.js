@@ -29,6 +29,7 @@ const theseusHandleActiveChange = function theseusHandleActiveChange(app) {
   if (app.active === "chains" && !app.chains.loaded) app.loadChains();
   if (app.active === "studio" && !app.studio.loaded) app.loadStudio();
   if (app.active === "prompts") window.theseusAfterRender(app);
+  if (app.active === "chat") window.theseusEnsureChatSelection(app);
 };
 
 const theseusWatchAfterRender = function theseusWatchAfterRender(app, paths) {

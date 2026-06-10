@@ -12,6 +12,14 @@ window.theseusNewChat = async function theseusNewChat(app, rfpContext = null) {
   app.active = "chat";
 };
 
+window.theseusEnsureChatSelection = async function theseusEnsureChatSelection(
+  app,
+) {
+  if (app.active !== "chat" || app.currentChat) return;
+  if (!app.chats?.length) return;
+  await app.openChat(app.chats[0].id);
+};
+
 window.theseusOpenChat = async function theseusOpenChat(app, id) {
   try {
     window.theseusClearChatHistoryUi(app);
@@ -76,6 +84,7 @@ window.theseusConfirmDeleteChat = async function theseusConfirmDeleteChat(
     app.chatHistory.deletePendingId = null;
     await app.loadChats();
     await app.loadStats();
+    await window.theseusEnsureChatSelection(app);
     app.toast("Chat deleted");
   } catch (error) {
     app.toast("Delete failed: " + error.message, "error");
@@ -585,4 +594,5 @@ window.theseusLoadChats = async function theseusLoadChats(app) {
   } catch {
     app.chats = [];
   }
+  await window.theseusEnsureChatSelection(app);
 };

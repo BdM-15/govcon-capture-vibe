@@ -362,13 +362,24 @@
               x-text="navSubtitle()"
             ></span>
           </div>
-          <button
-            class="btn btn-ghost text-xs"
-            @click="refreshAll()"
-            title="Refresh all"
-          >
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              x-show="active === 'chat'"
+              type="button"
+              class="btn-hero-cyan inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-ink-950"
+              @click="newChat()"
+            >
+              <i data-lucide="message-square-plus" class="w-3.5 h-3.5"></i>
+              New chat
+            </button>
+            <button
+              class="btn btn-ghost text-xs"
+              @click="refreshAll()"
+              title="Refresh all"
+            >
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh
+            </button>
+          </div>
         </div>
 
         <!-- Content area -->
