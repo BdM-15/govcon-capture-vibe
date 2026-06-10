@@ -680,6 +680,22 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusSaveSidebarRename(this, chatId);
     },
 
+    handoffMode(sourceMode) {
+      return window.theseusHandoffMode(sourceMode);
+    },
+
+    openInsightHandoff(messageIndex) {
+      return window.theseusOpenInsightHandoff(this, messageIndex);
+    },
+
+    closeInsightHandoff() {
+      return window.theseusCloseInsightHandoff(this);
+    },
+
+    async confirmInsightHandoff() {
+      return window.theseusConfirmInsightHandoff(this);
+    },
+
     async renameChat() {
       return window.theseusRenameChat(this);
     },

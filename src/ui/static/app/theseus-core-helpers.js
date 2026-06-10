@@ -52,6 +52,7 @@ window.theseusInit = async function theseusInit(app) {
     "chatHistory.filter",
     "chatHistory.deletePendingId",
     "chatHistory.editingId",
+    "chatHandoff.open",
     "graph.selected",
     "palette.open",
     "wsModal.open",

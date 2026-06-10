@@ -54,7 +54,7 @@ class ChatStore:
 
     @staticmethod
     def summary(chat: dict[str, Any]) -> dict[str, Any]:
-        return {
+        item = {
             "id": chat["id"],
             "title": chat.get("title", "Untitled"),
             "mode": chat.get("mode", "mix"),
@@ -63,6 +63,9 @@ class ChatStore:
             "created_at": chat.get("created_at"),
             "updated_at": chat.get("updated_at"),
         }
+        if chat.get("handoff_from"):
+            item["handoff_from"] = chat["handoff_from"]
+        return item
 
     def list_summaries(self) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
@@ -82,6 +85,7 @@ class ChatStore:
         title: str,
         mode: str,
         rfp_context: str | None,
+        handoff_from: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         chat_id = uuid.uuid4().hex[:16]
         now = self._now()
@@ -94,6 +98,8 @@ class ChatStore:
             "created_at": now,
             "updated_at": now,
         }
+        if handoff_from:
+            chat["handoff_from"] = handoff_from
         self.write(chat)
         return chat
 

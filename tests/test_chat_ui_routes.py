@@ -321,6 +321,39 @@ def test_stream_message_accepts_per_message_bypass_override(tmp_path) -> None:
     assert assistant["mode"] == "bypass"
 
 
+def test_create_chat_persists_handoff_metadata(tmp_path) -> None:
+    client, _ = _client(tmp_path)
+    source = client.post("/api/ui/chats", json={"title": "Source", "mode": "mix"})
+    source_id = source.json()["id"]
+
+    created = client.post(
+        "/api/ui/chats",
+        json={
+            "title": "NET 30 cash-flow risk",
+            "mode": "hybrid",
+            "rfp_context": "MCPP",
+            "handoff_from": {
+                "chat_id": source_id,
+                "message_index": 3,
+                "excerpt": "NET 30 vs receivables is Critical",
+            },
+        },
+    )
+    assert created.status_code == 201, created.text
+    branch_id = created.json()["id"]
+    assert created.json()["handoff_from"] == {
+        "chat_id": source_id,
+        "message_index": 3,
+        "excerpt": "NET 30 vs receivables is Critical",
+    }
+
+    full = client.get(f"/api/ui/chats/{branch_id}")
+    assert full.status_code == 200, full.text
+    assert full.json()["handoff_from"]["chat_id"] == source_id
+    assert full.json()["mode"] == "hybrid"
+    assert full.json()["rfp_context"] == "MCPP"
+
+
 def test_message_mode_override_rejects_invalid_mode(tmp_path) -> None:
     client, _ = _client(tmp_path)
     created = client.post("/api/ui/chats", json={"title": "Bad mode", "mode": "mix"})

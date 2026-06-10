@@ -1,3 +1,137 @@
+window.theseusChatSelectionInMessage = function theseusChatSelectionInMessage(
+  containerEl,
+) {
+  const selection = window.getSelection?.();
+  if (!selection || selection.isCollapsed || !containerEl) return "";
+  const range = selection.rangeCount ? selection.getRangeAt(0) : null;
+  if (!range || !containerEl.contains(range.commonAncestorContainer)) return "";
+  return selection.toString().trim();
+};
+
+window.theseusHandoffTitleFromQuote = function theseusHandoffTitleFromQuote(
+  quote,
+) {
+  const plain = (quote || "").replace(/\s+/g, " ").trim();
+  if (!plain) return "Insight thread";
+  return plain.length > 48 ? `${plain.slice(0, 48)}…` : plain;
+};
+
+window.theseusHandoffMode = function theseusHandoffMode(sourceMode) {
+  const mode = sourceMode || "mix";
+  return mode === "bypass" ? "mix" : mode;
+};
+
+window.theseusBuildHandoffSeed = function theseusBuildHandoffSeed({
+  sourceTitle,
+  messageIndex,
+  quote,
+  framingQuestion,
+  priorQuestion,
+}) {
+  const question =
+    (framingQuestion || "").trim() ||
+    "Expand on this insight — walk me through the evidence and implications.";
+  const quoted = (quote || "").trim();
+  const blockquote = quoted.replace(/\n/g, "\n> ");
+  let body =
+    "I'm exploring one insight from a prior Capture Chat thread. Use workspace retrieval to ground RFP facts; treat the quoted passage as context from the prior answer, not as solicitation text.\n\n";
+  body += `**Source chat:** ${sourceTitle || "Prior chat"} · assistant message #${messageIndex + 1}\n`;
+  if (priorQuestion) {
+    body += `**Original question:** ${priorQuestion}\n`;
+  }
+  body += `\n**Quoted insight:**\n> ${blockquote}\n\n**My question:** ${question}`;
+  return body;
+};
+
+window.theseusOpenInsightHandoff = function theseusOpenInsightHandoff(
+  app,
+  messageIndex,
+) {
+  if (!app.currentChat || app.sending) return;
+  const messages = app.currentChat.messages || [];
+  const message = messages[messageIndex];
+  if (!message || message.role !== "assistant" || !message.content) return;
+
+  const bubble = document.querySelector(
+    `[data-msg-bubble][data-msg-idx="${messageIndex}"]`,
+  );
+  const selected = bubble
+    ? window.theseusChatSelectionInMessage(bubble)
+    : "";
+  const quote = selected || message.content.trim().slice(0, 1200);
+  const priorUser = theseusPriorUserMessage(messages, messageIndex);
+
+  app.chatHandoff = {
+    open: true,
+    sending: false,
+    messageIndex,
+    quote,
+    quoteIsSelection: Boolean(selected),
+    framingQuestion: "",
+    sourceChatId: app.currentChat.id,
+    sourceChatTitle: app.currentChat.title || "Prior chat",
+    priorUserQuestion: priorUser?.message?.content || "",
+  };
+  app.$nextTick(() => {
+    const input = app.$refs.handoffQuestion;
+    if (input) input.focus();
+    window.theseusRefreshIcons?.();
+  });
+};
+
+window.theseusCloseInsightHandoff = function theseusCloseInsightHandoff(app) {
+  app.chatHandoff.open = false;
+  app.chatHandoff.sending = false;
+};
+
+window.theseusConfirmInsightHandoff = async function theseusConfirmInsightHandoff(
+  app,
+) {
+  if (app.chatHandoff.sending || !app.chatHandoff.quote?.trim()) return;
+  if (!app.currentChat) return;
+
+  app.chatHandoff.sending = true;
+  const handoff = { ...app.chatHandoff };
+  const sourceChat = app.currentChat;
+
+  try {
+    const mode = window.theseusHandoffMode(sourceChat.mode);
+    const title = window.theseusHandoffTitleFromQuote(handoff.quote);
+    const seed = window.theseusBuildHandoffSeed({
+      sourceTitle: handoff.sourceChatTitle,
+      messageIndex: handoff.messageIndex,
+      quote: handoff.quote,
+      framingQuestion: handoff.framingQuestion,
+      priorQuestion: handoff.priorUserQuestion,
+    });
+
+    const chat = await app.api("/api/ui/chats", {
+      method: "POST",
+      body: JSON.stringify({
+        title,
+        mode,
+        rfp_context: sourceChat.rfp_context || null,
+        handoff_from: {
+          chat_id: handoff.sourceChatId,
+          message_index: handoff.messageIndex,
+          excerpt: handoff.quote.slice(0, 400),
+        },
+      }),
+    });
+
+    window.theseusCloseInsightHandoff(app);
+    await app.loadChats();
+    await app.openChat(chat.id);
+    app.active = "chat";
+    app.composer = seed;
+    await app.sendMessage();
+    app.toast("Started grounded insight thread");
+  } catch (error) {
+    app.chatHandoff.sending = false;
+    app.toast(`Handoff failed: ${error.message}`, "error");
+  }
+};
+
 window.theseusNewChat = async function theseusNewChat(app, rfpContext = null) {
   const chat = await app.api("/api/ui/chats", {
     method: "POST",

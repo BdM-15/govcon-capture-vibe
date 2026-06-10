@@ -803,6 +803,25 @@ details.acc .summary-actions {
   background: rgba(var(--neon-amber-rgb), 0.08);
   box-shadow: 0 0 12px -4px rgba(var(--neon-amber-rgb), 0.55);
 }
+.msg-action-handoff:hover:not(:disabled) {
+  color: #c4b5fd;
+  border-color: rgba(167, 139, 250, 0.55);
+  background: rgba(167, 139, 250, 0.1);
+  box-shadow: 0 0 12px -4px rgba(167, 139, 250, 0.55);
+}
+
+.chat-handoff-quote {
+  max-height: 9rem;
+  overflow-y: auto;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  background: rgba(8, 12, 24, 0.55);
+  white-space: pre-wrap;
+}
+.chat-handoff-modal textarea:focus {
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.25);
+}
 
 /* ----- Inline citation chips ([N] in assistant text) ----- */
 .cite-chip {
