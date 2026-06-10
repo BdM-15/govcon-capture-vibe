@@ -70,6 +70,24 @@ def test_build_startup_banner_items_includes_endpoints_and_optional_neo4j() -> N
     assert any("33" in value and "35" in value for label, value in items if label == "Schema")
 
 
+def test_build_startup_banner_items_reports_ollama_warmup_state() -> None:
+    items = build_startup_banner_items(
+        _settings(),
+        host="127.0.0.1",
+        port=9621,
+        graph_storage="Neo4JStorage",
+        working_dir="rag_storage/demo",
+        entity_count=33,
+        relationship_count=35,
+        colors=_Colors,
+        ollama_status={"ok": True, "state": "ready", "model": "qwen3.5:9b"},
+    )
+
+    ollama_row = next(value for label, value in items if label == "Ollama   (local)")
+    assert "qwen3.5:9b" in ollama_row
+    assert "READY" in ollama_row
+
+
 def test_build_startup_banner_items_reports_native_pipeline_health() -> None:
     items = build_startup_banner_items(
         _settings(),

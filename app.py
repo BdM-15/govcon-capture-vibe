@@ -18,7 +18,8 @@ Usage:
 This will:
 1. Start Neo4j container (if not already running)
 2. Wait for Neo4j health check
-3. Start GovCon RAG server
+3. Warm up local Ollama (insight handoff + optional keyword routing)
+4. Start GovCon RAG server
     
 Then visit: http://localhost:9621
 """
@@ -196,6 +197,32 @@ def manage_neo4j_startup():
     return True
 
 
+def manage_ollama_startup(settings) -> dict:
+    """Warm up local Ollama before the async RAG server starts."""
+    from src.server.ollama_llm import warmup_ollama_sync
+    from src.server.runtime_state import set_ollama_status
+
+    print("🔍 Checking Ollama local LLM...")
+    status = warmup_ollama_sync(settings)
+    set_ollama_status(status)
+
+    host = status.get("host", "http://localhost:11434")
+    model = status.get("model", getattr(settings, "ollama_model", "qwen3.5:9b"))
+    if status.get("ok"):
+        print(f"✅ Ollama ready: {model} @ {host}\n")
+    elif status.get("available"):
+        print(
+            f"⚠️  Ollama reachable at {host} but warmup failed: "
+            f"{status.get('error', 'unknown')}\n"
+        )
+    else:
+        print(
+            f"⚠️  Ollama not reachable at {host} "
+            f"(handoff compose + keyword may use fallback)\n"
+        )
+    return status
+
+
 if __name__ == "__main__":
     # ANSI color codes for PowerShell
     CYAN = '\033[96m'
@@ -257,6 +284,8 @@ if __name__ == "__main__":
                 print(
                     f"✅ MinerU already running at {mineru_controller.endpoint.docs_url}\n"
                 )
+
+        manage_ollama_startup(_settings)
 
         # Start the RAG server
         print("🚀 Starting Project Theseus...\n")

@@ -84,6 +84,7 @@ class TheseusRAGRuntime:
     adapter: Any
     health: Any
     settings: Any
+    ollama_status: dict[str, Any] | None = None
 
 
 @dataclass
@@ -128,6 +129,7 @@ def build_startup_banner_items(
     colors: Any,
     version_resolver: Callable[[str], str] = resolve_package_version,
     pipeline_health: Any | None = None,
+    ollama_status: dict[str, Any] | None = None,
 ) -> list[tuple[str, str]]:
     """Build the startup banner rows for log_banner()."""
     mineru_version = version_resolver("mineru")
@@ -138,6 +140,8 @@ def build_startup_banner_items(
     )
     device = settings.mineru_device_mode.upper()
     device_color = colors.GREEN if device == "CUDA" else colors.YELLOW
+
+    from src.server.ollama_llm import format_ollama_banner_line
 
     startup_items = [
         ("Workspace", f"{colors.BOLD}{colors.WHITE}{settings.workspace}{colors.RESET}"),
@@ -162,13 +166,7 @@ def build_startup_banner_items(
                 )
             ),
         ),
-        (
-            "Ollama   (local)",
-            (
-                f"{colors.GREEN}{getattr(settings, 'ollama_model', 'qwen3.5:9b')}{colors.RESET}"
-                f"  {colors.DIM}·  {getattr(settings, 'ollama_host', 'http://localhost:11434')}{colors.RESET}"
-            ),
-        ),
+        ("Ollama   (local)", format_ollama_banner_line(ollama_status, settings, colors)),
         ("VLM      (LightRAG)", f"{colors.CYAN}{settings.vlm_llm_name}{colors.RESET}"),
         ("Query    (LightRAG)", f"{colors.MAGENTA}{settings.reasoning_llm_name}{colors.RESET}"),
         ("Post-Process", f"{colors.YELLOW}{settings.post_processing_llm_name}{colors.RESET}"),
@@ -368,28 +366,19 @@ async def initialize_theseus_rag_runtime(
 
     configure_lightrag_args_fn()
     settings = get_settings_fn()
-    try:
-        from src.server.ollama_llm import warmup_ollama
+    from src.server.ollama_llm import log_ollama_startup, warmup_ollama
+    from src.server.runtime_state import get_ollama_status, set_ollama_status
 
-        ollama_status = await warmup_ollama(settings)
-        if ollama_status.get("ok"):
-            logger.info(
-                "✅ Ollama ready: model=%s host=%s",
-                ollama_status.get("model"),
-                ollama_status.get("host"),
-            )
-        elif ollama_status.get("available"):
-            logger.warning(
-                "⚠️ Ollama reachable but warmup failed: %s",
-                ollama_status.get("error", "unknown"),
-            )
-        else:
-            logger.info(
-                "ℹ️ Ollama not available at %s — handoff compose will use mechanical fallback",
-                ollama_status.get("host"),
-            )
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("Ollama warmup skipped: %s", exc)
+    ollama_status = get_ollama_status()
+    if not ollama_status or not ollama_status.get("ok"):
+        try:
+            ollama_status = await warmup_ollama(settings)
+            set_ollama_status(ollama_status)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Ollama async warmup failed: %s", exc)
+            ollama_status = ollama_status or {"ok": False, "state": "unavailable", "error": str(exc)[:160]}
+            set_ollama_status(ollama_status)
+    log_ollama_startup(ollama_status, logger_obj=logger)
 
     native_runtime = await initialize_native_lightrag_fn(
         settings,
@@ -404,6 +393,7 @@ async def initialize_theseus_rag_runtime(
         adapter=native_runtime.adapter,
         health=native_runtime.health,
         settings=settings,
+        ollama_status=ollama_status,
     )
 
 
@@ -614,6 +604,7 @@ def build_server_runtime(
     entity_types: list[Any] | None = None,
     relationship_types: list[Any] | None = None,
     pipeline_health: Any | None = None,
+    ollama_status: dict[str, Any] | None = None,
 ) -> ServerRuntime:
     """Build app, wire routes/UI, log banner, return launch config."""
 
@@ -670,6 +661,7 @@ def build_server_runtime(
         relationship_count=len(relationship_types),
         colors=colors,
         pipeline_health=pipeline_health,
+        ollama_status=ollama_status,
     )
     log_banner_fn(
         f"{colors.BOLD}✅ LIGHTRAG-FIRST CAPTURE WORKBENCH READY{colors.RESET}",
@@ -744,6 +736,7 @@ async def main():
         register_ui_fn=register_ui,
         build_startup_banner_items_fn=build_startup_banner_items,
         pipeline_health=rag_runtime.health,
+        ollama_status=rag_runtime.ollama_status,
     )
 
     # Step 5: Start server

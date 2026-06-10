@@ -14,6 +14,7 @@ from src.server.admin_routes import (
     release_version,
     ui_chat_history_pairs,
 )
+from src.server.runtime_state import clear_ollama_status, set_ollama_status
 
 
 def _settings() -> SimpleNamespace:
@@ -21,10 +22,14 @@ def _settings() -> SimpleNamespace:
         workspace="demo",
         extraction_llm_name="extract-model",
         reasoning_llm_name="reason-model",
+        keyword_llm_name="qwen3.5:9b",
+        keyword_llm_binding="ollama",
         embedding_model="embed-model",
         vlm_llm_name="vlm-model",
         rerank_model="rerank-model",
         enable_rerank=True,
+        ollama_host="http://localhost:11434",
+        ollama_model="qwen3.5:9b",
     )
 
 
@@ -83,8 +88,41 @@ def test_gather_stats_counts_workspace_and_shapes_payload(tmp_path, monkeypatch)
     assert payload["ontology"]["relationship_type_count"] == len(VALID_RELATIONSHIP_TYPES)
     assert payload["models"]["rerank"] == "rerank-model"
     assert payload["models"]["vlm"] == "vlm-model"
+    assert payload["models"]["keyword"] == "qwen3.5:9b"
+    assert payload["ollama"]["model"] == "qwen3.5:9b"
+    assert payload["ollama"]["state"] == "unknown"
     assert payload["stack"] == {"lightrag": "test"}
     assert payload["timestamp"] == "2026-05-03T12:00:00-05:00"
+
+
+def test_gather_stats_includes_ollama_warmup_status(tmp_path) -> None:
+    workspace = tmp_path / "demo"
+    chats = workspace / "chats"
+    chats.mkdir(parents=True)
+    set_ollama_status(
+        {
+            "ok": True,
+            "state": "ready",
+            "model": "qwen3.5:9b",
+            "host": "http://localhost:11434",
+            "available": ["qwen3.5:9b"],
+            "warmed_at": "2026-06-10T12:00:00",
+            "keyword_binding": "ollama",
+            "keyword_model": "qwen3.5:9b",
+        }
+    )
+    try:
+        payload = gather_stats(
+            workspace_dir=lambda: workspace,
+            chats_dir=lambda: chats,
+            settings_provider=_settings,
+        )
+    finally:
+        clear_ollama_status()
+
+    assert payload["ollama"]["ready"] is True
+    assert payload["ollama"]["state"] == "ready"
+    assert payload["ollama"]["warmed_at"] == "2026-06-10T12:00:00"
 
 
 def test_dashboard_stats_route_uses_injected_dependencies(tmp_path) -> None:
