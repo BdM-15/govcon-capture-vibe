@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from src.core import get_settings
+from src.server.chunk_store import get_text_chunk
 from src.skills import get_skill_manager
 from src.skills.chain_models import ChainRunState, ChainSpec, ChainStepSpec
 from src.skills.context import (
@@ -1225,15 +1226,7 @@ def register_skill_run_ui_routes(
         if not chunks_path.exists():
             raise HTTPException(404, "No text-chunk store in this workspace")
 
-        def _load_chunk() -> Optional[dict[str, Any]]:
-            try:
-                store = json.loads(chunks_path.read_text(encoding="utf-8"))
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Failed reading text-chunk store: %s", exc)
-                return None
-            return store.get(chunk_id)
-
-        chunk = await asyncio.to_thread(_load_chunk)
+        chunk = await asyncio.to_thread(get_text_chunk, chunks_path, chunk_id)
         if not chunk:
             raise HTTPException(404, f"Unknown chunk: {chunk_id}")
 

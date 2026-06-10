@@ -66,6 +66,63 @@ v7.1   - Forbid space/comma-joined canonical types in keywords field.
 
 Changelog:
 ----------
+v3.9.7 (Jun 2026) - Post-context format anchor for query prompts (issue #192)
+  - Format contract appended after `{context_data}` so rules stay salient after 200k retrieval
+
+v3.9.6 (Jun 2026) - Structure normalizer for prose-heavy answers (issue #192)
+  - Server + renderer promote plain section lines (`Section 1.0 –`) and major themes to headings
+  - System compose: mandatory ## / bullets for multi-topic answers (not library prompts)
+
+v3.9.5 (Jun 2026) - References fallback + heading color separation (issue #192)
+  - Server appends `### References` from retrieved sources when the model omits it
+  - Renderer promotes plain section titles to `##` for cyan theme styling
+  - h2/h3 CSS: cyan section rails + magenta subheads
+
+v3.9.4 (Jun 2026) - Drop in-response Explore next (issue #192)
+  - Removed from scope primer; follow-up prompts belong in UI, not answer body
+  - References is unambiguously the final section (no follow-up block before it)
+
+v3.9.3 (Jun 2026) - Formatting stays in system settings, not prompt library (issue #192)
+  - Reverted scope primer to content-only; no ##/bullet instructions in library prompts
+  - Response Format picker in query settings (`response_type`); Additional Output Prompt unchanged
+  - System compose still owns LightRAG §3 Markdown + [N] + References ordering
+
+v3.9.2 (Jun 2026) - Structure + citations must coexist (issue #192)
+  - Formatting rules in query_compose (not library); renderer handles circled digits (①②)
+
+v3.9.1 (Jun 2026) - References section ordering + scope primer citations (issue #192)
+  - Scope primer: Explore next before References; References must be final section
+  - Query compose: explicit section-order rule when user requests follow-up questions
+
+v3.9.0 (Jun 2026) - Structured Markdown response_type + citation hardening (issue #192)
+  - UI query defaults now set `response_type` to structured Markdown instead of LightRAG's
+    implicit "Multiple Paragraphs" (which flattened headings/bullets)
+  - `query_compose.py` clarifies Markdown wins over presentation style; forbids bare citation numbers
+  - Chat renderer upgrades bare trailing citation digits (e.g. "...fact. 1") to cite chips
+
+v3.8.0 (Jun 2026) - Compose query prompts on LightRAG formatting spine (issue #192)
+  - `prompts/govcon/query_compose.py` loads LightRAG `rag_response` / `naive_rag_response` and
+    preserves sections 3–6 (Markdown formatting, `{response_type}`, references) verbatim
+  - GovCon domain blocks (role, Phase 4–6 scope, UCF awareness, grounding guardrails, `[N]` citations)
+    are additive — no duplicate format rules or anti-markdown constraints
+  - Depth/topic guidance remains in prompt-library starters only
+
+v3.7.0 (Jun 2026) - Restore #69 query core; move depth tiers to prompt library (issue #192)
+  - Removed rigid Response Depth tiers from system prompt (were compressing scope overviews)
+  - Restored #69 strategic analysis approach and "prefer thoroughness over brevity" for walkthroughs
+  - Kept v3.1-v3.3 guardrails: Phase 4-6 scope, inline [N], UCF/non-UCF entities, ontology vs fact, templates
+  - Depth/format guidance now lives in prompt-library starters (e.g. scope primer, forensic, deep-dive)
+
+v3.6.0 (Jun 2026) - Tiered strategic analyst query persona (issue #192)
+  - Restored #69 strategic-analyst grounding balance (interpret + recommend when warranted)
+  - Added explicit Response Depth tiers: lookup, elaboration, strategic, forensic
+  - Supports conversational follow-up on prior insights without consultant-workshop drift
+  - Removed v3.0 mandatory implication-per-fact and unprompted pattern dumps; kept v3.1-v3.3 guardrails
+  - Expanded Prompt Library with discovery, forensic, and bypass starter prompts from user workflows
+
+v3.5.0 (Jun 2026) - Query tone correction: rein in consultant drift (issue #192, superseded by v3.6.0)
+  - Interim answer-first analyst tone; replaced in v3.6.0 with tiered depth model
+
 v3.4.0 (Apr 2026) - JSON Structured-Output Extraction (issue #124, Phase 1.2)
   - Added entity_extraction_json_system_prompt loaded from govcon_lightrag_json.txt
     (materialized by tools/_build_json_prompt.py from the canonical native.txt).

@@ -166,6 +166,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     },
     _chunkCache: Object.create(null),
     streamLiveContent: "",
+    streamLiveHtml: "",
     thinkStartedAt: null,
     thinkElapsed: 0,
     thinkTimer: null,

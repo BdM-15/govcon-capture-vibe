@@ -158,7 +158,12 @@ def test_build_server_runtime_wires_app_routes_ui_and_banner() -> None:
         working_dir="./rag_storage",
         graph_storage="Neo4JStorage",
     )
-    ui_bridges = SimpleNamespace(query="query-fn", query_data="query-data-fn", llm="llm-fn")
+    ui_bridges = SimpleNamespace(
+        query="query-fn",
+        query_data="query-data-fn",
+        query_llm="query-llm-fn",
+        llm="llm-fn",
+    )
     colors = SimpleNamespace(BOLD="<b>", RESET="</b>")
 
     runtime = build_server_runtime(
@@ -173,8 +178,8 @@ def test_build_server_runtime_wires_app_routes_ui_and_banner() -> None:
         make_ui_query_bridges_fn=lambda rag_instance, *, logger: calls.append(
             ("make_ui_query_bridges", rag_instance, logger)
         ) or ui_bridges,
-        register_ui_fn=lambda built_app, query, query_data, *, llm_func: calls.append(
-            ("register_ui", built_app, query, query_data, llm_func)
+        register_ui_fn=lambda built_app, query, query_data, *, query_llm_func, llm_func: calls.append(
+            ("register_ui", built_app, query, query_data, query_llm_func, llm_func)
         ),
         build_startup_banner_items_fn=lambda settings, **kwargs: calls.append(
             ("build_startup_banner_items", settings, kwargs)
@@ -191,7 +196,7 @@ def test_build_server_runtime_wires_app_routes_ui_and_banner() -> None:
         ("create_app", global_args),
         ("register_custom_ingestion_routes", app, "rag-instance", logger),
         ("make_ui_query_bridges", "rag-instance", logger),
-        ("register_ui", app, "query-fn", "query-data-fn", "llm-fn"),
+        ("register_ui", app, "query-fn", "query-data-fn", "query-llm-fn", "llm-fn"),
         (
             "build_startup_banner_items",
             SimpleNamespace(workspace="demo"),
@@ -231,7 +236,12 @@ def test_build_server_runtime_passes_pipeline_health_to_banner() -> None:
         logger=_Logger(),
         create_app_fn=lambda args: SimpleNamespace(router=SimpleNamespace(routes=[])),
         register_custom_ingestion_routes_fn=lambda *args, **kwargs: None,
-        make_ui_query_bridges_fn=lambda rag_instance, *, logger: SimpleNamespace(query="q", query_data="qd", llm="llm"),
+        make_ui_query_bridges_fn=lambda rag_instance, *, logger: SimpleNamespace(
+            query="q",
+            query_data="qd",
+            query_llm="qllm",
+            llm="llm",
+        ),
         register_ui_fn=lambda *args, **kwargs: None,
         build_startup_banner_items_fn=lambda settings, **kwargs: calls.append(kwargs) or [],
         make_rerank_func=lambda: None,

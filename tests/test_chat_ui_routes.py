@@ -13,7 +13,12 @@ class _QuerySettings:
         return {"top_k": 7}
 
 
-def _client(tmp_path, *, query_func=None, data_func=None) -> tuple[TestClient, list[tuple[Any, ...]]]:
+def _client(
+    tmp_path,
+    *,
+    query_func=None,
+    query_llm_func=None,
+) -> tuple[TestClient, list[tuple[Any, ...]]]:
     calls: list[tuple[Any, ...]] = []
 
     async def default_query_func(text, mode, history, stream, overrides):
@@ -31,10 +36,53 @@ def _client(tmp_path, *, query_func=None, data_func=None) -> tuple[TestClient, l
         chat_store=store,
         query_settings=_QuerySettings(),
         query_func=query_func or default_query_func,
-        data_func=data_func,
+        query_llm_func=query_llm_func,
         now=lambda: "now",
     )
     return TestClient(app), calls
+
+
+def _native_sources_llm_result(*, stream: bool, answer: str | AsyncIterator[str]):
+    if stream:
+
+        async def chunks() -> AsyncIterator[str]:
+            if hasattr(answer, "__aiter__"):
+                async for item in answer:
+                    yield item
+            else:
+                yield str(answer)
+
+        llm_response = {
+            "content": None,
+            "response_iterator": chunks(),
+            "is_streaming": True,
+        }
+    else:
+        llm_response = {
+            "content": answer,
+            "response_iterator": None,
+            "is_streaming": False,
+        }
+
+    return {
+        "status": "success",
+        "data": {
+            "chunks": [
+                {
+                    "reference_id": "ref-native-1",
+                    "chunk_id": "chunk-native-1",
+                    "file_path": "native-rfp.pdf",
+                    "content": "Native-ingested PWS source text",
+                }
+            ],
+            "references": [
+                {"reference_id": "ref-native-1", "file_path": "native-rfp.pdf"}
+            ],
+            "entities": [{"entity_name": "Workload Requirement"}],
+            "relationships": [{"src_id": "Workload Requirement"}],
+        },
+        "llm_response": llm_response,
+    }
 
 
 def test_trim_sources_compacts_retrieval_payload() -> None:
@@ -107,35 +155,16 @@ def test_chat_crud_and_sync_message_routes(tmp_path) -> None:
 
 
 def test_sync_message_route_persists_native_sources(tmp_path) -> None:
-    query_calls: list[tuple[Any, ...]] = []
-    data_calls: list[tuple[Any, ...]] = []
+    query_llm_calls: list[tuple[Any, ...]] = []
 
-    async def query_func(text, mode, history, stream, overrides):
-        query_calls.append((text, mode, history, stream, overrides))
-        return "Native answer cites workload requirement."
+    async def query_llm_func(text, mode, history, stream, overrides):
+        query_llm_calls.append((text, mode, history, stream, overrides))
+        return _native_sources_llm_result(
+            stream=False,
+            answer="Native answer cites workload requirement.",
+        )
 
-    async def data_func(text, mode, history, overrides):
-        data_calls.append((text, mode, history, overrides))
-        return {
-            "status": "success",
-            "data": {
-                "chunks": [
-                    {
-                        "reference_id": "ref-native-1",
-                        "chunk_id": "chunk-native-1",
-                        "file_path": "native-rfp.pdf",
-                        "content": "Native-ingested PWS source text",
-                    }
-                ],
-                "references": [
-                    {"reference_id": "ref-native-1", "file_path": "native-rfp.pdf"}
-                ],
-                "entities": [{"entity_name": "Workload Requirement"}],
-                "relationships": [{"src_id": "Workload Requirement"}],
-            },
-        }
-
-    client, _ = _client(tmp_path, query_func=query_func, data_func=data_func)
+    client, _ = _client(tmp_path, query_llm_func=query_llm_func)
     created = client.post("/api/ui/chats", json={"title": "Native", "mode": "mix"})
     chat_id = created.json()["id"]
 
@@ -154,49 +183,23 @@ def test_sync_message_route_persists_native_sources(tmp_path) -> None:
         "references": 1,
     }
     assert assistant["sources"]["chunks"][0]["file_path"] == "native-rfp.pdf"
-    assert query_calls[0] == (
-        "What workload drives pricing?",
-        "mix",
-        [],
-        False,
-        {"top_k": 7},
-    )
-    assert data_calls[0] == ("What workload drives pricing?", "mix", [], {"top_k": 7})
+    assert query_llm_calls == [
+        ("What workload drives pricing?", "mix", [], False, {"top_k": 7}),
+    ]
 
 
 def test_streaming_message_route_emits_sse_and_persists_sources(tmp_path) -> None:
-    query_calls: list[tuple[Any, ...]] = []
-    data_calls: list[tuple[Any, ...]] = []
+    query_llm_calls: list[tuple[Any, ...]] = []
 
-    async def query_func(text, mode, history, stream, overrides):
-        query_calls.append((text, mode, history, stream, overrides))
+    async def stream_answer():
+        yield "stream "
+        yield "answer"
 
-        async def chunks() -> AsyncIterator[str]:
-            yield "stream "
-            yield "answer"
+    async def query_llm_func(text, mode, history, stream, overrides):
+        query_llm_calls.append((text, mode, history, stream, overrides))
+        return _native_sources_llm_result(stream=True, answer=stream_answer())
 
-        return chunks()
-
-    async def data_func(text, mode, history, overrides):
-        data_calls.append((text, mode, history, overrides))
-        return {
-            "status": "success",
-            "data": {
-                "chunks": [
-                    {
-                        "reference_id": "r1",
-                        "chunk_id": "c1",
-                        "file_path": "doc.pdf",
-                        "content": "source text",
-                    }
-                ],
-                "references": [{"reference_id": "r1", "file_path": "doc.pdf"}],
-                "entities": [{}],
-                "relationships": [{}, {}],
-            },
-        }
-
-    client, _ = _client(tmp_path, query_func=query_func, data_func=data_func)
+    client, _ = _client(tmp_path, query_llm_func=query_llm_func)
     created = client.post("/api/ui/chats", json={"title": "Stream", "mode": "mix"})
     chat_id = created.json()["id"]
 
@@ -208,12 +211,11 @@ def test_streaming_message_route_emits_sse_and_persists_sources(tmp_path) -> Non
     assert response.status_code == 200, response.text
     assert response.headers["content-type"].startswith("text/event-stream")
     assert "event: open" in response.text
-    assert "event: sources" in response.text
+    assert "source_counts" in response.text
     assert "event: token" in response.text
-    assert "stream answer" in response.text
     assert "event: done" in response.text
-    assert query_calls[0] == ("Stream it", "mix", [], True, {"top_k": 7})
-    assert data_calls[0] == ("Stream it", "mix", [], {"top_k": 7})
+    assert "event: sources" not in response.text
+    assert query_llm_calls == [("Stream it", "mix", [], True, {"top_k": 7})]
 
     full = client.get(f"/api/ui/chats/{chat_id}").json()
     assert [item["role"] for item in full["messages"]] == ["user", "assistant"]
@@ -222,7 +224,67 @@ def test_streaming_message_route_emits_sse_and_persists_sources(tmp_path) -> Non
     assert assistant["sources"]["counts"] == {
         "chunks": 1,
         "entities": 1,
-        "relationships": 2,
+        "relationships": 1,
         "references": 1,
     }
     assert assistant["timing"]["chunk_count"] == 2
+
+
+def test_streaming_message_route_uses_single_query_llm_pass(tmp_path) -> None:
+    query_calls: list[tuple[Any, ...]] = []
+    query_llm_calls: list[tuple[Any, ...]] = []
+
+    async def query_func(text, mode, history, stream, overrides):
+        query_calls.append((text, mode, history, stream, overrides))
+        return "should-not-run"
+
+    async def chunks() -> AsyncIterator[str]:
+        yield "single "
+        yield "pass"
+
+    async def query_llm_func(text, mode, history, stream, overrides):
+        query_llm_calls.append((text, mode, history, stream, overrides))
+        return {
+            "status": "success",
+            "data": {
+                "chunks": [
+                    {
+                        "reference_id": "r9",
+                        "chunk_id": "c9",
+                        "file_path": "one-pass.pdf",
+                        "content": "retrieved once",
+                    }
+                ],
+                "references": [{"reference_id": "r9", "file_path": "one-pass.pdf"}],
+                "entities": [{}],
+                "relationships": [],
+            },
+            "llm_response": {
+                "content": None,
+                "response_iterator": chunks(),
+                "is_streaming": True,
+            },
+        }
+
+    client, _ = _client(
+        tmp_path,
+        query_func=query_func,
+        query_llm_func=query_llm_func,
+    )
+    created = client.post("/api/ui/chats", json={"title": "Single pass", "mode": "mix"})
+    chat_id = created.json()["id"]
+
+    response = client.post(
+        f"/api/ui/chats/{chat_id}/messages/stream",
+        json={"content": "One retrieval only"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert "event: token" in response.text
+    assert "source_counts" in response.text
+    assert query_llm_calls == [("One retrieval only", "mix", [], True, {"top_k": 7})]
+    assert query_calls == []
+
+    assistant = client.get(f"/api/ui/chats/{chat_id}").json()["messages"][1]
+    assert assistant["content"] == "single pass"
+    assert assistant["sources"]["chunks"][0]["file_path"] == "one-pass.pdf"

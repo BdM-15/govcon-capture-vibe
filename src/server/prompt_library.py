@@ -8,6 +8,26 @@ from fastapi.responses import JSONResponse
 
 PROMPT_LIBRARY: list[dict[str, str]] = [
     # ═════════════════ Phase 4 — Proposal Planning ═════════════════
+    # ── Discovery & orientation (content only — formatting via LightRAG + query settings) ──
+    {"phase": "4", "category": "Discovery", "title": "Scope & services primer",
+     "prompt": "Provide an overview of the scope and services for this contract. Use an educational tone in plain language; expand acronyms on first use. Stay grounded in retrieved document terminology and facts — cite with [N]. Explain structure: contract type, periods, task/service areas (walk major PWS/SOW sections with substantive detail per area), major deliverables, and key performance mechanisms. CLINs are supporting structure only; prioritize what the contractor must perform. Assume a reader new to this procurement who is not a domain SME. Prioritize clarity and completeness over brevity. Do not append unsolicited win themes or capture strategy."},
+    {"phase": "4", "category": "Discovery", "title": "Site & location inventory",
+     "prompt": "Summarize all sites and locations in scope. Organize by country, then region. Note counts where the documents support them. Identify geographic clusters, OCONUS vs CONUS concentration, and any site-specific appendix patterns. Flag data gaps. Cite every factual claim with [N]."},
+    {"phase": "4", "category": "Discovery", "title": "Topic deep-dive",
+     "prompt": "Deep-dive on: {topic}. Use retrieved evidence first. Structure: what the documents require → how it is performed or measured → dependencies and interfaces → compliance or performance risks visible in the text. Add brief proposal implications only where directly supported by cited facts. Cite every factual claim with [N]."},
+    {"phase": "4", "category": "Discovery", "title": "Evaluation criteria decoder",
+     "prompt": "Decode all evaluation_factor and subfactor entities (UCF Section M or equivalent — adjectival, LPTA, or non-UCF schemes). For each: what the government is evaluating; stated weights or rating definitions if present; evidence or proof they expect; what a strong vs weak response looks like per document language; pain points implied; proposal volumes or sections that must answer it. Ground every row in [N] citations. Label Shipley interpretation separately from document facts."},
+    {"phase": "4", "category": "Strategy", "title": "Volume-by-volume proposal blueprint",
+     "prompt": "Build a volume-by-volume proposal blueprint from the proposal_instruction and evaluation_factor entities. For each volume or evaluation factor, provide four blocks: (1) Compliance checks — page limits, format, submission mechanics, required artifacts; (2) Content specifics — what must be addressed, keyed to SOW/PWS sections and CLINs; (3) Customer pain points — only those supported by retrieved context; (4) Solutioning angles — proposal implications tied to cited requirements; flag assumptions. Do not invent pain points not evidenced in the workspace."},
+    {"phase": "4", "category": "Forensic", "title": "Forensic domain analysis",
+     "prompt": "Perform a forensic analysis of: {focus}. Search proposal_instruction, evaluation_factor, requirement, deliverable, clause, and PWS/SOW chunks (UCF and non-UCF). Deliver in order: (1) Executive summary — one paragraph, grounded; (2) Verbatim extracts — quote exact language with section/page refs and [N] citations; (3) Summary table(s) appropriate to {focus}; (4) Risk and performance implications — H/M/L with cited basis; (5) Proposal implications — only actions supported by documents. Example focus values: payment terms and cash flow by CLIN; shipping destinations and OTD/FR metrics; upfront capital obligations; inventory ownership and disposition."},
+    {"phase": "4", "category": "Pricing", "title": "Financial & cash-flow risk scan",
+     "prompt": "What contractor financial risks does this procurement create — especially cash flow, seed capital, working capital, and payment timing mismatches? Cite the driving clauses with [N]. Quantify where the documents provide numbers. Flag what a basis-of-estimate or financing narrative must address in the proposal."},
+    {"phase": "4", "category": "Bypass", "title": "External research enhancement",
+     "prompt": "Using the conversation above as grounded RFP context, research and analyze: {external_topic}. Do not contradict cited facts from earlier turns. Label clearly: (A) from prior conversation, (B) from external sources, (C) your synthesis. Focus on proposal and pricing implications for this opportunity. Switch chat mode to bypass before sending."},
+    {"phase": "4", "category": "Bypass", "title": "Incumbent capability research",
+     "prompt": "Using the conversation above as grounded context on scope, performance metrics, and transition requirements, research publicly available information about incumbent {company} capabilities relevant to this requirement. Deliver: facility or network summary table, capability claims vs RFP requirements, incumbent advantage assessment, transition risk, gaps our solution must close. Label external claims with source. State uncertainty where data is incomplete. Switch chat mode to bypass before sending."},
+    # ── Compliance & planning ──
     {"phase": "4", "category": "Compliance", "title": "Full Compliance Matrix (Instructions ↔ Evaluation)",
      "prompt": "Generate a full proposal-instruction ↔ evaluation-factor compliance matrix. For every proposal_instruction (UCF Section L or equivalent — non-UCF task orders, FOPRs, BPA calls, OTAs may name the section differently or embed instructions inline in the PWS), list the linked evaluation_factor (UCF Section M or equivalent — including adjectival or LPTA schemes), the responsible proposal volume, page-limit constraints, and any unmatched items as gaps. Tag each row with instruction_source (UCF-L | non-UCF | PWS-inline | attachment) and evaluation_source (UCF-M | non-UCF | adjectival | LPTA). Do NOT emit GAP merely because an entity lacks a literal 'Section L' / 'Section M' heading."},
     {"phase": "4", "category": "Compliance", "title": "Cross-reference matrix (9-column)",
@@ -96,6 +116,8 @@ PROMPT_LIBRARY: list[dict[str, str]] = [
 # Suggested prompt library route (Shipley phases 4-6)
 #
 # Design rules:
+#  - Response depth and format (lookup vs elaboration vs strategic vs forensic)
+#    belong HERE in each starter prompt — not as rigid tiers in the system persona.
 #  - Pattern-based, not keyword-based: prompts assume Theseus has indexed the
 #    RFP's structure (sections, requirements, eval criteria, deliverables) and
 #    refer to those abstractions rather than literal headings.

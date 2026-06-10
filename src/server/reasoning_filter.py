@@ -28,6 +28,11 @@ class ThinkStripper:
         self._buf = ""
         self._in_think = False
 
+    @property
+    def in_think(self) -> bool:
+        """True while buffering a <think>...</think> block."""
+        return self._in_think
+
     def feed(self, chunk: str) -> str:
         """Consume one chunk, return safe-to-emit text outside <think>."""
         if not chunk:

@@ -139,7 +139,7 @@
                       class="flex-1 overflow-y-auto px-6 py-5 space-y-4"
                       x-ref="msgs"
                       @click="handleCiteClick($event)"
-                      x-effect="currentChat && currentChat.messages.length, $nextTick(() => window.lucide && lucide.createIcons())"
+                      x-effect="currentChat && currentChat.messages.length && !sending, $nextTick(() => window.lucide && lucide.createIcons())"
                     >
                       <template x-for="(m, i) in currentChat.messages" :key="i">
                         <div
@@ -172,11 +172,28 @@
                           >
                             <template x-if="m.role === 'assistant'">
                               <div>
+                                <!-- Live: throttle markdown (no messages.splice per token) -->
                                 <div
-                                  x-html="renderMd(m.content, i) || '&nbsp;'"
+                                  x-show="m.streaming && sending && i === currentChat.messages.length - 1 && streamLiveHtml"
+                                  class="markdown"
+                                  x-html="streamLiveHtml"
+                                ></div>
+                                <div
+                                  x-show="m.streaming && sending && i === currentChat.messages.length - 1 && !streamLiveHtml"
+                                  class="whitespace-pre-wrap"
+                                  x-text="streamLiveContent || ''"
+                                ></div>
+                                <div
+                                  x-show="m.streaming && (!sending || i !== currentChat.messages.length - 1)"
+                                  class="whitespace-pre-wrap"
+                                  x-text="m.content || ''"
+                                ></div>
+                                <div
+                                  x-show="!m.streaming"
+                                  x-html="m.renderedHtml || renderMd(m.content, i) || '&nbsp;'"
                                 ></div>
                                 <span
-                                  x-show="m.streaming"
+                                  x-show="m.streaming && sending && i === currentChat.messages.length - 1"
                                   class="inline-block w-1.5 h-4 align-text-bottom ml-0.5 bg-neon-cyan animate-pulse"
                                 ></span>
                               </div>
@@ -205,6 +222,10 @@
                             <span
                               x-show="m.timing && m.timing.total_ms != null"
                               x-text="'total ' + (m.timing.total_ms / 1000).toFixed(1) + 's'"
+                            ></span>
+                            <span
+                              x-show="m.timing && m.timing.chunk_count"
+                              x-text="m.timing.chunk_count + ' chunks'"
                             ></span>
                             <span
                               x-show="m.timing && m.timing.char_count"
@@ -247,7 +268,7 @@
                           </div>
                           <!-- assistant Sources panel: collapsible drawer of retrieved chunks -->
                           <div
-                            x-show="m.role === 'assistant' && m.sources && m.sources.chunks && m.sources.chunks.length"
+                            x-show="m.role === 'assistant' && !m.streaming && m.sources && m.sources.chunks && m.sources.chunks.length"
                             class="sources-panel w-full max-w-[85%]"
                             :data-msg-idx="i"
                           >
@@ -286,17 +307,19 @@
                                   :class="{ 'source-card-disabled': !s.chunk_id }"
                                   :id="`source-${i}-${s.reference_id}`"
                                   :data-source-ref="s.reference_id"
-                                  x-data="{ fmt: formatSource(s), loading: false, error: null }"
-                                  x-init="
-                                    if (s.chunk_id && (s.truncated || fmt.kind === 'table' || fmt.kind === 'image' || fmt.kind === 'equation')) {
-                                      loading = true;
-                                      fetchChunk(s.chunk_id).then(function(f){
-                                        if (f && f.content) {
-                                          fmt = formatSource({ ...s, preview: f.content, truncated: false });
-                                        }
-                                      }).catch(function(e){ error = e && e.message ? e.message : String(e); })
-                                        .finally(function(){ loading = false; });
-                                    }
+                                  x-data="{ fmt: formatSource(s), loading: false, error: null, hydrated: false }"
+                                  x-effect="
+                                    if (!m.sourcesOpen || hydrated || !s.chunk_id) return;
+                                    const needsFetch = s.truncated || fmt.kind === 'table' || fmt.kind === 'image' || fmt.kind === 'equation';
+                                    if (!needsFetch) return;
+                                    hydrated = true;
+                                    loading = true;
+                                    fetchChunk(s.chunk_id).then(function(f){
+                                      if (f && f.content) {
+                                        fmt = formatSource({ ...s, preview: f.content, truncated: false });
+                                      }
+                                    }).catch(function(e){ error = e && e.message ? e.message : String(e); })
+                                      .finally(function(){ loading = false; });
                                   "
                                 >
                                   <div class="source-card-head">
@@ -390,7 +413,23 @@
                         ></span>
                         <span x-text="chatStatus.label"></span>
                       </div>
-                      <!-- Live status: thinking (iterator open, no token yet) -->
+                      <!-- Live status: Grok reasoning (hidden </think> block) -->
+                      <div
+                        x-show="sending && chatStatus.phase === 'reasoning'"
+                        class="flex items-center gap-2 text-[11px] font-mono"
+                      >
+                        <span class="dot-pulse-vivid"
+                          ><span></span><span></span><span></span
+                        ></span>
+                        <span class="text-neon-amber/90 font-semibold"
+                          >Reasoning…</span
+                        >
+                        <span
+                          class="text-slate-500"
+                          x-text="chatStatus.retrieve_ms != null ? '(context ' + (chatStatus.retrieve_ms/1000).toFixed(1) + 's · elapsed ' + thinkElapsed + 's)' : '(elapsed ' + thinkElapsed + 's)'"
+                        ></span>
+                      </div>
+                      <!-- Live status: LLM started, no visible answer token yet -->
                       <div
                         x-show="sending && chatStatus.phase === 'generating' && (!streamLiveContent || streamLiveContent.length === 0)"
                         class="flex items-center gap-2 text-[11px] font-mono"
@@ -413,7 +452,7 @@
                       >
                         <i data-lucide="cpu" class="w-3 h-3"></i>
                         <span
-                          x-text="'Writing · context ' + (chatStatus.retrieve_ms != null ? (chatStatus.retrieve_ms/1000).toFixed(1) + 's' : '—') + ' · think ' + thinkElapsed + 's'"
+                          x-text="'Writing · context ' + (chatStatus.retrieve_ms != null ? (chatStatus.retrieve_ms/1000).toFixed(1) + 's' : '—') + ' · think ' + thinkElapsed + 's' + (chatStatus.source_counts && chatStatus.source_counts.chunks ? ' · ' + chatStatus.source_counts.chunks + ' chunks' : '')"
                         ></span>
                       </div>
                     </div>

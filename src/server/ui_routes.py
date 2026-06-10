@@ -46,6 +46,13 @@ QueryDataFunc = Callable[
     Awaitable[dict],
 ]
 
+# query_llm_func signature: (text, mode, history, stream, overrides) -> dict
+# Returns LightRAG aquery_llm shape with structured data plus llm_response.
+QueryLlmFunc = Callable[
+    [str, str, list[dict], bool, dict],
+    Awaitable[dict],
+]
+
 
 class TheseusStaticFiles(StaticFiles):
     """StaticFiles variant that disables browser caching for live UI edits."""
@@ -182,6 +189,7 @@ def _register_feature_routes(
     context: UIRouteContext,
     query_func: QueryFunc,
     data_func: QueryDataFunc | None,
+    query_llm_func: QueryLlmFunc | None,
     llm_func: "LlmFunc" | None,
 ) -> None:
     """Register all feature-owner route modules behind the UI shell."""
@@ -204,7 +212,7 @@ def _register_feature_routes(
         chat_store=context.chat_store,
         query_settings=context.query_settings,
         query_func=query_func,
-        data_func=data_func,
+        query_llm_func=query_llm_func,
         now=context.now,
     )
 
@@ -259,6 +267,7 @@ def register_ui(
     app: FastAPI,
     query_func: QueryFunc,
     data_func: QueryDataFunc | None = None,
+    query_llm_func: QueryLlmFunc | None = None,
     llm_func: LlmFunc | None = None,
 ) -> None:
     """
@@ -272,9 +281,13 @@ def register_ui(
                     is an async iterator of token chunks.
         data_func: Optional async callable (query_text, mode, history, overrides)
                     -> dict that returns LightRAG aquery_data structured retrieval
-                    (chunks/entities/relationships/references). Used by the chat
-                    SSE endpoint to emit a `sources` event before streaming the
-                    answer. If None, no sources event is emitted.
+                    (chunks/entities/relationships/references). Used by skill
+                    retrieval and as a legacy chat fallback when query_llm_func
+                    is unavailable.
+        query_llm_func: Optional async callable (query_text, mode, history, stream,
+                    overrides) -> dict that returns LightRAG aquery_llm output.
+                    Chat routes prefer this single-pass path to avoid duplicate
+                    retrieval on stream.
     """
     if not _STATIC_DIR.exists():
         logger.warning("UI static dir missing: %s — UI will not be mounted", _STATIC_DIR)
@@ -322,6 +335,7 @@ def register_ui(
         context=context,
         query_func=query_func,
         data_func=data_func,
+        query_llm_func=query_llm_func,
         llm_func=llm_func,
     )
 
