@@ -428,6 +428,20 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
 
   const controller = new AbortController();
   app.chatAbort = controller;
+  let streamContent = "";
+  let streamMdTimer = null;
+  let reader = null;
+  const liveMsgIdx = () =>
+    app.currentChat?.messages ? app.currentChat.messages.length - 1 : 0;
+  const finalizeRenderedHtml = (text, msgIdx) => {
+    if (!text) return "";
+    if (window.theseusRenderMdCache) {
+      Object.keys(window.theseusRenderMdCache).forEach((key) => {
+        if (key.startsWith(`${msgIdx}:`)) delete window.theseusRenderMdCache[key];
+      });
+    }
+    return window.theseusRenderMd(text, msgIdx);
+  };
   try {
     const resp = await fetch(`/api/ui/chats/${chatId}/messages/stream`, {
       method: "POST",
@@ -439,25 +453,13 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
       throw new Error(`HTTP ${resp.status}`);
     }
 
-    const reader = resp.body.getReader();
+    reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
     let scrollPending = false;
     let pendingTokenText = "";
     let tokenFlushRaf = null;
-    let streamContent = "";
-    let streamMdTimer = null;
-    const liveMsgIdx = () =>
-      app.currentChat?.messages ? app.currentChat.messages.length - 1 : 0;
-    const finalizeRenderedHtml = (text, msgIdx) => {
-      if (!text) return "";
-      if (window.theseusRenderMdCache) {
-        Object.keys(window.theseusRenderMdCache).forEach((key) => {
-          if (key.startsWith(`${msgIdx}:`)) delete window.theseusRenderMdCache[key];
-        });
-      }
-      return window.theseusRenderMd(text, msgIdx);
-    };
+    let streamFinished = false;
     const scheduleStreamMarkdown = () => {
       if (streamMdTimer != null) return;
       streamMdTimer = setTimeout(() => {
@@ -510,7 +512,10 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
           if (line.startsWith("event:")) event = line.slice(6).trim();
           else if (line.startsWith("data:")) data += line.slice(5).trim();
         }
-        if (!data) continue;
+        if (!data) {
+          if (frame.trim().startsWith(":")) continue;
+          continue;
+        }
 
         let parsed;
         try {
@@ -563,7 +568,8 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
             renderedHtml: finalizeRenderedHtml(errorBody, liveMsgIdx()),
           });
           app.toast("Query failed", "error");
-          continue;
+          streamFinished = true;
+          break;
         }
 
         if (event === "done") {
@@ -602,7 +608,15 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
             updated.renderedHtml = finalizeRenderedHtml(body, msgIdx);
           }
           live = theseusReplaceLiveChatMessage(app, live, updated);
+          streamFinished = true;
+          break;
         }
+      }
+      if (streamFinished) {
+        try {
+          await reader.cancel();
+        } catch (_) {}
+        break;
       }
     }
     flushPendingTokens();
@@ -614,9 +628,13 @@ window.theseusSendMessage = async function theseusSendMessage(app) {
         renderedHtml: finalizeRenderedHtml(streamContent, msgIdx),
       });
     }
-    await app.loadChats();
+    theseusFinishChatSend(app);
+    window.theseusRefreshIcons?.();
+    try {
+      await app.loadChats();
+    } catch (_) {}
   } catch (error) {
-    let failureContent = streamContent || live.content || "";
+    let failureContent = streamContent || live?.content || "";
     if (error?.name === "AbortError") {
       failureContent += "\n\n_(stopped)_";
     } else {
