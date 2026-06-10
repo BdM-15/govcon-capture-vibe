@@ -191,12 +191,21 @@ def register_query_settings_routes(
             raise HTTPException(500, f"Failed resetting settings: {exc}") from exc
         return JSONResponse({"settings": settings})
 
+class ChatHandoffFrom(BaseModel):
+    """Provenance when a chat branches from a prior assistant insight."""
+
+    chat_id: str = Field(..., min_length=6, max_length=64)
+    message_index: int = Field(..., ge=0, le=5000)
+    excerpt: str | None = Field(default=None, max_length=500)
+
+
 class ChatCreate(BaseModel):
     """Body for POST /api/ui/chats."""
 
     title: str = Field(default="New chat", max_length=120)
     mode: str = Field(default="mix")
     rfp_context: str | None = Field(default=None, max_length=200)
+    handoff_from: ChatHandoffFrom | None = None
 
 
 class ChatUpdate(BaseModel):
@@ -293,10 +302,14 @@ def register_chat_routes(
     @app.post("/api/ui/chats", tags=["theseus-ui"])
     async def create_chat(payload: ChatCreate) -> JSONResponse:
         """Create new persistent chat session."""
+        handoff_from = (
+            payload.handoff_from.model_dump() if payload.handoff_from else None
+        )
         chat = chat_store.create(
             title=payload.title,
             mode=payload.mode,
             rfp_context=payload.rfp_context,
+            handoff_from=handoff_from,
         )
         return JSONResponse(chat_store.summary(chat), status_code=201)
 

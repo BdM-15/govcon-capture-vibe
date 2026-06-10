@@ -129,6 +129,11 @@
                           <span>msgs</span>
                           <span class="text-slate-700">·</span>
                           <span class="text-neon-cyan/60" x-text="c.mode"></span>
+                          <span
+                            x-show="c.handoff_from"
+                            class="text-purple-400/80"
+                            title="Branched from another chat"
+                          >↳</span>
                           <span class="text-slate-700" x-show="c.updated_at">·</span>
                           <span
                             x-show="c.updated_at"
@@ -296,6 +301,8 @@
                           <div
                             class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm"
                             :class="m.role === 'user' ? 'bubble-user rounded-br-md' : (m.streaming ? 'bubble-streaming rounded-bl-md markdown' : 'bubble-assistant rounded-bl-md markdown')"
+                            :data-msg-idx="m.role === 'assistant' ? i : null"
+                            :data-msg-bubble="m.role === 'assistant' ? '' : null"
                           >
                             <template x-if="m.role === 'assistant'">
                               <div>
@@ -380,6 +387,15 @@
                             >
                               <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                               <span>Copy</span>
+                            </button>
+                            <button
+                              class="msg-action-btn msg-action-handoff"
+                              @click="openInsightHandoff(i)"
+                              :disabled="sending"
+                              title="Branch this insight into a new grounded chat"
+                            >
+                              <i data-lucide="git-branch-plus" class="w-3.5 h-3.5"></i>
+                              <span>Focus</span>
                             </button>
                             <button
                               class="msg-action-btn msg-action-regen"
@@ -678,6 +694,96 @@
                     </div>
                   </div>
                 </template>
+              </div>
+            </div>
+
+            <!-- Insight handoff modal -->
+            <div
+              x-show="chatHandoff.open"
+              x-cloak
+              class="chat-handoff-overlay fixed inset-0 z-[55] bg-ink-950/80 backdrop-blur-sm flex items-start justify-center pt-24 px-4"
+              @click.self="closeInsightHandoff()"
+            >
+              <div
+                class="chat-handoff-modal w-full max-w-xl modal-canvas rounded-2xl overflow-hidden flex flex-col"
+                @click.stop
+              >
+                <div
+                  class="px-5 py-4 glass-section-bar flex items-center justify-between gap-4 border-b border-edge"
+                >
+                  <div class="flex items-center gap-3 min-w-0">
+                    <i data-lucide="git-branch-plus" class="w-5 h-5 text-purple-400 shrink-0"></i>
+                    <div class="min-w-0">
+                      <h3 class="font-semibold text-sm">Focus in new chat</h3>
+                      <p class="text-[11px] text-slate-500 mt-0.5">
+                        Opens a grounded branch with retrieval on
+                        (<span x-text="handoffMode(currentChat?.mode)"></span>).
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-ghost text-slate-500"
+                    @click="closeInsightHandoff()"
+                  >
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                  </button>
+                </div>
+                <div class="px-5 py-4 space-y-4">
+                  <div>
+                    <div class="flex items-center justify-between gap-2 mb-1.5">
+                      <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
+                        >Quoted insight</span
+                      >
+                      <span
+                        x-show="chatHandoff.quoteIsSelection"
+                        class="text-[10px] font-mono text-purple-400/90"
+                        >from selection</span
+                      >
+                    </div>
+                    <div
+                      class="chat-handoff-quote text-xs text-slate-300 leading-relaxed"
+                      x-text="chatHandoff.quote"
+                    ></div>
+                  </div>
+                  <label class="block space-y-1.5">
+                    <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
+                      >Your question</span
+                    >
+                    <textarea
+                      x-ref="handoffQuestion"
+                      x-model="chatHandoff.framingQuestion"
+                      rows="3"
+                      class="w-full bg-ink-900 border border-edge focus:border-purple-400/60 outline-none rounded-lg px-3 py-2 text-sm resize-y"
+                      placeholder="Expand on this insight — walk me through the evidence and implications."
+                      @keydown.enter.prevent="if (!$event.shiftKey) confirmInsightHandoff()"
+                    ></textarea>
+                  </label>
+                  <p class="text-[10px] font-mono text-slate-600">
+                    Tip: highlight part of the answer before clicking Focus to quote only that passage.
+                  </p>
+                </div>
+                <div
+                  class="px-5 py-4 border-t border-edge flex items-center justify-end gap-2"
+                >
+                  <button
+                    type="button"
+                    class="btn btn-ghost text-xs"
+                    @click="closeInsightHandoff()"
+                    :disabled="chatHandoff.sending"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-hero-cyan inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-ink-950 disabled:opacity-40"
+                    @click="confirmInsightHandoff()"
+                    :disabled="chatHandoff.sending || !chatHandoff.quote?.trim()"
+                  >
+                    <i data-lucide="git-branch-plus" class="w-3.5 h-3.5"></i>
+                    <span x-text="chatHandoff.sending ? 'Starting…' : 'Start branch'"></span>
+                  </button>
+                </div>
               </div>
             </div>
           </section>
