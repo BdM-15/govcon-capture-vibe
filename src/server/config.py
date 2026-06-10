@@ -10,8 +10,15 @@ Configuration is loaded from src/core/config.py (centralized Settings class).
 # CRITICAL: Load .env BEFORE importing LightRAG modules
 # LightRAG's chunk_token_size default: int(os.getenv("CHUNK_SIZE", 1200))
 # Must set environment variables before LightRAG classes are defined
+import os
+
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
+
+from src.server.lightrag_env import apply_cross_provider_role_env_defaults
+
+apply_cross_provider_role_env_defaults()
 
 # Now safe to import LightRAG and our config
 import logging

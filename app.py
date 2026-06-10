@@ -37,6 +37,19 @@ if sys.platform == 'win32':
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
+# LightRAG validates per-role bindings at import time. When keyword routes to
+# Ollama while LLM_BINDING=openai, it requires role-specific host + api key env vars.
+if os.getenv("KEYWORD_LLM_BINDING", "").strip().lower() == "ollama":
+    os.environ.setdefault(
+        "KEYWORD_LLM_BINDING_HOST",
+        os.getenv("OLLAMA_HOST", "http://localhost:11434"),
+    )
+    os.environ.setdefault("KEYWORD_LLM_BINDING_API_KEY", "ollama")
+
 # Import LightRAG before adding src to path. This prevents local modules from shadowing the pip package.
 from lightrag.api.lightrag_server import create_app as _verify_lightrag_import
 
