@@ -66,13 +66,15 @@ v7.1   - Forbid space/comma-joined canonical types in keywords field.
 
 Changelog:
 ----------
-v3.5.0 (Jun 2026) - Query tone correction: rein in consultant drift (issue #192)
-  - rag_response and naive_rag_response rewritten around answer-first, evidence-forward prose
-  - Role shifted from "senior mentor teaching capture expertise" to "proposal analyst on the team"
-  - Removed mandatory "strategic implication for every fact" and unprompted pattern-recognition dumps
-  - Replaced Shipley glossary lecture block with on-demand vocabulary reference
-  - Kept Phase 4-6 scope contract, format-agnostic entity reasoning, ontology/fact separation,
-    template-placeholder guardrails, and inline `[N]` citation requirements
+v3.6.0 (Jun 2026) - Tiered strategic analyst query persona (issue #192)
+  - Restored #69 strategic-analyst grounding balance (interpret + recommend when warranted)
+  - Added explicit Response Depth tiers: lookup, elaboration, strategic, forensic
+  - Supports conversational follow-up on prior insights without consultant-workshop drift
+  - Removed v3.0 mandatory implication-per-fact and unprompted pattern dumps; kept v3.1-v3.3 guardrails
+  - Expanded Prompt Library with discovery, forensic, and bypass starter prompts from user workflows
+
+v3.5.0 (Jun 2026) - Query tone correction: rein in consultant drift (issue #192, superseded by v3.6.0)
+  - Interim answer-first analyst tone; replaced in v3.6.0 with tiered depth model
 
 v3.4.0 (Apr 2026) - JSON Structured-Output Extraction (issue #124, Phase 1.2)
   - Added entity_extraction_json_system_prompt loaded from govcon_lightrag_json.txt
