@@ -28,6 +28,12 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       es: null,
     },
     chats: [],
+    chatHistory: {
+      filter: "",
+      deletePendingId: null,
+      editingId: null,
+      editingTitle: "",
+    },
     currentChat: null,
     composer: "",
     composerBypassOnce: false,
