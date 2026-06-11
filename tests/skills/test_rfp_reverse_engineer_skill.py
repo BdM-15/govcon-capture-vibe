@@ -59,6 +59,8 @@ def test_rfp_reverse_engineer_frontmatter_is_spec_compliant() -> None:
         f"fields: {extra}. Move them under `metadata:`."
     )
     assert fm["name"] == "rfp-reverse-engineer"
+    assert fm["metadata"]["status"] == "deprecated"
+    assert fm["metadata"]["superseded_by"] == "mission-readiness-framer"
     assert len(fm["description"]) <= 1024, (
         f"description is {len(fm['description'])} chars (spec max 1024)"
     )

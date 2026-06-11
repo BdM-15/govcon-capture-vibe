@@ -90,6 +90,7 @@ MIN_GROUNDING_RATIO_PER_SKILL: dict[str, float] = {
     "price-to-win": 0.75,          # 147.10: 0.842 ratio, ratchet 0.70 -> 0.75
     "competitive-intel": 0.65,     # 147.10: 0.75 ratio, ratchet 0.60 -> 0.65
     "renderers": 0.35,             # 147.10: 0.429 ratio, ratchet 0.30 -> 0.35
+    "mission-readiness-framer": 0.50,  # inherits capture-analyst Class B vernacular + document-section anchors
     "rfp-reverse-engineer": 0.50,  # 147.12: tool-side calibration credits document-section anchors (H.x.y, Section N), agency-issuance regs (DAFI/AFMAN/DoDI), and capture-analyst visible-reasoning vernacular (Play:, Read:, signals X, CO has clearly Y)
 }
 

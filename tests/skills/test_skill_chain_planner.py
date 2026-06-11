@@ -30,6 +30,11 @@ _SKILLS = [
         "capability": "draft",
     },
     {
+        "name": "mission-readiness-framer",
+        "description": "Frame mission readiness and program-office customer intent.",
+        "capability": "analyze",
+    },
+    {
         "name": "rfp-reverse-engineer",
         "description": "Reverse engineer RFP scope and hot buttons.",
         "capability": "analyze",
@@ -75,7 +80,7 @@ def test_planner_builds_logical_ptw_chain_with_rendering() -> None:
     assert "low/mid/high" in plan.spec.steps[2].context["quality_gate"]
 
 
-def test_planner_defaults_reverse_engineer_before_proposal() -> None:
+def test_planner_defaults_mission_readiness_framer_before_proposal() -> None:
     planner = SkillChainPlanner(_SKILLS)
 
     plan = planner.plan(
@@ -85,8 +90,8 @@ def test_planner_defaults_reverse_engineer_before_proposal() -> None:
     )
 
     skills = [step.skill for step in plan.spec.steps]
-    assert skills == ["rfp-reverse-engineer", "proposal-generator"]
-    assert plan.spec.steps[1].depends_on == ["rfp-reverse-engineer"]
+    assert skills == ["mission-readiness-framer", "proposal-generator"]
+    assert plan.spec.steps[1].depends_on == ["mission-readiness-framer"]
     assert plan.spec.steps[0].context["retrieval_query"]
     assert plan.spec.steps[1].context["ask_for_input_when_missing"] is True
 

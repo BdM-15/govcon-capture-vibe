@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "skill": "mission-readiness-framer",
+  "evals": [
+    {
+      "id": "mrf-001",
+      "name": "Frame OCONUS ISS readiness from full package",
+      "prompt": "Workspace `afcap5_adab_iss`. Build the Mission Readiness Frame for this AFCAP V FOPR — what readiness outcome is the program office buying, what workload enablers instrument it, and what are the top pain points?",
+      "expected_signals": [
+        "calls `kg_entities` across solicitation package types: requirement, deliverable, evaluation_factor, performance_standard, document_section, amendment",
+        "emits `mission_readiness_frame` with `readiness_outcome`, `workload_enablers`, `readiness_signals`, and `source_chunk_ids`",
+        "emits at least 1 `customer_pain_points[]` with `source_role: program_office` and `readiness_link`",
+        "emits at least 1 `importance_signals[]` entry",
+        "emits at least 1 `win_theme_candidates[]` with `priority` and `readiness_link`",
+        "JSON written to `{run_dir}/artifacts/mission_readiness_frame.json`",
+        "narrative cites chunks or uses visible-judgment markers for Class B reads"
+      ],
+      "anti_signals": [
+        "treating the CO as the mission customer without program-office framing",
+        "win-theme FAB prose or executive summary instead of candidates",
+        "pain points or frame entries without source citations",
+        "inventing readiness outcomes with no document signal"
+      ]
+    },
+    {
+      "id": "mrf-002",
+      "name": "Cross-walk background PWS eval repetition",
+      "prompt": "Workspace `afcap5_adab_iss`. Cross-walk background, PWS task areas, and evaluation criteria — where does the same priority repeat, and what implicit criteria does that suggest?",
+      "expected_signals": [
+        "runs cross-walk per `references/customer_intent_signals.md`",
+        "emits `importance_signals[]` with `signal_type: repetition` or `background_eval_echo` when patterns fire",
+        "emits `implicit_criteria[]` with `customer_read`, `acquisition_read`, and `alternate_read`",
+        "links eval factors in `linked_evaluation_factors` when eval language is involved"
+      ],
+      "anti_signals": [
+        "implicit criteria with high confidence but no alternate_read",
+        "skipping eval section because user asked for customer intent",
+        "flat Section M rewrite instead of tea-leaves synthesis"
+      ]
+    },
+    {
+      "id": "mrf-003",
+      "name": "Proxy readiness when literal readiness absent",
+      "prompt": "Workspace with sparse readiness wording. Build the Mission Readiness Frame using proxy signals (QASP density, transition language, performance thresholds) and mark confidence honestly.",
+      "expected_signals": [
+        "uses `readiness_signal_catalog.md` proxy patterns with `type: proxy` in readiness_signals",
+        "sets `mission_readiness_frame.confidence` to medium or low when proxies dominate",
+        "emits `claim_gaps[]` for missing background or performance context",
+        "emits `clarification_questions[]` for open readiness links"
+      ],
+      "anti_signals": [
+        "confidence high without explicit readiness language",
+        "dropping the frame because 'readiness' never appears verbatim",
+        "CO trap analysis dominating the brief (wrong skill)"
+      ]
+    }
+  ]
+}

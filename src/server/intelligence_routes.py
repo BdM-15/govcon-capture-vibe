@@ -58,6 +58,34 @@ INTEL_SLICE_CATALOG: list[dict[str, Any]] = [
         ),
     },
     {
+        "id": "mission-readiness",
+        "label": "Mission Readiness Frame",
+        "icon": "target",
+        "description": (
+            "Program-office priorities from the full solicitation package — readiness outcome, "
+            "pain points, and win-theme candidates."
+        ),
+        "action": "skill",
+        "skill": "mission-readiness-framer",
+        "skill_prompt": (
+            "Build the Mission Readiness Frame from the full solicitation package "
+            "(PWS/SOW, background, QASP, deliverables, evaluation criteria, amendments). "
+            "The program office is the customer; the contract is workload that enables readiness. "
+            "Emit mission_readiness_frame, customer pain points, importance signals, "
+            "implicit criteria with alternate reads, and win-theme candidates — all cited."
+        ),
+        "related_skills": [
+            {
+                "skill": "compliance-auditor",
+                "label": "Acquisition traps",
+                "prompt": (
+                    "Forensic focus: FAR clause traps, Section L/M compliance gaps, "
+                    "and contracts-shop errors — not program-office readiness."
+                ),
+            },
+        ],
+    },
+    {
         "id": "financial",
         "label": "Financial risk",
         "icon": "banknote",

@@ -122,7 +122,14 @@ def test_build_intel_slices_includes_catalog_and_latest_runs(tmp_path) -> None:
     slices = build_intel_slices(tmp_path)
     ids = [item["id"] for item in slices]
 
-    assert ids == ["overview", "sites", "evaluation", "financial", "logistics"]
+    assert ids == [
+        "overview",
+        "sites",
+        "evaluation",
+        "mission-readiness",
+        "financial",
+        "logistics",
+    ]
     financial = next(item for item in slices if item["id"] == "financial")
     assert financial["action"] == "skill"
     assert financial["skill"] == "payment-terms-auditor"
@@ -131,6 +138,11 @@ def test_build_intel_slices_includes_catalog_and_latest_runs(tmp_path) -> None:
     overview = next(item for item in slices if item["id"] == "overview")
     assert overview["action"] == "chat"
     assert overview["latest_run"] is None
+
+    mission_readiness = next(item for item in slices if item["id"] == "mission-readiness")
+    assert mission_readiness["action"] == "skill"
+    assert mission_readiness["skill"] == "mission-readiness-framer"
+    assert "Mission Readiness Frame" in mission_readiness["skill_prompt"]
 
 
 def test_intelligence_slices_route_returns_catalog(tmp_path) -> None:
@@ -142,5 +154,5 @@ def test_intelligence_slices_route_returns_catalog(tmp_path) -> None:
 
     assert response.status_code == 200, response.text
     payload = response.json()
-    assert len(payload["slices"]) == 5
+    assert len(payload["slices"]) == 6
     assert payload["slices"][0]["id"] == "overview"

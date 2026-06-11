@@ -147,6 +147,7 @@ Core GovCon/platform skills use the closed taxonomy axes directly:
 | `data-analyzer`             | none               | []                                    | []                                                 | analyze      |
 | `renderers`                 | none               | []                                    | []                                                 | render       |
 | `workload-analyzer`         | cost_estimator     | [capture_manager]                     | [capture, strategy]                                | analyze      |
+| `mission-readiness-framer`  | capture_manager    | [proposal_manager, program_manager]   | [capture, strategy]                                | analyze      |
 | `rfp-reverse-engineer`      | capture_manager    | [proposal_manager]                    | [capture, strategy]                                | analyze      |
 | `skill-creator`             | none               | []                                    | []                                                 | meta         |
 | `subcontractor-sow-builder` | contracts_manager  | [program_manager, capture_manager]    | [strategy, proposal_development, post_award]       | draft        |

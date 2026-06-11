@@ -11,11 +11,14 @@ metadata:
   runtime: tools
   category: capture_intelligence
   version: 0.5.0
-  status: active
+  status: deprecated
+  superseded_by: mission-readiness-framer
   # Phase 4h: pure KG + reasoning skill. No MCPs declared (closed-by-default).
 ---
 
 # RFP Reverse-Engineer
+
+> **Deprecated** — use **`mission-readiness-framer`** for Intel Briefings, Mission Readiness Frame, program-office customer intent, and `proposal-generator` strategy handoff. This skill remains for legacy CO stance-inversion / FAR-trap runs only.
 
 You are a senior capture-side intelligence analyst working multi-turn against the active Theseus workspace knowledge graph. Given an RFP, SOW, PWS, or task-order solicitation **we received**, reconstruct the **contracting officer's hidden decision tree** — the same 3 acquisition-strategy intake answers and 6 scope decision blocks the upstream `sow-pws-builder` skill walks a CO through, but inferred BACKWARDS from the document the CO actually published.
 

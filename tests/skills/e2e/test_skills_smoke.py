@@ -67,6 +67,11 @@ DEFAULT_PROMPTS: dict[str, str] = {
         "Confirm whether this AFCAP V FOPR is a FAR-based vehicle or an "
         "OT prototype. If FAR-based, state that clearly and stop."
     ),
+    "mission-readiness-framer": (
+        "Build the Mission Readiness Frame for this Al Dhafra ISS FOPR. "
+        "What readiness outcome is the program office buying, what pain "
+        "points matter, and what win-theme candidates should we seed?"
+    ),
     "rfp-reverse-engineer": (
         "Reverse-engineer the CO's hidden priorities on this Al Dhafra "
         "ISS FOPR. Surface hot buttons, ghost language, and the "

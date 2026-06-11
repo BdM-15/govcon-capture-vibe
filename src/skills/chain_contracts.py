@@ -198,6 +198,27 @@ _DEFAULT_CONTRACTS = [
         },
     ),
     SkillChainContract(
+        skill="mission-readiness-framer",
+        keywords={
+            "readiness", "mission", "customer", "intent", "pain", "priority",
+            "priorities", "theme", "themes", "win", "program", "office",
+            "enabler", "workload", "implicit", "hidden", "framer", "frame",
+        },
+        accepts={"evaluation_factors", "requirement_graph"},
+        produces={"strategy_handoff", "mission_readiness_handoff", "scope_read"},
+        artifact_extensions=("json", "md", "html"),
+        downstream_skills={"proposal-generator"},
+        phase_rank=14,
+        role="frame program-office mission readiness and customer intent from solicitation package",
+        quality_gate=(
+            "Output must define mission_readiness_frame, pain points, importance signals, "
+            "implicit criteria, and win-theme candidates with citations."
+        ),
+        default_upstream_triggers={
+            "proposal-generator": {"proposal", "respond", "response", "draft"},
+        },
+    ),
+    SkillChainContract(
         skill="rfp-reverse-engineer",
         keywords={
             "reverse", "engineer", "scope", "hot", "button", "buttons",
@@ -206,13 +227,10 @@ _DEFAULT_CONTRACTS = [
         accepts={"requirement_graph", "evaluation_factors"},
         produces={"strategy_handoff", "scope_read"},
         artifact_extensions=("json", "md", "html"),
-        downstream_skills={"proposal-generator"},
+        downstream_skills=set(),
         phase_rank=15,
-        role="extract hidden scope and strategy signals",
+        role="(deprecated) CO stance inversion and acquisition-trap forensics",
         quality_gate="Output must name scope decisions, hot buttons, discriminator hooks, and missing-section signals.",
-        default_upstream_triggers={
-            "proposal-generator": {"proposal", "respond", "response", "draft"},
-        },
     ),
     SkillChainContract(
         skill="workload-analyzer",
