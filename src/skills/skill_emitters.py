@@ -58,7 +58,10 @@ _PRODUCT_PROFILES: dict[str, dict[str, object]] = {
     "mission-readiness-framer": {
         "base": "mission_readiness_frame",
         "label": "Mission Readiness Frame",
-        "xlsx_sources": ["mission_readiness_frame.json"],
+        "xlsx_sources": [
+            "mission_readiness_workbook.json",
+            "mission_readiness_frame.json",
+        ],
     },
     "rfp-reverse-engineer": {
         "base": "rfp_reverse_engineering",
@@ -223,6 +226,10 @@ def _load_json(path: Path) -> Any | None:
         return None
 
 
+def _mission_readiness_helpers(skill: Skill):
+    return load_skill_tool_module(Path(skill.path), "mission_readiness_tools")
+
+
 def _brief_source_path(
     skill: Skill,
     artifacts_dir: Path,
@@ -230,6 +237,11 @@ def _brief_source_path(
     base: str,
     title: str,
 ) -> Path | None:
+    if skill.name == "mission-readiness-framer":
+        brief = artifacts_dir / "brief.md"
+        if brief.is_file() and brief.read_text(encoding="utf-8").strip():
+            return brief
+        return None
     if skill.name != "competitive-intel":
         return None
     for source in _xlsx_source_paths(skill, artifacts_dir, profile):
@@ -292,6 +304,13 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
 
         report_md = artifacts_dir / "report.md"
         response_text = response_path.read_text(encoding="utf-8")
+        brief_path = artifacts_dir / "brief.md"
+        if (
+            skill.name == "mission-readiness-framer"
+            and brief_path.is_file()
+            and brief_path.read_text(encoding="utf-8").strip()
+        ):
+            response_text = brief_path.read_text(encoding="utf-8")
         report_md.write_text(response_text, encoding="utf-8")
 
         report_json = artifacts_dir / "report.json"
@@ -309,6 +328,19 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
             "report.md": f"{title} Final Response",
             "report.json": f"{title} Final Response Data",
         }
+
+        if skill.name == "mission-readiness-framer":
+            frame_json = artifacts_dir / "mission_readiness_frame.json"
+            payload = _load_json(frame_json) if frame_json.is_file() else None
+            if isinstance(payload, dict):
+                try:
+                    _mission_readiness_helpers(skill).write_workbook_source(
+                        artifacts_dir, payload
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(
+                        "mission-readiness-framer workbook shaping failed: %s", exc
+                    )
 
         if not ({"docx", "xlsx"} & formats):
             _set_display_names(Path(run_dir), labels)

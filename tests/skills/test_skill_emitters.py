@@ -3,6 +3,8 @@ import json
 import shutil
 import subprocess
 
+import pytest
+
 from src.skills.skill_emitters import auto_emit_artifacts
 from src.skills.skill_local_tools import load_skill_tool_module
 from src.skills.skill_models import Skill, SkillFrontmatter
@@ -422,3 +424,68 @@ def test_auto_emit_artifacts_marks_failed_render_on_source_artifact(
     assert entry["render_targets"] == ["demo_skill_brief.docx"]
     assert entry["render_logs"] == ["render_docx.stdout.txt", "render_docx.stderr.txt"]
     assert entry["render_log_excerpt"] == "docx renderer blew up"
+
+
+def test_auto_emit_artifacts_uses_mission_readiness_brief_for_docx(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    skill_dir = tmp_path / "mission-readiness-framer"
+    skill_dir.mkdir()
+    shutil.copy(
+        _REPO_ROOT / ".github" / "skills" / "mission-readiness-framer" / "mission_readiness_tools.py",
+        skill_dir / "mission_readiness_tools.py",
+    )
+    skill = Skill(
+        name="mission-readiness-framer",
+        path=str(skill_dir),
+        skill_md_path=str(skill_dir / "SKILL.md"),
+        frontmatter=SkillFrontmatter(name="mission-readiness-framer", description="desc"),
+        body_md="body",
+    )
+    skill.frontmatter.metadata["auto_emit_formats"] = ["md", "json", "docx"]
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "response.md").write_text("thin cover note only", encoding="utf-8")
+    artifacts_dir = run_dir / "artifacts"
+    artifacts_dir.mkdir()
+    brief = "# Mission Readiness Frame Brief\n\nFull capture narrative with citations."
+    (artifacts_dir / "brief.md").write_text(brief, encoding="utf-8")
+    (artifacts_dir / "mission_readiness_frame.json").write_text(
+        json.dumps(
+            {
+                "mission_readiness_frame": {"readiness_outcome": "FMC"},
+                "customer_pain_points": [{"id": "PP-001"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    repo_root = tmp_path / "repo"
+    renderers_dir = repo_root / ".github" / "skills" / "renderers" / "scripts"
+    renderers_dir.mkdir(parents=True)
+
+    captured: dict[str, str] = {}
+
+    def _capture_render(*args, **kwargs):
+        cmd = args[0]
+        out_idx = cmd.index("--output") + 1
+        inp_idx = cmd.index("--input") + 1
+        captured["input"] = Path(cmd[inp_idx]).read_text(encoding="utf-8")
+        Path(cmd[out_idx]).write_text("rendered", encoding="utf-8")
+
+        class _Proc:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        return _Proc()
+
+    renderers_dir.joinpath("render_docx.py").write_text("print('docx')", encoding="utf-8")
+    monkeypatch.setattr(subprocess, "run", _capture_render)
+
+    auto_emit_artifacts(skill, run_dir, repo_root=repo_root)
+
+    assert (artifacts_dir / "report.md").read_text(encoding="utf-8") == brief
+    assert captured["input"] == brief
+    assert (artifacts_dir / "mission_readiness_workbook.json").is_file()

@@ -71,8 +71,10 @@ INTEL_SLICE_CATALOG: list[dict[str, Any]] = [
             "Build the Mission Readiness Frame from the full solicitation package "
             "(PWS/SOW, background, QASP, deliverables, evaluation criteria, amendments). "
             "The program office is the customer; the contract is workload that enables readiness. "
-            "Emit mission_readiness_frame, customer pain points, importance signals, "
-            "implicit criteria with alternate reads, and win-theme candidates — all cited."
+            "Meet the skill minimum depth contract: ≥5 kg_chunks passes, ≥12 unique chunk citations, "
+            "≥4 pain points, ≥4 importance signals, ≥3 implicit criteria, 3 win-theme candidates, "
+            "≥6 verbatim extracts, ≥4 eval-crosswalk rows, and a ≥120-line cited brief.md. "
+            "Return the full brief as your final message — not a cover note."
         ),
         "related_skills": [
             {

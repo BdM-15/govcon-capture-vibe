@@ -75,6 +75,24 @@ Every run emits **both**:
       "source_chunk_ids": []
     }
   ],
+  "verbatim_extracts": [
+    {
+      "id": "VE-001",
+      "section": "PWS C.2",
+      "quote": "verbatim government phrase (max ~40 words)",
+      "readiness_relevance": "...",
+      "source_chunk_ids": []
+    }
+  ],
+  "eval_crosswalk": [
+    {
+      "evaluation_factor": "Past Performance",
+      "pws_clusters": ["Mission-Essential Services"],
+      "readiness_link": "...",
+      "proof_expected": "...",
+      "source_chunk_ids": []
+    }
+  ],
   "win_theme_candidates": [
     {
       "id": "WT-001",
@@ -96,6 +114,16 @@ Every run emits **both**:
   }
 }
 ```
+
+## Minimum counts (unless documented in `claim_gaps[]`)
+
+- `customer_pain_points`: 4+
+- `importance_signals`: 4+
+- `implicit_criteria`: 3+
+- `win_theme_candidates`: 3 (priority 1–3)
+- `verbatim_extracts`: 6+
+- `eval_crosswalk`: 4+ rows
+- `clarification_questions`: 3+ when ambiguity exists
 
 ## Discipline
 
