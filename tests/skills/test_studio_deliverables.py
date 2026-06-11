@@ -463,6 +463,54 @@ def test_list_deliverables_ignores_runs_without_artifacts_dir(tmp_path: Path) ->
     assert mgr.list_deliverables(tmp_path) == []
 
 
+def test_list_deliverables_disambiguates_colliding_titles_with_prompt_variants(
+    tmp_path: Path,
+) -> None:
+    mgr = SkillManager()
+    shared_brief = "# Mission Readiness Frame — MCPP RFP (M67004-26-R-0007)\n".encode(
+        "utf-8"
+    )
+    run_a = _seed_run(
+        tmp_path,
+        skill="mission-readiness-framer",
+        run_id="20260611_151031_frame_v1",
+        artifacts={"mission_readiness_frame_brief.docx": b"docx-a"},
+        created_at="2026-06-11T15:10:31",
+    )
+    run_b = _seed_run(
+        tmp_path,
+        skill="mission-readiness-framer",
+        run_id="20260611_161045_frame_v2",
+        artifacts={"mission_readiness_frame_brief.docx": b"docx-b"},
+        created_at="2026-06-11T16:10:45",
+    )
+    (run_a / "artifacts" / "brief.md").write_bytes(shared_brief)
+    (run_b / "artifacts" / "brief.md").write_bytes(shared_brief)
+    (run_a / "run.md").write_text(
+        (run_a / "run.md").read_text(encoding="utf-8")
+        + "\n## User Prompt\n\nBuild frame with OCI transition emphasis for MCPP.\n",
+        encoding="utf-8",
+    )
+    (run_b / "run.md").write_text(
+        (run_b / "run.md").read_text(encoding="utf-8")
+        + "\n## User Prompt\n\nRebuild frame focusing on logistics SLA and staffing risks.\n",
+        encoding="utf-8",
+    )
+
+    rows = {
+        row["run_id"]: row["display_name"]
+        for row in mgr.list_deliverables(tmp_path)
+        if row["skill"] == "mission-readiness-framer"
+    }
+
+    assert rows["20260611_151031_frame_v1"] == (
+        "MCPP RFP (M67004-26-R-0007) · frame with OCI transition emphasis for MCPP · Brief"
+    )
+    assert rows["20260611_161045_frame_v2"] == (
+        "MCPP RFP (M67004-26-R-0007) · frame focusing on logistics SLA and staffing · Brief"
+    )
+
+
 def test_list_deliverables_respects_limit(tmp_path: Path) -> None:
     mgr = SkillManager()
     artifacts = {f"a{i}.pdf": b"x" for i in range(10)}

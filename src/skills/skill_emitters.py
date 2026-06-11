@@ -13,6 +13,7 @@ from src.skills.artifact_labels import (
     derive_run_content_title,
     fallback_content_title,
     format_product_display_name,
+    maybe_enrich_display_name_with_prompt,
     normalize_content_title,
 )
 from src.skills.run_metadata import read_artifact_manifest, write_artifact_manifest
@@ -118,11 +119,24 @@ def _profile(skill: Skill) -> dict[str, object]:
     return profile
 
 
-def _set_display_names(run_dir: Path, labels: dict[str, str]) -> None:
+def _set_display_names(
+    run_dir: Path,
+    labels: dict[str, str],
+    *,
+    skill_name: str = "",
+) -> None:
     manifest = read_artifact_manifest(run_dir)
     for artifact, display_name in labels.items():
+        enriched = display_name
+        if skill_name:
+            enriched = maybe_enrich_display_name_with_prompt(
+                display_name,
+                skill_name=skill_name,
+                run_dir=run_dir,
+                artifact_rel=artifact,
+            )
         entry = dict(manifest.get(artifact) or {})
-        entry["display_name"] = display_name
+        entry["display_name"] = enriched
         manifest[artifact] = entry
     write_artifact_manifest(run_dir, manifest)
 
@@ -355,7 +369,7 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
                     )
 
         if not ({"docx", "xlsx"} & formats):
-            _set_display_names(Path(run_dir), labels)
+            _set_display_names(Path(run_dir), labels, skill_name=skill.name)
             return
 
         if repo_root is None:
@@ -461,6 +475,6 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
                         logs=list(result["log_files"]),
                         excerpt=str(result["excerpt"] or ""),
                     )
-        _set_display_names(Path(run_dir), labels)
+        _set_display_names(Path(run_dir), labels, skill_name=skill.name)
     except Exception as exc:  # noqa: BLE001
         logger.warning("auto_emit_artifacts error: %s", exc)

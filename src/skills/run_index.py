@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -21,6 +22,7 @@ from src.skills.run_projections import project_run_summary_payload
 from src.skills.artifact_labels import (
     derive_run_content_title,
     humanize_run_label,
+    maybe_enrich_display_name_with_prompt,
     resolve_studio_display_name,
 )
 from src.skills.studio_surfaces import (
@@ -132,7 +134,7 @@ class SkillRunIndex:
         is_safe_run_id: Callable[[str], bool],
         limit: int = 500,
     ) -> list[dict[str, Any]]:
-        rows: list[dict[str, Any]] = []
+        pending: list[dict[str, Any]] = []
         for skill_name, run_dir in self._iter_run_dirs():
             if not is_safe_run_id(run_dir.name):
                 continue
@@ -172,7 +174,7 @@ class SkillRunIndex:
                     manifest_entry=manifest_entry,
                     content_title=content_title,
                 )
-                rows.append(
+                pending.append(
                     {
                         "skill": skill_name,
                         "run_id": run_dir.name,
@@ -189,8 +191,28 @@ class SkillRunIndex:
                         "deck_complete": deck.get("complete"),
                         "deck_slides_found": deck.get("found"),
                         "deck_slides_expected": deck.get("expected"),
+                        "_run_dir": run_dir,
                     }
                 )
+
+        collision_counts = Counter(
+            (row["skill"], str(row.get("display_name") or "").lower())
+            for row in pending
+        )
+        rows: list[dict[str, Any]] = []
+        for row in pending:
+            run_dir = row.pop("_run_dir")
+            force_variant = collision_counts[
+                (row["skill"], str(row.get("display_name") or "").lower())
+            ] > 1
+            row["display_name"] = maybe_enrich_display_name_with_prompt(
+                str(row.get("display_name") or ""),
+                skill_name=str(row.get("skill") or ""),
+                run_dir=run_dir,
+                artifact_rel=str(row.get("filename") or ""),
+                force=force_variant,
+            )
+            rows.append(row)
 
         rows.sort(key=lambda row: row.get("created_at", ""), reverse=True)
         return rows[:limit]

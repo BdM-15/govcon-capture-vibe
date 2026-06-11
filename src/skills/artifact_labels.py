@@ -8,10 +8,29 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.skills.run_metadata import humanize_artifact_name, sanitize_artifact_display_name
+from src.skills.run_metadata import (
+    humanize_artifact_name,
+    read_run_metadata,
+    sanitize_artifact_display_name,
+)
 
 _RUN_ID_RE = re.compile(r"^(\d{8})_(\d{6})_(.+)$")
 _H1_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
+
+_PRODUCT_SUFFIXES = (
+    " · Brief",
+    " · Workbook",
+    " Final Response Data",
+    " Final Response",
+    " Brief Source",
+)
+
+_PROMPT_PREFIX_RE = re.compile(
+    r"^(?:please|kindly|run|execute|invoke|rebuild|build|create|generate|design|analyze|analyse|"
+    r"provide|give me|help me|draft|prepare|produce|make|develop|write)\s+"
+    r"(?:the\s+|a\s+|an\s+|me\s+)?",
+    re.IGNORECASE,
+)
 
 _GENERIC_TITLE_TOKENS = frozenset(
     {
@@ -249,6 +268,145 @@ def derive_run_content_title(skill_name: str, run_dir: Path) -> str | None:
     return None
 
 
+def read_run_invoke_prompt(run_dir: Path) -> str:
+    """Return the user invoke prompt persisted on a skill run."""
+    meta = read_run_metadata(run_dir)
+    user_prompt = str(meta.get("user_prompt") or "").strip()
+    if user_prompt:
+        return user_prompt
+
+    prompt_path = Path(run_dir) / "prompt.md"
+    if not prompt_path.is_file():
+        return ""
+
+    text = prompt_path.read_text(encoding="utf-8", errors="replace").strip()
+    if not text:
+        return ""
+
+    marker = "## User Prompt"
+    if marker in text:
+        tail = text.split(marker, 1)[1].strip()
+        for stop in ("\n## ", "\n---"):
+            if stop in tail:
+                tail = tail.split(stop, 1)[0]
+        return tail.strip()
+    return text
+
+
+def extract_prompt_variant(prompt: str, *, max_len: int = 48) -> str | None:
+    """Pull a short iteration-specific phrase from the invoke prompt."""
+    text = re.sub(r"\s+", " ", str(prompt or "").strip())
+    if not text:
+        return None
+
+    sentence = re.split(r"[.!?\n]", text, maxsplit=1)[0].strip()
+    for _ in range(3):
+        trimmed = _PROMPT_PREFIX_RE.sub("", sentence).strip(" \"'")
+        if trimmed == sentence:
+            break
+        sentence = trimmed
+    sentence = sentence.strip(" \"'")
+    if len(sentence) < 8:
+        return None
+
+    if len(sentence) > max_len:
+        sentence = sentence[: max_len + 1].rsplit(" ", 1)[0].strip()
+    return sanitize_artifact_display_name(sentence)
+
+
+def strip_product_suffix(display_name: str) -> str:
+    cleaned = sanitize_artifact_display_name(display_name) or ""
+    for suffix in _PRODUCT_SUFFIXES:
+        if cleaned.endswith(suffix):
+            return cleaned[: -len(suffix)].strip()
+    return cleaned
+
+
+def is_weak_content_title(
+    title: str,
+    *,
+    skill_name: str,
+    run_dir: Path,
+    artifact_rel: str,
+) -> bool:
+    """True when the title needs invoke-prompt help to distinguish iterations."""
+    base = strip_product_suffix(title)
+    normalized = strip_skill_label_from_title(base, skill_name)
+    if not normalized:
+        return True
+
+    topic = run_topic_label(Path(run_dir).name)
+    if topic and normalized.lower() == topic.lower():
+        return True
+
+    fallback = fallback_content_title(skill_name, run_dir, artifact_rel)
+    if normalized.lower() == fallback.lower():
+        return True
+
+    tokens = [token for token in re.split(r"[\s·]+", normalized.lower()) if token]
+    if tokens and all(token in _GENERIC_TITLE_TOKENS for token in tokens):
+        return True
+
+    if is_generic_studio_label(normalized, skill_name=skill_name, filename=artifact_rel):
+        return True
+
+    return False
+
+
+def inject_prompt_variant(display_name: str, variant: str) -> str:
+    """Insert a prompt-derived clause before any product suffix."""
+    cleaned = sanitize_artifact_display_name(display_name) or ""
+    variant_clean = sanitize_artifact_display_name(variant) or ""
+    if not cleaned or not variant_clean:
+        return cleaned or display_name
+    if variant_clean.lower() in cleaned.lower():
+        return cleaned
+
+    for suffix in _PRODUCT_SUFFIXES:
+        if cleaned.endswith(suffix):
+            base = cleaned[: -len(suffix)].strip()
+            return f"{base} · {variant_clean}{suffix}"
+    return f"{cleaned} · {variant_clean}"
+
+
+def needs_prompt_disambiguation(
+    display_name: str,
+    *,
+    skill_name: str,
+    run_dir: Path,
+    artifact_rel: str,
+) -> bool:
+    return is_weak_content_title(
+        display_name,
+        skill_name=skill_name,
+        run_dir=run_dir,
+        artifact_rel=artifact_rel,
+    )
+
+
+def maybe_enrich_display_name_with_prompt(
+    display_name: str,
+    *,
+    skill_name: str,
+    run_dir: Path,
+    artifact_rel: str,
+    force: bool = False,
+) -> str:
+    """Add a prompt-derived variant when the title is weak or forced by collision."""
+    if not force and not needs_prompt_disambiguation(
+        display_name,
+        skill_name=skill_name,
+        run_dir=run_dir,
+        artifact_rel=artifact_rel,
+    ):
+        return display_name
+
+    variant = extract_prompt_variant(read_run_invoke_prompt(run_dir))
+    if not variant:
+        return display_name
+    return inject_prompt_variant(display_name, variant)
+
+
 def fallback_content_title(
     skill_name: str,
     run_dir: Path,
@@ -362,13 +520,20 @@ def resolve_studio_display_name(
 __all__ = [
     "derive_run_content_title",
     "extract_markdown_h1",
+    "extract_prompt_variant",
     "fallback_content_title",
     "format_product_display_name",
     "humanize_run_label",
+    "inject_prompt_variant",
     "is_generic_studio_label",
+    "is_weak_content_title",
+    "maybe_enrich_display_name_with_prompt",
+    "needs_prompt_disambiguation",
     "normalize_content_title",
+    "read_run_invoke_prompt",
     "resolve_studio_display_name",
     "run_topic_label",
     "skill_profile_labels",
+    "strip_product_suffix",
     "strip_skill_label_from_title",
 ]
