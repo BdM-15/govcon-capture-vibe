@@ -57,21 +57,20 @@
     {
       "id": "mrf-004",
       "name": "Customer-grounded differentiation exploration",
-      "prompt": "Workspace with MCPP or sustainment PWS. Surface non-obvious pain points with rationale, current methods implied by the PWS, and innovation opportunities (quality and cost; lean delivery; no internal capability claims).",
+      "prompt": "Workspace with MCPP or sustainment PWS. Surface non-obvious pain points with rationale, current methods implied by the PWS, and innovation opportunities (quality and cost; lean delivery).",
       "expected_signals": [
         "loads `references/differentiation_exploration.md`",
-        "emits `customer_pain_points[]` with `visibility`, `rationale`, and at least one `latent` or `structural` entry",
+        "emits `customer_pain_points[]` with `visibility`, `rationale`, and latent/structural entries when evidence supports them",
         "emits `current_methods[]` with `systems_named` when PWS cites tools/systems",
         "emits `innovation_opportunities[]` with `quality_impact`, `cost_impact`, and `fit_to_scope`",
-        "win_theme_candidates include `rationale_chain` with customer-grounded differentiation hypothesis",
-        "does not emit company_capabilities or internal proof inventory mapping"
+        "win_theme_candidates include `rationale_chain` with customer-grounded differentiation hypothesis"
       ],
       "anti_signals": [
         "generic AI innovation with no PWS anchor",
-        "mapping to company_capabilities ontology entities",
         "pain points listed without rationale justification",
-        "only explicit pains — no latent/structural mining",
-        "bloat proposals that expand scope beyond the solicitation"
+        "only explicit pains when latent/structural signals exist in the package",
+        "bloat proposals that expand scope beyond the solicitation",
+        "fixed-count padding unrelated to solicitation size"
       ]
     }
   ]

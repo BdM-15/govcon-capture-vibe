@@ -1,6 +1,6 @@
 # Differentiation Exploration — Pain, Themes, Methods, Innovation
 
-> Extend the Mission Readiness Frame with **exploratory but grounded** capture intelligence: non-obvious pains, theme opportunities with rationale, what methods the customer already uses, and where a bidder could differentiate — **customer-grounded ideation only**. Internal company proof inventory is out of scope until capability data is bid-ready.
+> Extend the Mission Readiness Frame with **exploratory but grounded** capture intelligence: non-obvious pains, theme opportunities with rationale, what methods the customer already uses, and where a bidder could differentiate — **customer-grounded ideation only**.
 
 ## Layer A — Comprehensive pain & theme opportunity mining
 
@@ -98,19 +98,14 @@ When the user names a **vendor, platform, or URL** and asks whether it addresses
 | Step | Action |
 | ---- | ------ |
 | 1 | `web_fetch` every URL; supplement with `web_search` if thin |
-| 2 | Extract ≥3 **platform_capabilities** with Class A summaries from web evidence |
-| 3 | Map each capability to ≥2 `customer_pain_points[]` with honest `applicability` |
-| 4 | Extend `innovation_opportunities[]` (≥5 on overlay runs) with dual anchors: PWS chunk + capability |
-| 5 | Brief section `## Capability overlay (user-directed)` ≥30 lines — table + risks + proof checklist |
+| 2 | Extract **platform_capabilities** with Class A summaries from web evidence |
+| 3 | Map capabilities to relevant `customer_pain_points[]` with honest `applicability` |
+| 4 | Extend `innovation_opportunities[]` with dual anchors: PWS chunk + capability where applicable |
+| 5 | Brief section `## Capability overlay (user-directed)` — substantive table + risks + proof checklist |
 
 **Anti-pattern:** Two closing sentences tagged onto the brief. **Pattern:** Capture-manager-ready overlay the BD lead can sanity-check before proposal-generator.
 
 Mark external claims with `evidence_url` or `external_provenance: web`. Do not claim past performance or contract wins for the vendor unless the user provided them.
-
-## Out of scope (this skill)
-
-- **Unprompted** mapping to internal **company_capabilities** or proof inventory — not reliable enough for real bids yet.
-- Claiming **our** platforms, past performance, or discriminators without user direction — that is `proposal-generator` / capture team validation.
 
 ## Educational tone in `brief.md`
 
@@ -118,4 +113,4 @@ Remain **insightful and educational** (explain *why* a signal matters to a captu
 
 - **What the document says** (Class A)
 - **What we infer and why** (Class B with visible markers)
-- **Where a bidder might differentiate** (Class B, customer-grounded, with `fit_to_scope` honesty — no internal capability claims)
+- **Where a bidder might differentiate** (Class B, customer-grounded, with `fit_to_scope` honesty)

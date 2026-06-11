@@ -172,19 +172,15 @@ Every run emits **both**:
 }
 ```
 
-## Minimum counts (unless documented in `claim_gaps[]`)
+## Completeness (solicitation-driven — no fixed counts)
 
-- `customer_pain_points`: 4+ (include ≥2 `latent` or `structural`)
-- `current_methods`: 3+ task clusters
-- `innovation_opportunities`: 3+ (mix of types; not all `technology`)
+Arrays scale with **this package**. Do not pad to hit numbers. Do not omit retrieved eval factors.
 
-- `importance_signals`: 4+
-- `implicit_criteria`: 3+
-- `win_theme_candidates`: 3 (priority 1–3)
-- `verbatim_extracts`: 6+
-- `eval_crosswalk`: 1 row per material `evaluation_factor` / `subfactor` (minimum 4 when package is sparse); no collapsed multi-factor rows
+- `eval_crosswalk`: **one row per** material `evaluation_factor` / `subfactor` from tool output; no collapsed multi-factor rows
+- `customer_pain_points`, `current_methods`, `innovation_opportunities`, `importance_signals`, `implicit_criteria`, `verbatim_extracts`: cover what the solicitation supports; include latent/structural pains when evidence exists
+- `win_theme_candidates`: priority-ranked seeds — count follows the readiness story, not a template
 - `capability_overlay`: required when user prompt names vendor/platform/URL; see step 6c in SKILL.md
-- `clarification_questions`: 3+ when ambiguity exists
+- `clarification_questions`: when ambiguity exists; otherwise document gaps in `claim_gaps[]`
 
 ## Discipline
 

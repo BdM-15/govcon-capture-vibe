@@ -9,21 +9,22 @@ from typing import Any
 
 _URL_RE = re.compile(r"https?://[^\s\)>\"']+", re.IGNORECASE)
 
-_MINIMUM_COUNTS: dict[str, int] = {
-    "customer_pain_points": 4,
-    "current_methods": 3,
-    "innovation_opportunities": 3,
-    "importance_signals": 4,
-    "implicit_criteria": 3,
-    "win_theme_candidates": 3,
-    "verbatim_extracts": 6,
-    "eval_crosswalk": 4,
-    "clarification_questions": 3,
-}
+_REQUIRED_ARRAY_KEYS = (
+    "customer_pain_points",
+    "current_methods",
+    "innovation_opportunities",
+    "importance_signals",
+    "implicit_criteria",
+    "win_theme_candidates",
+    "verbatim_extracts",
+    "eval_crosswalk",
+    "clarification_questions",
+)
 
-_MIN_BRIEF_LINES = 120
-_MIN_OVERLAY_BRIEF_LINES = 30
-_MIN_CROSSWALK_READINESS_CHARS = 40
+_PLACEHOLDER_RE = re.compile(
+    r"^(tbd|todo|n/?a|none|placeholder|too short|\.{3,})$",
+    re.IGNORECASE,
+)
 
 
 def _join_list(value: Any) -> str:
@@ -73,7 +74,7 @@ def detect_capability_overlay_request(user_prompt: str) -> dict[str, Any] | None
     }
 
 
-def _section_line_count(markdown: str, heading: str) -> int:
+def _section_content_lines(markdown: str, heading: str) -> list[str]:
     lines = str(markdown or "").splitlines()
     start = -1
     for index, line in enumerate(lines):
@@ -81,14 +82,22 @@ def _section_line_count(markdown: str, heading: str) -> int:
             start = index + 1
             break
     if start < 0:
-        return 0
-    count = 0
+        return []
+    content: list[str] = []
     for line in lines[start:]:
         if line.startswith("## "):
             break
-        if line.strip():
-            count += 1
-    return count
+        stripped = line.strip()
+        if stripped:
+            content.append(stripped)
+    return content
+
+
+def _is_placeholder_text(value: str) -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return True
+    return bool(_PLACEHOLDER_RE.match(text))
 
 
 def _thin_crosswalk_rows(rows: list[Any]) -> list[str]:
@@ -105,13 +114,28 @@ def _thin_crosswalk_rows(rows: list[Any]) -> list[str]:
             issues.append(f"eval_crosswalk row {index} missing evaluation_factor")
         if not isinstance(clusters, list) or not clusters:
             issues.append(f"eval_crosswalk row {index} missing pws_clusters")
-        if len(readiness) < _MIN_CROSSWALK_READINESS_CHARS:
-            issues.append(
-                f"eval_crosswalk row {index} readiness_link too thin "
-                f"({len(readiness)} chars; need {_MIN_CROSSWALK_READINESS_CHARS}+)"
-            )
-        if len(proof) < 20:
-            issues.append(f"eval_crosswalk row {index} proof_expected too thin")
+        if _is_placeholder_text(readiness):
+            issues.append(f"eval_crosswalk row {index} readiness_link missing or placeholder")
+        if _is_placeholder_text(proof):
+            issues.append(f"eval_crosswalk row {index} proof_expected missing or placeholder")
+    return issues
+
+
+def _overlay_content_issues(overlay: dict[str, Any]) -> list[str]:
+    issues: list[str] = []
+    if not str(overlay.get("vendor") or "").strip():
+        issues.append("capability_overlay.vendor is empty")
+
+    capabilities = overlay.get("platform_capabilities") or []
+    mappings = overlay.get("pain_point_mappings") or overlay.get("mappings") or []
+    innovations = overlay.get("innovation_links") or []
+
+    if not isinstance(capabilities, list) or not capabilities:
+        issues.append("capability_overlay.platform_capabilities is missing or empty")
+    if not isinstance(mappings, list) or not mappings:
+        issues.append("capability_overlay.pain_point_mappings is missing or empty")
+    if not isinstance(innovations, list) or not innovations:
+        issues.append("capability_overlay.innovation_links is missing or empty")
     return issues
 
 
@@ -120,7 +144,7 @@ def validate_mission_readiness_run(
     *,
     user_prompt: str = "",
 ) -> list[str]:
-    """Post-run depth audit for mission-readiness-framer artifacts."""
+    """Post-run qualitative audit for mission-readiness-framer artifacts."""
     issues: list[str] = []
     overlay_request = detect_capability_overlay_request(user_prompt)
     artifacts_dir = Path(run_dir) / "artifacts"
@@ -148,33 +172,30 @@ def validate_mission_readiness_run(
         issues.append("missing brief.md")
 
     if brief_text:
-        line_count = len([line for line in brief_text.splitlines() if line.strip()])
-        if line_count < _MIN_BRIEF_LINES:
-            issues.append(
-                f"brief.md too short ({line_count} non-empty lines; minimum {_MIN_BRIEF_LINES})"
-            )
         if "## Eval cross-walk" not in brief_text and "## Eval Cross-walk" not in brief_text:
             issues.append("brief.md missing Eval cross-walk section")
+        if not [line for line in brief_text.splitlines() if line.strip()]:
+            issues.append("brief.md is empty")
 
     if payload:
-        for key, minimum in _MINIMUM_COUNTS.items():
+        for key in _REQUIRED_ARRAY_KEYS:
             rows = payload.get(key)
             if not isinstance(rows, list):
                 issues.append(f"missing or invalid array: {key}")
-                continue
-            if len(rows) < minimum:
-                issues.append(f"{key} has {len(rows)} entries (minimum {minimum})")
 
         crosswalk = payload.get("eval_crosswalk")
         if isinstance(crosswalk, list):
-            issues.extend(_thin_crosswalk_rows(crosswalk))
-            factors = {
-                str(row.get("evaluation_factor") or "").strip().lower()
-                for row in crosswalk
-                if isinstance(row, dict) and str(row.get("evaluation_factor") or "").strip()
-            }
-            if len(factors) < len(crosswalk):
-                issues.append("eval_crosswalk contains duplicate evaluation_factor labels")
+            if not crosswalk:
+                issues.append("eval_crosswalk is empty — cross-walk every material factor from the package or log claim_gaps[]")
+            else:
+                issues.extend(_thin_crosswalk_rows(crosswalk))
+                factors = {
+                    str(row.get("evaluation_factor") or "").strip().lower()
+                    for row in crosswalk
+                    if isinstance(row, dict) and str(row.get("evaluation_factor") or "").strip()
+                }
+                if len(factors) < len(crosswalk):
+                    issues.append("eval_crosswalk contains duplicate evaluation_factor labels")
 
         overlay = payload.get("capability_overlay")
         if overlay_request:
@@ -183,29 +204,15 @@ def validate_mission_readiness_run(
                     "user requested external capability overlay but capability_overlay is missing"
                 )
             else:
-                mappings = overlay.get("pain_point_mappings") or overlay.get("mappings") or []
-                innovations = overlay.get("innovation_links") or []
-                capabilities = overlay.get("platform_capabilities") or []
-                if not str(overlay.get("vendor") or "").strip():
-                    issues.append("capability_overlay.vendor is empty")
-                if len(capabilities) < 3:
-                    issues.append(
-                        "capability_overlay.platform_capabilities has fewer than 3 entries"
-                    )
-                if len(mappings) < 2:
-                    issues.append(
-                        "capability_overlay needs at least 2 pain_point_mappings"
-                    )
-                if len(innovations) < 2:
-                    issues.append(
-                        "capability_overlay needs at least 2 innovation_links"
-                    )
+                issues.extend(_overlay_content_issues(overlay))
 
-            overlay_lines = _section_line_count(brief_text, "## Capability overlay (user-directed)")
-            if overlay_lines < _MIN_OVERLAY_BRIEF_LINES:
+            overlay_lines = _section_content_lines(
+                brief_text,
+                "## Capability overlay (user-directed)",
+            )
+            if not overlay_lines:
                 issues.append(
-                    "brief.md Capability overlay section too thin "
-                    f"({overlay_lines} lines; minimum {_MIN_OVERLAY_BRIEF_LINES} when user requests vendor/platform review)"
+                    "brief.md missing substantive Capability overlay section when user requests vendor/platform review"
                 )
 
     transcript_path = Path(run_dir) / "transcript.json"
@@ -220,8 +227,8 @@ def validate_mission_readiness_run(
                     and entry.get("kind") == "tool"
                     and entry.get("name") == "kg_chunks"
                 )
-                if kg_calls < 5:
-                    issues.append(f"only {kg_calls} kg_chunks calls (minimum 5)")
+                if kg_calls == 0:
+                    issues.append("no kg_chunks calls — package retrieval did not run")
                 web_calls = sum(
                     1
                     for entry in transcript
