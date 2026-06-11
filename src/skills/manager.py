@@ -150,6 +150,7 @@ class SkillExecutor:
                 run_store=self._run_store,
                 mcp_registry=self._mcp_registry,
                 touch_invocation=self._touch_invocation,
+                entity_payload=entity_payload,
                 invoke_skill_fn=invoke_skill_fn,
             )
             self._annotate_products(workspace_root, result)

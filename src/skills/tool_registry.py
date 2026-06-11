@@ -18,6 +18,7 @@ from src.skills.tool_web_research import (
     tool_web_research,
     tool_web_search,
 )
+from src.skills.tool_workspace_artifacts import tool_read_workspace_artifact
 
 
 @dataclass
@@ -76,6 +77,34 @@ def build_tool_specs(
                 "additionalProperties": False,
             },
             handler=tool_invoke_skill,
+        ),
+        ToolSpec(
+            name="read_workspace_artifact",
+            description=(
+                "Read a Studio deliverable attached to this invoke. Only artifacts "
+                "listed in input_artifacts / context_artifacts are readable. Returns "
+                "text or JSON content for md/txt/json/html; notes for binary docx/xlsx/pdf."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "skill": {
+                        "type": "string",
+                        "description": "Skill slug that produced the artifact.",
+                    },
+                    "run_id": {
+                        "type": "string",
+                        "description": "Run id folder under skill_runs/<skill>/.",
+                    },
+                    "filename": {
+                        "type": "string",
+                        "description": "Artifact filename under artifacts/.",
+                    },
+                },
+                "required": ["skill", "run_id", "filename"],
+                "additionalProperties": False,
+            },
+            handler=tool_read_workspace_artifact,
         ),
         ToolSpec(
             name="read_file",

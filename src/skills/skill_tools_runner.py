@@ -74,6 +74,7 @@ async def run_tools_skill(
     run_store: Any,
     mcp_registry: Any,
     touch_invocation: Callable[[str], None],
+    entity_payload: Optional[dict[str, Any]] = None,
     run_tool_loop_fn: Optional[Callable[..., Awaitable[Any]]] = None,
     tool_context_cls: Optional[type] = None,
     auto_emit_fn: Callable[[Skill, Path], None] = auto_emit_artifacts,
@@ -103,6 +104,7 @@ async def run_tools_skill(
     extra_script_roots, extra_warnings = resolve_extra_script_roots(skill)
     warnings.extend(extra_warnings)
 
+    attached_artifacts = list((entity_payload or {}).get("input_artifacts") or [])
     ctx = tool_context_cls(
         skill_name=skill.name,
         skill_dir=Path(skill.path),
@@ -120,6 +122,7 @@ async def run_tools_skill(
         max_kg_relationships_per_entity=limits.max_kg_relationships_per_entity,
         extra_script_roots=extra_script_roots,
         invoke_skill_fn=invoke_skill_fn,
+        attached_artifacts=attached_artifacts,
     )
 
     requested_mcps = skill.frontmatter.required_mcps

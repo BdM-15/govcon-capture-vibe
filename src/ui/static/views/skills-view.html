@@ -430,6 +430,110 @@
                     ></textarea>
                   </div>
 
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                      <label
+                        class="flex items-center text-xs font-mono text-slate-400"
+                      >
+                        Context artifacts
+                        <span
+                          class="settings-label-tip"
+                          title="Attach up to 5 prior Studio deliverables (e.g. mission-readiness-framer output) as handoff context. Excerpts are inlined; use read_workspace_artifact in tools mode for full files."
+                          >?</span
+                        >
+                      </label>
+                      <button
+                        type="button"
+                        class="text-[10px] font-mono text-neon-cyan hover:text-neon-magenta"
+                        @click="skills.invokeArtifactsOpen = !skills.invokeArtifactsOpen; if (skills.invokeArtifactsOpen) loadSkillInvokeArtifacts()"
+                      >
+                        <span
+                          x-text="skills.invokeArtifactsOpen ? 'Hide picker' : ((skills.invokeContextArtifacts || []).length ? 'Edit (' + (skills.invokeContextArtifacts || []).length + ')' : 'Attach from Studio')"
+                        ></span>
+                      </button>
+                    </div>
+
+                    <div
+                      x-show="(skills.invokeContextArtifacts || []).length"
+                      class="flex flex-wrap gap-1.5"
+                    >
+                      <template
+                        x-for="ref in skills.invokeContextArtifacts"
+                        :key="skillContextArtifactKey(ref)"
+                      >
+                        <span
+                          class="inline-flex items-center gap-1 pill border border-neon-cyan/30 bg-neon-cyan/5 text-neon-cyan text-[10px] font-mono max-w-full"
+                        >
+                          <span
+                            class="truncate"
+                            x-text="skillContextArtifactLabel(ref)"
+                          ></span>
+                          <button
+                            type="button"
+                            class="text-slate-400 hover:text-neon-magenta shrink-0"
+                            @click="removeSkillContextArtifact(ref)"
+                            title="Remove artifact"
+                          >
+                            <i data-lucide="x" class="w-3 h-3"></i>
+                          </button>
+                        </span>
+                      </template>
+                    </div>
+
+                    <div
+                      x-show="skills.invokeArtifactsOpen"
+                      x-cloak
+                      class="border border-edge rounded-lg bg-ink-900/60"
+                    >
+                      <div
+                        x-show="skills.invokeArtifactsLoading || (studio && studio.loading)"
+                        class="px-3 py-2 text-[10px] font-mono text-slate-500"
+                      >
+                        Loading Studio deliverables…
+                      </div>
+                      <div
+                        x-show="!skills.invokeArtifactsLoading && !(studio && studio.loading) && !(studio && (studio.deliverables || []).length)"
+                        class="px-3 py-2 text-[10px] font-mono text-slate-500"
+                      >
+                        No Studio deliverables yet. Run a skill first, then attach
+                        its output here.
+                      </div>
+                      <div
+                        x-show="!skills.invokeArtifactsLoading && !(studio && studio.loading) && (studio && (studio.deliverables || []).length)"
+                        class="max-h-44 overflow-auto divide-y divide-edge/60"
+                      >
+                        <template
+                          x-for="deliverable in (studio.deliverables || []).slice(0, 80)"
+                          :key="studioKey(deliverable)"
+                        >
+                          <button
+                            type="button"
+                            class="w-full text-left px-3 py-2 hover:bg-ink-800/80 flex items-start gap-2"
+                            @click="toggleSkillContextArtifact(deliverable)"
+                          >
+                            <span
+                              class="mt-0.5 shrink-0 w-3.5 h-3.5 rounded border"
+                              :class="skillContextArtifactSelected(deliverable) ? 'border-neon-cyan bg-neon-cyan/20' : 'border-edge bg-ink-800'"
+                            ></span>
+                            <span class="min-w-0">
+                              <span
+                                class="block text-[11px] font-mono text-slate-200 truncate"
+                                x-text="deliverable.display_name || deliverable.filename"
+                              ></span>
+                              <span
+                                class="block text-[10px] font-mono text-slate-500 truncate"
+                                x-text="deliverable.skill + ' · ' + deliverable.run_id"
+                              ></span>
+                            </span>
+                          </button>
+                        </template>
+                      </div>
+                      <p class="px-3 py-1.5 text-[10px] font-mono text-slate-600 border-t border-edge/60">
+                        Max 5 artifacts · newest Studio items shown first
+                      </p>
+                    </div>
+                  </div>
+
                   <div class="flex items-center gap-2">
                     <button
                       @click="invokeSkill()"

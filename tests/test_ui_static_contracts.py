@@ -228,6 +228,23 @@ def test_chain_trace_missing_input_panel_reuses_chat_like_composer_language() ->
     assert source.count('x-init="mountChainInputPanel($el)"') == 2
 
 
+def test_skills_expose_optional_context_artifact_picker() -> None:
+    source = _index_html()
+    helpers = _SKILL_HELPERS.read_text(encoding="utf-8")
+    skills_view = (
+        _ROOT / "src" / "ui" / "static" / "views" / "skills-view.html"
+    ).read_text(encoding="utf-8")
+
+    assert "Context artifacts" in source
+    assert "skills.invokeContextArtifacts" in helpers
+    assert "context_artifacts" in helpers
+    assert "theseusToggleSkillContextArtifact" in helpers
+    assert "theseusLoadSkillInvokeArtifacts" in helpers
+    assert 'class="settings-label-tip"' in skills_view
+    assert "toggleSkillContextArtifact(deliverable)" in skills_view
+    assert "read_workspace_artifact" in skills_view
+
+
 def test_intel_briefings_expose_optional_slice_context_field() -> None:
     source = _index_html()
     intel_helpers = (

@@ -328,6 +328,115 @@ def test_skill_invoke_route_tools_mode(tmp_path) -> None:
     assert captured["retrieve"]["query_overrides"]["top_k"] == 9
 
 
+def test_skill_invoke_route_attaches_context_artifacts(tmp_path) -> None:
+    artifacts_dir = (
+        tmp_path
+        / "skill_runs"
+        / "mission-readiness-framer"
+        / "20260611_151031_mcpp"
+        / "artifacts"
+    )
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    artifact_path = artifacts_dir / "readiness-frame.md"
+    artifact_path.write_text("# Frame\n\nUse this artifact.", encoding="utf-8")
+
+    manager = _FakeManager("tools")
+
+    class _ArtifactManager(_FakeManager):
+        def get_artifact_path(self, workspace_root, skill_name, run_id, filename):
+            from src.skills.runs import SkillRunStore
+
+            return SkillRunStore().get_artifact_path(
+                workspace_root,
+                skill_name,
+                run_id,
+                filename,
+            )
+
+    manager = _ArtifactManager("tools")
+    app = FastAPI()
+    register_skill_invoke_ui_routes(
+        app,
+        workspace_dir=lambda: tmp_path,
+        query_settings_store=_query_store(tmp_path),
+        data_func=None,
+        llm_func=_llm,
+        workspace_name=lambda: "ws-a",
+        manager_factory=lambda: manager,
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/ui/skills/huashu-design/invoke",
+        json={
+            "prompt": "Design slides from the attached frame.",
+            "context_artifacts": [
+                {
+                    "skill": "mission-readiness-framer",
+                    "run_id": "20260611_151031_mcpp",
+                    "filename": "readiness-frame.md",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    _, invoke_kwargs = manager.invoke_calls[0]
+    assert "Design slides from the attached frame." in invoke_kwargs["user_prompt"]
+    assert "## Attached Studio Artifacts" in invoke_kwargs["user_prompt"]
+    assert "Use this artifact." in invoke_kwargs["user_prompt"]
+    assert invoke_kwargs["entity_payload"]["input_artifacts"][0]["path"] == str(
+        artifact_path.resolve()
+    )
+    assert (
+        invoke_kwargs["entity_payload"]["context_artifacts"][0]["filename"]
+        == "readiness-frame.md"
+    )
+
+
+def test_skill_invoke_route_rejects_missing_context_artifact(tmp_path) -> None:
+    class _ArtifactManager(_FakeManager):
+        def get_artifact_path(self, workspace_root, skill_name, run_id, filename):
+            from src.skills.runs import SkillRunStore
+
+            return SkillRunStore().get_artifact_path(
+                workspace_root,
+                skill_name,
+                run_id,
+                filename,
+            )
+
+    manager = _ArtifactManager("tools")
+    app = FastAPI()
+    register_skill_invoke_ui_routes(
+        app,
+        workspace_dir=lambda: tmp_path,
+        query_settings_store=_query_store(tmp_path),
+        data_func=None,
+        llm_func=_llm,
+        workspace_name=lambda: "ws-a",
+        manager_factory=lambda: manager,
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/ui/skills/demo/invoke",
+        json={
+            "prompt": "hello",
+            "context_artifacts": [
+                {
+                    "skill": "mission-readiness-framer",
+                    "run_id": "20260611_151031_mcpp",
+                    "filename": "missing.md",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 400, response.text
+    assert "Artifact not found" in response.json()["detail"]
+
+
 def test_skill_invoke_route_appends_user_addendum_on_first_run(tmp_path) -> None:
     manager = _FakeManager("tools")
     app = FastAPI()

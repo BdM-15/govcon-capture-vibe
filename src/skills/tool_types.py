@@ -36,6 +36,7 @@ class ToolContext:
     extra_script_roots: list[Path] = field(default_factory=list)
     mcp_sessions: dict[str, Any] = field(default_factory=dict)
     invoke_skill_fn: Optional[Callable[..., Awaitable[Any]]] = None
+    attached_artifacts: list[dict[str, Any]] = field(default_factory=list)
     call_seq: list[int] = field(default_factory=lambda: [0])
 
 

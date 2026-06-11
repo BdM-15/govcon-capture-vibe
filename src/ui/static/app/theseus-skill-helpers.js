@@ -398,10 +398,102 @@ window.theseusLoadSkills = async function theseusLoadSkills(
   }
 };
 
+window.theseusSkillContextArtifactKey =
+  function theseusSkillContextArtifactKey(ref) {
+    return (
+      (ref?.skill || "") +
+      "/" +
+      (ref?.run_id || "") +
+      "/" +
+      (ref?.filename || "")
+    );
+  };
+
+window.theseusSkillContextArtifactLabel =
+  function theseusSkillContextArtifactLabel(ref) {
+    if (!ref) return "";
+    const label = ref.display_name || ref.filename || "artifact";
+    const skill = ref.skill || "skill";
+    return label + " · " + skill;
+  };
+
+window.theseusLoadSkillInvokeArtifacts =
+  async function theseusLoadSkillInvokeArtifacts(app) {
+    if (app.studio?.loaded || app.skills.invokeArtifactsLoading) return;
+    app.skills.invokeArtifactsLoading = true;
+    try {
+      if (typeof app.loadStudio === "function") {
+        await app.loadStudio();
+      } else {
+        const response = await app.api("/api/ui/studio?limit=500");
+        app.studio.deliverables = response.deliverables || [];
+        app.studio.loaded = true;
+      }
+    } catch (error) {
+      app.toast(
+        "Failed to load Studio deliverables: " + (error?.message || error),
+        "warn",
+      );
+    } finally {
+      app.skills.invokeArtifactsLoading = false;
+      window.theseusAfterRender(app);
+    }
+  };
+
+window.theseusSkillContextArtifactSelected =
+  function theseusSkillContextArtifactSelected(app, deliverable) {
+    const key = window.theseusStudioKey(deliverable);
+    return (app.skills.invokeContextArtifacts || []).some(
+      (ref) => window.theseusSkillContextArtifactKey(ref) === key,
+    );
+  };
+
+window.theseusToggleSkillContextArtifact =
+  function theseusToggleSkillContextArtifact(app, deliverable) {
+    if (!deliverable?.skill || !deliverable?.run_id || !deliverable?.filename) {
+      return;
+    }
+    const key = window.theseusStudioKey(deliverable);
+    const current = app.skills.invokeContextArtifacts || [];
+    const index = current.findIndex(
+      (ref) => window.theseusSkillContextArtifactKey(ref) === key,
+    );
+    if (index >= 0) {
+      current.splice(index, 1);
+      app.skills.invokeContextArtifacts = current;
+      window.theseusAfterRender(app);
+      return;
+    }
+    if (current.length >= 5) {
+      app.toast("At most 5 context artifacts per invoke.", "warn");
+      return;
+    }
+    app.skills.invokeContextArtifacts = current.concat([
+      {
+        skill: deliverable.skill,
+        run_id: deliverable.run_id,
+        filename: deliverable.filename,
+        display_name: deliverable.display_name || deliverable.filename,
+      },
+    ]);
+    window.theseusAfterRender(app);
+  };
+
+window.theseusRemoveSkillContextArtifact =
+  function theseusRemoveSkillContextArtifact(app, ref) {
+    const key = window.theseusSkillContextArtifactKey(ref);
+    app.skills.invokeContextArtifacts = (
+      app.skills.invokeContextArtifacts || []
+    ).filter((item) => window.theseusSkillContextArtifactKey(item) !== key);
+    window.theseusAfterRender(app);
+  };
+
 window.theseusOpenSkill = async function theseusOpenSkill(app, name) {
   app.skills.invokeResult = "";
   app.skills.invokeMeta = null;
   app.skills.invokePrompt = "";
+  app.skills.invokeContextArtifacts = [];
+  app.skills.invokeArtifactsOpen = false;
   app.skills.runs = [];
   app.skills.runTrash = [];
   app.skills.runTrashOpen = false;
@@ -412,6 +504,7 @@ window.theseusOpenSkill = async function theseusOpenSkill(app, name) {
     window.theseusAfterRender(app);
     app.loadSkillRuns(name);
     app.loadSkillRunTrash(name);
+    window.theseusLoadSkillInvokeArtifacts(app);
   } catch (error) {
     app.toast("Failed to load skill: " + (error?.message || error), "error");
   }
@@ -435,6 +528,13 @@ window.theseusInvokeSkill = async function theseusInvokeSkill(app) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: app.skills.invokePrompt || "",
+          context_artifacts: (app.skills.invokeContextArtifacts || []).map(
+            (ref) => ({
+              skill: ref.skill,
+              run_id: ref.run_id,
+              filename: ref.filename,
+            }),
+          ),
         }),
       },
     );

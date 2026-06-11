@@ -488,6 +488,30 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusInvokeSkill(this);
     },
 
+    async loadSkillInvokeArtifacts() {
+      return window.theseusLoadSkillInvokeArtifacts(this);
+    },
+
+    skillContextArtifactKey(ref) {
+      return window.theseusSkillContextArtifactKey(ref);
+    },
+
+    skillContextArtifactLabel(ref) {
+      return window.theseusSkillContextArtifactLabel(ref);
+    },
+
+    skillContextArtifactSelected(deliverable) {
+      return window.theseusSkillContextArtifactSelected(this, deliverable);
+    },
+
+    toggleSkillContextArtifact(deliverable) {
+      return window.theseusToggleSkillContextArtifact(this, deliverable);
+    },
+
+    removeSkillContextArtifact(ref) {
+      return window.theseusRemoveSkillContextArtifact(this, ref);
+    },
+
     async loadSkillRuns(name) {
       return window.theseusLoadSkillRuns(this, name);
     },

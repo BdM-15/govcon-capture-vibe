@@ -14,6 +14,12 @@ from src.core import get_settings
 from src.server.chunk_store import get_text_chunk
 from src.skills import get_skill_manager
 from src.skills.chain_models import ChainRunState, ChainSpec, ChainStepSpec
+from src.skills.context_artifacts import (
+    ContextArtifactRef,
+    format_context_artifacts_prompt_block,
+    resolve_context_artifacts,
+    to_input_artifacts_payload,
+)
 from src.skills.context import (
     build_skill_briefing_book,
     retrieve_relevant_entities_for_skill,
@@ -371,6 +377,13 @@ def register_skill_invoke_ui_routes(
                 "(URLs, partner notes, incumbent hints). Appended to prompt."
             ),
         )
+        context_artifacts: list[ContextArtifactRef] = Field(
+            default_factory=list,
+            max_length=5,
+            description=(
+                "Optional Studio deliverables to attach as context (skill, run_id, filename)."
+            ),
+        )
 
     class SkillChainInvokePayload(BaseModel):
         """Body for POST /api/ui/skill-chains/invoke."""
@@ -389,6 +402,10 @@ def register_skill_invoke_ui_routes(
         """Body for POST /api/ui/skills/{name}/runs/{run_id}/resume."""
 
         user_addendum: str = Field("", max_length=8000)
+        context_artifacts: list[ContextArtifactRef] = Field(
+            default_factory=list,
+            max_length=5,
+        )
         answers: dict[str, Any] = Field(default_factory=dict)
         entity_types: Optional[list[str]] = Field(None)
         max_entities_per_type: Optional[int] = Field(None, ge=1, le=500)
@@ -471,11 +488,48 @@ def register_skill_invoke_ui_routes(
         *,
         user_addendum: str = "",
         addendum_heading: str = "User-supplied missing input",
+        artifact_block: str = "",
     ) -> str:
         parts = [str(prompt or "").strip()]
         if user_addendum.strip():
             parts.append(f"{addendum_heading}:\n" + user_addendum.strip())
+        if artifact_block.strip():
+            parts.append(artifact_block.strip())
         return "\n\n".join(part for part in parts if part)
+
+    def _resolve_invoke_context_artifacts(
+        mgr: Any,
+        refs: list[ContextArtifactRef],
+    ) -> tuple[list[Any], list[str], str, list[dict[str, Any]]]:
+        if not refs:
+            return [], [], "", []
+        get_artifact_path = getattr(mgr, "get_artifact_path", None)
+        if get_artifact_path is None:
+            raise HTTPException(
+                503,
+                "Skill manager does not support context artifact resolution",
+            )
+        resolved, errors = resolve_context_artifacts(
+            workspace_dir(),
+            refs,
+            get_artifact_path=get_artifact_path,
+        )
+        artifact_block = format_context_artifacts_prompt_block(resolved)
+        input_artifacts = to_input_artifacts_payload(resolved)
+        return resolved, errors, artifact_block, input_artifacts
+
+    def _merge_context_artifacts_extras(
+        extras: dict[str, Any],
+        *,
+        resolved: list[Any],
+        input_artifacts: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        if not resolved:
+            return extras
+        merged = dict(extras)
+        merged["context_artifacts"] = [artifact.model_dump() for artifact in resolved]
+        merged["input_artifacts"] = input_artifacts
+        return merged
 
     def _skill_response_with_run(
         mgr: Any,
@@ -579,10 +633,16 @@ def register_skill_invoke_ui_routes(
         frontmatter_mode = skill.frontmatter.runtime_mode if skill is not None else "legacy"
         effective_mode = resolve_skill_runtime_mode(frontmatter_mode)
         user_addendum = str(payload.user_addendum or "").strip()
+        resolved_artifacts, artifact_errors, artifact_block, input_artifacts = (
+            _resolve_invoke_context_artifacts(mgr, payload.context_artifacts)
+        )
+        if artifact_errors:
+            raise HTTPException(400, "; ".join(artifact_errors))
         effective_prompt = _skill_prompt(
             payload.prompt,
             user_addendum=user_addendum,
             addendum_heading="User-supplied context",
+            artifact_block=artifact_block,
         )
 
         plan = resolve_plan_from_store(
@@ -595,6 +655,11 @@ def register_skill_invoke_ui_routes(
             invoke_extras = {
                 "user_supplied_context": {"first_run_notes": user_addendum},
             }
+        invoke_extras = _merge_context_artifacts_extras(
+            invoke_extras,
+            resolved=resolved_artifacts,
+            input_artifacts=input_artifacts,
+        )
         if effective_mode == "tools":
             try:
                 result = await mgr.invoke(
@@ -683,10 +748,20 @@ def register_skill_invoke_ui_routes(
         if not user_addendum:
             raise HTTPException(400, "user_addendum or answers required")
 
+        resolved_artifacts, artifact_errors, artifact_block, input_artifacts = (
+            _resolve_invoke_context_artifacts(mgr, payload.context_artifacts)
+        )
+        if artifact_errors:
+            raise HTTPException(400, "; ".join(artifact_errors))
+
         original_prompt = str(
             ((projected.get("metadata") or {}).get("user_prompt") or "")
         ).strip()
-        effective_prompt = _skill_prompt(original_prompt, user_addendum=user_addendum)
+        effective_prompt = _skill_prompt(
+            original_prompt,
+            user_addendum=user_addendum,
+            artifact_block=artifact_block,
+        )
         missing_inputs = list(projected.get("missing_inputs") or [])
         skill_desc = skill.frontmatter.description
         frontmatter_mode = skill.frontmatter.runtime_mode
@@ -704,6 +779,11 @@ def register_skill_invoke_ui_routes(
                 "answers": payload.answers,
             }
         }
+        resume_extras = _merge_context_artifacts_extras(
+            resume_extras,
+            resolved=resolved_artifacts,
+            input_artifacts=input_artifacts,
+        )
         if effective_mode == "tools":
             try:
                 result = await mgr.invoke(
