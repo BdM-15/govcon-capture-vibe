@@ -32,6 +32,7 @@ _REQUIRED_REFERENCES = [
     "output_contract.md",
     "readiness_signal_catalog.md",
     "customer_intent_signals.md",
+    "differentiation_exploration.md",
     "narrative_template.md",
 ]
 
@@ -81,6 +82,11 @@ def test_mission_readiness_framer_body_has_envelope_markers() -> None:
         "win_theme_candidates",
         "verbatim_extracts",
         "eval_crosswalk",
+        "current_methods",
+        "innovation_opportunities",
+        "company_capability_matches",
+        "differentiation_exploration.md",
+        "rationale_chain",
         "Minimum depth contract",
         "full text of `brief.md`",
         "mission_readiness_frame.json",
@@ -117,7 +123,7 @@ def test_mission_readiness_framer_evals_exercise_key_branches() -> None:
     assert len(evals) >= 3, f"expected at least 3 evals, got {len(evals)}"
 
     all_text = json.dumps(evals).lower()
-    for branch_marker in ("readiness", "cross-walk", "proxy"):
+    for branch_marker in ("readiness", "cross-walk", "proxy", "differentiation", "innovation"):
         assert branch_marker in all_text, (
             f"evals do not exercise the '{branch_marker}' branch"
         )

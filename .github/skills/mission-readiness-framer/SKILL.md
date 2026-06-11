@@ -9,7 +9,7 @@ metadata:
   capability: analyze
   runtime: tools
   category: capture_intelligence
-  version: 1.1.0
+  version: 1.2.0
   status: active
 ---
 
@@ -52,7 +52,10 @@ Unless the workspace truly lacks evidence (document each shortfall in `claim_gap
 | ------ | ------- | ----- |
 | `kg_chunks` queries | **≥ 5** | Distinct focuses: background, PWS task cluster, QASP, eval factors, transition/amendments |
 | Unique cited chunks | **≥ 12** | Across JSON + brief |
-| `customer_pain_points[]` | **≥ 4** | Mix anxiety levels; at least one transition/crisis confession if present in package |
+| `customer_pain_points[]` | **≥ 4** | Mix anxiety levels; **≥ 2** `latent` or `structural`; each with `rationale` |
+| `current_methods[]` | **≥ 3** | Named systems/processes the PWS implies are in use today |
+| `innovation_opportunities[]` | **≥ 3** | Quality↑ and/or cost↓; not all `technology`; honest `fit_to_scope` |
+| `company_capability_matches[]` | **≥ 2** | Cross-walk to KG capabilities when entities exist; else `claim_gaps[]` |
 | `importance_signals[]` | **≥ 4** | Include ≥1 `repetition` or `background_eval_echo` when language echoes |
 | `implicit_criteria[]` | **≥ 3** | Each with `alternate_read` unless `confidence: high` |
 | `win_theme_candidates[]` | **3** | Full priority 1–3 spine tied to readiness |
@@ -89,21 +92,30 @@ Unless the workspace truly lacks evidence (document each shortfall in `claim_gap
     "clause",
     "amendment",
     "period_of_performance",
-    "place_of_performance"
+    "place_of_performance",
+    "pain_point",
+    "customer_priority",
+    "technology",
+    "past_performance_reference",
+    "strategic_theme",
+    "program"
   ],
   "limit": 400
 }
 ```
 
-Then run **at least five** focused `kg_chunks` queries (adapt to package labels):
+Pull **company_capabilities** ontology entities when present (`technology`, `past_performance_reference`, `strategic_theme`, `program`) — these are proof inventory for differentiation, not solicitation text.
 
-1. `"background mission readiness operational objective program office"`
-2. `"PWS SOW shall task area deliverable maintenance quality"`
+Then run **at least six** focused `kg_chunks` queries (adapt to package labels):
+
+1. `"background mission readiness operational objective program office pain challenge"`
+2. `"PWS SOW shall task area deliverable maintenance quality system tool"`
 3. `"QASP inspection performance standard consequence payment"`
-4. `"evaluation factor subfactor rating past performance technical"`
+4. `"evaluation factor subfactor rating past performance technical innovative efficient"`
 5. `"transition crisis surge mission essential amendment"`
+6. `"OMMS QMSS WAWF system software platform manual process"`
 
-Add queries for user-mentioned sections or incumbent/pain phrases.
+Add queries for user-mentioned sections, latent challenges, or capability keywords.
 
 ### 2. Build Mission Readiness Frame
 
@@ -118,7 +130,16 @@ Load `references/readiness_signal_catalog.md`. Emit `mission_readiness_frame`:
 
 ### 3. Map customer pain points
 
-Load `references/customer_intent_signals.md`. Emit `customer_pain_points[]` from background confessions, transition risk, QASP anxiety, prior-performance failures. Each entry: `source_role: program_office`, `readiness_link`, `recommended_response_type`.
+Load `references/customer_intent_signals.md` and `references/differentiation_exploration.md`. Emit `customer_pain_points[]` — **explicit and non-obvious** (latent/structural). Each entry: `visibility`, `challenge_type`, `rationale` (signal → readiness → response), `source_role: program_office`, `readiness_link`, `recommended_response_type`.
+
+### 3b. Map current methods and innovation opportunities
+
+From PWS/SOW and attachments, emit `current_methods[]` (what the customer already uses to perform the workload).  
+Then emit `innovation_opportunities[]` — methods or technology that improve **quality, cost, or both**; cite scope fit honestly.
+
+### 3c. Cross-walk company capabilities
+
+Match pains, themes, and innovation opportunities to `technology`, `past_performance_reference`, and `strategic_theme` entities in the KG. Emit `company_capability_matches[]` with `proof_strength` — mark `gap` when we lack proof.
 
 ### 4. Cross-walk and importance signals
 
@@ -130,7 +151,7 @@ Emit `implicit_criteria[]` with `customer_read`, `acquisition_read`, `alternate_
 
 ### 6. Seed win-theme candidates
 
-Exactly 3 entries, `priority` 1–3, each with `readiness_link`, `proof_required[]`, `evaluation_factor_links[]`.
+Exactly 3 entries, `priority` 1–3, each with `rationale_chain` (signal → consequence → angle → proof → differentiation hypothesis), `readiness_link`, `proof_required[]`, `evaluation_factor_links[]`.
 
 ### 6b. Verbatim extracts and eval cross-walk
 
@@ -147,11 +168,13 @@ Write `{run_dir}/artifacts/brief.md` — a **capture-manager-ready** narrative:
 
 1. Mission Readiness Frame (outcome, failure modes, enablers, our read)
 2. Verbatim signal bank (top extracts with commentary)
-3. Customer pain and importance (program-office lens)
-4. Eval cross-walk table (factor → PWS → readiness)
-5. Implicit criteria / tea leaves with alternate reads
-6. Win-theme candidate spine (3 seeds + proof checklist)
-7. Clarification questions + claim gaps
+3. Customer pain and importance — include **non-obvious** pains with rationale
+4. Current methods vs innovation opportunities (quality/cost lens)
+5. Company capability cross-walk (what we can credibly prove)
+6. Eval cross-walk table (factor → PWS → readiness)
+7. Implicit criteria / tea leaves with alternate reads
+8. Win-theme candidate spine (3 seeds + rationale chains + proof checklist)
+9. Clarification questions + claim gaps
 
 Load `references/narrative_template.md` if losing structure.
 
@@ -176,4 +199,5 @@ Copy the complete `brief.md` content into your final assistant response. Do not 
 - [references/output_contract.md](references/output_contract.md) — JSON envelope schema
 - [references/readiness_signal_catalog.md](references/readiness_signal_catalog.md) — readiness and proxy patterns
 - [references/customer_intent_signals.md](references/customer_intent_signals.md) — pain, importance, cross-walk, tea leaves
+- [references/differentiation_exploration.md](references/differentiation_exploration.md) — latent pains, current methods, innovation, company_capabilities cross-walk
 - [references/narrative_template.md](references/narrative_template.md) — optional bullet skeleton for brief.md

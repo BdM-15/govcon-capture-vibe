@@ -16,6 +16,10 @@ Triangulate the same priority language across:
 
 When a noun phrase or priority appears in **three or more** places → emit `importance_signals[]` with `signal_type: repetition`.
 
+## Comprehensive pain discovery
+
+Go beyond stated confessions. Mine **latent** pains (QASP density, threshold obsession, omissions) and **structural** pains (workload design forces failure modes). Every pain needs a **`rationale`** chain — see `differentiation_exploration.md`.
+
 ## Pain point patterns (`customer_pain_points[]`)
 
 | Pattern | Example language | `recommended_response_type` |

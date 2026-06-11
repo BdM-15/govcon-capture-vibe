@@ -46,11 +46,48 @@ Every run emits **both**:
       "id": "PP-001",
       "text": "...",
       "source_role": "program_office",
+      "visibility": "explicit|latent|structural",
+      "challenge_type": "performance|transition|data_integrity|staffing|compliance|cost|security|other",
+      "rationale": "signal → readiness impact → response implication (2-4 sentences)",
       "anxiety_level": "high|medium|low",
       "sections_echoed": [],
       "readiness_link": "...",
       "source_chunk_ids": [],
       "recommended_response_type": "mitigation|proof|transition"
+    }
+  ],
+  "current_methods": [
+    {
+      "id": "CM-001",
+      "task_cluster": "PWS 3.x",
+      "method_description": "what the package implies is used today",
+      "systems_named": [],
+      "maturity_signal": "mandated|referenced|incumbent_implied",
+      "source_chunk_ids": []
+    }
+  ],
+  "innovation_opportunities": [
+    {
+      "id": "IO-001",
+      "label": "...",
+      "opportunity_type": "process|data_analytics|automation|technology|organizational",
+      "quality_impact": "...",
+      "cost_impact": "reduce|neutral|invest_to_save",
+      "differentiation_angle": "...",
+      "readiness_link": "...",
+      "fit_to_scope": "in_scope|stretch|requires_qa",
+      "source_chunk_ids": []
+    }
+  ],
+  "company_capability_matches": [
+    {
+      "id": "CCM-001",
+      "capability_entity": "entity name from KG",
+      "entity_id": "...",
+      "match_basis": "why this capability supports the opportunity",
+      "linked_to": ["WT-001", "IO-001", "PP-002"],
+      "proof_strength": "strong|moderate|weak|gap",
+      "source_chunk_ids": []
     }
   ],
   "importance_signals": [
@@ -98,6 +135,14 @@ Every run emits **both**:
       "id": "WT-001",
       "theme_label": "...",
       "why_the_customer_cares": "...",
+      "rationale_chain": {
+        "customer_signal": "cited fact",
+        "readiness_consequence": "...",
+        "theme_angle": "...",
+        "proof_required_summary": "...",
+        "differentiation_hypothesis": "Our read: ...",
+        "confidence": "high|medium|low"
+      },
       "readiness_link": "...",
       "proof_required": [],
       "linked_hooks": [],
@@ -117,7 +162,10 @@ Every run emits **both**:
 
 ## Minimum counts (unless documented in `claim_gaps[]`)
 
-- `customer_pain_points`: 4+
+- `customer_pain_points`: 4+ (include ≥2 `latent` or `structural`)
+- `current_methods`: 3+ task clusters
+- `innovation_opportunities`: 3+ (mix of types; not all `technology`)
+- `company_capability_matches`: 2+ when ontology entities exist; else document in `claim_gaps[]`
 - `importance_signals`: 4+
 - `implicit_criteria`: 3+
 - `win_theme_candidates`: 3 (priority 1–3)
