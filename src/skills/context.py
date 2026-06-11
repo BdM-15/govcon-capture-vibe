@@ -35,6 +35,8 @@ class SkillWorkspaceEvidenceStore:
         max_chunks_per_entity: int = 2,
         max_relationships_per_entity: int = 5,
         relevant_entity_names: Optional[set[str]] = None,
+        retrieval_chunk_ids: Optional[set[str]] = None,
+        max_chunk_content_chars: int = 8000,
     ) -> dict[str, Any]:
         """Build source-grounded evidence payload for one skill run."""
 
@@ -85,6 +87,8 @@ class SkillWorkspaceEvidenceStore:
             "source_chunks": self._load_source_chunks(
                 entity_chunk_map,
                 max_chunks_per_entity,
+                retrieval_chunk_ids=retrieval_chunk_ids,
+                max_chunk_content_chars=max_chunk_content_chars,
             ),
             "relationships": self._load_relationships(
                 entity_name_set,
@@ -115,8 +119,11 @@ class SkillWorkspaceEvidenceStore:
         self,
         entity_chunk_map: dict[str, list[str]],
         max_chunks_per_entity: int,
+        *,
+        retrieval_chunk_ids: Optional[set[str]] = None,
+        max_chunk_content_chars: int = 8000,
     ) -> list[dict[str, Any]]:
-        wanted_chunk_ids: set[str] = set()
+        wanted_chunk_ids: set[str] = set(retrieval_chunk_ids or [])
         if max_chunks_per_entity > 0:
             for chunk_ids in entity_chunk_map.values():
                 for chunk_id in chunk_ids[:max_chunks_per_entity]:
@@ -126,15 +133,19 @@ class SkillWorkspaceEvidenceStore:
             return []
 
         source_chunks: list[dict[str, Any]] = []
+        content_cap = max(500, int(max_chunk_content_chars or 8000))
         for record in self._read_records("vdb_chunks.json"):
             chunk_id = record.get("__id__")
             if chunk_id not in wanted_chunk_ids:
                 continue
+            content = str(record.get("content") or "")
+            truncated = len(content) > content_cap
             source_chunks.append(
                 {
                     "chunk_id": chunk_id,
                     "file_path": record.get("file_path"),
-                    "content": (record.get("content") or "")[:1500],
+                    "content": content[:content_cap],
+                    "truncated": truncated,
                 }
             )
         return source_chunks
@@ -186,6 +197,8 @@ def build_skill_briefing_book(
     max_chunks_per_entity: int = 2,
     max_relationships_per_entity: int = 5,
     relevant_entity_names: Optional[set[str]] = None,
+    retrieval_chunk_ids: Optional[set[str]] = None,
+    max_chunk_content_chars: int = 8000,
 ) -> dict[str, Any]:
     """Build the source-grounded briefing book for a skill invocation.
 
@@ -205,6 +218,8 @@ def build_skill_briefing_book(
         max_chunks_per_entity=max_chunks_per_entity,
         max_relationships_per_entity=max_relationships_per_entity,
         relevant_entity_names=relevant_entity_names,
+        retrieval_chunk_ids=retrieval_chunk_ids,
+        max_chunk_content_chars=max_chunk_content_chars,
     )
 
 
@@ -212,22 +227,38 @@ async def retrieve_relevant_entities_for_skill(
     data_func: Optional[QueryDataFunc],
     prompt: str,
     skill_description: str,
+    *,
     mode: str,
-    top_k: int,
+    query_overrides: dict[str, Any],
 ) -> dict[str, Any]:
     """Run structured retrieval and return entity and chunk identifiers.
 
     The return shape is ``{names, chunk_ids, metadata}``, where ``names`` is a
     lowercased entity-name whitelist and ``chunk_ids`` are retrieval-ranked
-    chunks available to future callers that want to augment the briefing book.
+    chunks available to augment the briefing book.
     """
+    top_k = int(query_overrides.get("top_k") or 40)
     meta: dict[str, Any] = {
         "mode": mode,
         "top_k": top_k,
+        "chunk_top_k": query_overrides.get("chunk_top_k"),
+        "max_total_tokens": query_overrides.get("max_total_tokens"),
         "matched_entities": 0,
         "matched_chunks": 0,
         "used": False,
         "reason": "",
+        "query_overrides": {
+            key: query_overrides[key]
+            for key in (
+                "top_k",
+                "chunk_top_k",
+                "max_entity_tokens",
+                "max_relation_tokens",
+                "max_total_tokens",
+                "enable_rerank",
+            )
+            if key in query_overrides
+        },
     }
     if mode == "off":
         meta["reason"] = "retrieval disabled (mode=off)"
@@ -243,11 +274,8 @@ async def retrieve_relevant_entities_for_skill(
         return {"names": set(), "chunk_ids": set(), "metadata": meta}
 
     retrieval_query = f"{user_prompt}\n\n[Skill context: {hint}]" if hint else user_prompt
-    overrides = {
-        "top_k": top_k,
-        "chunk_top_k": min(top_k, 30),
-        "only_need_context": True,
-    }
+    overrides = dict(query_overrides)
+    overrides.setdefault("only_need_context", True)
     try:
         data = await data_func(retrieval_query, mode, [], overrides)
     except Exception as exc:  # noqa: BLE001
@@ -280,7 +308,7 @@ async def retrieve_relevant_entities_for_skill(
 
     meta["matched_entities"] = len(names)
     meta["matched_chunks"] = len(chunk_ids)
-    meta["used"] = bool(names)
-    if not names:
-        meta["reason"] = "retrieval returned 0 entities; falling back to bulk slice"
+    meta["used"] = bool(names or chunk_ids)
+    if not names and not chunk_ids:
+        meta["reason"] = "retrieval returned 0 entities/chunks; falling back to bulk slice"
     return {"names": names, "chunk_ids": chunk_ids, "metadata": meta}

@@ -234,6 +234,9 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       confirmText: "",
       busy: false,
     },
+    queryTuningGuideModal: {
+      open: false,
+    },
     querySettings: {
       loaded: false,
       saving: false,

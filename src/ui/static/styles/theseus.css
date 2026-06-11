@@ -3619,3 +3619,138 @@ details.acc .summary-actions {
   overflow-y: auto;
   line-height: 1.4;
 }
+
+/* Settings field help (plain-language tooltips) */
+.settings-tip-box {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #94a3b8;
+  background: rgba(var(--ink-900-rgb), 0.45);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.settings-field-help {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  line-height: 1.45;
+  color: #64748b;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+.settings-field-default {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  color: #475569;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+.settings-label-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--edge);
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: help;
+  vertical-align: middle;
+}
+.settings-field-differs {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.4;
+  color: #fbbf24;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+.settings-section-heading {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--edge);
+}
+.settings-compare-box {
+  font-size: 10px;
+  line-height: 1.5;
+  color: #94a3b8;
+  background: rgba(var(--ink-900-rgb), 0.35);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.settings-compare-box strong {
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+/* Query tuning guide modal */
+.tuning-guide-body {
+  color: #94a3b8;
+  line-height: 1.55;
+}
+.tuning-guide-h {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  margin-bottom: 8px;
+}
+.tuning-guide-table {
+  width: 100%;
+  font-size: 11px;
+  border-collapse: collapse;
+}
+.tuning-guide-table th,
+.tuning-guide-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--edge);
+  vertical-align: top;
+}
+.tuning-guide-table th {
+  color: #64748b;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.tuning-guide-table td strong {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+.tuning-guide-dl {
+  display: grid;
+  gap: 10px;
+  font-size: 11px;
+}
+.tuning-guide-dl dt {
+  color: #cbd5e1;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 10px;
+}
+.tuning-guide-dl dd {
+  margin: 0;
+  color: #94a3b8;
+  padding-left: 0;
+}
+.tuning-guide-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 11px;
+  color: #94a3b8;
+  list-style: disc;
+}
+.tuning-guide-list li {
+  margin-bottom: 4px;
+}

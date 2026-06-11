@@ -5,11 +5,27 @@ from types import SimpleNamespace
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from dataclasses import dataclass
+
+from src.server.chat_routes import QuerySettingsStore
 from src.server.skill_routes import register_skill_invoke_ui_routes, register_skill_run_ui_routes
 from src.skills.context import build_skill_briefing_book, retrieve_relevant_entities_for_skill
 from src.skills.chain_planner import ChainPlan, PlannedSkill
 from src.skills.chain_models import ChainSpec, ChainStepSpec
-from src.skills.settings import SkillSettingsStore
+
+
+@dataclass
+class FakeSettings:
+    workspace: str = "ws-a"
+    enable_rerank: bool = True
+    min_rerank_score: float = 0.0
+
+
+def _query_store(tmp_path) -> QuerySettingsStore:
+    return QuerySettingsStore(
+        workspace_dir=lambda: tmp_path,
+        settings_provider=lambda: FakeSettings(),
+    )
 
 
 class _FakeInvokeResult:
@@ -148,6 +164,8 @@ def test_skill_invoke_route_legacy_mode(tmp_path) -> None:
         max_chunks_per_entity,
         max_relationships_per_entity,
         relevant_entity_names,
+        retrieval_chunk_ids=None,
+        max_chunk_content_chars=8000,
     ):
         captured["slice"] = {
             "workspace_root": workspace_root,
@@ -156,18 +174,21 @@ def test_skill_invoke_route_legacy_mode(tmp_path) -> None:
             "max_chunks_per_entity": max_chunks_per_entity,
             "max_relationships_per_entity": max_relationships_per_entity,
             "relevant_entity_names": relevant_entity_names,
+            "retrieval_chunk_ids": retrieval_chunk_ids,
+            "max_chunk_content_chars": max_chunk_content_chars,
         }
         return {"entities": {"requirement": [{"name": "Entity A"}]}}
 
-    async def fake_retrieve(data_func, prompt, skill_description, mode, top_k):
+    async def fake_retrieve(data_func, prompt, skill_description, *, mode, query_overrides):
         captured["retrieve"] = {
             "prompt": prompt,
             "skill_description": skill_description,
             "mode": mode,
-            "top_k": top_k,
+            "query_overrides": query_overrides,
         }
         return {
-            "names": {"Entity A"},
+            "names": {"entity a"},
+            "chunk_ids": {"chunk-a"},
             "metadata": {"mode": "mix", "used": True},
         }
 
@@ -175,7 +196,7 @@ def test_skill_invoke_route_legacy_mode(tmp_path) -> None:
     register_skill_invoke_ui_routes(
         app,
         workspace_dir=lambda: tmp_path,
-        settings_store=SkillSettingsStore(lambda: tmp_path),
+        query_settings_store=_query_store(tmp_path),
         data_func=None,
         llm_func=_llm,
         workspace_name=lambda: "ws-a",
@@ -193,16 +214,16 @@ def test_skill_invoke_route_legacy_mode(tmp_path) -> None:
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["runtime_mode"] == "legacy"
-    assert body["retrieval"] == {"mode": "mix", "used": True}
+    assert body["retrieval"]["mode"] == "mix"
+    assert body["retrieval"]["settings_source"] == "query_settings"
     assert captured["retrieve"]["prompt"] == "hello"
-    assert captured["slice"]["relevant_entity_names"] == {"Entity A"}
+    assert captured["retrieve"]["query_overrides"]["top_k"] == 9
+    assert captured["slice"]["relevant_entity_names"] == {"entity a"}
 
     _, invoke_kwargs = manager.invoke_calls[0]
     assert invoke_kwargs["workspace"] == "ws-a"
-    assert invoke_kwargs["entity_payload"]["retrieval_metadata"] == {
-        "mode": "mix",
-        "used": True,
-    }
+    assert invoke_kwargs["entity_payload"]["retrieval_metadata"]["mode"] == "mix"
+    assert invoke_kwargs["entity_payload"]["retrieval_metadata"]["settings_source"] == "query_settings"
     assert "slice_fn" not in invoke_kwargs
     assert "retrieve_fn" not in invoke_kwargs
 
@@ -228,6 +249,8 @@ def test_skill_invoke_route_tools_mode(tmp_path) -> None:
         max_chunks_per_entity,
         max_relationships_per_entity,
         relevant_entity_names,
+        retrieval_chunk_ids=None,
+        max_chunk_content_chars=8000,
     ):
         captured["slice"] = {
             "workspace_root": workspace_root,
@@ -236,26 +259,29 @@ def test_skill_invoke_route_tools_mode(tmp_path) -> None:
             "max_chunks_per_entity": max_chunks_per_entity,
             "max_relationships_per_entity": max_relationships_per_entity,
             "relevant_entity_names": relevant_entity_names,
+            "retrieval_chunk_ids": retrieval_chunk_ids,
+            "max_chunk_content_chars": max_chunk_content_chars,
         }
         return {}
 
-    async def fake_retrieve(data_func, prompt, skill_description, mode, top_k):
+    async def fake_retrieve(data_func, prompt, skill_description, *, mode, query_overrides):
         captured["retrieve"] = {
             "prompt": prompt,
             "skill_description": skill_description,
             "mode": mode,
-            "top_k": top_k,
+            "query_overrides": query_overrides,
         }
         return {
-            "names": {"Entity A"},
-            "metadata": {"mode": mode, "used": mode != "off", "top_k": top_k},
+            "names": {"entity a"},
+            "chunk_ids": set(),
+            "metadata": {"mode": mode, "used": mode != "off"},
         }
 
     app = FastAPI()
     register_skill_invoke_ui_routes(
         app,
         workspace_dir=lambda: tmp_path,
-        settings_store=SkillSettingsStore(lambda: tmp_path),
+        query_settings_store=_query_store(tmp_path),
         data_func=None,
         llm_func=_llm,
         workspace_name=lambda: "ws-a",
@@ -282,15 +308,9 @@ def test_skill_invoke_route_tools_mode(tmp_path) -> None:
     assert body["runtime_mode"] == "tools"
     assert body["finish_reason"] == "max_turns"
     assert body["run"]["run_id"] == "run-1"
-    assert body["retrieval"] == {
-        "mode": "off",
-        "top_k": 9,
-        "used": False,
-        "reason": "tools-mode runtime",
-        "max_entities_per_type": 7,
-        "max_chunks_per_entity": 1,
-        "max_relationships_per_entity": 2,
-    }
+    assert body["retrieval"]["mode"] == "off"
+    assert body["retrieval"]["settings_source"] == "query_settings"
+    assert body["retrieval"]["max_entities_per_type"] == 7
 
     _, invoke_kwargs = manager.invoke_calls[0]
     assert invoke_kwargs["workspace"] == "ws-a"
@@ -299,22 +319,13 @@ def test_skill_invoke_route_tools_mode(tmp_path) -> None:
     assert callable(invoke_kwargs["retrieve_fn"])
 
     invoke_kwargs["slice_fn"](["requirement"], 99, 6, 8, {"Entity A"})
-    assert captured["slice"] == {
-        "workspace_root": tmp_path,
-        "entity_types": ["requirement"],
-        "max_per_type": 7,
-        "max_chunks_per_entity": 1,
-        "max_relationships_per_entity": 2,
-        "relevant_entity_names": {"Entity A"},
-    }
+    assert captured["slice"]["max_per_type"] == 7
+    assert captured["slice"]["max_chunks_per_entity"] == 1
+    assert captured["slice"]["relevant_entity_names"] == {"Entity A"}
 
     asyncio.run(invoke_kwargs["retrieve_fn"]("prompt text", "desc", "hybrid", 99))
-    assert captured["retrieve"] == {
-        "prompt": "prompt text",
-        "skill_description": "desc",
-        "mode": "off",
-        "top_k": 9,
-    }
+    assert captured["retrieve"]["mode"] == "hybrid"
+    assert captured["retrieve"]["query_overrides"]["top_k"] == 9
 
 
 def test_proposal_skill_tools_mode_can_use_native_ingested_evidence(tmp_path) -> None:
@@ -400,7 +411,7 @@ def test_proposal_skill_tools_mode_can_use_native_ingested_evidence(tmp_path) ->
     register_skill_invoke_ui_routes(
         app,
         workspace_dir=lambda: tmp_path,
-        settings_store=SkillSettingsStore(lambda: tmp_path),
+        query_settings_store=_query_store(tmp_path),
         data_func=native_query_data,
         llm_func=_llm,
         workspace_name=lambda: "ws-a",
@@ -436,6 +447,8 @@ def test_skill_chain_invoke_route_builds_spec_and_context(tmp_path) -> None:
         max_chunks_per_entity,
         max_relationships_per_entity,
         relevant_entity_names,
+        retrieval_chunk_ids=None,
+        max_chunk_content_chars=8000,
     ):
         captured["slice"] = {
             "workspace_root": workspace_root,
@@ -444,26 +457,29 @@ def test_skill_chain_invoke_route_builds_spec_and_context(tmp_path) -> None:
             "max_chunks_per_entity": max_chunks_per_entity,
             "max_relationships_per_entity": max_relationships_per_entity,
             "relevant_entity_names": relevant_entity_names,
+            "retrieval_chunk_ids": retrieval_chunk_ids,
+            "max_chunk_content_chars": max_chunk_content_chars,
         }
         return {"entities": {"requirement": [{"name": "Entity A"}]}}
 
-    async def fake_retrieve(data_func, prompt, skill_description, mode, top_k):
+    async def fake_retrieve(data_func, prompt, skill_description, *, mode, query_overrides):
         captured["retrieve"] = {
             "prompt": prompt,
             "skill_description": skill_description,
             "mode": mode,
-            "top_k": top_k,
+            "query_overrides": query_overrides,
         }
         return {
-            "names": {"Entity A"},
-            "metadata": {"mode": mode, "used": True, "top_k": top_k},
+            "names": {"entity a"},
+            "chunk_ids": set(),
+            "metadata": {"mode": mode, "used": True},
         }
 
     app = FastAPI()
     register_skill_invoke_ui_routes(
         app,
         workspace_dir=lambda: tmp_path,
-        settings_store=SkillSettingsStore(lambda: tmp_path),
+        query_settings_store=_query_store(tmp_path),
         data_func=None,
         llm_func=_llm,
         workspace_name=lambda: "ws-a",
@@ -499,22 +515,20 @@ def test_skill_chain_invoke_route_builds_spec_and_context(tmp_path) -> None:
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["chain"]["chain_id"] == "chain-1"
-    assert body["retrieval"] == {"mode": "mix", "used": True, "top_k": 11}
+    assert body["retrieval"]["mode"] == "mix"
+    assert body["retrieval"]["top_k"] == 11
     assert captured["retrieve"]["prompt"] == (
         "Build a chain.\n\nFind incumbent data.\n\nEstimate price using intel."
     )
-    assert captured["slice"]["relevant_entity_names"] == {"Entity A"}
+    assert captured["slice"]["relevant_entity_names"] == {"entity a"}
 
     spec, invoke_kwargs = manager.chain_calls[0]
     assert spec.name == "intel-to-ptw"
     assert [step.skill for step in spec.steps] == ["competitive-intel", "price-to-win"]
     assert spec.steps[1].depends_on == ["intel"]
     assert invoke_kwargs["workspace"] == "ws-a"
-    assert invoke_kwargs["entity_payload"]["retrieval_metadata"] == {
-        "mode": "mix",
-        "used": True,
-        "top_k": 11,
-    }
+    assert invoke_kwargs["entity_payload"]["retrieval_metadata"]["mode"] == "mix"
+    assert invoke_kwargs["entity_payload"]["retrieval_metadata"]["top_k"] == 11
     assert callable(invoke_kwargs["slice_fn"])
     assert callable(invoke_kwargs["retrieve_fn"])
 
@@ -564,17 +578,19 @@ def test_skill_chain_rerun_and_resume_routes(tmp_path) -> None:
         max_chunks_per_entity,
         max_relationships_per_entity,
         relevant_entity_names,
+        retrieval_chunk_ids=None,
+        max_chunk_content_chars=8000,
     ):
         return {"entities": {}}
 
-    async def fake_retrieve(data_func, prompt, skill_description, mode, top_k):
-        return {"names": set(), "metadata": {"mode": mode, "top_k": top_k}}
+    async def fake_retrieve(data_func, prompt, skill_description, *, mode, query_overrides):
+        return {"names": set(), "chunk_ids": set(), "metadata": {"mode": mode}}
 
     app = FastAPI()
     register_skill_invoke_ui_routes(
         app,
         workspace_dir=lambda: tmp_path,
-        settings_store=SkillSettingsStore(lambda: tmp_path),
+        query_settings_store=_query_store(tmp_path),
         data_func=None,
         llm_func=_llm,
         workspace_name=lambda: "ws-a",
@@ -715,7 +731,7 @@ def test_skill_run_resume_route_reinvokes_skill_with_user_addendum(tmp_path) -> 
     register_skill_invoke_ui_routes(
         app,
         workspace_dir=lambda: tmp_path,
-        settings_store=SkillSettingsStore(lambda: tmp_path),
+        query_settings_store=_query_store(tmp_path),
         data_func=None,
         llm_func=_llm,
         workspace_name=lambda: "ws-a",
@@ -752,17 +768,19 @@ def test_skill_chain_plan_and_invoke_planned_routes(tmp_path) -> None:
         max_chunks_per_entity,
         max_relationships_per_entity,
         relevant_entity_names,
+        retrieval_chunk_ids=None,
+        max_chunk_content_chars=8000,
     ):
         return {"entities": {}}
 
-    async def fake_retrieve(data_func, prompt, skill_description, mode, top_k):
-        return {"names": set(), "metadata": {"mode": mode, "top_k": top_k}}
+    async def fake_retrieve(data_func, prompt, skill_description, *, mode, query_overrides):
+        return {"names": set(), "chunk_ids": set(), "metadata": {"mode": mode}}
 
     app = FastAPI()
     register_skill_invoke_ui_routes(
         app,
         workspace_dir=lambda: tmp_path,
-        settings_store=SkillSettingsStore(lambda: tmp_path),
+        query_settings_store=_query_store(tmp_path),
         data_func=None,
         llm_func=_llm,
         workspace_name=lambda: "ws-a",

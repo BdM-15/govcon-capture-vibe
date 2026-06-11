@@ -73,6 +73,10 @@ class QuerySettingsUpdate(BaseModel):
     stream: bool | None = None
     response_type: str | None = Field(default=None, max_length=200)
     user_prompt: str | None = Field(default=None, max_length=20000)
+    skill_max_entities_per_type: int | None = Field(default=None, ge=1, le=500)
+    skill_max_chunks_per_entity: int | None = Field(default=None, ge=0, le=50)
+    skill_max_relationships_per_entity: int | None = Field(default=None, ge=0, le=50)
+    skill_max_chunk_content_chars: int | None = Field(default=None, ge=500, le=50000)
 
 
 class QuerySettingsStore:
@@ -104,6 +108,18 @@ class QuerySettingsStore:
             "stream": True,
             "response_type": DEFAULT_RESPONSE_TYPE,
             "user_prompt": "",
+            "skill_max_entities_per_type": env_int(
+                "SKILL_MAX_ENTITIES_PER_TYPE", 80, 1, 500
+            ),
+            "skill_max_chunks_per_entity": env_int(
+                "SKILL_MAX_CHUNKS_PER_ENTITY", 10, 0, 50
+            ),
+            "skill_max_relationships_per_entity": env_int(
+                "SKILL_MAX_RELATIONSHIPS_PER_ENTITY", 25, 0, 50
+            ),
+            "skill_max_chunk_content_chars": env_int(
+                "SKILL_MAX_CHUNK_CONTENT_CHARS", 8000, 500, 50000
+            ),
         }
 
     def path(self) -> Path:

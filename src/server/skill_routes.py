@@ -20,8 +20,14 @@ from src.skills.context import (
 )
 from src.skills.skill_emitters import auto_emit_artifacts
 from src.skills.runs import resolve_artifact_mime
+from src.server.skill_invoke_support import (
+    build_briefing_context,
+    make_retrieve_fn,
+    make_slice_fn,
+    resolve_plan_from_store,
+)
+from src.skills.retrieval_plan import retrieval_metadata_from_plan
 from src.skills.settings import (
-    SkillSettingsStore,
     VALID_SKILL_RETRIEVAL_MODES,
     resolve_skill_runtime_mode,
     skill_tools_runtime_defaults,
@@ -38,9 +44,34 @@ SliceFunc = Callable[
     dict[str, Any],
 ]
 RetrieveFunc = Callable[
-    [Optional[QueryDataFunc], str, str, str, int],
+    [Optional[QueryDataFunc], str, str, str, dict[str, Any]],
     Awaitable[dict[str, Any]],
 ]
+
+_SKILL_TO_QUERY_KEYS = {
+    "retrieval_mode": "mode",
+    "retrieval_top_k": "top_k",
+    "max_entities_per_type": "skill_max_entities_per_type",
+    "max_chunks_per_entity": "skill_max_chunks_per_entity",
+    "max_relationships_per_entity": "skill_max_relationships_per_entity",
+}
+
+
+def _skill_settings_projection(query_settings: dict[str, Any]) -> dict[str, Any]:
+    """Expose query settings through the legacy skill-settings API shape."""
+    return {
+        "retrieval_mode": query_settings.get("mode", "mix"),
+        "retrieval_top_k": query_settings.get("top_k", 40),
+        "max_entities_per_type": query_settings.get("skill_max_entities_per_type", 80),
+        "max_chunks_per_entity": query_settings.get("skill_max_chunks_per_entity", 10),
+        "max_relationships_per_entity": query_settings.get(
+            "skill_max_relationships_per_entity", 25
+        ),
+    }
+
+
+def _skill_settings_defaults(query_defaults: dict[str, Any]) -> dict[str, Any]:
+    return _skill_settings_projection(query_defaults)
 
 
 class SkillInstallPayload(BaseModel):
@@ -178,49 +209,65 @@ def register_skill_catalog_ui_routes(
 def register_skill_settings_ui_routes(
     app: FastAPI,
     *,
-    settings_store: SkillSettingsStore,
+    query_settings_store: Any,
     workspace_name: Callable[[], str] | None = None,
     set_env_var: Callable[[str, str], None] | None = None,
 ) -> None:
-    """Register skill settings read/update/reset routes."""
+    """Register skill settings routes backed by Query Tuning (legacy API shape)."""
     if workspace_name is None:
         workspace_name = lambda: get_settings().workspace
 
     @app.get("/api/ui/settings/skills", tags=["theseus-ui"])
     async def get_skill_settings() -> JSONResponse:
+        current = query_settings_store.read()
         return JSONResponse(
             {
                 "workspace": workspace_name(),
-                "settings": settings_store.read(),
-                "defaults": settings_store.defaults(),
+                "settings": _skill_settings_projection(current),
+                "defaults": _skill_settings_defaults(query_settings_store.defaults()),
+                "deprecated": True,
+                "canonical_endpoint": "/api/ui/settings/query",
+                "message": "Skill retrieval is configured in Query Tuning.",
             }
         )
 
     @app.put("/api/ui/settings/skills", tags=["theseus-ui"])
     async def update_skill_settings(payload: SkillSettingsUpdate) -> JSONResponse:
-        current = settings_store.read()
+        current = query_settings_store.read()
         updates = payload.model_dump(exclude_none=True)
         if "retrieval_mode" in updates:
             mode = (updates["retrieval_mode"] or "").strip().lower()
-            if mode not in VALID_SKILL_RETRIEVAL_MODES:
+            if mode == "off":
+                mode = "bypass"
+            elif mode not in VALID_SKILL_RETRIEVAL_MODES and mode != "bypass":
                 raise HTTPException(400, f"Unsupported retrieval_mode: {mode}")
-            updates["retrieval_mode"] = mode
-        current.update(updates)
+            current["mode"] = mode
+        for skill_key, query_key in _SKILL_TO_QUERY_KEYS.items():
+            if skill_key in updates and skill_key != "retrieval_mode":
+                current[query_key] = updates[skill_key]
         try:
-            settings_store.write(current)
+            query_settings_store.write(current)
         except OSError as exc:
             raise HTTPException(500, f"Failed writing settings: {exc}") from exc
-        return JSONResponse({"settings": current})
+        return JSONResponse(
+            {
+                "settings": _skill_settings_projection(current),
+                "canonical_endpoint": "/api/ui/settings/query",
+            }
+        )
 
     @app.post("/api/ui/settings/skills/reset", tags=["theseus-ui"])
     async def reset_skill_settings() -> JSONResponse:
-        path = settings_store.path()
         try:
-            if path.exists():
-                path.unlink()
+            query_settings_store.reset()
         except OSError as exc:
             raise HTTPException(500, f"Failed resetting settings: {exc}") from exc
-        return JSONResponse({"settings": settings_store.defaults()})
+        return JSONResponse(
+            {
+                "settings": _skill_settings_defaults(query_settings_store.defaults()),
+                "canonical_endpoint": "/api/ui/settings/query",
+            }
+        )
 
     @app.get("/api/ui/settings/skills/runtime", tags=["theseus-ui"])
     async def get_skill_runtime_settings() -> JSONResponse:
@@ -265,7 +312,7 @@ def register_skill_invoke_ui_routes(
     app: FastAPI,
     *,
     workspace_dir: Callable[[], Path],
-    settings_store: SkillSettingsStore,
+    query_settings_store: Any,
     data_func: Optional[QueryDataFunc],
     llm_func: Optional[LlmFunc],
     workspace_name: Callable[[], str] | None = None,
@@ -276,21 +323,6 @@ def register_skill_invoke_ui_routes(
     """Register POST /api/ui/skills/{name}/invoke."""
     if workspace_name is None:
         workspace_name = lambda: get_settings().workspace
-
-    def _default_max_entities_per_type() -> int:
-        return int(settings_store.read()["max_entities_per_type"])
-
-    def _default_max_chunks_per_entity() -> int:
-        return int(settings_store.read()["max_chunks_per_entity"])
-
-    def _default_max_relationships_per_entity() -> int:
-        return int(settings_store.read()["max_relationships_per_entity"])
-
-    def _default_skill_retrieval_mode() -> str:
-        return str(settings_store.read()["retrieval_mode"])
-
-    def _default_skill_retrieval_top_k() -> int:
-        return int(settings_store.read()["retrieval_top_k"])
 
     class SkillInvokePayload(BaseModel):
         """Body for POST /api/ui/skills/{name}/invoke."""
@@ -303,38 +335,33 @@ def register_skill_invoke_ui_routes(
                 "Defaults to the skill's recommended slice (see SKILL.md)."
             ),
         )
-        max_entities_per_type: int = Field(
-            default_factory=_default_max_entities_per_type,
+        max_entities_per_type: Optional[int] = Field(
+            None,
             ge=1,
             le=500,
+            description="Optional per-request override; defaults to Query Tuning.",
         )
-        max_chunks_per_entity: int = Field(
-            default_factory=_default_max_chunks_per_entity,
-            ge=0,
-            le=10,
-            description=(
-                "Verbatim source-chunk count attached per entity. "
-                "0 disables the chunks block."
-            ),
-        )
-        max_relationships_per_entity: int = Field(
-            default_factory=_default_max_relationships_per_entity,
+        max_chunks_per_entity: Optional[int] = Field(
+            None,
             ge=0,
             le=50,
-            description=(
-                "KG edges attached per entity. "
-                "0 disables the relationships block."
-            ),
+            description="Optional per-request override; defaults to Query Tuning.",
         )
-        retrieval_mode: str = Field(
-            default_factory=_default_skill_retrieval_mode,
-            description="Skill retrieval mode: hybrid|local|global|naive|mix|off.",
+        max_relationships_per_entity: Optional[int] = Field(
+            None,
+            ge=0,
+            le=50,
+            description="Optional per-request override; defaults to Query Tuning.",
         )
-        retrieval_top_k: int = Field(
-            default_factory=_default_skill_retrieval_top_k,
+        retrieval_mode: Optional[str] = Field(
+            None,
+            description="Optional per-request override; defaults to Query Tuning mode.",
+        )
+        retrieval_top_k: Optional[int] = Field(
+            None,
             ge=5,
             le=500,
-            description="Cap on retrieval-ranked entities promoted into the briefing book.",
+            description="Optional per-request override; defaults to Query Tuning top_k.",
         )
 
     class SkillChainInvokePayload(BaseModel):
@@ -344,27 +371,11 @@ def register_skill_invoke_ui_routes(
         prompt: str = ""
         steps: list[ChainStepSpec] = Field(..., min_length=1, max_length=20)
         stop_on_error: bool = True
-        max_entities_per_type: int = Field(
-            default_factory=_default_max_entities_per_type,
-            ge=1,
-            le=500,
-        )
-        max_chunks_per_entity: int = Field(
-            default_factory=_default_max_chunks_per_entity,
-            ge=0,
-            le=10,
-        )
-        max_relationships_per_entity: int = Field(
-            default_factory=_default_max_relationships_per_entity,
-            ge=0,
-            le=50,
-        )
-        retrieval_mode: str = Field(default_factory=_default_skill_retrieval_mode)
-        retrieval_top_k: int = Field(
-            default_factory=_default_skill_retrieval_top_k,
-            ge=5,
-            le=500,
-        )
+        max_entities_per_type: Optional[int] = Field(None, ge=1, le=500)
+        max_chunks_per_entity: Optional[int] = Field(None, ge=0, le=50)
+        max_relationships_per_entity: Optional[int] = Field(None, ge=0, le=50)
+        retrieval_mode: Optional[str] = None
+        retrieval_top_k: Optional[int] = Field(None, ge=5, le=500)
 
     class SkillRunRepeatPayload(BaseModel):
         """Body for POST /api/ui/skills/{name}/runs/{run_id}/resume."""
@@ -372,27 +383,11 @@ def register_skill_invoke_ui_routes(
         user_addendum: str = Field("", max_length=8000)
         answers: dict[str, Any] = Field(default_factory=dict)
         entity_types: Optional[list[str]] = Field(None)
-        max_entities_per_type: int = Field(
-            default_factory=_default_max_entities_per_type,
-            ge=1,
-            le=500,
-        )
-        max_chunks_per_entity: int = Field(
-            default_factory=_default_max_chunks_per_entity,
-            ge=0,
-            le=10,
-        )
-        max_relationships_per_entity: int = Field(
-            default_factory=_default_max_relationships_per_entity,
-            ge=0,
-            le=50,
-        )
-        retrieval_mode: str = Field(default_factory=_default_skill_retrieval_mode)
-        retrieval_top_k: int = Field(
-            default_factory=_default_skill_retrieval_top_k,
-            ge=5,
-            le=500,
-        )
+        max_entities_per_type: Optional[int] = Field(None, ge=1, le=500)
+        max_chunks_per_entity: Optional[int] = Field(None, ge=0, le=50)
+        max_relationships_per_entity: Optional[int] = Field(None, ge=0, le=50)
+        retrieval_mode: Optional[str] = None
+        retrieval_top_k: Optional[int] = Field(None, ge=5, le=500)
 
     class SkillChainPlanPayload(BaseModel):
         """Body for dynamic chain plan/run routes."""
@@ -401,54 +396,22 @@ def register_skill_invoke_ui_routes(
         outcome: str = Field("", max_length=2000)
         max_steps: int = Field(8, ge=1, le=20)
         include_rendering: bool = True
-        max_entities_per_type: int = Field(
-            default_factory=_default_max_entities_per_type,
-            ge=1,
-            le=500,
-        )
-        max_chunks_per_entity: int = Field(
-            default_factory=_default_max_chunks_per_entity,
-            ge=0,
-            le=10,
-        )
-        max_relationships_per_entity: int = Field(
-            default_factory=_default_max_relationships_per_entity,
-            ge=0,
-            le=50,
-        )
-        retrieval_mode: str = Field(default_factory=_default_skill_retrieval_mode)
-        retrieval_top_k: int = Field(
-            default_factory=_default_skill_retrieval_top_k,
-            ge=5,
-            le=500,
-        )
+        max_entities_per_type: Optional[int] = Field(None, ge=1, le=500)
+        max_chunks_per_entity: Optional[int] = Field(None, ge=0, le=50)
+        max_relationships_per_entity: Optional[int] = Field(None, ge=0, le=50)
+        retrieval_mode: Optional[str] = None
+        retrieval_top_k: Optional[int] = Field(None, ge=5, le=500)
 
     class SkillChainRepeatPayload(BaseModel):
         """Body for chain rerun/resume routes."""
 
         from_step_id: str = Field("", max_length=64)
         user_addendum: str = Field("", max_length=8000)
-        max_entities_per_type: int = Field(
-            default_factory=_default_max_entities_per_type,
-            ge=1,
-            le=500,
-        )
-        max_chunks_per_entity: int = Field(
-            default_factory=_default_max_chunks_per_entity,
-            ge=0,
-            le=10,
-        )
-        max_relationships_per_entity: int = Field(
-            default_factory=_default_max_relationships_per_entity,
-            ge=0,
-            le=50,
-        )
-        retrieval_mode: str = Field(default_factory=_default_skill_retrieval_mode)
-        retrieval_top_k: int = Field(
-            default_factory=_default_skill_retrieval_top_k,
-            ge=5,
-            le=500,
-        )
+        max_entities_per_type: Optional[int] = Field(None, ge=1, le=500)
+        max_chunks_per_entity: Optional[int] = Field(None, ge=0, le=50)
+        max_relationships_per_entity: Optional[int] = Field(None, ge=0, le=50)
+        retrieval_mode: Optional[str] = None
+        retrieval_top_k: Optional[int] = Field(None, ge=5, le=500)
 
     def _slice_workspace_entities(
         entity_types: Optional[list[str]],
@@ -466,18 +429,17 @@ def register_skill_invoke_ui_routes(
             relevant_entity_names,
         )
 
-    async def _retrieve_relevant_entities_for_skill(
+    async def _retrieve_for_plan(
         prompt: str,
         skill_description: str,
-        mode: str,
-        top_k: int,
+        plan: Any,
     ) -> dict[str, Any]:
         return await retrieve_entities_for_skill(
             data_func,
             prompt,
             skill_description,
-            mode,
-            top_k,
+            mode=plan.mode,
+            query_overrides=plan.query_overrides,
         )
 
     def _format_skill_resume_answers(answers: dict[str, Any]) -> str:
@@ -552,62 +514,40 @@ def register_skill_invoke_ui_routes(
     ) -> tuple[dict[str, Any], dict[str, Any], Callable[..., dict[str, Any]], Callable[..., Awaitable[dict[str, Any]]]]:
         skills_by_name = _require_chain_skills(mgr, spec)
         user_addendum = str(getattr(payload, "user_addendum", "") or "").strip()
-        retrieval = await _retrieve_relevant_entities_for_skill(
-            prompt=_chain_prompt(spec, user_addendum=user_addendum),
-            skill_description=_chain_description(skills_by_name),
-            mode=payload.retrieval_mode,
-            top_k=payload.retrieval_top_k,
+        chain_prompt = _chain_prompt(spec, user_addendum=user_addendum)
+        plan = resolve_plan_from_store(query_settings_store, chain_prompt, payload=payload)
+        retrieval = await _retrieve_for_plan(
+            chain_prompt,
+            _chain_description(skills_by_name),
+            plan,
         )
-        context = _slice_workspace_entities(
-            None,
-            payload.max_entities_per_type,
-            max_chunks_per_entity=payload.max_chunks_per_entity,
-            max_relationships_per_entity=payload.max_relationships_per_entity,
-            relevant_entity_names=retrieval["names"] or None,
+        extras = (
+            {"user_supplied_context": {"resume_notes": user_addendum}}
+            if user_addendum
+            else None
         )
-        context["retrieval_metadata"] = retrieval["metadata"]
-        if user_addendum:
-            context["user_supplied_context"] = {"resume_notes": user_addendum}
-
-        def _tools_slice_workspace_entities(
-            entity_types: Optional[list[str]],
-            max_per_type: int,
-            max_chunks_per_entity: int = 2,
-            max_relationships_per_entity: int = 5,
-            relevant_entity_names: Optional[set[str]] = None,
-        ) -> dict[str, Any]:
-            return _slice_workspace_entities(
-                entity_types,
-                min(max_per_type, payload.max_entities_per_type),
-                max_chunks_per_entity=min(
-                    max_chunks_per_entity,
-                    payload.max_chunks_per_entity,
-                ),
-                max_relationships_per_entity=min(
-                    max_relationships_per_entity,
-                    payload.max_relationships_per_entity,
-                ),
-                relevant_entity_names=relevant_entity_names,
-            )
-
-        async def _tools_retrieve_relevant_entities_for_skill(
-            prompt: str,
-            skill_description: str,
-            mode: str,
-            top_k: int,
-        ) -> dict[str, Any]:
-            return await _retrieve_relevant_entities_for_skill(
-                prompt,
-                skill_description,
-                payload.retrieval_mode,
-                min(top_k, payload.retrieval_top_k),
-            )
-
+        context = build_briefing_context(
+            workspace_dir(),
+            plan=plan,
+            retrieval=retrieval,
+            entity_types=None,
+            extras=extras,
+            slice_fn=slice_workspace_entities,
+        )
         return (
             context,
-            retrieval["metadata"],
-            _tools_slice_workspace_entities,
-            _tools_retrieve_relevant_entities_for_skill,
+            retrieval_metadata_from_plan(plan, retrieval_result=retrieval),
+            make_slice_fn(
+                workspace_dir(),
+                plan=plan,
+                retrieval_chunk_ids=retrieval.get("chunk_ids"),
+                slice_fn=slice_workspace_entities,
+            ),
+            make_retrieve_fn(
+                data_func,
+                plan=plan,
+                retrieve_impl=retrieve_entities_for_skill,
+            ),
         )
 
     @app.post("/api/ui/skills/{name}/invoke", tags=["theseus-ui"])
@@ -626,41 +566,12 @@ def register_skill_invoke_ui_routes(
         frontmatter_mode = skill.frontmatter.runtime_mode if skill is not None else "legacy"
         effective_mode = resolve_skill_runtime_mode(frontmatter_mode)
 
+        plan = resolve_plan_from_store(
+            query_settings_store,
+            payload.prompt,
+            payload=payload,
+        )
         if effective_mode == "tools":
-            def _tools_slice_workspace_entities(
-                entity_types: Optional[list[str]],
-                max_per_type: int,
-                max_chunks_per_entity: int = 2,
-                max_relationships_per_entity: int = 5,
-                relevant_entity_names: Optional[set[str]] = None,
-            ) -> dict[str, Any]:
-                return _slice_workspace_entities(
-                    entity_types,
-                    min(max_per_type, payload.max_entities_per_type),
-                    max_chunks_per_entity=min(
-                        max_chunks_per_entity,
-                        payload.max_chunks_per_entity,
-                    ),
-                    max_relationships_per_entity=min(
-                        max_relationships_per_entity,
-                        payload.max_relationships_per_entity,
-                    ),
-                    relevant_entity_names=relevant_entity_names,
-                )
-
-            async def _tools_retrieve_relevant_entities_for_skill(
-                prompt: str,
-                skill_description: str,
-                mode: str,
-                top_k: int,
-            ) -> dict[str, Any]:
-                return await _retrieve_relevant_entities_for_skill(
-                    prompt,
-                    skill_description,
-                    payload.retrieval_mode,
-                    min(top_k, payload.retrieval_top_k),
-                )
-
             try:
                 result = await mgr.invoke(
                     name,
@@ -669,8 +580,16 @@ def register_skill_invoke_ui_routes(
                     entity_payload={},
                     llm=llm_func,
                     workspace_root=workspace_dir(),
-                    slice_fn=_tools_slice_workspace_entities,
-                    retrieve_fn=_tools_retrieve_relevant_entities_for_skill,
+                    slice_fn=make_slice_fn(
+                        workspace_dir(),
+                        plan=plan,
+                        slice_fn=slice_workspace_entities,
+                    ),
+                    retrieve_fn=make_retrieve_fn(
+                        data_func,
+                        plan=plan,
+                        retrieve_impl=retrieve_entities_for_skill,
+                    ),
                 )
             except KeyError as exc:
                 raise HTTPException(404, str(exc)) from exc
@@ -679,33 +598,18 @@ def register_skill_invoke_ui_routes(
                     mgr,
                     result,
                     runtime_mode="tools",
-                    retrieval={
-                        "mode": payload.retrieval_mode,
-                        "top_k": payload.retrieval_top_k,
-                        "used": payload.retrieval_mode != "off",
-                        "reason": "tools-mode runtime",
-                        "max_entities_per_type": payload.max_entities_per_type,
-                        "max_chunks_per_entity": payload.max_chunks_per_entity,
-                        "max_relationships_per_entity": payload.max_relationships_per_entity,
-                    },
+                    retrieval=retrieval_metadata_from_plan(plan),
                 )
             )
 
-        retrieval = await _retrieve_relevant_entities_for_skill(
-            prompt=payload.prompt,
-            skill_description=skill_desc,
-            mode=payload.retrieval_mode,
-            top_k=payload.retrieval_top_k,
+        retrieval = await _retrieve_for_plan(payload.prompt, skill_desc, plan)
+        context = build_briefing_context(
+            workspace_dir(),
+            plan=plan,
+            retrieval=retrieval,
+            entity_types=payload.entity_types,
+            slice_fn=slice_workspace_entities,
         )
-        whitelist = retrieval["names"] or None
-        context = _slice_workspace_entities(
-            payload.entity_types,
-            payload.max_entities_per_type,
-            max_chunks_per_entity=payload.max_chunks_per_entity,
-            max_relationships_per_entity=payload.max_relationships_per_entity,
-            relevant_entity_names=whitelist,
-        )
-        context["retrieval_metadata"] = retrieval["metadata"]
         try:
             result = await mgr.invoke(
                 name,
@@ -722,7 +626,7 @@ def register_skill_invoke_ui_routes(
                 mgr,
                 result,
                 runtime_mode="legacy",
-                retrieval=retrieval["metadata"],
+                retrieval=retrieval_metadata_from_plan(plan, retrieval_result=retrieval),
             )
         )
 
@@ -762,58 +666,37 @@ def register_skill_invoke_ui_routes(
         frontmatter_mode = skill.frontmatter.runtime_mode
         effective_mode = resolve_skill_runtime_mode(frontmatter_mode)
 
+        plan = resolve_plan_from_store(
+            query_settings_store,
+            effective_prompt,
+            payload=payload,
+        )
+        resume_extras = {
+            "user_supplied_context": {
+                "resume_notes": user_addendum,
+                "missing_inputs": missing_inputs,
+                "answers": payload.answers,
+            }
+        }
         if effective_mode == "tools":
-
-            def _tools_slice_workspace_entities(
-                entity_types: Optional[list[str]],
-                max_per_type: int,
-                max_chunks_per_entity: int = 2,
-                max_relationships_per_entity: int = 5,
-                relevant_entity_names: Optional[set[str]] = None,
-            ) -> dict[str, Any]:
-                return _slice_workspace_entities(
-                    entity_types,
-                    min(max_per_type, payload.max_entities_per_type),
-                    max_chunks_per_entity=min(
-                        max_chunks_per_entity,
-                        payload.max_chunks_per_entity,
-                    ),
-                    max_relationships_per_entity=min(
-                        max_relationships_per_entity,
-                        payload.max_relationships_per_entity,
-                    ),
-                    relevant_entity_names=relevant_entity_names,
-                )
-
-            async def _tools_retrieve_relevant_entities_for_skill(
-                prompt: str,
-                skill_description: str,
-                mode: str,
-                top_k: int,
-            ) -> dict[str, Any]:
-                return await _retrieve_relevant_entities_for_skill(
-                    prompt,
-                    skill_description,
-                    payload.retrieval_mode,
-                    min(top_k, payload.retrieval_top_k),
-                )
-
             try:
                 result = await mgr.invoke(
                     name,
                     workspace=workspace_name(),
                     user_prompt=effective_prompt,
-                    entity_payload={
-                        "user_supplied_context": {
-                            "resume_notes": user_addendum,
-                            "missing_inputs": missing_inputs,
-                            "answers": payload.answers,
-                        }
-                    },
+                    entity_payload=resume_extras,
                     llm=llm_func,
                     workspace_root=workspace_dir(),
-                    slice_fn=_tools_slice_workspace_entities,
-                    retrieve_fn=_tools_retrieve_relevant_entities_for_skill,
+                    slice_fn=make_slice_fn(
+                        workspace_dir(),
+                        plan=plan,
+                        slice_fn=slice_workspace_entities,
+                    ),
+                    retrieve_fn=make_retrieve_fn(
+                        data_func,
+                        plan=plan,
+                        retrieve_impl=retrieve_entities_for_skill,
+                    ),
                 )
             except KeyError as exc:
                 raise HTTPException(404, str(exc)) from exc
@@ -822,37 +705,19 @@ def register_skill_invoke_ui_routes(
                     mgr,
                     result,
                     runtime_mode="tools",
-                    retrieval={
-                        "mode": payload.retrieval_mode,
-                        "top_k": payload.retrieval_top_k,
-                        "used": payload.retrieval_mode != "off",
-                        "reason": "tools-mode runtime",
-                        "max_entities_per_type": payload.max_entities_per_type,
-                        "max_chunks_per_entity": payload.max_chunks_per_entity,
-                        "max_relationships_per_entity": payload.max_relationships_per_entity,
-                    },
+                    retrieval=retrieval_metadata_from_plan(plan),
                 )
             )
 
-        retrieval = await _retrieve_relevant_entities_for_skill(
-            prompt=effective_prompt,
-            skill_description=skill_desc,
-            mode=payload.retrieval_mode,
-            top_k=payload.retrieval_top_k,
+        retrieval = await _retrieve_for_plan(effective_prompt, skill_desc, plan)
+        context = build_briefing_context(
+            workspace_dir(),
+            plan=plan,
+            retrieval=retrieval,
+            entity_types=payload.entity_types,
+            extras=resume_extras,
+            slice_fn=slice_workspace_entities,
         )
-        context = _slice_workspace_entities(
-            payload.entity_types,
-            payload.max_entities_per_type,
-            max_chunks_per_entity=payload.max_chunks_per_entity,
-            max_relationships_per_entity=payload.max_relationships_per_entity,
-            relevant_entity_names=retrieval["names"] or None,
-        )
-        context["retrieval_metadata"] = retrieval["metadata"]
-        context["user_supplied_context"] = {
-            "resume_notes": user_addendum,
-            "missing_inputs": missing_inputs,
-            "answers": payload.answers,
-        }
         try:
             result = await mgr.invoke(
                 name,
@@ -869,7 +734,7 @@ def register_skill_invoke_ui_routes(
                 mgr,
                 result,
                 runtime_mode="legacy",
-                retrieval=retrieval["metadata"],
+                retrieval=retrieval_metadata_from_plan(plan, retrieval_result=retrieval),
             )
         )
 
@@ -1313,15 +1178,22 @@ def register_skill_ui_routes(
     data_func: Optional[QueryDataFunc],
     llm_func: Optional[LlmFunc],
     set_env_var: Callable[[str, str], None] | None = None,
+    query_settings_store: Any | None = None,
 ) -> None:
     """Register skill, run, Studio, and chunk-preview UI endpoints."""
 
-    settings_store = SkillSettingsStore(workspace_dir)
+    if query_settings_store is None:
+        from src.server.chat_routes import QuerySettingsStore
+
+        query_settings_store = QuerySettingsStore(
+            workspace_dir=workspace_dir,
+            settings_provider=get_settings,
+        )
     current_workspace = lambda: get_settings().workspace
 
     register_skill_settings_ui_routes(
         app,
-        settings_store=settings_store,
+        query_settings_store=query_settings_store,
         workspace_name=current_workspace,
         set_env_var=set_env_var,
     )
@@ -1329,7 +1201,7 @@ def register_skill_ui_routes(
     register_skill_invoke_ui_routes(
         app,
         workspace_dir=workspace_dir,
-        settings_store=settings_store,
+        query_settings_store=query_settings_store,
         data_func=data_func,
         llm_func=llm_func,
         workspace_name=current_workspace,

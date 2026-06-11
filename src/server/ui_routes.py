@@ -257,6 +257,7 @@ def _register_feature_routes(
         data_func=data_func,
         llm_func=llm_func,
         set_env_var=context.set_env_var,
+        query_settings_store=context.query_settings,
     )
 
     register_mcp_ui_routes(

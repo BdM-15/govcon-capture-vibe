@@ -117,7 +117,7 @@ def test_tools_mode_kg_tools_read_native_ingested_evidence(tmp_path) -> None:
         }
 
     ctx = _ctx(tmp_path)
-    ctx.slice_fn = lambda types, limit, chunks, rels, names: build_skill_briefing_book(
+    ctx.slice_fn = lambda types, limit, chunks, rels, names, *extra: build_skill_briefing_book(
         tmp_path,
         types,
         limit,
@@ -129,8 +129,8 @@ def test_tools_mode_kg_tools_read_native_ingested_evidence(tmp_path) -> None:
         native_query_data,
         prompt,
         desc,
-        mode,
-        top_k,
+        mode=mode,
+        query_overrides={"top_k": top_k, "chunk_top_k": top_k, "only_need_context": True},
     )
 
     entities = _run(tool_kg_entities(ctx, types=["requirement"], limit=5))
@@ -144,9 +144,12 @@ def test_tools_mode_kg_tools_read_native_ingested_evidence(tmp_path) -> None:
         "metadata": {
             "mode": "mix",
             "top_k": 5,
+            "chunk_top_k": 5,
+            "max_total_tokens": None,
             "matched_entities": 1,
             "matched_chunks": 1,
             "used": True,
             "reason": "",
+            "query_overrides": {"top_k": 5, "chunk_top_k": 5},
         },
     }

@@ -880,6 +880,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusSubmitWipeAll(this);
     },
 
+    openQueryTuningGuide() {
+      return window.theseusOpenQueryTuningGuide(this);
+    },
+
+    closeQueryTuningGuide() {
+      return window.theseusCloseQueryTuningGuide(this);
+    },
+
     async loadQuerySettings() {
       return window.theseusLoadQuerySettings(this);
     },

@@ -45,6 +45,10 @@ def test_query_settings_store_defaults_use_env_and_settings(
     assert defaults["enable_rerank"] is False
     assert defaults["min_rerank_score"] == 0.2
     assert defaults["response_type"] == DEFAULT_RESPONSE_TYPE
+    assert defaults["skill_max_entities_per_type"] == 80
+    assert defaults["skill_max_chunks_per_entity"] == 10
+    assert defaults["skill_max_relationships_per_entity"] == 25
+    assert defaults["skill_max_chunk_content_chars"] == 8000
 
 
 def test_query_settings_store_defaults_fallback_for_invalid_env(

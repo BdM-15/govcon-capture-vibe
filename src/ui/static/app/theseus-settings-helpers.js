@@ -50,6 +50,17 @@ const theseusResetSettingsSection = async function theseusResetSettingsSection(
   }
 };
 
+window.theseusOpenQueryTuningGuide = function theseusOpenQueryTuningGuide(app) {
+  app.queryTuningGuideModal.open = true;
+  window.theseusAfterRender(app);
+};
+
+window.theseusCloseQueryTuningGuide = function theseusCloseQueryTuningGuide(
+  app,
+) {
+  app.queryTuningGuideModal.open = false;
+};
+
 window.theseusLoadQuerySettings = async function theseusLoadQuerySettings(app) {
   return theseusLoadSettingsSection(app, {
     stateKey: "querySettings",

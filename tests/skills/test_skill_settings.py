@@ -11,6 +11,7 @@ from src.skills.settings import (
     mcp_tool_call_timeout,
     resolve_skill_runtime_mode,
     skill_tools_max_turns,
+    skill_tools_runtime_defaults,
     skill_tools_runtime_limits,
 )
 
@@ -66,11 +67,20 @@ def test_resolve_skill_runtime_mode_precedence(monkeypatch) -> None:
 
 
 def test_skill_tools_max_turns_uses_larger_skill_budget(monkeypatch) -> None:
-    monkeypatch.setenv("SKILL_TOOLS_MAX_TURNS", "16")
-    assert skill_tools_max_turns({"max_turns": 12}) == 16
-    assert skill_tools_max_turns({"max_turns": 20}) == 20
-    assert skill_tools_max_turns({"max_turns": 4}) == 16
-    assert skill_tools_max_turns({"max_turns": "12"}) == 16
+    monkeypatch.setenv("SKILL_TOOLS_MAX_TURNS", "20")
+    assert skill_tools_max_turns({"max_turns": 12}) == 20
+    assert skill_tools_max_turns({"max_turns": 30}) == 30
+    assert skill_tools_max_turns({"max_turns": 4}) == 20
+    assert skill_tools_max_turns({"max_turns": "12"}) == 20
+
+
+def test_skill_tools_runtime_defaults_match_recommended_caps() -> None:
+    defaults = skill_tools_runtime_defaults()
+
+    assert defaults["max_turns"] == 25
+    assert defaults["max_tool_result_chars"] == 50_000
+    assert defaults["max_kg_entities_per_type"] == 100
+    assert defaults["max_kg_chunks"] == 100
 
 
 def test_skill_tools_runtime_limits_are_env_backed(monkeypatch) -> None:

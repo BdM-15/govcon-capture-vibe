@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
+from src.skills.settings import skill_tools_runtime_limits
 from src.skills.skill_local_tools import load_skill_tool_module
 from src.skills.tool_filesystem import tool_read_file, tool_run_script, tool_write_file
 from src.skills.tool_kg import tool_kg_chunks, tool_kg_entities, tool_kg_query
@@ -37,6 +38,7 @@ def build_tool_specs(
     skill_dir: Path | None = None,
 ) -> list[ToolSpec]:
     """Return the core tool registry plus any skill-specific helpers."""
+    limits = skill_tools_runtime_limits()
     specs = [
         ToolSpec(
             name="invoke_skill",
@@ -213,18 +215,18 @@ def build_tool_specs(
                         "type": "integer",
                         "description": "Max entities per type (capped by runtime).",
                         "minimum": 1,
-                        "maximum": 50,
+                        "maximum": limits.max_kg_entities_per_type,
                     },
                     "max_chunks_per_entity": {
                         "type": "integer",
                         "minimum": 0,
-                        "maximum": 5,
+                        "maximum": limits.max_kg_chunks_per_entity,
                         "description": "Per-entity cap on returned source chunk IDs.",
                     },
                     "max_relationships_per_entity": {
                         "type": "integer",
                         "minimum": 0,
-                        "maximum": 20,
+                        "maximum": limits.max_kg_relationships_per_entity,
                         "description": "Per-entity cap on returned KG relationships.",
                     },
                 },
@@ -250,7 +252,7 @@ def build_tool_specs(
                     "top_k": {
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": 30,
+                        "maximum": limits.max_kg_chunks,
                         "description": "Number of entity hits to return.",
                     },
                     "mode": {

@@ -72,7 +72,7 @@
     class="font-sans antialiased scanline"
     @keydown.window.ctrl.k.prevent="openPalette()"
     @keydown.window.meta.k.prevent="openPalette()"
-    @keydown.window.escape="palette.open=false; wsModal.open=false; promptPicker.open=false; promptEditor.open=false"
+    @keydown.window.escape="palette.open=false; wsModal.open=false; promptPicker.open=false; promptEditor.open=false; queryTuningGuideModal.open=false"
   >
     <!-- ========================== TOP COMMAND BAR ========================== -->
     <header
@@ -2056,6 +2056,159 @@
             <span
               x-text="wipeAllModal.busy ? 'Wiping…' : 'Wipe everything'"
             ></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================== QUERY TUNING GUIDE MODAL ========================== -->
+    <div
+      x-show="queryTuningGuideModal.open"
+      x-cloak
+      class="fixed inset-0 z-[66] bg-ink-950/85 backdrop-blur-sm flex items-center justify-center p-4"
+      @click.self="closeQueryTuningGuide()"
+    >
+      <div
+        class="w-full max-w-2xl modal-canvas rounded-2xl overflow-hidden flex flex-col max-h-[85vh] border border-neon-cyan/30"
+      >
+        <div
+          class="px-5 py-4 glass-section-bar flex items-center justify-between shrink-0"
+        >
+          <div>
+            <h3 class="font-semibold flex items-center gap-2 text-neon-cyan">
+              <i data-lucide="book-open" class="w-4 h-4"></i>
+              <span>Query &amp; Skill Tuning Guide</span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Plain-language reference — bookmark mentally, reopen anytime from Settings.
+            </p>
+          </div>
+          <button
+            class="btn btn-ghost text-slate-500"
+            @click="closeQueryTuningGuide()"
+            title="Close (Esc)"
+          >
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="tuning-guide-body overflow-y-auto p-5 space-y-5 text-sm">
+          <div class="settings-tip-box">
+            <strong class="text-slate-300">90-second rule:</strong>
+            Tune <span class="text-slate-300">Chunk Top K</span> and
+            <span class="text-slate-300">Max Total Tokens</span> until chat answers feel grounded.
+            Skills inherit automatically. Leave advanced panels alone unless something errors.
+          </div>
+
+          <section>
+            <h4 class="tuning-guide-h">If this happens… tune this</h4>
+            <table class="tuning-guide-table">
+              <thead>
+                <tr>
+                  <th>Symptom</th>
+                  <th>First knob</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Misses specific RFP wording, tables, long clauses</td>
+                  <td><strong>Chunk Top K</strong> ↑</td>
+                </tr>
+                <tr>
+                  <td>Answers feel shallow even with high Top K</td>
+                  <td><strong>Max Total Tokens</strong> ↑</td>
+                </tr>
+                <tr>
+                  <td>Misses task areas, factors, big-picture structure</td>
+                  <td><strong>KG Top K</strong> ↑ · mode <strong>mix</strong></td>
+                </tr>
+                <tr>
+                  <td>Retrieved context feels noisy / off-topic</td>
+                  <td><strong>Min Rerank Score</strong> ↑ (try 0.2–0.4)</td>
+                </tr>
+                <tr>
+                  <td>Skill stops with truncation / max turns / timeout</td>
+                  <td><strong>Skill Execution Limits</strong> (advanced)</td>
+                </tr>
+                <tr>
+                  <td>“Map everything” / exhaustive workspace ask</td>
+                  <td>Auto-boost runs once — still raise Chunk Top K if thin</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section>
+            <h4 class="tuning-guide-h">Query Tuning fields</h4>
+            <dl class="tuning-guide-dl">
+              <dt>Default Mode</dt>
+              <dd>
+                <strong>mix</strong> = KG + RFP chunks (default).
+                <strong>local</strong> = narrow neighborhood.
+                <strong>global</strong> = wide relationship sweep.
+                <strong>naive</strong> = text chunks only.
+                <strong>bypass</strong> = no workspace lookup.
+              </dd>
+              <dt>KG Top K</dt>
+              <dd>How many graph entities/relationships to rank. Structural breadth.</dd>
+              <dt>Chunk Top K</dt>
+              <dd>How many verbatim RFP passages to pull. Usually the most important knob.</dd>
+              <dt>Max Entity / Relation / Total Tokens</dt>
+              <dd>Input budget (not answer length). Total is the suitcase; entity/relation are compartments inside it.</dd>
+              <dt>Enable Rerank / Min Score</dt>
+              <dd>Second-pass relevance filter. Leave on; raise min score only if context is noisy.</dd>
+              <dt>Stream / Only Need Context / Prompt</dt>
+              <dd>Stream = normal chat UX. “Only Need” = debug modes — leave off.</dd>
+            </dl>
+          </section>
+
+          <section>
+            <h4 class="tuning-guide-h">Two “similar” skill panels — not redundant</h4>
+            <div class="settings-compare-box space-y-2">
+              <div>
+                <strong>Skill evidence packaging</strong> (Query Tuning, per-workspace):
+                Shapes the <span class="text-slate-300">briefing book at skill start</span> — what evidence is on the desk before turn 1.
+              </div>
+              <div>
+                <strong>Skill Execution Limits → KG tool caps</strong> (global <code class="text-neon-amber">.env</code>):
+                Limits <span class="text-slate-300">mid-run</span> fetches when the agent calls
+                <code class="text-slate-500">kg_entities</code> / <code class="text-slate-500">kg_chunks</code>.
+              </div>
+              <div class="text-slate-500">
+                Binder on the desk at kickoff vs. extra photocopies during the meeting.
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h4 class="tuning-guide-h">Skill Execution Limits (when things hard-stop)</h4>
+            <dl class="tuning-guide-dl">
+              <dt>Tool Result Chars</dt>
+              <dd>Max JSON/text from one built-in tool back to the model. Old 12k often cut entity lists; recommended 50k.</dd>
+              <dt>Max Read / Write Bytes</dt>
+              <dd>File size caps on disk (~200 KB read, ~1 MB write). Not retrieval — safety rails for artifacts.</dd>
+              <dt>Max Turns / timeouts</dt>
+              <dd>Agent loop length and wait limits. Raise only when skills error on these specifically.</dd>
+            </dl>
+            <p class="text-[11px] text-amber-400/90 mt-2">
+              If numbers look old (e.g. 12,000 tool chars), that is your saved
+              <code class="text-neon-amber">.env</code> — use Reset in Skill Execution Limits for current defaults.
+            </p>
+          </section>
+
+          <section>
+            <h4 class="tuning-guide-h">Where settings live</h4>
+            <ul class="tuning-guide-list">
+              <li><strong>Query Tuning</strong> — per workspace (<code class="text-slate-500">ui_query_settings.json</code>)</li>
+              <li><strong>Skill Execution Limits</strong> — global process (<code class="text-slate-500">.env</code>)</li>
+              <li>Changes take effect on the <strong>next</strong> chat message or skill run</li>
+            </ul>
+          </section>
+        </div>
+        <div
+          class="px-5 py-3 border-t border-edge flex justify-end shrink-0 bg-ink-900/40"
+        >
+          <button class="btn btn-primary text-xs" @click="closeQueryTuningGuide()">
+            Got it
           </button>
         </div>
       </div>

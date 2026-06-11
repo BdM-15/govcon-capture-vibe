@@ -192,6 +192,14 @@
                 <div class="flex items-center gap-2" @click.stop>
                   <button
                     class="btn btn-ghost text-xs"
+                    @click="openQueryTuningGuide()"
+                    title="Open tuning guide — what each field does"
+                  >
+                    <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                    Guide
+                  </button>
+                  <button
+                    class="btn btn-ghost text-xs"
                     @click="resetQuerySettings()"
                     :disabled="!querySettings.loaded || querySettings.saving"
                     title="Reset to .env defaults"
@@ -213,137 +221,181 @@
               </summary>
               <div class="acc-body">
                 <p class="text-xs text-slate-500 mb-4 max-w-xl">
-                  Tunes how Capture Chat retrieves context from the knowledge
-                  graph. Mirrors the LightRAG WebUI panel and adds a reranker
-                  score threshold. Saved per workspace; takes effect on the next
-                  query.
+                  Single retrieval control plane for
+                  <span class="text-slate-400">Capture Chat</span> and
+                  <span class="text-slate-400">agent skills</span>. Skills inherit
+                  these settings automatically. Exhaustive prompts (e.g. full
+                  workspace maps) receive a one-run coverage boost. Saved per
+                  workspace; takes effect on the next chat query or skill run.
+                  <button
+                    type="button"
+                    class="text-neon-cyan hover:underline ml-1"
+                    @click="openQueryTuningGuide()"
+                  >Open tuning guide</button>
+                  if field names slip your mind.
                 </p>
                 <template x-if="!querySettings.loaded">
                   <div class="text-xs text-slate-500 font-mono">loading…</div>
                 </template>
 
                 <template x-if="querySettings.loaded">
-                  <div class="space-y-5">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="space-y-6">
+                    <div class="settings-tip-box max-w-2xl">
+                      <strong class="text-slate-300">Start here:</strong>
+                      This panel controls <span class="text-slate-300">how much RFP + knowledge-graph context</span> gets found and packed for
+                      <span class="text-slate-400">Capture Chat</span> and <span class="text-slate-400">agent skills</span> (skills inherit automatically).
+                      For most users, only two knobs matter: <span class="text-slate-300">Chunk Top K</span> (verbatim RFP passages) and
+                      <span class="text-slate-300">Max Total Tokens</span> (overall input room). Exhaustive prompts like “map all task areas” auto-widen for one run.
+                      Saved <span class="text-slate-300">per workspace</span>.
+                    </div>
+
+                    <div class="space-y-4">
+                      <div class="settings-section-heading">1 · How we search (retrieval strategy)</div>
+
                       <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >Default Mode (new chats)</span
-                        >
+                        <span class="text-xs text-slate-400 font-mono">
+                          Default Mode (new chats)
+                          <span
+                            class="settings-label-tip"
+                            title="LightRAG search strategy: whether to lean on the knowledge graph, raw RFP chunks, or both. Skills use the same mode (bypass becomes no retrieval)."
+                            >?</span>
+                        </span>
                         <select
                           x-model="querySettings.values.mode"
                           class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
                         >
-                          <option value="mix">mix</option>
-                          <option value="hybrid">hybrid</option>
-                          <option value="local">local</option>
-                          <option value="global">global</option>
-                          <option value="naive">naive</option>
-                          <option value="bypass">bypass</option>
+                          <option value="mix">mix — KG + chunk search (recommended)</option>
+                          <option value="hybrid">hybrid — entity + relationship focus</option>
+                          <option value="local">local — stay near matched entities</option>
+                          <option value="global">global — relationship-wide sweep</option>
+                          <option value="naive">naive — chunk text only (no KG ranking)</option>
+                          <option value="bypass">bypass — no retrieval (LLM only)</option>
                         </select>
-                      </label>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono">
-                          KG Top K
-                          <span class="text-slate-600"
-                            >· entities/relations</span
-                          >
+                        <span class="settings-field-help">
+                          <strong class="text-slate-500 font-normal">mix</strong> = best default (structured KG + verbatim RFP).
+                          <strong class="text-slate-500 font-normal">local</strong> = narrow, entity-neighborhood answers.
+                          <strong class="text-slate-500 font-normal">global</strong> = wide relationship sweeps (traceability).
+                          <strong class="text-slate-500 font-normal">naive</strong> = keyword-ish chunk search only.
+                          <strong class="text-slate-500 font-normal">bypass</strong> = no workspace lookup (brainstorming only).
                         </span>
-                        <input
-                          type="number"
-                          min="1"
-                          max="500"
-                          x-model.number="querySettings.values.top_k"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
-                        />
+                        <span class="settings-field-default" x-text="'Default: ' + querySettings.defaults.mode"></span>
                       </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono">
-                          Chunk Top K
-                          <span class="text-slate-600">· text chunks</span>
-                        </span>
-                        <input
-                          type="number"
-                          min="1"
-                          max="500"
-                          x-model.number="querySettings.values.chunk_top_k"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
-                        />
-                      </label>
+
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="block">
+                          <span class="text-xs text-slate-400 font-mono">
+                            KG Top K
+                            <span
+                              class="settings-label-tip"
+                              title="How many knowledge-graph entities and relationships LightRAG ranks and considers before building the prompt. Not how many appear in the final answer — that is shaped by token budgets below."
+                              >?</span>
+                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="500"
+                            x-model.number="querySettings.values.top_k"
+                            class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                          />
+                          <span class="settings-field-help">Breadth of structural context: task areas, evaluation factors, instructions, deliverables. Raise when answers miss “the big picture” or cross-document links.</span>
+                          <span class="settings-field-default" x-text="'Default: ' + querySettings.defaults.top_k"></span>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-400 font-mono">
+                            Chunk Top K
+                            <span
+                              class="settings-label-tip"
+                              title="How many raw RFP text passages (chunks) to retrieve. This is usually the first knob to turn when answers miss specific section language, tables, or long clauses."
+                              >?</span>
+                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="500"
+                            x-model.number="querySettings.values.chunk_top_k"
+                            class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                          />
+                          <span class="settings-field-help">Verbatim solicitation text pulled in. Most important field for coverage on large RFPs. Skills use this same value when they run retrieval before building the briefing book.</span>
+                          <span class="settings-field-default" x-text="'Default: ' + querySettings.defaults.chunk_top_k"></span>
+                        </label>
+                      </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >Max Entity Tokens</span
-                        >
-                        <input
-                          type="number"
-                          min="100"
-                          max="200000"
-                          x-model.number="querySettings.values.max_entity_tokens"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
-                        />
-                      </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >Max Relation Tokens</span
-                        >
-                        <input
-                          type="number"
-                          min="100"
-                          max="200000"
-                          x-model.number="querySettings.values.max_relation_tokens"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
-                        />
-                      </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >Max Total Tokens</span
-                        >
-                        <input
-                          type="number"
-                          min="100"
-                          max="500000"
-                          x-model.number="querySettings.values.max_total_tokens"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
-                        />
-                      </label>
-                    </div>
-                    <p class="text-[11px] text-slate-500 font-mono leading-relaxed">
-                      Token budget (LightRAG): entities and relations are capped
-                      separately first, then
-                      <span class="text-slate-400">Max Total</span>
-                      is the full prompt envelope — system prompt + KG context
-                      (entities + relations) + your question + text chunks. Raising
-                      Max Total mainly adds room for chunks on large graphs. This is
-                      <span class="text-slate-400">input</span>
-                      budget; answer length is controlled by
-                      <span class="text-slate-400">LLM_MAX_OUTPUT_TOKENS</span>
-                      in .env (currently your Grok 4.3 output cap).
-                    </p>
+                    <div class="space-y-4">
+                      <div class="settings-section-heading">2 · How much fits in the prompt (token budgets)</div>
+                      <p class="settings-field-help -mt-2 max-w-2xl">
+                        Tokens ≈ pieces of text the model can read at once. These caps apply to <span class="text-slate-400">input</span> (what the model sees), not how long the answer can be.
+                        Think of Max Total Tokens as the suitcase size; entity/relation splits are compartments inside it.
+                      </p>
 
-                    <div
-                      class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end"
-                    >
-                      <label
-                        class="flex items-center gap-2 text-sm font-mono select-none"
-                      >
+                      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <label class="block">
+                          <span class="text-xs text-slate-400 font-mono">
+                            Max Entity Tokens
+                            <span class="settings-label-tip" title="Sub-budget inside Max Total Tokens reserved for KG entity names and descriptions (requirements, factors, etc.).">?</span>
+                          </span>
+                          <input
+                            type="number"
+                            min="100"
+                            max="200000"
+                            x-model.number="querySettings.values.max_entity_tokens"
+                            class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                          />
+                          <span class="settings-field-help">Room for entity summaries. Increase if KG-heavy questions lose entity detail; usually tune Max Total Tokens first.</span>
+                          <span class="settings-field-default" x-text="'Default: ' + querySettings.defaults.max_entity_tokens"></span>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-400 font-mono">
+                            Max Relation Tokens
+                            <span class="settings-label-tip" title="Sub-budget for KG edges — which requirement links to which factor, instruction, deliverable, etc.">?</span>
+                          </span>
+                          <input
+                            type="number"
+                            min="100"
+                            max="200000"
+                            x-model.number="querySettings.values.max_relation_tokens"
+                            class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                          />
+                          <span class="settings-field-help">Room for relationship/traceability context. Helps “what connects to what” questions and crosswalk-style work.</span>
+                          <span class="settings-field-default" x-text="'Default: ' + querySettings.defaults.max_relation_tokens"></span>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-400 font-mono">
+                            Max Total Tokens
+                            <span class="settings-label-tip" title="Hard cap on total retrieved context + your question sent to the model. If retrieval feels thin despite high Top K values, this is often the bottleneck.">?</span>
+                          </span>
+                          <input
+                            type="number"
+                            min="100"
+                            max="500000"
+                            x-model.number="querySettings.values.max_total_tokens"
+                            class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                          />
+                          <span class="settings-field-help">Overall input ceiling (KG + RFP chunks + your message). Raise on large workspaces when answers feel clipped or shallow even after increasing Chunk Top K.</span>
+                          <span class="settings-field-default" x-text="'Default: ' + querySettings.defaults.max_total_tokens"></span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="space-y-4">
+                      <div class="settings-section-heading">3 · Relevance filter (rerank)</div>
+
+                      <label class="flex items-center gap-2 text-sm font-mono select-none">
                         <input
                           type="checkbox"
                           x-model="querySettings.values.enable_rerank"
                           class="accent-neon-amber"
                         />
                         <span>Enable Rerank</span>
+                        <span class="settings-label-tip" title="After initial retrieval, a reranker model re-scores chunks so the most relevant RFP passages float to the top. Usually leave on.">?</span>
                       </label>
-                      <label class="block">
+                      <span class="settings-field-help">Second-pass “is this passage actually relevant?” filter. Turn off only when debugging whether reranking is hiding useful chunks.</span>
+                      <span class="settings-field-default" x-text="'Default: ' + (querySettings.defaults.enable_rerank ? 'on' : 'off')"></span>
+
+                      <label class="block max-w-xs">
                         <span class="text-xs text-slate-400 font-mono">
                           Min Rerank Score
-                          <span class="text-slate-600"
-                            >· 0.0 = pass-through</span
-                          >
+                          <span class="settings-label-tip" title="Chunks scoring below this (0.0–1.0) are dropped after reranking. 0.0 keeps all first-pass hits; higher = stricter.">?</span>
                         </span>
                         <input
                           type="number"
@@ -354,249 +406,187 @@
                           :disabled="!querySettings.values.enable_rerank"
                           class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none disabled:opacity-40"
                         />
+                        <span class="settings-field-help">Strictness after rerank. Start at 0.0; raise toward 0.2–0.4 only if retrieved context feels noisy or off-topic.</span>
+                        <span class="settings-field-default" x-text="'Default: ' + querySettings.defaults.min_rerank_score"></span>
                       </label>
                     </div>
 
-                    <div
-                      class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm font-mono"
-                    >
-                      <label class="flex items-center gap-2 select-none">
-                        <input
-                          type="checkbox"
-                          x-model="querySettings.values.stream"
-                          class="accent-neon-cyan"
-                        />
-                        <span>Stream Response</span>
-                      </label>
-                      <label class="flex items-center gap-2 select-none">
-                        <input
-                          type="checkbox"
-                          x-model="querySettings.values.only_need_context"
-                          class="accent-neon-magenta"
-                        />
-                        <span>Only Need Context</span>
-                      </label>
-                      <label class="flex items-center gap-2 select-none">
-                        <input
-                          type="checkbox"
-                          x-model="querySettings.values.only_need_prompt"
-                          class="accent-neon-magenta"
-                        />
-                        <span>Only Need Prompt</span>
-                      </label>
-                    </div>
-
-                    <label class="block">
-                      <span class="text-xs text-slate-400 font-mono">
-                        Response Format
-                        <span class="text-slate-600"
-                          >· LightRAG `{response_type}` (§3 Markdown still applies)</span
-                        >
-                      </span>
-                      <select
-                        x-model="querySettings.values.response_type"
-                        class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                    <details class="rounded-lg border border-edge bg-ink-900/30">
+                      <summary
+                        class="cursor-pointer px-3 py-2 text-xs font-mono text-slate-400"
                       >
-                        <option value="Markdown">Markdown (default)</option>
-                        <option value="Multiple Paragraphs">
-                          Multiple Paragraphs
-                        </option>
-                        <option value="Bullet Points">Bullet Points</option>
-                        <option value="Single Paragraph">Single Paragraph</option>
-                      </select>
-                    </label>
+                        Skill evidence packaging (advanced) — not the same as Skill Execution Limits
+                      </summary>
+                      <div class="px-3 pb-4 pt-2 space-y-4">
+                        <div class="settings-compare-box max-w-2xl">
+                          <strong>Why this exists (and why it looks redundant):</strong>
+                          Skills get evidence in <span class="text-slate-300">two phases</span> — similar field names, different moments:
+                          <div class="mt-2 space-y-1.5">
+                            <div>
+                              <strong>Here (Query Tuning → evidence packaging):</strong>
+                              Per-workspace. Shapes the <span class="text-slate-300">briefing book</span> assembled <span class="text-slate-300">once at skill start</span>
+                              after retrieval — the evidence pack injected before turn 1. Uses Chunk Top K / mode above to <em>find</em> content, then these fields decide <em>how it is formatted</em> into the briefing book.
+                            </div>
+                            <div>
+                              <strong>Skill Execution Limits → KG tool caps:</strong>
+                              Global (<code class="text-neon-amber">.env</code>). Limits what the agent can fetch <span class="text-slate-300">mid-run</span>
+                              when it calls <code class="text-slate-500">kg_entities</code> / <code class="text-slate-500">kg_chunks</code> tools during the think→tool loop.
+                            </div>
+                          </div>
+                          <div class="mt-2 text-slate-500">
+                            Analogy: evidence packaging = what’s in the binder on the desk at kickoff; KG tool caps = how many extra pages the agent may photocopy later.
+                            Most users never touch either — tune Chunk Top K + Max Total Tokens first.
+                          </div>
+                        </div>
 
-                    <label class="block">
-                      <span class="text-xs text-slate-400 font-mono">
-                        Additional Output Prompt
-                        <span class="text-slate-600"
-                          >· appended to LLM instructions ({user_prompt})</span
-                        >
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <label class="block">
+                            <span class="text-xs text-slate-400 font-mono">
+                              Entities per Type
+                              <span class="settings-label-tip" title="In the startup briefing book only: max entities per bucket (requirements, factors, task areas, etc.). Separate from KG Entities/Type in Skill Execution Limits (mid-run tool calls).">?</span>
+                            </span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="500"
+                              x-model.number="querySettings.values.skill_max_entities_per_type"
+                              class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                            />
+                            <span class="settings-field-help">Briefing book: how many entities of each type to include after retrieval. Raise for wide workspace maps; exhaustive prompts auto-boost this for one run.</span>
+                            <span class="settings-field-default" x-text="'Default: ' + querySettings.defaults.skill_max_entities_per_type"></span>
+                          </label>
+                          <label class="block">
+                            <span class="text-xs text-slate-400 font-mono">
+                              Source Chunks per Entity
+                              <span class="settings-label-tip" title="Briefing book: how many verbatim RFP chunk IDs to attach to each matched entity. Not Chunk Top K (total retrieval) — this is per-entity attachment after retrieval.">?</span>
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="50"
+                              x-model.number="querySettings.values.skill_max_chunks_per_entity"
+                              class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                            />
+                            <span class="settings-field-help">Briefing book: RFP passages linked to each entity. Helps when one requirement spans multiple sections. 0 = entity list without attached source text.</span>
+                            <span class="settings-field-default" x-text="'Default: ' + querySettings.defaults.skill_max_chunks_per_entity"></span>
+                          </label>
+                          <label class="block">
+                            <span class="text-xs text-slate-400 font-mono">
+                              KG Edges per Entity
+                              <span class="settings-label-tip" title="Briefing book: relationship edges listed per entity for traceability. Separate from Relationships/Entity in Skill Execution Limits (tool-call responses).">?</span>
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="50"
+                              x-model.number="querySettings.values.skill_max_relationships_per_entity"
+                              class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                            />
+                            <span class="settings-field-help">Briefing book: “what links to what” per entity. Supports crosswalk and traceability skills at startup.</span>
+                            <span class="settings-field-default" x-text="'Default: ' + querySettings.defaults.skill_max_relationships_per_entity"></span>
+                          </label>
+                          <label class="block">
+                            <span class="text-xs text-slate-400 font-mono">
+                              Max Chunk Content Chars
+                              <span class="settings-label-tip" title="Briefing book: max characters copied from each RFP chunk body. Distinct from Tool Result Chars (mid-run tool JSON) and Max Read Bytes (disk file reads).">?</span>
+                            </span>
+                            <input
+                              type="number"
+                              min="500"
+                              max="50000"
+                              x-model.number="querySettings.values.skill_max_chunk_content_chars"
+                              class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
+                            />
+                            <span class="settings-field-help">Briefing book: how much of each RFP passage text is copied in full. Lower = faster/cheaper; raise if long tables or clauses get cut off in skill output.</span>
+                            <span class="settings-field-default" x-text="'Default: ' + querySettings.defaults.skill_max_chunk_content_chars"></span>
+                          </label>
+                        </div>
+                      </div>
+                    </details>
+
+                    <div class="space-y-4">
+                      <div class="settings-section-heading">4 · Chat behavior (mostly Capture Chat)</div>
+
+                      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm font-mono">
+                        <label class="flex items-center gap-2 select-none">
+                          <input
+                            type="checkbox"
+                            x-model="querySettings.values.stream"
+                            class="accent-neon-cyan"
+                          />
+                          <span>Stream Response</span>
+                          <span class="settings-label-tip" title="Chat UI shows tokens as they arrive instead of waiting for the full completion. Does not change retrieval quality.">?</span>
+                        </label>
+                        <label class="flex items-center gap-2 select-none">
+                          <input
+                            type="checkbox"
+                            x-model="querySettings.values.only_need_context"
+                            class="accent-neon-magenta"
+                          />
+                          <span>Only Need Context</span>
+                          <span class="settings-label-tip" title="Debug: skip the LLM answer and return only the retrieved KG + RFP context block. Useful to inspect what retrieval found.">?</span>
+                        </label>
+                        <label class="flex items-center gap-2 select-none">
+                          <input
+                            type="checkbox"
+                            x-model="querySettings.values.only_need_prompt"
+                            class="accent-neon-magenta"
+                          />
+                          <span>Only Need Prompt</span>
+                          <span class="settings-label-tip" title="Debug: return the full assembled prompt (instructions + context) without calling the model for an answer.">?</span>
+                        </label>
+                      </div>
+                      <span class="settings-field-help">
+                        <strong class="text-slate-500 font-normal">Stream</strong> = normal chat UX.
+                        <strong class="text-slate-500 font-normal">Only Need Context / Prompt</strong> = developer troubleshooting — leave off for everyday capture work.
                       </span>
-                      <textarea
-                        x-model="querySettings.values.user_prompt"
-                        rows="3"
-                        class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none resize-y"
-                        placeholder="Optional: extra instructions appended to every response…"
-                      ></textarea>
-                    </label>
-                  </div>
-                </template>
-              </div>
-            </details>
+                      <span class="settings-field-default" x-text="'Defaults: stream=' + (querySettings.defaults.stream ? 'on' : 'off') + ', only_need_context=off, only_need_prompt=off'"></span>
 
-            <!-- ===== Agent Skills Retrieval ===== -->
-            <details class="acc accent-amber" data-acc-key="skills">
-              <summary>
-                <div class="flex items-center gap-3 min-w-0">
-                  <i
-                    data-lucide="chevron-right"
-                    class="acc-chevron w-4 h-4"
-                  ></i>
-                  <i
-                    data-lucide="bot"
-                    class="w-4 h-4 text-neon-amber shrink-0"
-                  ></i>
-                  <div class="min-w-0">
-                    <div class="font-semibold">Agent Skills Retrieval</div>
-                    <div
-                      class="text-[11px] font-mono text-slate-500 truncate"
-                      x-text="skillSettings.loaded ? `mode=${skillSettings.values.retrieval_mode} · top_k=${skillSettings.values.retrieval_top_k} · entities/type=${skillSettings.values.max_entities_per_type} · chunks/entity=${skillSettings.values.max_chunks_per_entity}` : 'loading…'"
-                    ></div>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2" @click.stop>
-                  <button
-                    class="btn btn-ghost text-xs"
-                    @click="resetSkillSettings()"
-                    :disabled="!skillSettings.loaded || skillSettings.saving"
-                    title="Reset to .env defaults"
-                  >
-                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                    Reset
-                  </button>
-                  <button
-                    class="btn btn-primary text-xs"
-                    @click="saveSkillSettings()"
-                    :disabled="!skillSettings.loaded || skillSettings.saving"
-                  >
-                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
-                    <span
-                      x-text="skillSettings.saving ? 'Saving…' : 'Save'"
-                    ></span>
-                  </button>
-                </div>
-              </summary>
-              <div class="acc-body">
-                <p class="text-xs text-slate-500 mb-4 max-w-xl">
-                  Controls the briefing book and retrieval pipeline used when
-                  any agent skill is invoked against this workspace. Skills go
-                  through the same chat-grade hybrid retrieval as Capture Chat
-                  (LightRAG <code>aquery_data</code>), then the result is
-                  packaged with verbatim source chunks and KG relationships.
-                  Saved per workspace; takes effect on the next skill run.
-                  Tools-mode hard caps live in the global section below and are
-                  backed by <code>.env</code>.
-                </p>
-                <template x-if="!skillSettings.loaded">
-                  <div class="text-xs text-slate-500 font-mono">loading…</div>
-                </template>
-
-                <template x-if="skillSettings.loaded">
-                  <div class="space-y-5">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <label class="block">
                         <span class="text-xs text-slate-400 font-mono">
-                          Retrieval Mode
+                          Response Format
+                          <span
+                            class="settings-label-tip"
+                            title="LightRAG response_type hint: preferred answer shape. GovCon §3 Markdown structure rules still apply regardless."
+                            >?</span>
                           <span class="text-slate-600"
-                            >· same options as chat</span
+                            >· LightRAG `{response_type}` (§3 Markdown still applies)</span
                           >
                         </span>
                         <select
-                          x-model="skillSettings.values.retrieval_mode"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none"
+                          x-model="querySettings.values.response_type"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none"
                         >
-                          <option value="hybrid">
-                            hybrid (entity + relation)
+                          <option value="Markdown">Markdown — headings, tables, lists (recommended)</option>
+                          <option value="Multiple Paragraphs">
+                            Multiple Paragraphs — prose blocks
                           </option>
-                          <option value="local">local (entity-anchored)</option>
-                          <option value="global">
-                            global (relation-anchored)
-                          </option>
-                          <option value="mix">mix (KG + naive)</option>
-                          <option value="naive">
-                            naive (chunk vector only)
-                          </option>
-                          <option value="off">
-                            off (Phase 1.5 bulk slice)
-                          </option>
+                          <option value="Bullet Points">Bullet Points — list-heavy answers</option>
+                          <option value="Single Paragraph">Single Paragraph — one dense block</option>
                         </select>
+                        <span class="settings-field-help">Chat answer layout. Does not affect retrieval. Markdown fits capture deliverables; bullets help quick scans.</span>
+                        <span class="settings-field-default" x-text="'Default: ' + querySettings.defaults.response_type"></span>
                       </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono">
-                          Retrieval Top K
-                          <span class="text-slate-600"
-                            >· max ranked entities</span
-                          >
-                        </span>
-                        <input
-                          type="number"
-                          min="5"
-                          max="500"
-                          x-model.number="skillSettings.values.retrieval_top_k"
-                          :disabled="skillSettings.values.retrieval_mode === 'off'"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none disabled:opacity-40"
-                        />
-                      </label>
-                    </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <label class="block">
                         <span class="text-xs text-slate-400 font-mono">
-                          Entities per Type
+                          Additional Output Prompt
+                          <span
+                            class="settings-label-tip"
+                            title="Free-text instructions appended to every Capture Chat answer in this workspace — tone, citation rules, formatting habits."
+                            >?</span>
                           <span class="text-slate-600"
-                            >· cap on each bucket</span
+                            >· appended to LLM instructions ({user_prompt})</span
                           >
                         </span>
-                        <input
-                          type="number"
-                          min="1"
-                          max="500"
-                          x-model.number="skillSettings.values.max_entities_per_type"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none"
-                        />
+                        <textarea
+                          x-model="querySettings.values.user_prompt"
+                          rows="3"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-cyan/60 outline-none resize-y"
+                          placeholder="Optional: e.g. Always cite RFP section numbers. Use active voice. Flag ambiguities explicitly."
+                        ></textarea>
+                        <span class="settings-field-help">Persistent chat instructions for this workspace only. Skills follow SKILL.md unless you type a per-run override on the Skills page.</span>
                       </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono">
-                          Source Chunks per Entity
-                          <span class="text-slate-600"
-                            >· verbatim RFP text</span
-                          >
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="10"
-                          x-model.number="skillSettings.values.max_chunks_per_entity"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none"
-                        />
-                      </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono">
-                          KG Edges per Entity
-                          <span class="text-slate-600"
-                            >· in + out, deduped</span
-                          >
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="50"
-                          x-model.number="skillSettings.values.max_relationships_per_entity"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none"
-                        />
-                      </label>
-                    </div>
-
-                    <div
-                      class="text-[11px] text-slate-500 leading-relaxed bg-ink-900/40 border border-edge rounded-lg px-3 py-2 font-mono"
-                    >
-                      <div>
-                        <span class="text-neon-amber">mode=hybrid</span> mirrors
-                        the chat: ranks entities + relations + chunks against
-                        the user prompt and skill description. Tighter prompts
-                        produce tighter slices.
-                      </div>
-                      <div class="mt-1">
-                        <span class="text-neon-amber">mode=off</span> falls back
-                        to the Phase 1.5 bulk slice (file order, entity_types
-                        only) — useful for diagnosing whether retrieval is
-                        helping or hurting.
-                      </div>
-                      <div class="mt-1">
-                        This panel tunes retrieval. It does not own hard stop
-                        limits like turns, LLM timeout, or MCP timeout.
-                      </div>
                     </div>
                   </div>
                 </template>
@@ -615,7 +605,7 @@
                     class="w-4 h-4 text-neon-magenta shrink-0"
                   ></i>
                   <div class="min-w-0">
-                    <div class="font-semibold">Global Skill Runtime Caps</div>
+                    <div class="font-semibold">Skill Execution Limits (advanced)</div>
                     <div
                       class="text-[11px] font-mono text-slate-500 truncate"
                       x-text="skillRuntimeSettings.loaded ? `turns=${skillRuntimeSettings.values.max_turns} · llm=${skillRuntimeSettings.values.llm_timeout_seconds}s · mcp=${skillRuntimeSettings.values.mcp_tool_call_timeout}s · tool=${skillRuntimeSettings.values.max_tool_result_chars} chars` : 'loading…'"
@@ -623,6 +613,14 @@
                   </div>
                 </div>
                 <div class="flex items-center gap-2" @click.stop>
+                  <button
+                    class="btn btn-ghost text-xs"
+                    @click="openQueryTuningGuide()"
+                    title="Open tuning guide"
+                  >
+                    <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                    Guide
+                  </button>
                   <button
                     class="btn btn-ghost text-xs"
                     @click="resetSkillRuntimeSettings()"
@@ -646,21 +644,30 @@
               </summary>
               <div class="acc-body">
                 <p class="text-xs text-slate-500 mb-4 max-w-2xl">
-                  Global tools-mode ceilings for agent skills. Backed by
-                  <code>.env</code>, shared across all workspaces, and used by
-                  competitive-intel, compliance-auditor, price-to-win, and other
-                  tools-mode skills. Use this for hard stop budgets.
+                  Advanced execution ceilings for tools-mode skills (turns,
+                  timeouts, tool-output size). Retrieval is configured in
+                  <span class="text-slate-400">Query Tuning</span> above.
+                  Defaults are generous; adjust only when a skill run hits a
+                  hard stop.
                 </p>
                 <template x-if="!skillRuntimeSettings.loaded">
                   <div class="text-xs text-slate-500 font-mono">loading…</div>
                 </template>
                 <template x-if="skillRuntimeSettings.loaded">
                   <div class="space-y-5">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="settings-tip-box max-w-2xl">
+                      <strong class="text-slate-300">What this panel controls:</strong>
+                      Safety rails for tools-mode skills — how long a run can go, how big tool/file outputs can be, and caps on KG tool slices.
+                      These are <span class="text-slate-300">global</span> (saved to <code class="text-neon-amber">.env</code>), not per-workspace.
+                      If a number here looks old (e.g. 12,000 tool chars), it is your saved <code class="text-neon-amber">.env</code> value — hit <span class="text-slate-300">Reset</span> for current recommended defaults.
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >Max Turns</span
-                        >
+                        <span class="text-xs text-slate-400 font-mono">
+                          Max Turns
+                          <span class="settings-label-tip" title="How many back-and-forth LLM ↔ tool steps one skill run may take before stopping.">?</span>
+                        </span>
                         <input
                           type="number"
                           min="1"
@@ -668,11 +675,15 @@
                           x-model.number="skillRuntimeSettings.values.max_turns"
                           class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
                         />
+                        <span class="settings-field-help">Agent loop limit (think → call tool → think again). Raise only if skills stop mid-job with “max turns” errors.</span>
+                        <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.max_turns"></span>
+                        <span class="settings-field-differs" x-show="skillRuntimeSettings.values.max_turns !== skillRuntimeSettings.defaults.max_turns">Your value differs from recommended.</span>
                       </label>
                       <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >LLM Timeout (s)</span
-                        >
+                        <span class="text-xs text-slate-400 font-mono">
+                          LLM Timeout (s)
+                          <span class="settings-label-tip" title="Max seconds to wait for one LLM completion during a skill run.">?</span>
+                        </span>
                         <input
                           type="number"
                           min="1"
@@ -680,53 +691,74 @@
                           x-model.number="skillRuntimeSettings.values.llm_timeout_seconds"
                           class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
                         />
-                      </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >MCP Handshake (s)</span
-                        >
-                        <input
-                          type="number"
-                          min="0.1"
-                          max="3600"
-                          step="0.1"
-                          x-model.number="skillRuntimeSettings.values.mcp_handshake_timeout"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
-                        />
-                      </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >MCP Tool Call (s)</span
-                        >
-                        <input
-                          type="number"
-                          min="0.1"
-                          max="3600"
-                          step="0.1"
-                          x-model.number="skillRuntimeSettings.values.mcp_tool_call_timeout"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
-                        />
+                        <span class="settings-field-help">Per-completion wait. Large reasoning models on slow hardware may need more; 180s is a practical default.</span>
+                        <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.llm_timeout_seconds + 's'"></span>
+                        <span class="settings-field-differs" x-show="skillRuntimeSettings.values.llm_timeout_seconds !== skillRuntimeSettings.defaults.llm_timeout_seconds">Your value differs from recommended.</span>
                       </label>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <details class="rounded-lg border border-edge bg-ink-900/30">
+                      <summary class="cursor-pointer px-3 py-2 text-xs font-mono text-slate-400">
+                        MCP timeouts (only if external tool servers hang or fail)
+                      </summary>
+                      <div class="px-3 pb-4 pt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <label class="block">
+                          <span class="text-xs text-slate-400 font-mono">
+                            MCP Handshake (s)
+                            <span class="settings-label-tip" title="Seconds to wait when starting an MCP server and listing its tools.">?</span>
+                          </span>
+                          <input
+                            type="number"
+                            min="0.1"
+                            max="3600"
+                            step="0.1"
+                            x-model.number="skillRuntimeSettings.values.mcp_handshake_timeout"
+                            class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                          />
+                          <span class="settings-field-help">Startup + tools/list for USAspending, eCFR, etc.</span>
+                          <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.mcp_handshake_timeout + 's'"></span>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-400 font-mono">
+                            MCP Tool Call (s)
+                            <span class="settings-label-tip" title="Seconds to wait for one external MCP tool to return.">?</span>
+                          </span>
+                          <input
+                            type="number"
+                            min="0.1"
+                            max="3600"
+                            step="0.1"
+                            x-model.number="skillRuntimeSettings.values.mcp_tool_call_timeout"
+                            class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                          />
+                          <span class="settings-field-help">Per external API call. Slow federal APIs may need 90–120s.</span>
+                          <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.mcp_tool_call_timeout + 's'"></span>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-400 font-mono">
+                            MCP Shutdown (s)
+                            <span class="settings-label-tip" title="Seconds to wait for an MCP subprocess to exit cleanly after a skill finishes.">?</span>
+                          </span>
+                          <input
+                            type="number"
+                            min="0.1"
+                            max="3600"
+                            step="0.1"
+                            x-model.number="skillRuntimeSettings.values.mcp_shutdown_timeout"
+                            class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                          />
+                          <span class="settings-field-help">Graceful cleanup when the skill ends. Rarely needs tuning.</span>
+                          <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.mcp_shutdown_timeout + 's'"></span>
+                        </label>
+                      </div>
+                    </details>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >MCP Shutdown (s)</span
-                        >
-                        <input
-                          type="number"
-                          min="0.1"
-                          max="3600"
-                          step="0.1"
-                          x-model.number="skillRuntimeSettings.values.mcp_shutdown_timeout"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
-                        />
-                      </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >Tool Result Chars</span
-                        >
+                        <span class="text-xs text-slate-400 font-mono">
+                          Tool Result Chars
+                          <span class="settings-label-tip" title="Max characters of JSON/text returned from one built-in tool (kg_entities, kg_chunks, etc.) back to the model. Extra text is cut off with a truncation marker.">?</span>
+                        </span>
                         <input
                           type="number"
                           min="500"
@@ -734,38 +766,15 @@
                           x-model.number="skillRuntimeSettings.values.max_tool_result_chars"
                           class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
                         />
+                        <span class="settings-field-help">Caps one tool’s reply size. The old 12,000 default often cut off large entity lists mid-map; 50,000 fits bigger KG slices while still bounding cost.</span>
+                        <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.max_tool_result_chars.toLocaleString() + ' chars'"></span>
+                        <span class="settings-field-differs" x-show="skillRuntimeSettings.values.max_tool_result_chars !== skillRuntimeSettings.defaults.max_tool_result_chars">Your saved value may be from an older default — Reset applies 50,000.</span>
                       </label>
                       <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >Max Read Bytes</span
-                        >
-                        <input
-                          type="number"
-                          min="1000"
-                          max="5000000"
-                          x-model.number="skillRuntimeSettings.values.max_read_bytes"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
-                        />
-                      </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >Max Write Bytes</span
-                        >
-                        <input
-                          type="number"
-                          min="1000"
-                          max="20000000"
-                          x-model.number="skillRuntimeSettings.values.max_write_bytes"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
-                        />
-                      </label>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >Script Timeout (s)</span
-                        >
+                        <span class="text-xs text-slate-400 font-mono">
+                          Script Timeout (s)
+                          <span class="settings-label-tip" title="Max runtime for an optional Python/shell script step inside a skill.">?</span>
+                        </span>
                         <input
                           type="number"
                           min="1"
@@ -773,73 +782,126 @@
                           x-model.number="skillRuntimeSettings.values.max_script_seconds"
                           class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
                         />
-                      </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >KG Entities / Type</span
-                        >
-                        <input
-                          type="number"
-                          min="1"
-                          max="5000"
-                          x-model.number="skillRuntimeSettings.values.max_kg_entities_per_type"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
-                        />
-                      </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >KG Chunks</span
-                        >
-                        <input
-                          type="number"
-                          min="1"
-                          max="5000"
-                          x-model.number="skillRuntimeSettings.values.max_kg_chunks"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
-                        />
-                      </label>
-                      <label class="block">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >Chunks / Entity</span
-                        >
-                        <input
-                          type="number"
-                          min="0"
-                          max="500"
-                          x-model.number="skillRuntimeSettings.values.max_kg_chunks_per_entity"
-                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
-                        />
+                        <span class="settings-field-help">Safety stop for embedded scripts. 120s is enough for light transforms; raise for heavy local processing.</span>
+                        <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.max_script_seconds + 's'"></span>
                       </label>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <label class="block md:col-span-1">
-                        <span class="text-xs text-slate-400 font-mono"
-                          >Relationships / Entity</span
-                        >
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">
+                          Max Read Bytes
+                          <span class="settings-label-tip" title="Largest file the skill may read from disk in one shot (~bytes ≈ characters for text). Prevents accidentally loading huge files into context.">?</span>
+                        </span>
                         <input
                           type="number"
-                          min="0"
-                          max="500"
-                          x-model.number="skillRuntimeSettings.values.max_kg_relationships_per_entity"
+                          min="1000"
+                          max="5000000"
+                          x-model.number="skillRuntimeSettings.values.max_read_bytes"
                           class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
                         />
+                        <span class="settings-field-help">File read ceiling for workspace artifacts. 200,000 bytes ≈ 200 KB — enough for reports/JSON, not whole PDFs. Not the same as Tool Result Chars.</span>
+                        <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.max_read_bytes.toLocaleString() + ' bytes (~' + Math.round(skillRuntimeSettings.defaults.max_read_bytes / 1024) + ' KB)'"></span>
+                        <span class="settings-field-differs" x-show="skillRuntimeSettings.values.max_read_bytes !== skillRuntimeSettings.defaults.max_read_bytes">Your value differs from recommended.</span>
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">
+                          Max Write Bytes
+                          <span class="settings-label-tip" title="Largest artifact a skill may write to disk in one save. Stops runaway generated files.">?</span>
+                        </span>
+                        <input
+                          type="number"
+                          min="1000"
+                          max="20000000"
+                          x-model.number="skillRuntimeSettings.values.max_write_bytes"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                        />
+                        <span class="settings-field-help">Output file size cap. 1,000,000 bytes ≈ 1 MB — room for substantial crosswalks/drafts without unbounded disk use.</span>
+                        <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.max_write_bytes.toLocaleString() + ' bytes (~' + Math.round(skillRuntimeSettings.defaults.max_write_bytes / 1024 / 1024) + ' MB)'"></span>
+                        <span class="settings-field-differs" x-show="skillRuntimeSettings.values.max_write_bytes !== skillRuntimeSettings.defaults.max_write_bytes">Your value differs from recommended.</span>
                       </label>
                     </div>
+
+                    <details class="rounded-lg border border-edge bg-ink-900/30">
+                      <summary class="cursor-pointer px-3 py-2 text-xs font-mono text-slate-400">
+                        KG tool slice caps (when skills call kg_entities / kg_chunks directly)
+                      </summary>
+                      <p class="px-3 pt-2 text-[10px] text-slate-500 leading-relaxed max-w-2xl">
+                        Mid-run tool limits — <span class="text-slate-400">not</span> the startup briefing book
+                        (that is <span class="text-slate-400">Query Tuning → Skill evidence packaging</span>).
+                        Retrieval breadth (Chunk Top K, mode) is also in Query Tuning.
+                        Only change these if a skill errors on KG tool caps during its agent loop.
+                      </p>
+                      <div class="px-3 pb-4 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="block">
+                          <span class="text-xs text-slate-400 font-mono">
+                            KG Entities / Type
+                            <span class="settings-label-tip" title="Max entities returned per entity type from kg_entities tool calls.">?</span>
+                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="5000"
+                            x-model.number="skillRuntimeSettings.values.max_kg_entities_per_type"
+                            class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                          />
+                          <span class="settings-field-help">Per-type ceiling in tool responses. Raised from 50 → 100 for exhaustive workspace maps.</span>
+                          <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.max_kg_entities_per_type"></span>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-400 font-mono">
+                            KG Chunks
+                            <span class="settings-label-tip" title="Max total chunk records one kg_chunks tool call may return.">?</span>
+                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="5000"
+                            x-model.number="skillRuntimeSettings.values.max_kg_chunks"
+                            class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                          />
+                          <span class="settings-field-help">Total chunk IDs in one tool reply. 100 supports wider evidence pulls than the old 30.</span>
+                          <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.max_kg_chunks"></span>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-400 font-mono">
+                            Chunks / Entity
+                            <span class="settings-label-tip" title="How many source text chunks may be attached per entity in KG tool output.">?</span>
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="500"
+                            x-model.number="skillRuntimeSettings.values.max_kg_chunks_per_entity"
+                            class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                          />
+                          <span class="settings-field-help">Source passages per entity in tool JSON. 15 covers multi-section requirements.</span>
+                          <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.max_kg_chunks_per_entity"></span>
+                        </label>
+                        <label class="block">
+                          <span class="text-xs text-slate-400 font-mono">
+                            Relationships / Entity
+                            <span class="settings-label-tip" title="How many KG edges may be listed per entity in tool output.">?</span>
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="500"
+                            x-model.number="skillRuntimeSettings.values.max_kg_relationships_per_entity"
+                            class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-magenta/60 outline-none"
+                          />
+                          <span class="settings-field-help">Traceability links per entity. 25 supports crosswalk-style tool replies.</span>
+                          <span class="settings-field-default" x-text="'Recommended: ' + skillRuntimeSettings.defaults.max_kg_relationships_per_entity"></span>
+                        </label>
+                      </div>
+                    </details>
 
                     <div
-                      class="text-[11px] text-slate-500 leading-relaxed bg-ink-900/40 border border-edge rounded-lg px-3 py-2 font-mono"
+                      class="text-[11px] text-slate-500 leading-relaxed bg-ink-900/40 border border-edge rounded-lg px-3 py-2"
                     >
                       <div>
-                        Use this panel for hard ceilings: turns, timeouts, tool
-                        truncation, KG caps.
-                      </div>
-                      <div class="mt-1">
-                        Use
-                        <span class="text-neon-magenta"
-                          >Agent Skills Retrieval</span
-                        >
-                        above for per-workspace retrieval tuning only.
+                        <strong class="text-slate-400">Rule of thumb:</strong> leave this panel alone unless a skill errors on turns, timeouts, truncation, or file size.
+                        For “answers miss RFP content,” tune <span class="text-neon-cyan font-mono">Query Tuning</span> first.
                       </div>
                     </div>
                   </div>

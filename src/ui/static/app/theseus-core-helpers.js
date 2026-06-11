@@ -16,7 +16,6 @@ const theseusHandleActiveChange = function theseusHandleActiveChange(app) {
   if (app.active === "settings" && !app.querySettings.loaded) {
     app.loadQuerySettings();
   }
-  app.loadSkillSettings();
   app.loadSkillRuntimeSettings();
   if (app.active === "settings" && !app.mcps.loaded) {
     app.loadMcps();
@@ -57,6 +56,7 @@ window.theseusInit = async function theseusInit(app) {
     "palette.open",
     "wsModal.open",
     "wsModal.items",
+    "queryTuningGuideModal.open",
     "promptPicker.query",
     "promptLibrary",
     "promptFilter",

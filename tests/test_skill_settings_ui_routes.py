@@ -1,15 +1,27 @@
+from dataclasses import dataclass
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.server.chat_routes import QuerySettingsStore
 from src.server.skill_routes import register_skill_settings_ui_routes
-from src.skills.settings import SkillSettingsStore
+
+
+@dataclass
+class FakeSettings:
+    workspace: str = "demo"
+    enable_rerank: bool = True
+    min_rerank_score: float = 0.2
 
 
 def _client(tmp_path, *, workspace: str = "demo", set_env_var=None) -> TestClient:
     app = FastAPI()
     register_skill_settings_ui_routes(
         app,
-        settings_store=SkillSettingsStore(lambda: tmp_path),
+        query_settings_store=QuerySettingsStore(
+            workspace_dir=lambda: tmp_path,
+            settings_provider=lambda: FakeSettings(workspace=workspace),
+        ),
         workspace_name=lambda: workspace,
         set_env_var=set_env_var,
     )
@@ -23,6 +35,7 @@ def test_skill_settings_routes_round_trip(tmp_path) -> None:
     assert initial.status_code == 200, initial.text
     assert initial.json()["workspace"] == "ws-a"
     assert initial.json()["settings"]["retrieval_mode"] == "mix"
+    assert initial.json()["canonical_endpoint"] == "/api/ui/settings/query"
 
     updated = client.put(
         "/api/ui/settings/skills",
@@ -59,7 +72,7 @@ def test_skill_runtime_settings_routes_round_trip(tmp_path, monkeypatch) -> None
     initial = client.get("/api/ui/settings/skills/runtime")
     assert initial.status_code == 200, initial.text
     assert initial.json()["workspace"] == "ws-a"
-    assert initial.json()["settings"]["max_turns"] == 20
+    assert initial.json()["settings"]["max_turns"] == 25
 
     updated = client.put(
         "/api/ui/settings/skills/runtime",
@@ -73,7 +86,7 @@ def test_skill_runtime_settings_routes_round_trip(tmp_path, monkeypatch) -> None
 
     reset = client.post("/api/ui/settings/skills/runtime/reset")
     assert reset.status_code == 200, reset.text
-    assert reset.json()["settings"]["max_turns"] == 20
+    assert reset.json()["settings"]["max_turns"] == 25
     assert reset.json()["settings"]["llm_timeout_seconds"] == 180.0
 
 

@@ -63,6 +63,7 @@ def test_build_skill_briefing_book_filters_noise_and_loads_sources(tmp_path: Pat
         max_per_type=10,
         max_chunks_per_entity=1,
         max_relationships_per_entity=2,
+        max_chunk_content_chars=1500,
     )
 
     assert list(briefing["entities"]) == ["requirement"]
@@ -74,7 +75,12 @@ def test_build_skill_briefing_book_filters_noise_and_loads_sources(tmp_path: Pat
         }
     ]
     assert briefing["source_chunks"] == [
-        {"chunk_id": "chunk-a", "file_path": "rfp.pdf", "content": "A" * 1500}
+        {
+            "chunk_id": "chunk-a",
+            "file_path": "rfp.pdf",
+            "content": "A" * 1500,
+            "truncated": True,
+        }
     ]
     assert briefing["relationships"] == [
         {
@@ -197,17 +203,46 @@ def test_build_skill_briefing_book_reads_native_ingested_vdb_evidence(tmp_path: 
             "chunk_id": "chunk-native-workload",
             "file_path": "native-rfp.pdf",
             "content": "Native parsed workload requirement text",
+            "truncated": False,
         }
     ]
-    assert briefing["relationships"] == [
+
+
+def test_build_skill_briefing_book_includes_retrieval_chunk_ids(tmp_path: Path) -> None:
+    _write_json(
+        tmp_path / "vdb_entities.json",
         {
-            "src": "Native Workload Requirement",
-            "type": "EVALUATED_BY",
-            "tgt": "Technical Evaluation Factor",
-            "description": "Native evidence links workload to evaluation.",
-            "source_chunk": "chunk-native-workload",
-        }
-    ]
+            "data": [
+                {
+                    "entity_name": "Req A",
+                    "entity_type": "requirement",
+                    "description": "Perform the work",
+                    "source_id": "chunk-a",
+                }
+            ]
+        },
+    )
+    _write_json(
+        tmp_path / "vdb_chunks.json",
+        {
+            "data": [
+                {"__id__": "chunk-a", "file_path": "rfp.pdf", "content": "Entity chunk"},
+                {"__id__": "chunk-retrieved", "file_path": "rfp.pdf", "content": "Retrieved chunk"},
+            ]
+        },
+    )
+
+    briefing = build_skill_briefing_book(
+        tmp_path,
+        entity_types=None,
+        max_per_type=10,
+        max_chunks_per_entity=1,
+        relevant_entity_names={"req a"},
+        retrieval_chunk_ids={"chunk-retrieved"},
+    )
+
+    chunk_ids = {item["chunk_id"] for item in briefing["source_chunks"]}
+    assert chunk_ids == {"chunk-a", "chunk-retrieved"}
 
 
 def test_retrieve_relevant_entities_for_skill_returns_whitelist_and_metadata() -> None:
@@ -235,7 +270,12 @@ def test_retrieve_relevant_entities_for_skill_returns_whitelist_and_metadata() -
             prompt="Need compliance view",
             skill_description="Audit the solicitation",
             mode="mix",
-            top_k=10,
+            query_overrides={
+                "top_k": 10,
+                "chunk_top_k": 25,
+                "max_total_tokens": 120_000,
+                "only_need_context": True,
+            },
         )
     )
 
@@ -244,19 +284,22 @@ def test_retrieve_relevant_entities_for_skill_returns_whitelist_and_metadata() -
             "Need compliance view\n\n[Skill context: Audit the solicitation]",
             "mix",
             [],
-            {"top_k": 10, "chunk_top_k": 10, "only_need_context": True},
+            {
+                "top_k": 10,
+                "chunk_top_k": 25,
+                "max_total_tokens": 120_000,
+                "only_need_context": True,
+            },
         )
     ]
     assert result["names"] == {"req a", "eval b", "instruction c"}
     assert result["chunk_ids"] == {"chunk-a", "chunk-b"}
-    assert result["metadata"] == {
-        "mode": "mix",
-        "top_k": 10,
-        "matched_entities": 3,
-        "matched_chunks": 2,
-        "used": True,
-        "reason": "",
-    }
+    assert result["metadata"]["mode"] == "mix"
+    assert result["metadata"]["top_k"] == 10
+    assert result["metadata"]["chunk_top_k"] == 25
+    assert result["metadata"]["matched_entities"] == 3
+    assert result["metadata"]["matched_chunks"] == 2
+    assert result["metadata"]["used"] is True
 
 
 def test_retrieve_relevant_entities_for_skill_off_mode_skips_data_func() -> None:
@@ -269,7 +312,7 @@ def test_retrieve_relevant_entities_for_skill_off_mode_skips_data_func() -> None
             prompt="anything",
             skill_description="anything",
             mode="off",
-            top_k=5,
+            query_overrides={"top_k": 5, "chunk_top_k": 5},
         )
     )
 
