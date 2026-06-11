@@ -306,12 +306,32 @@ def extract_prompt_variant(prompt: str, *, max_len: int = 48) -> str | None:
             break
         sentence = trimmed
     sentence = sentence.strip(" \"'")
+    sentence = re.sub(
+        r"\s+from\s+the\s+full(\s+solicitation(\s+package)?)?\s*$",
+        "",
+        sentence,
+        flags=re.IGNORECASE,
+    ).strip(" \"'")
+    sentence = re.sub(
+        r"\s+for\s+this\s+(package|solicitation|opportunity)\s*$",
+        "",
+        sentence,
+        flags=re.IGNORECASE,
+    ).strip(" \"'")
     if len(sentence) < 8:
         return None
 
     if len(sentence) > max_len:
         sentence = sentence[: max_len + 1].rsplit(" ", 1)[0].strip()
     return sanitize_artifact_display_name(sentence)
+
+
+def collision_run_variant(run_id: str) -> str | None:
+    """Short per-run discriminator when content titles collide."""
+    label = humanize_run_label(run_id)
+    if not label:
+        return None
+    return sanitize_artifact_display_name(label)
 
 
 def strip_product_suffix(display_name: str) -> str:
@@ -393,15 +413,20 @@ def maybe_enrich_display_name_with_prompt(
     force: bool = False,
 ) -> str:
     """Add a prompt-derived variant when the title is weak or forced by collision."""
-    if not force and not needs_prompt_disambiguation(
+    weak = needs_prompt_disambiguation(
         display_name,
         skill_name=skill_name,
         run_dir=run_dir,
         artifact_rel=artifact_rel,
-    ):
+    )
+    if not force and not weak:
         return display_name
 
-    variant = extract_prompt_variant(read_run_invoke_prompt(run_dir))
+    if weak:
+        variant = extract_prompt_variant(read_run_invoke_prompt(run_dir))
+    else:
+        variant = collision_run_variant(Path(run_dir).name)
+
     if not variant:
         return display_name
     return inject_prompt_variant(display_name, variant)

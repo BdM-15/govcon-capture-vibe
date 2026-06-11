@@ -504,10 +504,10 @@ def test_list_deliverables_disambiguates_colliding_titles_with_prompt_variants(
     }
 
     assert rows["20260611_151031_frame_v1"] == (
-        "MCPP RFP (M67004-26-R-0007) · frame with OCI transition emphasis for MCPP · Brief"
+        "MCPP RFP (M67004-26-R-0007) · 11 Jun 15:10 · frame v1 · Brief"
     )
     assert rows["20260611_161045_frame_v2"] == (
-        "MCPP RFP (M67004-26-R-0007) · frame focusing on logistics SLA and staffing · Brief"
+        "MCPP RFP (M67004-26-R-0007) · 11 Jun 16:10 · frame v2 · Brief"
     )
 
 

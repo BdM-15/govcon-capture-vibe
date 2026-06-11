@@ -11,6 +11,8 @@ metadata:
   category: capture_intelligence
   version: 1.2.1
   status: active
+  auto_emit_formats: md, json, docx
+  max_turns: 35
 ---
 
 # Mission Readiness Framer

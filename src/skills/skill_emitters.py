@@ -65,10 +65,7 @@ _PRODUCT_PROFILES: dict[str, dict[str, object]] = {
     "mission-readiness-framer": {
         "base": "mission_readiness_frame",
         "label": "Mission Readiness Frame",
-        "xlsx_sources": [
-            "mission_readiness_workbook.json",
-            "mission_readiness_frame.json",
-        ],
+        "xlsx_sources": ["mission_readiness_workbook.json"],
     },
     "rfp-reverse-engineer": {
         "base": "rfp_reverse_engineering",

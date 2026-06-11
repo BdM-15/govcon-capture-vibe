@@ -177,6 +177,12 @@ def test_extract_prompt_variant_strips_boilerplate_and_caps_length() -> None:
         )
         == "mission readiness frame focused on OCI"
     )
+    assert (
+        extract_prompt_variant(
+            "Build the mission readiness frame from the full solicitation package"
+        )
+        == "mission readiness frame"
+    )
 
 
 def test_inject_prompt_variant_inserts_before_product_suffix() -> None:
