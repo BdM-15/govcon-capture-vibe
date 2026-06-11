@@ -41,9 +41,9 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-from theseus_bootstrap_env import apply_theseus_env_defaults
-
-apply_theseus_env_defaults()
+# Legacy .env files may set KEYWORD_LLM_BINDING=ollama; LightRAG then requires the ollama pip package.
+if os.getenv("KEYWORD_LLM_BINDING", "").strip().lower() == "ollama":
+    os.environ["KEYWORD_LLM_BINDING"] = "openai"
 
 # Import LightRAG before adding src to path. This prevents local modules from shadowing the pip package.
 from lightrag.api.lightrag_server import create_app as _verify_lightrag_import
@@ -217,10 +217,7 @@ def manage_ollama_startup(settings) -> dict:
     host = status.get("host", "http://localhost:11434")
     model = status.get("model", getattr(settings, "ollama_model", "qwen3.5:9b"))
     if status.get("ok"):
-        line = f"✅ Ollama ready: {model} @ {host}"
-        if status.get("keyword_uses_ollama"):
-            line += f" · keyword={status.get('keyword_model')}"
-        print(f"{line}\n")
+        print(f"✅ Ollama ready: {model} @ {host}\n")
     elif status.get("available"):
         print(
             f"⚠️  Ollama reachable at {host} but warmup failed: "

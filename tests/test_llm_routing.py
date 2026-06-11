@@ -11,8 +11,7 @@ class _Settings:
     vlm_llm_name = "vlm-model"
     llm_max_output_tokens = 12345
     llm_timeout = 600
-    keyword_uses_ollama = False
-    ollama_openai_base_url = "http://localhost:11434/v1"
+
 
 
 def test_build_role_llm_routing_prompt_only(monkeypatch) -> None:
@@ -151,7 +150,7 @@ def test_vlm_llm_builds_image_message(monkeypatch) -> None:
     assert messages[1]["content"][1]["image_url"]["url"] == "data:image/jpeg;base64,abc"
 
 
-def test_keyword_role_routes_to_ollama_when_binding_enabled(monkeypatch) -> None:
+def test_keyword_role_routes_to_xai(monkeypatch) -> None:
     calls = []
     monkeypatch.delenv("ENTITY_EXTRACTION_STRICT_SCHEMA", raising=False)
 
@@ -161,8 +160,7 @@ def test_keyword_role_routes_to_ollama_when_binding_enabled(monkeypatch) -> None
 
     monkeypatch.setattr(llm_routing, "openai_complete_if_cache", fake_complete)
     settings = _Settings()
-    settings.keyword_uses_ollama = True
-    settings.keyword_llm_name = "qwen2.5:7b-instruct"
+    settings.keyword_llm_name = "grok-4.20-0309-non-reasoning"
     routing = llm_routing.build_role_llm_routing(
         settings,
         xai_api_key="xai-key",
@@ -171,9 +169,11 @@ def test_keyword_role_routes_to_ollama_when_binding_enabled(monkeypatch) -> None
 
     asyncio.run(routing.role_llm_configs["keyword"].func("keywords please"))
 
-    assert calls == [("qwen2.5:7b-instruct", "http://localhost:11434/v1", "ollama")]
+    assert calls == [
+        ("grok-4.20-0309-non-reasoning", "https://api.x.ai/v1", "xai-key"),
+    ]
     assert routing.role_llm_configs["keyword"].metadata == {
-        "model": "qwen2.5:7b-instruct",
-        "host": "http://localhost:11434/v1",
-        "binding": "openai-compat",
+        "model": "grok-4.20-0309-non-reasoning",
+        "host": "https://api.x.ai/v1",
+        "binding": "openai",
     }

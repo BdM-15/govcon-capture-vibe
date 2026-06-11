@@ -163,7 +163,6 @@ async def compose_insight_handoff(
             model=model,
             max_tokens=1400,
             timeout=_compose_timeout(settings),
-            use_native_api=True,
         )
     except (httpx.TimeoutException, httpx.HTTPError, RuntimeError, OSError) as exc:
         fallback = mechanical_handoff_seed(payload)

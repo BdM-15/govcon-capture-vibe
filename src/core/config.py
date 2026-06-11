@@ -110,11 +110,6 @@ class Settings(BaseSettings):
         validation_alias="KEYWORD_LLM_MODEL",
         description="Non-reasoning model for query-time keyword extraction (LightRAG `keyword` role)",
     )
-    theseus_keyword_use_ollama: bool = Field(
-        default=False,
-        validation_alias="THESEUS_KEYWORD_USE_OLLAMA",
-        description="Route LightRAG keyword role to local Ollama via OpenAI-compat /v1 (not native ollama binding)",
-    )
     ollama_host: str = Field(
         default="http://localhost:11434",
         validation_alias="OLLAMA_HOST",
@@ -490,16 +485,6 @@ class Settings(BaseSettings):
     def llm_api_key(self) -> Optional[str]:
         """Alias for llm_binding_api_key."""
         return self.llm_binding_api_key
-
-    @property
-    def ollama_openai_base_url(self) -> str:
-        """OpenAI-compatible chat/completions base for Ollama."""
-        return f"{self.ollama_host.rstrip('/')}/v1"
-
-    @property
-    def keyword_uses_ollama(self) -> bool:
-        """True when LightRAG keyword role should route to local Ollama OpenAI-compat."""
-        return bool(self.theseus_keyword_use_ollama)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # HELPER METHODS for backward compatibility with MAX_ASYNC

@@ -11,7 +11,6 @@ from lightrag.lightrag import RoleLLMConfig
 from lightrag.llm.openai import openai_complete_if_cache
 
 from src.ontology.extraction_schema import build_response_format
-from src.server.ollama_llm import OLLAMA_API_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -55,13 +54,6 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
     extraction_model = settings.extraction_llm_name
     reasoning_model = settings.reasoning_llm_name
     keyword_model = getattr(settings, "keyword_llm_name", extraction_model)
-    keyword_uses_ollama = bool(getattr(settings, "keyword_uses_ollama", False))
-    keyword_base_url = (
-        getattr(settings, "ollama_openai_base_url", xai_base_url)
-        if keyword_uses_ollama
-        else xai_base_url
-    )
-    keyword_api_key = OLLAMA_API_KEY if keyword_uses_ollama else xai_api_key
     vlm_model = getattr(settings, "vlm_llm_name", extraction_model)
     query_max_tokens = settings.llm_max_output_tokens
     extract_timeout = settings.llm_timeout
@@ -136,8 +128,8 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
             prompt,
             system_prompt=system_prompt,
             history_messages=history_messages,
-            api_key=keyword_api_key,
-            base_url=keyword_base_url,
+            api_key=xai_api_key,
+            base_url=xai_base_url,
             **kwargs,
         )
 
@@ -217,14 +209,11 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
         query_max_tokens,
         QUERY_TIMEOUT,
     )
-    keyword_binding = "openai-compat" if keyword_uses_ollama else "openai"
     logger.info(
-        "   keyword  → %s  max_tokens=%6d  timeout=%ss  binding=%s host=%s",
+        "   keyword  → %s  max_tokens=%6d  timeout=%ss",
         f"{keyword_model:40s}",
         KEYWORD_MAX_TOKENS,
         KEYWORD_TIMEOUT,
-        keyword_binding,
-        keyword_base_url,
     )
     logger.info(
         "   vlm      → %s  max_tokens=%6d  timeout=%ss",
@@ -263,11 +252,7 @@ def build_role_llm_routing(settings, *, xai_api_key: str, xai_base_url: str) -> 
             func=keyword_llm_func,
             kwargs={"max_tokens": KEYWORD_MAX_TOKENS},
             timeout=KEYWORD_TIMEOUT,
-            metadata={
-                "model": keyword_model,
-                "host": keyword_base_url,
-                "binding": keyword_binding,
-            },
+            metadata={"model": keyword_model, "host": xai_base_url, "binding": "openai"},
         ),
         "vlm": RoleLLMConfig(
             func=vlm_llm_func,

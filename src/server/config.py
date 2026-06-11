@@ -16,9 +16,8 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-from src.server.lightrag_env import apply_cross_provider_role_env_defaults
-
-apply_cross_provider_role_env_defaults()
+if os.getenv("KEYWORD_LLM_BINDING", "").strip().lower() == "ollama":
+    os.environ["KEYWORD_LLM_BINDING"] = "openai"
 
 # Now safe to import LightRAG and our config
 import logging

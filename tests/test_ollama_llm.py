@@ -25,8 +25,7 @@ def test_warmup_ollama_sync_marks_ready_when_models_warm(monkeypatch) -> None:
     settings = SimpleNamespace(
         ollama_model="qwen3.5:9b",
         ollama_host="http://localhost:11434",
-        keyword_llm_name="grok-4.20-0309-non-reasoning",
-        keyword_uses_ollama=False,
+
     )
     monkeypatch.setattr(
         ollama_llm,
@@ -45,7 +44,6 @@ def test_warmup_ollama_sync_marks_ready_when_models_warm(monkeypatch) -> None:
     assert status["ok"] is True
     assert status["state"] == "ready"
     assert status["model"] == "qwen3.5:9b"
-    assert status["keyword_model"] == "grok-4.20-0309-non-reasoning"
     assert warmed == ["qwen3.5:9b"]
 
 

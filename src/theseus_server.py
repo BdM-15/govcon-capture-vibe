@@ -155,17 +155,7 @@ def build_startup_banner_items(
         ),
         ("", ""),
         ("Extract  (LightRAG)", f"{colors.CYAN}{settings.extraction_llm_name}{colors.RESET}"),
-        (
-            "Keyword  (LightRAG)",
-            (
-                f"{colors.CYAN}{settings.keyword_llm_name}{colors.RESET}"
-                + (
-                    f"  {colors.DIM}·  local @ {settings.ollama_openai_base_url}{colors.RESET}"
-                    if getattr(settings, "keyword_uses_ollama", False)
-                    else ""
-                )
-            ),
-        ),
+        ("Keyword  (LightRAG)", f"{colors.CYAN}{settings.keyword_llm_name}{colors.RESET}"),
         ("Ollama   (local)", format_ollama_banner_line(ollama_status, settings, colors)),
         ("VLM      (LightRAG)", f"{colors.CYAN}{settings.vlm_llm_name}{colors.RESET}"),
         ("Query    (LightRAG)", f"{colors.MAGENTA}{settings.reasoning_llm_name}{colors.RESET}"),

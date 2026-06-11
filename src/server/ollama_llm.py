@@ -1,4 +1,4 @@
-"""Local Ollama client for Theseus UI curation and optional keyword routing."""
+"""Local Ollama client for Theseus insight handoff packaging."""
 
 from __future__ import annotations
 
@@ -10,14 +10,12 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-OLLAMA_API_KEY = "ollama"
 _PREFERRED_MODEL_KEYWORDS = ("qwen3.5", "qwen3", "qwen2.5", "llama3.1", "mistral-nemo", "instruct")
 
 
 def _base_status(settings: Any) -> dict[str, Any]:
     host = getattr(settings, "ollama_host", "http://localhost:11434")
     configured = getattr(settings, "ollama_model", "qwen3.5:9b")
-    keyword_model = getattr(settings, "keyword_llm_name", configured)
     return {
         "ok": False,
         "state": "unavailable",
@@ -25,9 +23,6 @@ def _base_status(settings: Any) -> dict[str, Any]:
         "configured_model": configured,
         "host": host,
         "available": [],
-        "keyword_model": keyword_model,
-        "keyword_ok": False,
-        "keyword_uses_ollama": bool(getattr(settings, "keyword_uses_ollama", False)),
         "warmed_at": None,
         "error": None,
     }
@@ -124,7 +119,7 @@ def _warmup_model_sync(
 
 
 def warmup_ollama_sync(settings: Any, *, timeout: float = 90.0) -> dict[str, Any]:
-    """Synchronous startup warmup for app.py; loads curation + keyword models."""
+    """Synchronous startup warmup for app.py; loads the handoff compose model."""
     info = _base_status(settings)
     host = str(info["host"])
     try:
@@ -137,16 +132,6 @@ def warmup_ollama_sync(settings: Any, *, timeout: float = 90.0) -> dict[str, Any
         curation_model = resolve_ollama_model(settings)
         info["model"] = curation_model
         _warmup_model_sync(host=host, model=curation_model, timeout=timeout)
-
-        keyword_model = str(info.get("keyword_model") or curation_model)
-        if info.get("keyword_uses_ollama") and keyword_model != curation_model:
-            keyword_resolved = pick_best_model(keyword_model, info["available"])
-            info["keyword_model"] = keyword_resolved
-            _warmup_model_sync(host=host, model=keyword_resolved, timeout=timeout)
-            info["keyword_ok"] = True
-        elif info.get("keyword_uses_ollama"):
-            info["keyword_ok"] = True
-
         info["ok"] = True
         info["state"] = "ready"
         from src.utils.time_utils import now_local_iso
@@ -160,13 +145,8 @@ def warmup_ollama_sync(settings: Any, *, timeout: float = 90.0) -> dict[str, Any
 
 
 def _text_from_chat_payload(payload: dict[str, Any]) -> str:
-    """Extract assistant text from Ollama /api/chat or OpenAI-compat payloads."""
+    """Extract assistant text from Ollama /api/chat payloads."""
     message = payload.get("message") if isinstance(payload.get("message"), dict) else {}
-    choices = payload.get("choices") or []
-    if choices and isinstance(choices[0], dict):
-        choice_message = choices[0].get("message") or {}
-        if isinstance(choice_message, dict):
-            message = {**message, **choice_message}
     for key in ("content", "response"):
         text = str(payload.get(key) or message.get(key) or "").strip()
         if text:
@@ -186,9 +166,8 @@ async def ollama_chat(
     temperature: float | None = None,
     max_tokens: int = 1200,
     timeout: float = 45.0,
-    use_native_api: bool = False,
 ) -> str:
-    """Async chat completion against Ollama (/api/chat or OpenAI-compatible /v1)."""
+    """Async chat completion against Ollama /api/chat."""
     import httpx
 
     chosen = resolve_ollama_model(settings, model=model)
@@ -198,31 +177,18 @@ async def ollama_chat(
         else float(getattr(settings, "ollama_temperature", 0.3))
     )
     host = getattr(settings, "ollama_host", "http://localhost:11434").rstrip("/")
-    if use_native_api:
-        payload = {
-            "model": chosen,
-            "messages": messages,
-            "stream": False,
-            "options": {"temperature": temp, "num_predict": max_tokens},
-        }
-        url = f"{host}/api/chat"
-        headers = {"Content-Type": "application/json"}
-    else:
-        base = getattr(settings, "ollama_openai_base_url", None) or f"{host}/v1"
-        payload = {
-            "model": chosen,
-            "messages": messages,
-            "temperature": temp,
-            "max_tokens": max_tokens,
-            "stream": False,
-        }
-        url = f"{base.rstrip('/')}/chat/completions"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {OLLAMA_API_KEY}",
-        }
+    payload = {
+        "model": chosen,
+        "messages": messages,
+        "stream": False,
+        "options": {"temperature": temp, "num_predict": max_tokens},
+    }
     async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.post(url, json=payload, headers=headers)
+        response = await client.post(
+            f"{host}/api/chat",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
         response.raise_for_status()
         data = response.json()
     if not isinstance(data, dict):
@@ -247,14 +213,6 @@ async def warmup_ollama(settings: Any) -> dict[str, Any]:
             model=info["model"],
             timeout=60.0,
         )
-        if info.get("keyword_uses_ollama"):
-            keyword_model = pick_best_model(
-                str(info.get("keyword_model") or info["model"]),
-                info["available"],
-            )
-            if keyword_model != info["model"]:
-                _warmup_model_sync(host=host, model=keyword_model, timeout=60.0)
-            info["keyword_ok"] = True
         info["ok"] = True
         info["state"] = "ready"
         from src.utils.time_utils import now_local_iso
@@ -307,18 +265,11 @@ def log_ollama_startup(status: dict[str, Any] | None, *, logger_obj: Any | None 
     model = status.get("model")
     if status.get("ok"):
         log.info(
-            "✅ Ollama warmup complete: model=%s host=%s models=%d keyword_binding=%s",
+            "✅ Ollama warmup complete: model=%s host=%s models=%d",
             model,
             host,
             len(status.get("available") or []),
-            "openai-compat" if status.get("keyword_uses_ollama") else "xai",
         )
-        if status.get("keyword_uses_ollama"):
-            log.info(
-                "   keyword local model=%s warmed=%s",
-                status.get("keyword_model"),
-                status.get("keyword_ok"),
-            )
         return
     if status.get("available"):
         log.warning(
@@ -329,9 +280,8 @@ def log_ollama_startup(status: dict[str, Any] | None, *, logger_obj: Any | None 
         )
         return
     log.warning(
-        "⚠️ Ollama unavailable at %s — handoff compose falls back; keyword role may fail if binding=ollama (%s)",
+        "⚠️ Ollama unavailable at %s — handoff compose falls back to mechanical seed",
         host,
-        "openai-compat" if status.get("keyword_uses_ollama") else "xai",
     )
 
 
@@ -345,9 +295,6 @@ def ollama_stats_payload(status: dict[str, Any] | None, settings: Any) -> dict[s
         "available_models": [],
         "warmed_at": None,
         "error": None,
-        "keyword_uses_ollama": bool(getattr(settings, "keyword_uses_ollama", False)),
-        "keyword_model": getattr(settings, "keyword_llm_name", None),
-        "keyword_ok": False,
     }
     if not status:
         return base
@@ -360,11 +307,6 @@ def ollama_stats_payload(status: dict[str, Any] | None, settings: Any) -> dict[s
             "available_models": list(status.get("available") or []),
             "warmed_at": status.get("warmed_at"),
             "error": status.get("error"),
-            "keyword_uses_ollama": bool(
-                status.get("keyword_uses_ollama", base["keyword_uses_ollama"])
-            ),
-            "keyword_model": status.get("keyword_model") or base["keyword_model"],
-            "keyword_ok": bool(status.get("keyword_ok")),
         }
     )
     return base
