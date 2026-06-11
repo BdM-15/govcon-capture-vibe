@@ -8,10 +8,13 @@ from pathlib import Path
 from src.skills.artifact_labels import (
     derive_run_content_title,
     extract_markdown_h1,
+    fallback_content_title,
     format_product_display_name,
     humanize_run_label,
     is_generic_studio_label,
+    normalize_content_title,
     resolve_studio_display_name,
+    strip_skill_label_from_title,
 )
 
 
@@ -27,6 +30,25 @@ def test_extract_markdown_h1_reads_first_heading() -> None:
     )
 
 
+def test_strip_skill_label_from_title_removes_profile_prefix_and_suffix() -> None:
+    assert (
+        strip_skill_label_from_title(
+            "Mission Readiness Frame — MCPP RFP (M67004-26-R-0007)",
+            "mission-readiness-framer",
+        )
+        == "MCPP RFP (M67004-26-R-0007)"
+    )
+    assert (
+        strip_skill_label_from_title("MCPP Competitive Intel Brief", "competitive-intel")
+        == "MCPP Brief"
+    )
+    assert strip_skill_label_from_title("Competitive Intel", "competitive-intel") is None
+    assert (
+        strip_skill_label_from_title("Mission Readiness Frame Brief", "mission-readiness-framer")
+        is None
+    )
+
+
 def test_derive_run_content_title_from_mission_readiness_brief(tmp_path: Path) -> None:
     run_dir = tmp_path / "skill_runs" / "mission-readiness-framer" / "20260611_151031_frame"
     artifacts = run_dir / "artifacts"
@@ -38,17 +60,17 @@ def test_derive_run_content_title_from_mission_readiness_brief(tmp_path: Path) -
 
     title = derive_run_content_title("mission-readiness-framer", run_dir)
 
-    assert title == "Mission Readiness Frame — MCPP RFP (M67004-26-R-0007)"
+    assert title == "MCPP RFP (M67004-26-R-0007)"
 
 
 def test_format_product_display_name_adds_brief_suffix_without_duplication() -> None:
     assert (
         format_product_display_name(
-            "Mission Readiness Frame — MCPP RFP (M67004-26-R-0007)",
+            "MCPP RFP (M67004-26-R-0007)",
             filename="mission_readiness_frame_brief.docx",
             ext="docx",
         )
-        == "Mission Readiness Frame — MCPP RFP (M67004-26-R-0007) · Brief"
+        == "MCPP RFP (M67004-26-R-0007) · Brief"
     )
     assert (
         format_product_display_name(
@@ -90,7 +112,7 @@ def test_resolve_studio_display_name_backfills_generic_manifest(tmp_path: Path) 
         manifest_entry={"display_name": "Mission Readiness Frame Brief"},
     )
 
-    assert resolved == "Mission Readiness Frame — MCPP RFP (M67004-26-R-0007) · Brief"
+    assert resolved == "MCPP RFP (M67004-26-R-0007) · Brief"
 
 
 def test_resolve_studio_display_name_keeps_specific_manifest(tmp_path: Path) -> None:
@@ -107,6 +129,26 @@ def test_resolve_studio_display_name_keeps_specific_manifest(tmp_path: Path) -> 
     )
 
     assert resolved == "AFCAP V Parent Vehicle Burn Intel"
+
+
+def test_fallback_content_title_uses_run_topic_not_skill_slug(tmp_path: Path) -> None:
+    run_dir = tmp_path / "skill_runs" / "future-skill" / "20260611_120000_emit_product"
+    (run_dir / "artifacts").mkdir(parents=True)
+
+    title = fallback_content_title(
+        "future-skill",
+        run_dir,
+        "future_skill_brief.docx",
+    )
+
+    assert title == "emit product"
+
+
+def test_normalize_content_title_strips_competitive_intel_suffix() -> None:
+    assert (
+        normalize_content_title("FA805122F0001 Competitive Intel", "competitive-intel")
+        == "FA805122F0001"
+    )
 
 
 def test_derive_run_content_title_reads_huashu_deck_title(tmp_path: Path) -> None:
@@ -142,4 +184,4 @@ def test_derive_run_content_title_from_frame_json_when_brief_missing(tmp_path: P
 
     title = derive_run_content_title("mission-readiness-framer", run_dir)
 
-    assert title == "Mission Readiness Frame — USMC (M67004-26-R-0007)"
+    assert title == "USMC (M67004-26-R-0007)"

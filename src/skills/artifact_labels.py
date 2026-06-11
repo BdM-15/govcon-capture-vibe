@@ -13,6 +13,19 @@ from src.skills.run_metadata import humanize_artifact_name, sanitize_artifact_di
 _RUN_ID_RE = re.compile(r"^(\d{8})_(\d{6})_(.+)$")
 _H1_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 
+_GENERIC_TITLE_TOKENS = frozenset(
+    {
+        "artifact",
+        "brief",
+        "workbook",
+        "deck",
+        "final",
+        "response",
+        "source",
+        "data",
+    }
+)
+
 _PROFILE_LABELS: dict[str, str] = {
     "competitive-intel": "Competitive Intel",
     "compliance-auditor": "Compliance Audit",
@@ -64,6 +77,69 @@ def extract_markdown_h1(text: str) -> str | None:
     return sanitize_artifact_display_name(match.group(1).strip())
 
 
+def skill_profile_labels(skill_name: str) -> set[str]:
+    """Product labels that belong in the Skill column, not artifact titles."""
+    labels: set[str] = set()
+    profile = _PROFILE_LABELS.get(skill_name)
+    if profile:
+        labels.add(profile)
+    labels.add(humanize_artifact_name(skill_name))
+    labels.add("Huashu Design")
+    return labels
+
+
+def run_topic_label(run_id: str) -> str:
+    """Topic slug from a run folder id, without the timestamp prefix."""
+    label = humanize_run_label(run_id)
+    if " · " in label:
+        return label.split(" · ", 1)[1].strip()
+    return ""
+
+
+def strip_skill_label_from_title(title: str, skill_name: str) -> str | None:
+    """Remove skill/product labels so titles stay content-first."""
+    cleaned = sanitize_artifact_display_name(title) or ""
+    if not cleaned:
+        return None
+
+    for label in sorted(skill_profile_labels(skill_name), key=len, reverse=True):
+        cleaned = re.sub(rf"^{re.escape(label)}\s*[—–-]\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(rf"^{re.escape(label)}\s+", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(rf"\s+{re.escape(label)}\s+", " ", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(rf"\s+{re.escape(label)}$", "", cleaned, flags=re.IGNORECASE)
+        if cleaned.lower() == label.lower():
+            cleaned = ""
+
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" -—·")
+    if not cleaned:
+        return None
+
+    tokens = [token for token in re.split(r"[\s·]+", cleaned.lower()) if token]
+    if tokens and all(token in _GENERIC_TITLE_TOKENS for token in tokens):
+        return None
+    if cleaned in skill_profile_labels(skill_name):
+        return None
+    return cleaned
+
+
+def normalize_content_title(title: str | None, skill_name: str) -> str | None:
+    if not title:
+        return None
+    return strip_skill_label_from_title(title, skill_name)
+
+
+def _workspace_root_from_run_dir(run_dir: Path) -> Path | None:
+    """Resolve workspace root from ``skill_runs/<skill>/<run_id>``."""
+    current = Path(run_dir).resolve()
+    for _ in range(8):
+        if (current / "skill_runs").is_dir():
+            return current
+        if current.parent == current:
+            break
+        current = current.parent
+    return None
+
+
 def _load_json(path: Path) -> Any | None:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -76,7 +152,7 @@ def _mission_readiness_title(artifacts_dir: Path) -> str | None:
     if brief.is_file():
         title = extract_markdown_h1(brief.read_text(encoding="utf-8", errors="replace"))
         if title:
-            return title
+            return normalize_content_title(title, "mission-readiness-framer")
 
     frame_path = artifacts_dir / "mission_readiness_frame.json"
     payload = _load_json(frame_path)
@@ -84,6 +160,15 @@ def _mission_readiness_title(artifacts_dir: Path) -> str | None:
         return None
 
     context = payload.get("opportunity_context") or {}
+    opportunity = str(
+        context.get("opportunity_name")
+        or context.get("program_name")
+        or context.get("title")
+        or ""
+    ).strip()
+    if opportunity:
+        return normalize_content_title(opportunity, "mission-readiness-framer")
+
     solicitation = str(
         context.get("solicitation_id")
         or context.get("contract_number")
@@ -92,11 +177,11 @@ def _mission_readiness_title(artifacts_dir: Path) -> str | None:
     ).strip()
     agency = str(context.get("agency") or context.get("customer") or "").strip()
     if solicitation and agency:
-        return f"Mission Readiness Frame — {agency} ({solicitation})"
+        return f"{agency} ({solicitation})"
     if solicitation:
-        return f"Mission Readiness Frame — {solicitation}"
+        return solicitation
     if agency:
-        return f"Mission Readiness Frame — {agency}"
+        return agency
     return None
 
 
@@ -110,14 +195,20 @@ def _competitive_intel_title(artifacts_dir: Path) -> str | None:
         try:
             from src.skills.skill_local_tools import load_skill_tool_module
 
+            workspace_root = _workspace_root_from_run_dir(artifacts_dir.parent)
+            if workspace_root is None:
+                return None
             helpers = load_skill_tool_module(
-                artifacts_dir.parent.parent.parent / ".github" / "skills" / "competitive-intel",
+                workspace_root / ".github" / "skills" / "competitive-intel",
                 "competitive_intel_tools",
             )
         except Exception:
             return None
         try:
-            return helpers.build_competitive_intel_product_title(payload)
+            return normalize_content_title(
+                helpers.build_competitive_intel_product_title(payload),
+                "competitive-intel",
+            )
         except Exception:
             return None
     return None
@@ -147,13 +238,34 @@ def derive_run_content_title(skill_name: str, run_dir: Path) -> str | None:
             if path.is_file():
                 return humanize_artifact_name(path.name)
 
-    for candidate in ("brief.md", "report.md"):
+    for candidate in ("brief.md", "report.md", "response.md"):
         brief = artifacts_dir / candidate
         if brief.is_file():
             title = extract_markdown_h1(brief.read_text(encoding="utf-8", errors="replace"))
             if title:
-                return title
+                normalized = normalize_content_title(title, skill_name)
+                if normalized:
+                    return normalized
     return None
+
+
+def fallback_content_title(
+    skill_name: str,
+    run_dir: Path,
+    artifact_rel: str,
+) -> str:
+    """Last-resort title that never repeats the skill slug or profile label."""
+    topic = run_topic_label(Path(run_dir).name)
+    if topic:
+        return topic
+
+    stem = Path(artifact_rel).stem or Path(artifact_rel).name
+    skill_stem = skill_name.replace("-", "_")
+    if stem.lower().startswith(skill_stem.lower()):
+        stem = stem[len(skill_stem) :].lstrip("_-")
+    if stem:
+        return humanize_artifact_name(stem)
+    return humanize_artifact_name(Path(artifact_rel).name)
 
 
 def _generic_labels_for_skill(skill_name: str, filename: str) -> set[str]:
@@ -230,26 +342,33 @@ def resolve_studio_display_name(
         skill_name=skill_name,
         filename=artifact_rel,
     ):
-        return manifest_name
+        stripped = strip_skill_label_from_title(manifest_name, skill_name)
+        if stripped:
+            return stripped
 
     base_title = content_title or derive_run_content_title(skill_name, run_dir)
     if not base_title:
-        profile = _PROFILE_LABELS.get(skill_name)
-        base_title = profile or humanize_artifact_name(Path(artifact_rel).name)
+        base_title = fallback_content_title(skill_name, run_dir, artifact_rel)
 
     ext = Path(artifact_rel).suffix.lstrip(".").lower()
-    return format_product_display_name(
+    resolved = format_product_display_name(
         base_title,
         filename=artifact_rel,
         ext=ext,
     )
+    return strip_skill_label_from_title(resolved, skill_name) or resolved
 
 
 __all__ = [
     "derive_run_content_title",
     "extract_markdown_h1",
+    "fallback_content_title",
     "format_product_display_name",
     "humanize_run_label",
     "is_generic_studio_label",
+    "normalize_content_title",
     "resolve_studio_display_name",
+    "run_topic_label",
+    "skill_profile_labels",
+    "strip_skill_label_from_title",
 ]

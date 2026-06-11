@@ -246,7 +246,7 @@ def test_run_tools_skill_auto_emit_deliverables_reach_studio_route(tmp_path: Pat
         "future_skill_brief.docx",
     }
     assert all(row["run_id"] == result.run_id for row in rows)
-    assert by_filename["future_skill_brief.docx"]["display_name"] == "Future Skill Brief"
+    assert by_filename["future_skill_brief.docx"]["display_name"] == "Finished Product · Brief"
 
 
 def test_run_tools_skill_requires_workspace_root(tmp_path: Path) -> None:

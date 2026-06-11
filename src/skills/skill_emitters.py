@@ -11,7 +11,9 @@ from typing import Any
 
 from src.skills.artifact_labels import (
     derive_run_content_title,
+    fallback_content_title,
     format_product_display_name,
+    normalize_content_title,
 )
 from src.skills.run_metadata import read_artifact_manifest, write_artifact_manifest
 from src.skills.skill_local_tools import load_skill_tool_module
@@ -299,15 +301,6 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
 
         profile = _profile(skill)
         base = _safe_output_stem(str(profile["base"]))
-        title = (
-            derive_run_content_title(skill.name, Path(run_dir))
-            or _descriptive_profile_title(
-                skill,
-                artifacts_dir,
-                profile,
-                str(profile["label"]),
-            )
-        )
 
         report_md = artifacts_dir / "report.md"
         response_text = response_path.read_text(encoding="utf-8")
@@ -330,6 +323,18 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
             ]
         }
         report_json.write_text(json.dumps(json_payload, ensure_ascii=False), encoding="utf-8")
+
+        title = derive_run_content_title(skill.name, Path(run_dir))
+        if not title and skill.name == "competitive-intel":
+            title = normalize_content_title(
+                _descriptive_profile_title(skill, artifacts_dir, profile, ""),
+                "competitive-intel",
+            )
+        title = title or fallback_content_title(
+            skill.name,
+            Path(run_dir),
+            f"{base}_brief.docx",
+        )
 
         labels = {
             "report.md": f"{title} Final Response",
