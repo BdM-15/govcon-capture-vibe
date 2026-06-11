@@ -201,6 +201,22 @@ async def run_tools_skill(
             logger.warning("Huashu studio surface finalize failed for run %s: %s", run_id, exc)
             warnings.append(f"huashu studio finalize failed: {exc}")
 
+    if skill.name == "mission-readiness-framer":
+        try:
+            from src.skills.skill_local_tools import load_skill_tool_module
+
+            helpers = load_skill_tool_module(Path(skill.path), "mission_readiness_tools")
+            depth_issues = helpers.validate_mission_readiness_run(
+                Path(run_dir),
+                user_prompt=user_prompt,
+            )
+            helpers.write_depth_audit(Path(run_dir), depth_issues)
+            for issue in depth_issues:
+                warnings.append(f"depth_audit: {issue}")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Mission readiness depth audit failed for run %s: %s", run_id, exc)
+            warnings.append(f"mission readiness depth audit failed: {exc}")
+
     touch_invocation(skill.name)
 
     return SkillInvocationResult(

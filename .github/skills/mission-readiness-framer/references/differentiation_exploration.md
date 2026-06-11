@@ -91,10 +91,26 @@ Every `innovation_opportunities[]` entry should pass a **lean-delivery test**:
 
 **Our read:** differentiation in the AI era is often **fewer failure modes and less rework**, not more widgets. Prefer process clarity, automation of reporting burden, and measurable quality gains over novelty.
 
+## Layer C — User-directed capability overlay (explicit invoke only)
+
+When the user names a **vendor, platform, or URL** and asks whether it addresses pains or adds value:
+
+| Step | Action |
+| ---- | ------ |
+| 1 | `web_fetch` every URL; supplement with `web_search` if thin |
+| 2 | Extract ≥3 **platform_capabilities** with Class A summaries from web evidence |
+| 3 | Map each capability to ≥2 `customer_pain_points[]` with honest `applicability` |
+| 4 | Extend `innovation_opportunities[]` (≥5 on overlay runs) with dual anchors: PWS chunk + capability |
+| 5 | Brief section `## Capability overlay (user-directed)` ≥30 lines — table + risks + proof checklist |
+
+**Anti-pattern:** Two closing sentences tagged onto the brief. **Pattern:** Capture-manager-ready overlay the BD lead can sanity-check before proposal-generator.
+
+Mark external claims with `evidence_url` or `external_provenance: web`. Do not claim past performance or contract wins for the vendor unless the user provided them.
+
 ## Out of scope (this skill)
 
-- Mapping to internal **company_capabilities** or proof inventory — not reliable enough for real bids yet; handle in a future skill when ontology matures.
-- Claiming our platforms, past performance, or discriminators — that is `proposal-generator` / capture team validation, not solicitation reverse-engineering.
+- **Unprompted** mapping to internal **company_capabilities** or proof inventory — not reliable enough for real bids yet.
+- Claiming **our** platforms, past performance, or discriminators without user direction — that is `proposal-generator` / capture team validation.
 
 ## Educational tone in `brief.md`
 

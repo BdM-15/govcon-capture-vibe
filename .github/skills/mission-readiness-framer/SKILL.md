@@ -9,10 +9,10 @@ metadata:
   capability: analyze
   runtime: tools
   category: capture_intelligence
-  version: 1.2.1
+  version: 1.3.0
   status: active
   auto_emit_formats: md, json, docx
-  max_turns: 35
+  max_turns: 40
 ---
 
 # Mission Readiness Framer
@@ -62,7 +62,7 @@ Unless the workspace truly lacks evidence (document each shortfall in `claim_gap
 | `implicit_criteria[]` | **≥ 3** | Each with `alternate_read` unless `confidence: high` |
 | `win_theme_candidates[]` | **3** | Full priority 1–3 spine tied to readiness |
 | `verbatim_extracts[]` | **≥ 6** | Verbatim government phrases (≤ 40 words each) with readiness relevance |
-| `eval_crosswalk[]` | **≥ 4 rows** | Link evaluation factors → PWS clusters → readiness link |
+| `eval_crosswalk[]` | **≥ 1 row per material `evaluation_factor` / `subfactor`** | Minimum 4 only when the package is sparse; every technical/management factor gets its own row |
 | `clarification_questions[]` | **≥ 3** | When package is ambiguous; else explain in `claim_gaps[]` |
 | `brief.md` length | **≥ 120 lines** | Executive-ready capture brief, not a bullet stub |
 
@@ -148,7 +148,27 @@ Exactly 3 entries, `priority` 1–3, each with `rationale_chain` (signal → con
 ### 6b. Verbatim extracts and eval cross-walk
 
 Emit `verbatim_extracts[]` — quote the government's own phrases (not paraphrase).  
-Emit `eval_crosswalk[]` — one row per material evaluation factor linking to PWS workload and readiness.
+
+Emit `eval_crosswalk[]` — **one row per material evaluation factor and subfactor** surfaced in step 1 (`evaluation_factor`, `subfactor` entities). Do not collapse multiple technical factors into one row. Each row MUST include:
+
+- `evaluation_factor` — exact government label
+- `pws_clusters[]` — 2+ task areas / CDRL families tied to the factor
+- `readiness_link` — 2–4 sentences on readiness consequence if the factor is weak
+- `proof_expected` — what evidence the evaluator will look for
+- `source_chunk_ids[]`
+
+If a factor is missing from the package, document it in `claim_gaps[]` — never silently omit technical factors you retrieved.
+
+### 6c. User-directed capability overlay (when prompt names vendor/platform/URL)
+
+When the user asks whether a **named company, product, or platform** (with or without a URL) can address pains or add value:
+
+1. Call `web_fetch` / `web_research` on every URL provided (and `web_search` for the vendor + product if needed).
+2. Emit `capability_overlay` in JSON with `vendor`, `sources[]`, `platform_capabilities[]` (≥3 cited capabilities from web evidence), `pain_point_mappings[]` (≥2 links to `customer_pain_points[]`), and `innovation_links[]` (≥2 links to `innovation_opportunities[]`).
+3. Add or extend `innovation_opportunities[]` — minimum **5** entries on overlay runs; at least 3 must cite both a PWS/QASP chunk and an external capability.
+4. Write a dedicated brief section `## Capability overlay (user-directed)` — **≥ 30 lines**: capability summary, pain-by-pain applicability table, risks/`fit_to_scope`, and proof we'd need in a real bid.
+
+**Do not** satisfy an overlay request with a closing paragraph or two bullets. The overlay is a first-class deliverable when the user asks for it.
 
 ### 7. Assemble JSON envelope
 
@@ -162,10 +182,11 @@ Write `{run_dir}/artifacts/brief.md` — a **capture-manager-ready** narrative:
 2. Verbatim signal bank (top extracts with commentary)
 3. Customer pain and importance — include **non-obvious** pains with rationale
 4. Current methods vs innovation opportunities (quality/cost lens, value without bloat)
-5. Eval cross-walk table (factor → PWS → readiness)
+5. Eval cross-walk table — **full markdown table**, one row per factor/subfactor (not a 4-row sample)
 6. Implicit criteria / tea leaves with alternate reads
 7. Win-theme candidate spine (3 seeds + rationale chains + proof checklist)
-8. Clarification questions + claim gaps
+8. Capability overlay (user-directed) — **required when prompt names vendor/platform/URL**
+9. Clarification questions + claim gaps
 
 Load `references/narrative_template.md` if losing structure.
 
@@ -183,7 +204,8 @@ Copy the complete `brief.md` content into your final assistant response. Do not 
 - **FAR trap / CO error forensics** → `compliance-auditor` or deprecated `rfp-reverse-engineer`
 - **Proposal prose / FAB / themes narrative** → `proposal-generator`
 - **Competitor / incumbent fingerprinting** → `competitive-intel`
-- **Internal company capability / proof inventory mapping** → not in this skill (ontology not bid-ready); validate in capture team / future skill
+- **Unprompted internal company capability / proof inventory mapping** → not in this skill; validate in capture team / future skill
+- **User-directed vendor/platform overlay** (step 6c) → in scope when the invoke prompt names the vendor and asks for applicability
 - **Pricing** → `price-to-win`
 
 ## References

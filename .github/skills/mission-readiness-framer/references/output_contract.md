@@ -114,12 +114,34 @@ Every run emits **both**:
   "eval_crosswalk": [
     {
       "evaluation_factor": "Past Performance",
-      "pws_clusters": ["Mission-Essential Services"],
-      "readiness_link": "...",
-      "proof_expected": "...",
+      "pws_clusters": ["Mission-Essential Services", "QASP / Quality"],
+      "readiness_link": "2-4 sentences on readiness consequence if this factor is weak",
+      "proof_expected": "What evidence evaluators will look for",
       "source_chunk_ids": []
     }
   ],
+  "capability_overlay": {
+    "vendor": "Tagup, Inc",
+    "platform": "Manifest",
+    "sources": ["https://example.com/platform"],
+    "platform_capabilities": [
+      {
+        "id": "CAP-001",
+        "capability": "Named capability from web evidence",
+        "evidence_url": "https://...",
+        "summary": "What the platform does (Class A from web_fetch)"
+      }
+    ],
+    "pain_point_mappings": [
+      {
+        "pain_point_id": "PP-001",
+        "applicability": "high|medium|low|stretch",
+        "rationale": "Pain → capability → readiness value",
+        "linked_capabilities": ["CAP-001"]
+      }
+    ],
+    "innovation_links": ["IO-001", "IO-002"]
+  },
   "win_theme_candidates": [
     {
       "id": "WT-001",
@@ -160,7 +182,8 @@ Every run emits **both**:
 - `implicit_criteria`: 3+
 - `win_theme_candidates`: 3 (priority 1–3)
 - `verbatim_extracts`: 6+
-- `eval_crosswalk`: 4+ rows
+- `eval_crosswalk`: 1 row per material `evaluation_factor` / `subfactor` (minimum 4 when package is sparse); no collapsed multi-factor rows
+- `capability_overlay`: required when user prompt names vendor/platform/URL; see step 6c in SKILL.md
 - `clarification_questions`: 3+ when ambiguity exists
 
 ## Discipline

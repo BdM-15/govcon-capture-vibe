@@ -1,4 +1,4 @@
-"""Tests for mission-readiness-framer workbook shaping."""
+"""Tests for mission-readiness-framer deterministic helpers."""
 
 from __future__ import annotations
 
@@ -7,49 +7,58 @@ from pathlib import Path
 
 from src.skills.skill_local_tools import load_skill_tool_module
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-_MRF_DIR = _REPO_ROOT / ".github" / "skills" / "mission-readiness-framer"
-_tools = load_skill_tool_module(_MRF_DIR, "mission_readiness_tools")
+
+def _helpers():
+    skill_dir = Path(__file__).resolve().parents[2] / ".github" / "skills" / "mission-readiness-framer"
+    return load_skill_tool_module(skill_dir, "mission_readiness_tools")
 
 
-def test_build_workbook_payload_includes_frame_summary() -> None:
-    payload = _tools.build_workbook_payload(
-        {
-            "opportunity_context": {"solicitation_id": "ABC-123", "agency": "USMC"},
-            "mission_readiness_frame": {
-                "readiness_outcome": "Sustain FMC",
-                "confidence": "high",
-                "our_read": "Contract instruments readiness.",
-                "failure_modes_feared": ["surge gap"],
-                "workload_enablers": [{"label": "Maintenance", "readiness_link": "FMC"}],
-                "readiness_signals": [{"signal": "crisis", "type": "explicit"}],
-                "source_chunk_ids": ["chunk-001"],
-            },
-            "customer_pain_points": [{"id": "PP-001", "text": "pain"}],
-            "verbatim_extracts": [{"id": "VE-001", "quote": "shall perform"}],
-            "eval_crosswalk": [{"evaluation_factor": "Technical"}],
-        }
+def test_detect_capability_overlay_request_finds_vendor_and_url() -> None:
+    helpers = _helpers()
+    overlay = helpers.detect_capability_overlay_request(
+        "Can Tagup, Inc with their Manifest platform help? Review: https://tagup.ai/platform"
     )
-
-    assert payload["frame_summary"][0]["solicitation_id"] == "ABC-123"
-    assert payload["frame_summary"][0]["readiness_outcome"] == "Sustain FMC"
-    assert payload["workload_enablers"][0]["label"] == "Maintenance"
-    assert payload["verbatim_extracts"][0]["quote"] == "shall perform"
+    assert overlay is not None
+    assert "tagup.ai/platform" in overlay["urls"][0]
+    assert "Tagup" in overlay["vendor"]
 
 
-def test_write_workbook_source_writes_flattened_json(tmp_path: Path) -> None:
-    artifacts = tmp_path / "artifacts"
-    artifacts.mkdir()
-    envelope = {
-        "mission_readiness_frame": {"readiness_outcome": "Ready"},
-        "customer_pain_points": [],
-    }
+def test_validate_mission_readiness_run_flags_thin_crosswalk_and_overlay(tmp_path: Path) -> None:
+    helpers = _helpers()
+    run_dir = tmp_path / "run"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "brief.md").write_text("# Brief\n\n## Eval cross-walk\n\n| a | b |\n", encoding="utf-8")
     (artifacts / "mission_readiness_frame.json").write_text(
-        json.dumps(envelope), encoding="utf-8"
+        json.dumps(
+            {
+                "customer_pain_points": [{"id": "PP-001"}],
+                "eval_crosswalk": [
+                    {
+                        "evaluation_factor": "Technical",
+                        "pws_clusters": ["PWS 3"],
+                        "readiness_link": "too short",
+                        "proof_expected": "x",
+                        "source_chunk_ids": [],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
     )
 
-    out = _tools.write_workbook_source(artifacts, envelope)
-    assert out is not None
-    shaped = json.loads(out.read_text(encoding="utf-8"))
-    assert "frame_summary" in shaped
-    assert shaped["frame_summary"][0]["readiness_outcome"] == "Ready"
+    issues = helpers.validate_mission_readiness_run(
+        run_dir,
+        user_prompt="Review https://tagup.ai/platform for Tagup, Inc applicability",
+    )
+
+    assert any("brief.md too short" in issue for issue in issues)
+    assert any("eval_crosswalk row 1 readiness_link too thin" in issue for issue in issues)
+    assert any("capability_overlay is missing" in issue for issue in issues)
+    assert any("Capability overlay section too thin" in issue for issue in issues)
+
+    audit_path = helpers.write_depth_audit(run_dir, issues)
+    assert audit_path.is_file()
+    payload = json.loads(audit_path.read_text(encoding="utf-8"))
+    assert payload["ok"] is False
+    assert payload["issue_count"] == len(issues)

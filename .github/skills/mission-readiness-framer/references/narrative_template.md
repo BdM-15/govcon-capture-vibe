@@ -28,6 +28,18 @@ Use when the run drifts into unsourced paragraph synthesis. Bullets only.
 - CM-001: <method in place> [see current_methods[0]] — IO-001 opportunity: <quality/cost angle> [see innovation_opportunities[0]]
 - **Our read:** <differentiation angle grounded in scope fit>
 
+## Eval cross-walk
+| Evaluation factor | PWS / workload clusters | Readiness link | Proof expected |
+| ----------------- | ----------------------- | -------------- | -------------- |
+| <Factor 1> | <cluster A>, <cluster B> | <2-4 sentences> | <evidence type> |
+| <Factor 2> | ... | ... | ... |
+| <Factor N> | ... | ... | ... |
+
+## Capability overlay (user-directed)
+- Vendor / platform: <name> [see capability_overlay]
+- CAP-001 → PP-001: <applicability + rationale> [web evidence]
+- **Our read:** <fit_to_scope, risks, proof we'd need in a real bid>
+
 ## Win-theme candidates (seeds only)
 - WT-001: <label> — readiness link: <line> [see win_theme_candidates[0]]
 - **Play:** Feed WT-001..003 into proposal-generator after eval decoder check.
