@@ -1010,6 +1010,18 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusIntelSliceContextKey(sliceId, relatedSkill);
     },
 
+    openIntelBriefingGuide(slice, related) {
+      return window.theseusOpenIntelBriefingGuide(this, slice, related);
+    },
+
+    closeIntelBriefingGuide() {
+      return window.theseusCloseIntelBriefingGuide(this);
+    },
+
+    intelBriefingGuideTarget() {
+      return window.theseusIntelBriefingGuideTarget(this);
+    },
+
     openIntelSliceInStudio(run) {
       return window.theseusOpenIntelSliceInStudio(this, run);
     },

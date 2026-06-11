@@ -86,7 +86,18 @@
                           ></i>
                         </div>
                         <div class="min-w-0 flex-1">
-                          <div class="font-semibold text-sm" x-text="slice.label"></div>
+                          <div class="flex items-start justify-between gap-2">
+                            <div class="font-semibold text-sm" x-text="slice.label"></div>
+                            <button
+                              class="btn btn-ghost text-[10px] shrink-0 py-1 px-2"
+                              type="button"
+                              @click="openIntelBriefingGuide(slice)"
+                              title="What this briefing does, when to run it, and how optional context changes the output"
+                            >
+                              <i data-lucide="book-open" class="w-3 h-3"></i>
+                              Guide
+                            </button>
+                          </div>
                           <div
                             class="text-[11px] text-slate-500 mt-1 leading-relaxed"
                             x-text="slice.description"
@@ -96,12 +107,23 @@
 
                       <template x-if="slice.action === 'chat'">
                         <div class="space-y-2">
-                          <label class="block text-[10px] font-mono uppercase tracking-wider text-slate-500">
-                            Optional context
-                          </label>
+                          <div class="flex items-center gap-1.5">
+                            <label
+                              class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
+                              :title="slice.context_tooltip || ''"
+                            >
+                              Optional context
+                            </label>
+                            <i
+                              data-lucide="info"
+                              class="w-3 h-3 text-slate-600 cursor-help"
+                              :title="slice.context_tooltip || ''"
+                            ></i>
+                          </div>
                           <textarea
                             class="w-full min-h-[4.5rem] bg-ink-900 border border-edge rounded-lg px-3 py-2 text-xs text-slate-200 font-mono leading-relaxed resize-y"
-                            :placeholder="'URLs, partner notes, or focus areas for this briefing (optional)'"
+                            :placeholder="slice.context_placeholder || 'URLs, partner notes, or focus areas (optional)'"
+                            :title="slice.context_tooltip || ''"
                             x-model="intel.sliceContext[slice.id]"
                           ></textarea>
                           <div class="flex items-center gap-2 flex-wrap">
@@ -121,12 +143,23 @@
 
                       <template x-if="slice.action === 'skill'">
                         <div class="space-y-2">
-                          <label class="block text-[10px] font-mono uppercase tracking-wider text-slate-500">
-                            Optional context
-                          </label>
+                          <div class="flex items-center gap-1.5">
+                            <label
+                              class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
+                              :title="slice.context_tooltip || ''"
+                            >
+                              Optional context
+                            </label>
+                            <i
+                              data-lucide="info"
+                              class="w-3 h-3 text-slate-600 cursor-help"
+                              :title="slice.context_tooltip || ''"
+                            ></i>
+                          </div>
                           <textarea
                             class="w-full min-h-[4.5rem] bg-ink-900 border border-edge rounded-lg px-3 py-2 text-xs text-slate-200 font-mono leading-relaxed resize-y"
-                            :placeholder="'e.g. web_fetch https://example.com · Subcontractor: Acme · Incumbent: KBR'"
+                            :placeholder="slice.context_placeholder || 'e.g. web_fetch URL · Subcontractor · Incumbent'"
+                            :title="slice.context_tooltip || ''"
                             x-model="intel.sliceContext[slice.id]"
                           ></textarea>
                           <div class="flex items-center gap-2 flex-wrap">
@@ -167,13 +200,34 @@
                           </template>
                           <template x-for="rel in (slice.related_skills || [])" :key="rel.skill">
                             <div class="pt-2 border-t border-edge/50 space-y-2">
-                              <label
-                                class="block text-[10px] font-mono uppercase tracking-wider text-slate-600"
-                                x-text="'Context for ' + (rel.label || rel.skill)"
-                              ></label>
+                              <div class="flex items-center justify-between gap-2 flex-wrap">
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                  <label
+                                    class="text-[10px] font-mono uppercase tracking-wider text-slate-600 truncate"
+                                    x-text="'Context for ' + (rel.label || rel.skill)"
+                                    :title="rel.context_tooltip || ''"
+                                  ></label>
+                                  <i
+                                    data-lucide="info"
+                                    class="w-3 h-3 text-slate-600 cursor-help shrink-0"
+                                    :title="rel.context_tooltip || ''"
+                                  ></i>
+                                </div>
+                                <button
+                                  class="btn btn-ghost text-[10px] py-0.5 px-1.5 shrink-0"
+                                  type="button"
+                                  x-show="rel.guide"
+                                  @click="openIntelBriefingGuide(slice, rel)"
+                                  title="Guide for this related forensic skill"
+                                >
+                                  <i data-lucide="book-open" class="w-3 h-3"></i>
+                                  Guide
+                                </button>
+                              </div>
                               <textarea
                                 class="w-full min-h-[3.5rem] bg-ink-900 border border-edge rounded-lg px-3 py-2 text-xs text-slate-200 font-mono leading-relaxed resize-y"
-                                placeholder="Optional notes for this related skill run"
+                                :placeholder="rel.context_placeholder || 'Optional notes for this related skill run'"
+                                :title="rel.context_tooltip || ''"
                                 x-model="intel.sliceContext[intelSliceContextKey(slice.id, rel.skill)]"
                               ></textarea>
                               <div class="flex items-center gap-2 flex-wrap">
@@ -198,6 +252,104 @@
                       </template>
                     </div>
                   </template>
+                </div>
+              </div>
+
+              <!-- Briefing guide modal (reuses tuning-guide styles) -->
+              <div
+                x-show="intel.briefingGuide.open"
+                x-cloak
+                class="fixed inset-0 z-[66] bg-ink-950/85 backdrop-blur-sm flex items-center justify-center p-4"
+                @click.self="closeIntelBriefingGuide()"
+              >
+                <div
+                  class="w-full max-w-2xl modal-canvas rounded-2xl overflow-hidden flex flex-col max-h-[85vh] border border-neon-cyan/30"
+                  x-show="intelBriefingGuideTarget()?.guide"
+                >
+                  <div
+                    class="px-5 py-4 glass-section-bar flex items-center justify-between shrink-0"
+                  >
+                    <div class="min-w-0">
+                      <h3 class="font-semibold flex items-center gap-2 text-neon-cyan">
+                        <i data-lucide="book-open" class="w-4 h-4 shrink-0"></i>
+                        <span
+                          class="truncate"
+                          x-text="(intelBriefingGuideTarget()?.label || intelBriefingGuideTarget()?.skill || 'Briefing') + ' Guide'"
+                        ></span>
+                      </h3>
+                      <p class="text-xs text-slate-500 mt-0.5">
+                        When to run · what you get · how optional context changes the run
+                      </p>
+                    </div>
+                    <button
+                      class="btn btn-ghost text-slate-500 shrink-0"
+                      type="button"
+                      @click="closeIntelBriefingGuide()"
+                      title="Close (Esc)"
+                    >
+                      <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                  <div class="tuning-guide-body overflow-y-auto p-5 space-y-5 text-sm">
+                    <template x-if="intelBriefingGuideTarget()?.guide">
+                      <div class="space-y-5">
+                        <div class="settings-tip-box">
+                          <strong class="text-slate-300">Purpose:</strong>
+                          <span
+                            class="text-slate-400"
+                            x-text="intelBriefingGuideTarget().guide.purpose"
+                          ></span>
+                        </div>
+                        <section>
+                          <h4 class="tuning-guide-h">When to run</h4>
+                          <p
+                            class="text-slate-400 leading-relaxed"
+                            x-text="intelBriefingGuideTarget().guide.when"
+                          ></p>
+                        </section>
+                        <section>
+                          <h4 class="tuning-guide-h">What you get</h4>
+                          <p
+                            class="text-slate-400 leading-relaxed"
+                            x-text="intelBriefingGuideTarget().guide.output"
+                          ></p>
+                        </section>
+                        <section>
+                          <h4 class="tuning-guide-h">Optional context — impact</h4>
+                          <p
+                            class="text-slate-400 leading-relaxed"
+                            x-text="intelBriefingGuideTarget().guide.context_impact"
+                          ></p>
+                          <p
+                            class="text-[11px] text-slate-500 mt-2 font-mono leading-relaxed"
+                            x-text="intelBriefingGuideTarget().context_tooltip"
+                          ></p>
+                        </section>
+                        <section x-show="(intelBriefingGuideTarget().guide.tips || []).length">
+                          <h4 class="tuning-guide-h">Tips</h4>
+                          <ul class="tuning-guide-list">
+                            <template
+                              x-for="(tip, tipIdx) in (intelBriefingGuideTarget().guide.tips || [])"
+                              :key="tipIdx"
+                            >
+                              <li x-text="tip"></li>
+                            </template>
+                          </ul>
+                        </section>
+                      </div>
+                    </template>
+                  </div>
+                  <div
+                    class="px-5 py-3 border-t border-edge flex justify-end shrink-0 bg-ink-900/40"
+                  >
+                    <button
+                      class="btn btn-primary text-xs"
+                      type="button"
+                      @click="closeIntelBriefingGuide()"
+                    >
+                      Got it
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

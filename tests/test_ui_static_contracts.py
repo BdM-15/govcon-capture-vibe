@@ -233,10 +233,17 @@ def test_intel_briefings_expose_optional_slice_context_field() -> None:
     intel_helpers = (
         _ROOT / "src" / "ui" / "static" / "app" / "theseus-intel-helpers.js"
     ).read_text(encoding="utf-8")
+    intel_view = (
+        _ROOT / "src" / "ui" / "static" / "views" / "intel-view.html"
+    ).read_text(encoding="utf-8")
 
     assert 'x-model="intel.sliceContext[slice.id]"' in source
     assert "user_addendum" in intel_helpers
     assert "theseusIntelSliceContextText" in intel_helpers
+    assert "openIntelBriefingGuide(slice)" in intel_view
+    assert "intel.briefingGuide.open" in intel_view
+    assert "tuning-guide-body" in intel_view
+    assert "theseusOpenIntelBriefingGuide" in intel_helpers
 
 
 def test_chain_helpers_support_partial_status_and_chain_grouping() -> None:

@@ -143,6 +143,9 @@ def test_build_intel_slices_includes_catalog_and_latest_runs(tmp_path) -> None:
     assert mission_readiness["action"] == "skill"
     assert mission_readiness["skill"] == "mission-readiness-framer"
     assert "Mission Readiness Frame" in mission_readiness["skill_prompt"]
+    assert mission_readiness.get("guide", {}).get("purpose")
+    assert mission_readiness.get("context_tooltip")
+    assert mission_readiness["related_skills"][0].get("guide", {}).get("purpose")
 
 
 def test_intelligence_slices_route_returns_catalog(tmp_path) -> None:

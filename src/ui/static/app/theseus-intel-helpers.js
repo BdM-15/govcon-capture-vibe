@@ -1,3 +1,32 @@
+window.theseusOpenIntelBriefingGuide = function theseusOpenIntelBriefingGuide(
+  app,
+  slice,
+  related,
+) {
+  app.intel.briefingGuide.slice = slice || null;
+  app.intel.briefingGuide.related = related || null;
+  app.intel.briefingGuide.open = true;
+  window.theseusAfterRender(app);
+};
+
+window.theseusCloseIntelBriefingGuide = function theseusCloseIntelBriefingGuide(
+  app,
+) {
+  app.intel.briefingGuide.open = false;
+  app.intel.briefingGuide.slice = null;
+  app.intel.briefingGuide.related = null;
+  window.theseusAfterRender(app);
+};
+
+window.theseusIntelBriefingGuideTarget = function theseusIntelBriefingGuideTarget(
+  app,
+) {
+  if (app.intel.briefingGuide.related) {
+    return app.intel.briefingGuide.related;
+  }
+  return app.intel.briefingGuide.slice;
+};
+
 window.theseusLoadIntel = async function theseusLoadIntel(app) {
   app.intel.loading = true;
   app.intel.slicesLoading = true;

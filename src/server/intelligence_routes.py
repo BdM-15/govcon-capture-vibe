@@ -16,6 +16,220 @@ from src.skills.run_index import SkillRunIndex
 
 logger = logging.getLogger(__name__)
 
+_INTEL_CONTEXT_TOOLTIP_DEFAULT = (
+    "Optional first-run notes appended to this briefing's prompt as "
+    "User-supplied context. High impact for facts the KG may not encode: "
+    "incumbent name, partner URLs (web_fetch), teaming focus, or constraints "
+    "like 'no company capability mapping'. Leave empty for the catalog prompt only."
+)
+
+INTEL_SLICE_GUIDE_FIELDS: dict[str, dict[str, Any]] = {
+    "overview": {
+        "context_placeholder": (
+            "e.g. Focus on base + option periods · emphasize medical materiel scope"
+        ),
+        "guide": {
+            "purpose": (
+                "Orient you to what the government is buying before deeper capture work — "
+                "contract vehicle shape, periods, task areas, deliverables, and how "
+                "performance is measured."
+            ),
+            "when": (
+                "First pass on a new workspace, or when onboarding a teammate who needs "
+                "a plain-language scope primer."
+            ),
+            "output": (
+                "Grounded chat answer with [N] citations — not a saved Studio artifact. "
+                "Use it to sanity-check ingest coverage."
+            ),
+            "context_impact": (
+                "Steers retrieval toward the task areas you care about (e.g. transition, "
+                "Class VIII, options) without changing the core overview prompt."
+            ),
+            "tips": [
+                "Run after ingest completes; thin answers usually mean raise Chunk Top K in Query Tuning.",
+                "Empty context is fine — the catalog prompt is workspace-agnostic.",
+                "Follow with Mission Readiness Frame when you need program-office framing.",
+            ],
+        },
+    },
+    "sites": {
+        "context_placeholder": (
+            "e.g. Only Blount Island + OCONUS annexes · flag missing site appendices"
+        ),
+        "guide": {
+            "purpose": (
+                "Build a geographic picture of performance — where work happens, "
+                "CONUS/OCONUS clusters, and site-specific appendix patterns."
+            ),
+            "when": (
+                "Multi-site RFPs, prepositioning/logistics scopes, or when pricing and "
+                "staffing depend on location counts."
+            ),
+            "output": "Cited site inventory in Capture Chat; highlights data gaps explicitly.",
+            "context_impact": (
+                "Narrows the chat to regions or sites you are pursuing — useful when the "
+                "package is huge and you do not need every CONUS mention."
+            ),
+            "tips": [
+                "Ask for counts only where documents support them — the prompt forbids guessing.",
+                "Pair with Logistics SLAs if shipping/OTD language is site-specific.",
+            ],
+        },
+    },
+    "evaluation": {
+        "context_placeholder": (
+            "e.g. Emphasize Factor 2 technical · map subfactors to PWS Section C"
+        ),
+        "guide": {
+            "purpose": (
+                "Decode Section M (or equivalent) — what proof the government expects, "
+                "how factors relate to instructions, and what strong vs weak looks like."
+            ),
+            "when": (
+                "Before win-theme work or compliance matrix drafting; when you need an "
+                "eval-driven capture checklist."
+            ),
+            "output": (
+                "Factor-by-factor chat decode with citations — complements the L↔M matrix tab."
+            ),
+            "context_impact": (
+                "Focuses on specific factors or subfactors you must win — keeps retrieval "
+                "from spreading across every evaluation mention."
+            ),
+            "tips": [
+                "Cross-check against the Instructions ↔ Evaluation tab for unmapped gaps.",
+                "Does not replace Mission Readiness Frame (customer why vs eval how).",
+            ],
+        },
+    },
+    "mission-readiness": {
+        "context_placeholder": (
+            "e.g. web_fetch https://example.com/platform · Subcontractor: Acme · Incumbent: KBR"
+        ),
+        "context_tooltip": (
+            "Appended to the Mission Readiness catalog prompt. Use web_fetch lines for "
+            "external research (requires Web Research settings). Incumbent/partner notes "
+            "steer fit assessment — leave empty for customer-only framing (recommended first run)."
+        ),
+        "guide": {
+            "purpose": (
+                "Answer why the program office is buying — readiness outcome, pains, "
+                "importance signals, and win-theme seeds grounded in the solicitation package."
+            ),
+            "when": (
+                "Early capture on any workspace; canonical first skill run after ingest. "
+                "Produces a Studio brief (DOCX/MD) you can reuse across pursuits."
+            ),
+            "output": (
+                "mission_readiness_frame brief in Studio — cited pains, methods, innovation "
+                "opportunities, eval cross-walk, theme spine. Not a proposal draft."
+            ),
+            "context_impact": (
+                "Empty = unbiased customer framing. Context adds URLs, subcontractors, or "
+                "incumbent hints — only use when you want that enrichment in the same run."
+            ),
+            "tips": [
+                "First run: leave context empty (catalog prompt only).",
+                "Second run: add web_fetch URLs or partner notes when testing fit.",
+                "Acquisition traps (related skill) is CO/L/M forensics — not program-office readiness.",
+                "Inherits Query Tuning retrieval; see Settings → Guide if evidence feels thin.",
+            ],
+        },
+    },
+    "financial": {
+        "context_placeholder": (
+            "e.g. Emphasize CLIN 0001 base year cash flow · note progress payment clause"
+        ),
+        "guide": {
+            "purpose": (
+                "Forensic read of payment terms and CLIN-level cash-flow risk — "
+                "when money moves, what traps exist, and BOE implications."
+            ),
+            "when": (
+                "Before pricing/BOE, when payment terms look unusual, or when working "
+                "capital timing could kill margin."
+            ),
+            "output": (
+                "Saved skill run with CLIN cash-flow table, verbatim extracts, H/M/L risks."
+            ),
+            "context_impact": (
+                "Point at specific CLINs, clauses, or transition payment concerns — "
+                "the skill will prioritize those in extracts."
+            ),
+            "tips": [
+                "Run Capital obligations (related) when inventory/disposition language is heavy.",
+                "Forensic skill — not win-theme or readiness framing.",
+            ],
+        },
+    },
+    "logistics": {
+        "context_placeholder": (
+            "e.g. Surge SLA focus · shipping to AP sites only"
+        ),
+        "guide": {
+            "purpose": (
+                "Extract shipping destinations, OTD/fill-rate metrics, surge logistics "
+                "standards, and performance risks verbatim from the package."
+            ),
+            "when": (
+                "Distribution, warehousing, or OCONUS logistics scopes; when SLAs drive "
+                "staffing and risk reserves."
+            ),
+            "output": "Forensic skill artifacts with cited SLAs and H/M/L risk notes.",
+            "context_impact": (
+                "Directs attention to regions, metrics, or surge scenarios you need "
+                "priced or mitigated."
+            ),
+            "tips": [
+                "Pair with Sites & locations for geographic context first.",
+                "Requires logistics language in the ingest — sparse packages yield thin output.",
+            ],
+        },
+    },
+}
+
+INTEL_RELATED_SKILL_GUIDE_FIELDS: dict[str, dict[str, Any]] = {
+    "compliance-auditor": {
+        "context_placeholder": "e.g. Focus Section L.4 / DFARS cyber clauses only",
+        "context_tooltip": (
+            "Forensic addendum for acquisition-trap analysis — not readiness framing. "
+            "Name sections, clause families, or compliance worries."
+        ),
+        "guide": {
+            "purpose": (
+                "Surface FAR/L/M traps, unmapped requirements, and contracts-shop errors — "
+                "the CO/acquisition lens, not program-office priorities."
+            ),
+            "when": "After Mission Readiness Frame when you need compliance risk, not customer why.",
+            "output": "compliance_audit JSON/DOCX/XLSX in Studio with severity-ranked findings.",
+            "context_impact": "Steers which clauses or L/M sections to prioritize in the audit.",
+            "tips": [
+                "KG graph gaps (unmapped shalls) are common on large packages — findings reflect graph quality.",
+                "Different question than Mission Readiness — run both, compare in Studio.",
+            ],
+        },
+    },
+    "capital-obligations-auditor": {
+        "context_placeholder": "e.g. Inventory ownership at transition · GFP disposition",
+        "context_tooltip": (
+            "Addendum for capital/inventory forensics — property, disposition, transition costs."
+        ),
+        "guide": {
+            "purpose": (
+                "Identify upfront capital, inventory ownership, disposition, and transition "
+                "property obligations that affect cash and risk."
+            ),
+            "when": "Companion to Financial risk when the package has GFP, inventory, or transition property language.",
+            "output": "Forensic artifacts with cited obligations and H/M/L risks.",
+            "context_impact": "Highlight specific property classes or transition scenarios to stress.",
+            "tips": [
+                "Run Payment terms first for CLIN cash timing; this skill for capital stack.",
+            ],
+        },
+    },
+}
+
 INTEL_SLICE_CATALOG: list[dict[str, Any]] = [
     {
         "id": "overview",
@@ -379,20 +593,24 @@ def build_intel_slices(workspace_dir: Path) -> list[dict[str, Any]]:
     slices: list[dict[str, Any]] = []
     for entry in INTEL_SLICE_CATALOG:
         item = dict(entry)
+        guide_fields = INTEL_SLICE_GUIDE_FIELDS.get(str(item.get("id") or ""), {})
+        item.update(guide_fields)
+        item.setdefault("context_tooltip", _INTEL_CONTEXT_TOOLTIP_DEFAULT)
         if item.get("action") == "skill" and item.get("skill"):
             item["latest_run"] = _latest_skill_run(workspace_dir, str(item["skill"]))
             related = []
             for rel in item.get("related_skills") or []:
                 if not isinstance(rel, dict) or not rel.get("skill"):
                     continue
-                related.append(
-                    {
-                        **rel,
-                        "latest_run": _latest_skill_run(
-                            workspace_dir, str(rel["skill"])
-                        ),
-                    }
+                rel_item = dict(rel)
+                rel_item.update(
+                    INTEL_RELATED_SKILL_GUIDE_FIELDS.get(str(rel_item["skill"]), {})
                 )
+                rel_item.setdefault("context_tooltip", _INTEL_CONTEXT_TOOLTIP_DEFAULT)
+                rel_item["latest_run"] = _latest_skill_run(
+                    workspace_dir, str(rel_item["skill"])
+                )
+                related.append(rel_item)
             item["related_skills"] = related
         else:
             item["latest_run"] = None
