@@ -18,7 +18,7 @@ Usage:
 This will:
 1. Start Neo4j container (if not already running)
 2. Wait for Neo4j health check
-3. Warm up local Ollama (insight handoff + optional keyword routing)
+3. Warm up local Ollama (insight handoff packaging)
 4. Start GovCon RAG server
     
 Then visit: http://localhost:9621
@@ -229,7 +229,7 @@ def manage_ollama_startup(settings) -> dict:
     else:
         print(
             f"⚠️  Ollama not reachable at {host} "
-            f"(handoff compose + keyword may use fallback)\n"
+            f"(handoff compose may use fallback)\n"
         )
     return status
 

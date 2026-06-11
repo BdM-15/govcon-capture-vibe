@@ -106,10 +106,9 @@ class Settings(BaseSettings):
         description="Fast reasoning model for src/inference/ post-processing algorithms (NOT a LightRAG role)"
     )
     keyword_llm_name: str = Field(
-        default="grok-4-1-fast-non-reasoning",
+        default="grok-4.20-0309-non-reasoning",
         validation_alias="KEYWORD_LLM_MODEL",
-        description="Non-reasoning model for query-time keyword extraction (LightRAG `keyword` role). "
-                    "When THESEUS_KEYWORD_USE_OLLAMA=true, use a local instruct tag (e.g. qwen2.5:7b-instruct)."
+        description="Non-reasoning model for query-time keyword extraction (LightRAG `keyword` role)",
     )
     theseus_keyword_use_ollama: bool = Field(
         default=False,
@@ -119,7 +118,7 @@ class Settings(BaseSettings):
     ollama_host: str = Field(
         default="http://localhost:11434",
         validation_alias="OLLAMA_HOST",
-        description="Ollama HTTP base URL for local UI curation and optional keyword extraction"
+        description="Ollama HTTP base URL for local insight handoff packaging"
     )
     ollama_model: str = Field(
         default="qwen3.5:9b",
@@ -129,7 +128,7 @@ class Settings(BaseSettings):
     ollama_temperature: float = Field(
         default=0.3,
         validation_alias="OLLAMA_TEMPERATURE",
-        description="Temperature for local Ollama calls (handoff compose, keyword when binding=ollama)"
+        description="Temperature for local Ollama handoff compose calls"
     )
     ollama_compose_timeout: float = Field(
         default=120.0,

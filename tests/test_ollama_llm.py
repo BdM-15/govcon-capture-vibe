@@ -25,13 +25,13 @@ def test_warmup_ollama_sync_marks_ready_when_models_warm(monkeypatch) -> None:
     settings = SimpleNamespace(
         ollama_model="qwen3.5:9b",
         ollama_host="http://localhost:11434",
-        keyword_llm_name="qwen2.5:7b-instruct",
-        keyword_uses_ollama=True,
+        keyword_llm_name="grok-4.20-0309-non-reasoning",
+        keyword_uses_ollama=False,
     )
     monkeypatch.setattr(
         ollama_llm,
         "list_available_models",
-        lambda host, timeout=2.0: ["qwen3.5:9b", "qwen2.5:7b-instruct"],
+        lambda host, timeout=2.0: ["qwen3.5:9b"],
     )
     warmed: list[str] = []
     monkeypatch.setattr(
@@ -45,8 +45,8 @@ def test_warmup_ollama_sync_marks_ready_when_models_warm(monkeypatch) -> None:
     assert status["ok"] is True
     assert status["state"] == "ready"
     assert status["model"] == "qwen3.5:9b"
-    assert status["keyword_model"] == "qwen2.5:7b-instruct"
-    assert warmed == ["qwen3.5:9b", "qwen2.5:7b-instruct"]
+    assert status["keyword_model"] == "grok-4.20-0309-non-reasoning"
+    assert warmed == ["qwen3.5:9b"]
 
 
 def test_text_from_chat_payload_accepts_thinking_field() -> None:

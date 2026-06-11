@@ -22,8 +22,8 @@ def _settings() -> SimpleNamespace:
         workspace="demo",
         extraction_llm_name="extract-model",
         reasoning_llm_name="reason-model",
-        keyword_llm_name="qwen3.5:9b",
-        theseus_keyword_use_ollama=True,
+        keyword_llm_name="grok-4.20-0309-non-reasoning",
+        theseus_keyword_use_ollama=False,
         embedding_model="embed-model",
         vlm_llm_name="vlm-model",
         rerank_model="rerank-model",
@@ -88,7 +88,7 @@ def test_gather_stats_counts_workspace_and_shapes_payload(tmp_path, monkeypatch)
     assert payload["ontology"]["relationship_type_count"] == len(VALID_RELATIONSHIP_TYPES)
     assert payload["models"]["rerank"] == "rerank-model"
     assert payload["models"]["vlm"] == "vlm-model"
-    assert payload["models"]["keyword"] == "qwen3.5:9b"
+    assert payload["models"]["keyword"] == "grok-4.20-0309-non-reasoning"
     assert payload["ollama"]["model"] == "qwen3.5:9b"
     assert payload["ollama"]["state"] == "unknown"
     assert payload["stack"] == {"lightrag": "test"}
