@@ -255,6 +255,13 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       values: {},
       defaults: {},
     },
+    webResearchSettings: {
+      loaded: false,
+      saving: false,
+      values: {},
+      defaults: {},
+      providers: null,
+    },
     mcps: {
       loaded: false,
       loading: false,

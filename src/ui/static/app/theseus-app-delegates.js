@@ -924,6 +924,18 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusResetSkillRuntimeSettings(this);
     },
 
+    async loadWebResearchSettings() {
+      return window.theseusLoadWebResearchSettings(this);
+    },
+
+    async saveWebResearchSettings() {
+      return window.theseusSaveWebResearchSettings(this);
+    },
+
+    async resetWebResearchSettings() {
+      return window.theseusResetWebResearchSettings(this);
+    },
+
     async loadMcps() {
       return window.theseusLoadMcps(this);
     },

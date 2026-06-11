@@ -144,6 +144,58 @@ window.theseusResetSkillRuntimeSettings =
     });
   };
 
+window.theseusLoadWebResearchSettings =
+  async function theseusLoadWebResearchSettings(app) {
+    try {
+      const data = await app.api("/api/ui/settings/web-research");
+      app.webResearchSettings.values = { ...data.settings };
+      app.webResearchSettings.defaults = { ...data.defaults };
+      app.webResearchSettings.providers = data.providers || null;
+      app.webResearchSettings.loaded = true;
+    } catch (error) {
+      app.toast(`Failed loading web research settings: ${error.message}`, "error");
+    }
+  };
+
+window.theseusSaveWebResearchSettings =
+  async function theseusSaveWebResearchSettings(app) {
+    app.webResearchSettings.saving = true;
+    try {
+      const data = await app.api("/api/ui/settings/web-research", {
+        method: "PUT",
+        body: JSON.stringify(app.webResearchSettings.values),
+      });
+      app.webResearchSettings.values = { ...data.settings };
+      app.webResearchSettings.providers = data.providers || null;
+      app.toast("Web research settings saved");
+    } catch (error) {
+      app.toast("Save failed: " + error.message, "error");
+    } finally {
+      app.webResearchSettings.saving = false;
+    }
+  };
+
+window.theseusResetWebResearchSettings =
+  async function theseusResetWebResearchSettings(app) {
+    if (
+      !confirm(
+        "Restore default web research settings for this workspace?",
+      )
+    ) {
+      return;
+    }
+    try {
+      const data = await app.api("/api/ui/settings/web-research/reset", {
+        method: "POST",
+      });
+      app.webResearchSettings.values = { ...data.settings };
+      app.webResearchSettings.providers = data.providers || null;
+      app.toast("Web research settings reset to defaults");
+    } catch (error) {
+      app.toast("Reset failed: " + error.message, "error");
+    }
+  };
+
 window.theseusLoadMcps = async function theseusLoadMcps(app) {
   app.mcps.loading = true;
   try {

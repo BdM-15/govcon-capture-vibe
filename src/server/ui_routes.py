@@ -79,6 +79,7 @@ from src.server.admin_routes import (
 from src.server.document_routes import register_processing_log_routes
 from src.server.prompt_library import PromptLibraryStore, register_prompt_library_routes
 from src.server.skill_routes import register_skill_ui_routes
+from src.server.web_research_routes import register_web_research_settings_routes
 from src.server.entity_chunk_routes import register_entity_chunk_routes
 from src.server.graph_routes import register_graph_routes
 from src.server.intelligence_routes import register_intelligence_routes
@@ -249,6 +250,12 @@ def _register_feature_routes(
         app,
         workspace_name=context.workspace_name,
         store=context.query_settings,
+    )
+
+    register_web_research_settings_routes(
+        app,
+        workspace_dir=context.workspace_dir,
+        workspace_name=context.workspace_name,
     )
 
     register_skill_ui_routes(

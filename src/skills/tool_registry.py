@@ -12,6 +12,12 @@ from src.skills.tool_filesystem import tool_read_file, tool_run_script, tool_wri
 from src.skills.tool_kg import tool_kg_chunks, tool_kg_entities, tool_kg_query
 from src.skills.tool_skill_chain import tool_invoke_skill
 from src.skills.tool_types import ToolResult
+from src.skills.tool_web_research import (
+    tool_web_fetch,
+    tool_web_provider_status,
+    tool_web_research,
+    tool_web_search,
+)
 
 
 @dataclass
@@ -265,6 +271,109 @@ def build_tool_specs(
                 "additionalProperties": False,
             },
             handler=tool_kg_chunks,
+        ),
+        ToolSpec(
+            name="web_search",
+            description=(
+                "Search the public web for discovery. Returns titled hits with URLs, "
+                "snippets, and provider provenance. Free-first order: SearXNG (if "
+                "configured), then SerpAPI. Use to find pages relevant to a program, "
+                "agency, method, or partner — not for solicitation facts (use kg_chunks)."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Natural-language search query.",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 20,
+                        "description": "Max results to return (default 5).",
+                    },
+                },
+                "required": ["query"],
+                "additionalProperties": False,
+            },
+            handler=tool_web_search,
+        ),
+        ToolSpec(
+            name="web_fetch",
+            description=(
+                "Fetch and extract readable content from a URL. Provider fallback: "
+                "direct HTTP → crawl4ai (if installed) → Olostep → Firecrawl (only "
+                "when WEB_RESEARCH_ENABLE_FIRECRAWL=true or quality='premium'). "
+                "Returns markdown/text with provenance. Tag external claims separately "
+                "from solicitation [chunk-…] citations."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "Absolute http(s) URL to fetch.",
+                    },
+                    "quality": {
+                        "type": "string",
+                        "enum": ["standard", "premium"],
+                        "description": (
+                            "standard = cost-conscious fallback chain; premium = prefer "
+                            "Firecrawl when FIRECRAWL_API_KEY is set."
+                        ),
+                    },
+                },
+                "required": ["url"],
+                "additionalProperties": False,
+            },
+            handler=tool_web_fetch,
+        ),
+        ToolSpec(
+            name="web_research",
+            description=(
+                "Combined external research: run search queries, fetch explicit URLs, "
+                "and optionally fetch top search hits. Inputs may come from user context "
+                "or prior kg_chunks/aquery seeds. Use web_provider_status first when "
+                "unsure which providers are configured."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "queries": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional search queries to run.",
+                    },
+                    "urls": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional explicit URLs to fetch (user-supplied or from prior analysis).",
+                    },
+                    "fetch_quality": {
+                        "type": "string",
+                        "enum": ["standard", "premium"],
+                        "description": "Fetch chain quality (see web_fetch).",
+                    },
+                    "max_fetches": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10,
+                        "description": "Cap on total page fetches (0 = search only).",
+                    },
+                },
+                "additionalProperties": False,
+            },
+            handler=tool_web_research,
+        ),
+        ToolSpec(
+            name="web_provider_status",
+            description=(
+                "Return which web search/fetch providers are configured (no secrets). "
+                "Call before external research when provider availability is uncertain."
+            ),
+            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+            handler=tool_web_provider_status,
         ),
     ]
 

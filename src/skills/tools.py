@@ -15,6 +15,10 @@ to the model:
 * ``kg_entities(types, limit, max_chunks_per_entity, max_relationships_per_entity)``
   — slice the workspace KG by entity type (Phase 1.5 bulk slice)
 * ``kg_chunks(query, top_k, mode)`` — Phase 1.6 chat-grade hybrid retrieval
+* ``web_search(query, limit)`` — public-web SERP discovery (SearXNG/SerpAPI)
+* ``web_fetch(url, quality)`` — crawl/extract a URL (direct/Olostep/Firecrawl)
+* ``web_research(queries, urls, …)`` — combined search + fetch pass
+* ``web_provider_status()`` — configured external research providers
 
 Every tool call is captured in the run transcript along with timing,
 arguments, and a truncated preview of the result. Tools are designed to be

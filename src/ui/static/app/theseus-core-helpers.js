@@ -17,6 +17,9 @@ const theseusHandleActiveChange = function theseusHandleActiveChange(app) {
     app.loadQuerySettings();
   }
   app.loadSkillRuntimeSettings();
+  if (app.active === "settings" && !app.webResearchSettings.loaded) {
+    app.loadWebResearchSettings();
+  }
   if (app.active === "settings" && !app.mcps.loaded) {
     app.loadMcps();
   }

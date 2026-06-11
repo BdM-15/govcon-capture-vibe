@@ -17,8 +17,8 @@
                   <span class="h1-gradient">Settings</span>
                 </h1>
                 <p class="text-sm text-slate-500 mt-1">
-                  Workspace, tech stack, query tuning, server control, and
-                  destructive cleanup actions.
+                  Workspace, tech stack, query tuning, web research, server
+                  control, and destructive cleanup actions.
                 </p>
               </div>
               <div class="flex items-center gap-2">
@@ -903,6 +903,209 @@
                         <strong class="text-slate-400">Rule of thumb:</strong> leave this panel alone unless a skill errors on turns, timeouts, truncation, or file size.
                         For “answers miss RFP content,” tune <span class="text-neon-cyan font-mono">Query Tuning</span> first.
                       </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </details>
+
+            <!-- ===== External Web Research ===== -->
+            <details class="acc accent-amber" data-acc-key="web-research">
+              <summary>
+                <div class="flex items-center gap-3 min-w-0">
+                  <i
+                    data-lucide="chevron-right"
+                    class="acc-chevron w-4 h-4"
+                  ></i>
+                  <i
+                    data-lucide="globe"
+                    class="w-4 h-4 text-neon-amber shrink-0"
+                  ></i>
+                  <div class="min-w-0">
+                    <div class="font-semibold">Web Research</div>
+                    <div
+                      class="text-[11px] font-mono text-slate-500 truncate"
+                      x-text="webResearchSettings.loaded ? `${webResearchSettings.values.enabled ? 'on' : 'off'} · firecrawl=${webResearchSettings.values.enable_firecrawl ? 'chain' : 'premium-only'} · search=${webResearchSettings.values.enable_search ? 'on' : 'off'} · fetch=${webResearchSettings.values.enable_fetch ? 'on' : 'off'}` : 'loading…'"
+                    ></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2" @click.stop>
+                  <button
+                    class="btn btn-ghost text-xs"
+                    @click="resetWebResearchSettings()"
+                    :disabled="!webResearchSettings.loaded || webResearchSettings.saving"
+                    title="Restore defaults for this workspace"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    class="btn btn-primary text-xs"
+                    @click="saveWebResearchSettings()"
+                    :disabled="!webResearchSettings.loaded || webResearchSettings.saving"
+                  >
+                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                    <span
+                      x-text="webResearchSettings.saving ? 'Saving…' : 'Save'"
+                    ></span>
+                  </button>
+                </div>
+              </summary>
+              <div class="acc-body">
+                <p class="text-xs text-slate-500 mb-4 max-w-2xl">
+                  Controls skill tools
+                  <code class="text-neon-amber">web_search</code>,
+                  <code class="text-neon-amber">web_fetch</code>, and
+                  <code class="text-neon-amber">web_research</code>.
+                  API keys stay in <code class="text-slate-400">.env</code>
+                  (SerpAPI, Olostep, Firecrawl, SearXNG). Per-workspace toggles
+                  are stored in
+                  <code class="text-slate-400">ui_web_research_settings.json</code>.
+                  Use <span class="text-slate-300">premium</span> quality on a
+                  tool call to force Firecrawl even when it is off in the standard chain.
+                </p>
+                <template x-if="!webResearchSettings.loaded">
+                  <div class="text-xs text-slate-500 font-mono">loading…</div>
+                </template>
+                <template x-if="webResearchSettings.loaded">
+                  <div class="space-y-4">
+                    <div
+                      class="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px] font-mono"
+                      x-show="webResearchSettings.providers"
+                    >
+                      <template
+                        x-for="provider in (webResearchSettings.providers?.search || [])"
+                        :key="'search-' + provider.id"
+                      >
+                        <div
+                          class="rounded border px-2 py-1"
+                          :class="provider.configured ? 'border-neon-lime/30 text-neon-lime' : 'border-edge text-slate-500'"
+                        >
+                          <span x-text="provider.id"></span>
+                          <span class="text-slate-600" x-text="' · ' + provider.tier"></span>
+                        </div>
+                      </template>
+                      <template
+                        x-for="provider in (webResearchSettings.providers?.fetch || [])"
+                        :key="'fetch-' + provider.id"
+                      >
+                        <div
+                          class="rounded border px-2 py-1"
+                          :class="provider.configured ? 'border-neon-lime/30 text-neon-lime' : 'border-edge text-slate-500'"
+                        >
+                          <span x-text="provider.id"></span>
+                          <span class="text-slate-600" x-text="' · ' + provider.tier"></span>
+                        </div>
+                      </template>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <label class="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          x-model="webResearchSettings.values.enabled"
+                          class="rounded border-edge bg-ink-900/60"
+                        />
+                        <span>Enable external web research</span>
+                      </label>
+                      <label class="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          x-model="webResearchSettings.values.enable_firecrawl"
+                          class="rounded border-edge bg-ink-900/60"
+                        />
+                        <span>Include Firecrawl in standard fetch chain</span>
+                      </label>
+                      <label class="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          x-model="webResearchSettings.values.enable_search"
+                          class="rounded border-edge bg-ink-900/60"
+                        />
+                        <span>Allow web search</span>
+                      </label>
+                      <label class="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          x-model="webResearchSettings.values.enable_fetch"
+                          class="rounded border-edge bg-ink-900/60"
+                        />
+                        <span>Allow web fetch / crawl</span>
+                      </label>
+                      <label class="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          x-model="webResearchSettings.values.enable_direct_fetch"
+                          class="rounded border-edge bg-ink-900/60"
+                        />
+                        <span>Try direct HTTP fetch (free)</span>
+                      </label>
+                      <label class="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          x-model="webResearchSettings.values.enable_crawl4ai"
+                          class="rounded border-edge bg-ink-900/60"
+                        />
+                        <span>Try crawl4ai when installed (free)</span>
+                      </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">Fetch timeout (seconds)</span>
+                        <input
+                          type="number"
+                          min="3"
+                          max="300"
+                          x-model.number="webResearchSettings.values.fetch_timeout_seconds"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none"
+                        />
+                        <span
+                          class="settings-field-default"
+                          x-text="'Default: ' + webResearchSettings.defaults.fetch_timeout_seconds + 's'"
+                        ></span>
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">Max search results</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="20"
+                          x-model.number="webResearchSettings.values.max_search_results"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none"
+                        />
+                        <span
+                          class="settings-field-default"
+                          x-text="'Default: ' + webResearchSettings.defaults.max_search_results"
+                        ></span>
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">Max content chars / page</span>
+                        <input
+                          type="number"
+                          min="500"
+                          max="200000"
+                          x-model.number="webResearchSettings.values.max_content_chars"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none"
+                        />
+                        <span
+                          class="settings-field-default"
+                          x-text="'Default: ' + webResearchSettings.defaults.max_content_chars.toLocaleString()"
+                        ></span>
+                      </label>
+                      <label class="block">
+                        <span class="text-xs text-slate-400 font-mono">Cache TTL (seconds, 0=off)</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="2592000"
+                          x-model.number="webResearchSettings.values.cache_ttl_seconds"
+                          class="mt-1 w-full bg-ink-900/60 border border-edge rounded-lg px-3 py-2 text-sm font-mono focus:border-neon-amber/60 outline-none"
+                        />
+                        <span
+                          class="settings-field-default"
+                          x-text="'Default: ' + webResearchSettings.defaults.cache_ttl_seconds"
+                        ></span>
+                      </label>
                     </div>
                   </div>
                 </template>
