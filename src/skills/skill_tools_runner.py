@@ -192,6 +192,15 @@ async def run_tools_skill(
             logger.warning("Auto-emit artifacts failed for %s run %s: %s", skill.name, run_id, exc)
             warnings.append(f"auto_emit_artifacts failed: {exc}")
 
+    if skill.name == "huashu-design":
+        try:
+            from src.skills.studio_surfaces import finalize_huashu_studio_surfaces
+
+            warnings.extend(finalize_huashu_studio_surfaces(Path(run_dir)))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Huashu studio surface finalize failed for run %s: %s", run_id, exc)
+            warnings.append(f"huashu studio finalize failed: {exc}")
+
     touch_invocation(skill.name)
 
     return SkillInvocationResult(

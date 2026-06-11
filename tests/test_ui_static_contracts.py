@@ -228,6 +228,20 @@ def test_chain_trace_missing_input_panel_reuses_chat_like_composer_language() ->
     assert source.count('x-init="mountChainInputPanel($el)"') == 2
 
 
+def test_studio_surfaces_nested_deck_and_slide_completeness() -> None:
+    source = _index_html()
+    render_helpers = (
+        _ROOT / "src" / "ui" / "static" / "app" / "theseus-render-helpers.js"
+    ).read_text(encoding="utf-8")
+    studio_view = (
+        _ROOT / "src" / "ui" / "static" / "views" / "studio-view.html"
+    ).read_text(encoding="utf-8")
+
+    assert "deck_slides_expected" in studio_view
+    assert "slides'" in studio_view or "slides\"" in studio_view
+    assert "theseusStudioArtifactHref" in render_helpers
+
+
 def test_skills_expose_optional_context_artifact_picker() -> None:
     source = _index_html()
     helpers = _SKILL_HELPERS.read_text(encoding="utf-8")

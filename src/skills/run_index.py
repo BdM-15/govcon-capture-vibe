@@ -8,7 +8,6 @@ from typing import Any, Callable, Optional
 
 from src.skills.chain_contracts import CONTRACT_REGISTRY
 from src.skills.run_metadata import (
-    is_studio_deliverable,
     list_run_artifacts,
     list_tool_outputs,
     normalize_artifact_products,
@@ -20,6 +19,11 @@ from src.skills.run_metadata import (
     resolve_artifact_mime,
 )
 from src.skills.run_projections import project_run_summary_payload
+from src.skills.studio_surfaces import (
+    deck_display_name,
+    iter_studio_deliverable_paths,
+    validate_deck_index,
+)
 
 
 def _contract_products(skill_name: str) -> list[str]:
@@ -138,28 +142,37 @@ class SkillRunIndex:
             created_at = meta.get("created_at") or ""
             title = meta.get("title")
 
-            for artifact in sorted(artifacts_dir.iterdir()):
-                if not artifact.is_file():
-                    continue
-                if not is_studio_deliverable(artifact.name):
+            for rel, artifact in iter_studio_deliverable_paths(artifacts_dir):
+                if skill_name == "huashu-design" and rel.lower().endswith(".docx"):
                     continue
                 try:
                     stat = artifact.stat()
                 except OSError:
                     continue
-                rel = artifact.relative_to(artifacts_dir).as_posix()
+                manifest_entry = manifest.get(rel) or manifest.get(artifact.name)
                 products = normalize_artifact_products(
-                    (manifest.get(rel) or {}).get("products")
+                    (manifest_entry or {}).get("products")
                 ) or _contract_products(skill_name)
+                deck = (manifest_entry or {}).get("deck_completeness") or {}
+                if (
+                    skill_name == "huashu-design"
+                    and rel.endswith("index.html")
+                    and not deck
+                ):
+                    deck = validate_deck_index(artifact)
+                display_name = resolve_artifact_display_name(rel, manifest_entry)
+                if (
+                    skill_name == "huashu-design"
+                    and rel.endswith("index.html")
+                    and display_name == resolve_artifact_display_name(rel, None)
+                ):
+                    display_name = deck_display_name(artifact)
                 rows.append(
                     {
                         "skill": skill_name,
                         "run_id": run_dir.name,
-                        "filename": artifact.name,
-                        "display_name": resolve_artifact_display_name(
-                            artifact.name,
-                            manifest.get(rel),
-                        ),
+                        "filename": rel,
+                        "display_name": display_name,
                         "mime": resolve_artifact_mime(artifact.name),
                         "size": stat.st_size,
                         "created_at": created_at
@@ -167,6 +180,9 @@ class SkillRunIndex:
                         "title": title,
                         "ext": artifact.suffix.lstrip(".").lower(),
                         "products": products,
+                        "deck_complete": deck.get("complete"),
+                        "deck_slides_found": deck.get("found"),
+                        "deck_slides_expected": deck.get("expected"),
                     }
                 )
 

@@ -771,14 +771,15 @@ class SkillRunStore:
         """Resolve an artifact filename inside a run's artifacts/ folder."""
         if not self.is_safe_run_id(run_id):
             return None
-        if not filename or "/" in filename or "\\" in filename or filename in (".", ".."):
+        rel = str(filename or "").replace("\\", "/").strip().strip("/")
+        if not rel or ".." in rel.split("/") or rel in {".", ".."}:
             return None
         artifacts_dir = (
             self.runs_root(workspace_root, skill_name) / run_id / "artifacts"
         ).resolve()
         if not artifacts_dir.is_dir():
             return None
-        candidate = (artifacts_dir / filename).resolve()
+        candidate = (artifacts_dir / rel).resolve()
         try:
             candidate.relative_to(artifacts_dir)
         except ValueError:

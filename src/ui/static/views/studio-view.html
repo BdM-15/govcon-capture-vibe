@@ -424,6 +424,12 @@
                               x-text="row.deliverable.display_name || row.deliverable.filename"
                             ></span>
                           </button>
+                          <span
+                            x-show="row.deliverable.deck_slides_expected > 0"
+                            class="pill border text-[10px] font-mono ml-1 align-middle"
+                            :class="row.deliverable.deck_complete ? 'border-neon-cyan/30 text-neon-cyan' : 'border-neon-amber/40 text-neon-amber'"
+                            x-text="(row.deliverable.deck_slides_found || 0) + '/' + row.deliverable.deck_slides_expected + ' slides'"
+                          ></span>
                           <div
                             x-show="studioHasChain(row.deliverable)"
                             class="mt-1 flex flex-wrap items-center gap-1"

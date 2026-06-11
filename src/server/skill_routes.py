@@ -1259,18 +1259,21 @@ def register_skill_run_ui_routes(
         )
 
     @app.get(
-        "/api/ui/skills/{name}/runs/{run_id}/artifacts/{filename}",
+        "/api/ui/skills/{name}/runs/{run_id}/artifacts/{artifact_path:path}",
         tags=["theseus-ui"],
     )
     async def download_skill_run_artifact_route(
         name: str,
         run_id: str,
-        filename: str,
+        artifact_path: str,
     ) -> FileResponse:
         mgr = manager_factory()
-        path = mgr.get_artifact_path(workspace_dir(), name, run_id, filename)
+        path = mgr.get_artifact_path(workspace_dir(), name, run_id, artifact_path)
         if path is None:
-            raise HTTPException(404, f"Artifact not found: {name}/{run_id}/{filename}")
+            raise HTTPException(
+                404,
+                f"Artifact not found: {name}/{run_id}/{artifact_path}",
+            )
         return FileResponse(
             path,
             media_type=resolve_artifact_mime(path.name),

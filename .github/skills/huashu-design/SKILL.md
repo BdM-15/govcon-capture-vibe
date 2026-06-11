@@ -12,6 +12,7 @@ metadata:
   version: 0.2.0
   status: active
   runtime: tools
+  auto_emit_artifacts: false
   # Original Chinese description preserved verbatim from upstream (alchaincyf/huashu-design)
   # so bilingual users keep matching on the native trigger phrases. The English `description`
   # above is the spec-conformant trigger surface; this `description_zh` is reference only.

@@ -285,16 +285,32 @@ window.theseusArtifactIcon = function theseusArtifactIcon(mime, name) {
   return "file";
 };
 
+window.theseusStudioArtifactHref = function theseusStudioArtifactHref(
+  skill,
+  runId,
+  filename,
+) {
+  const parts = String(filename || "")
+    .split("/")
+    .filter(Boolean)
+    .map((part) => encodeURIComponent(part));
+  return (
+    "/api/ui/skills/" +
+    encodeURIComponent(skill) +
+    "/runs/" +
+    encodeURIComponent(runId) +
+    "/artifacts/" +
+    parts.join("/")
+  );
+};
+
 window.theseusStudioDownloadHref = function theseusStudioDownloadHref(
   deliverable,
 ) {
-  return (
-    "/api/ui/skills/" +
-    encodeURIComponent(deliverable.skill) +
-    "/runs/" +
-    encodeURIComponent(deliverable.run_id) +
-    "/artifacts/" +
-    encodeURIComponent(deliverable.filename)
+  return window.theseusStudioArtifactHref(
+    deliverable.skill,
+    deliverable.run_id,
+    deliverable.filename,
   );
 };
 
