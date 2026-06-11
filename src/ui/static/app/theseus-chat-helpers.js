@@ -1,3 +1,5 @@
+const THESEUS_HANDOFF_QUOTE_MAX_CHARS = 6000;
+
 window.theseusChatSelectionInMessage = function theseusChatSelectionInMessage(
   containerEl,
 ) {
@@ -6,6 +8,31 @@ window.theseusChatSelectionInMessage = function theseusChatSelectionInMessage(
   const range = selection.rangeCount ? selection.getRangeAt(0) : null;
   if (!range || !containerEl.contains(range.commonAncestorContainer)) return "";
   return selection.toString().trim();
+};
+
+window.theseusHandoffQuoteFromMessage = function theseusHandoffQuoteFromMessage(
+  message,
+  selectedText,
+) {
+  const full = (message?.content || "").trim();
+  const selected = (selectedText || "").trim();
+  if (selected) {
+    return {
+      quote: selected.slice(0, THESEUS_HANDOFF_QUOTE_MAX_CHARS),
+      quoteIsSelection: true,
+      quoteTruncated: selected.length > THESEUS_HANDOFF_QUOTE_MAX_CHARS,
+      quoteCharCount: Math.min(selected.length, THESEUS_HANDOFF_QUOTE_MAX_CHARS),
+      quoteSource: "selection",
+    };
+  }
+  const truncated = full.length > THESEUS_HANDOFF_QUOTE_MAX_CHARS;
+  return {
+    quote: truncated ? full.slice(0, THESEUS_HANDOFF_QUOTE_MAX_CHARS) : full,
+    quoteIsSelection: false,
+    quoteTruncated: truncated,
+    quoteCharCount: truncated ? THESEUS_HANDOFF_QUOTE_MAX_CHARS : full.length,
+    quoteSource: truncated ? "truncated" : "full",
+  };
 };
 
 window.theseusHandoffTitleFromQuote = function theseusHandoffTitleFromQuote(
@@ -58,15 +85,20 @@ window.theseusOpenInsightHandoff = function theseusOpenInsightHandoff(
   const selected = bubble
     ? window.theseusChatSelectionInMessage(bubble)
     : "";
-  const quote = selected || message.content.trim().slice(0, 1200);
+  const quoteMeta = window.theseusHandoffQuoteFromMessage(message, selected);
   const priorUser = theseusPriorUserMessage(messages, messageIndex);
 
   app.chatHandoff = {
     open: true,
     sending: false,
+    packaging: false,
     messageIndex,
-    quote,
-    quoteIsSelection: Boolean(selected),
+    quote: quoteMeta.quote,
+    quoteIsSelection: quoteMeta.quoteIsSelection,
+    quoteTruncated: quoteMeta.quoteTruncated,
+    quoteCharCount: quoteMeta.quoteCharCount,
+    quoteSource: quoteMeta.quoteSource,
+    quoteMaxChars: THESEUS_HANDOFF_QUOTE_MAX_CHARS,
     framingQuestion: "",
     sourceChatId: app.currentChat.id,
     sourceChatTitle: app.currentChat.title || "Prior chat",
@@ -77,6 +109,20 @@ window.theseusOpenInsightHandoff = function theseusOpenInsightHandoff(
     if (input) input.focus();
     window.theseusRefreshIcons?.();
   });
+};
+
+window.theseusResetHandoffQuoteToFull = function theseusResetHandoffQuoteToFull(
+  app,
+) {
+  if (!app.currentChat || app.chatHandoff.messageIndex == null) return;
+  const message = (app.currentChat.messages || [])[app.chatHandoff.messageIndex];
+  if (!message?.content) return;
+  const quoteMeta = window.theseusHandoffQuoteFromMessage(message, "");
+  app.chatHandoff.quote = quoteMeta.quote;
+  app.chatHandoff.quoteIsSelection = false;
+  app.chatHandoff.quoteTruncated = quoteMeta.quoteTruncated;
+  app.chatHandoff.quoteCharCount = quoteMeta.quoteCharCount;
+  app.chatHandoff.quoteSource = quoteMeta.quoteSource;
 };
 
 window.theseusCloseInsightHandoff = function theseusCloseInsightHandoff(app) {

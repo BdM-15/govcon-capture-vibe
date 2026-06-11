@@ -688,6 +688,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusOpenInsightHandoff(this, messageIndex);
     },
 
+    resetHandoffQuoteToFull() {
+      return window.theseusResetHandoffQuoteToFull(this);
+    },
+
     closeInsightHandoff() {
       return window.theseusCloseInsightHandoff(this);
     },
