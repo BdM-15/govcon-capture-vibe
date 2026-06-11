@@ -15,6 +15,8 @@ from pydantic import BaseModel, Field
 
 from src.core import get_settings
 from src.core.env import env_int
+from src.server.ollama_llm import ollama_stats_payload
+from src.server.runtime_state import get_ollama_status
 from src.ontology.schema import VALID_ENTITY_TYPES, VALID_RELATIONSHIP_TYPES
 from src.server.workspace_maintenance import safe_count_json_keys
 from src.utils.time_utils import now_local_iso
@@ -143,11 +145,13 @@ def gather_stats(
         "models": {
             "extraction": settings.extraction_llm_name,
             "reasoning": settings.reasoning_llm_name,
+            "keyword": settings.keyword_llm_name,
             "embedding": settings.embedding_model,
             "vlm": settings.vlm_llm_name,
             "rerank": settings.rerank_model if settings.enable_rerank else None,
             "rerank_enabled": settings.enable_rerank,
         },
+        "ollama": ollama_stats_payload(get_ollama_status(), settings),
         "storage": {
             "graph": graph_storage(),
             "vector": vector_storage(),

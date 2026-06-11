@@ -209,6 +209,7 @@ def test_build_server_runtime_wires_app_routes_ui_and_banner() -> None:
                 "relationship_count": 2,
                 "colors": colors,
                 "pipeline_health": None,
+                "ollama_status": None,
             },
         ),
         (

@@ -390,9 +390,9 @@
                             </button>
                             <button
                               class="msg-action-btn msg-action-handoff"
-                              @click="openInsightHandoff(i)"
+                              @mousedown.prevent="openInsightHandoff(i)"
                               :disabled="sending"
-                              title="Branch this insight into a new grounded chat"
+                              title="Select passage in the answer first, then click Focus — or edit the quote in the dialog"
                             >
                               <i data-lucide="git-branch" class="w-3.5 h-3.5"></i>
                               <span>Focus</span>
@@ -735,16 +735,42 @@
                       <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
                         >Quoted insight</span
                       >
-                      <span
-                        x-show="chatHandoff.quoteIsSelection"
-                        class="text-[10px] font-mono text-purple-400/90"
-                        >from selection</span
-                      >
+                      <div class="flex items-center gap-2 shrink-0">
+                        <span
+                          x-show="chatHandoff.quoteIsSelection"
+                          class="text-[10px] font-mono text-purple-400/90"
+                          >from selection</span
+                        >
+                        <span
+                          class="text-[10px] font-mono text-slate-600"
+                          x-text="(chatHandoff.quote || '').length + ' chars'"
+                        ></span>
+                        <button
+                          type="button"
+                          x-show="chatHandoff.quoteIsSelection"
+                          class="text-[10px] font-mono text-purple-300/90 hover:text-purple-200 underline underline-offset-2"
+                          @click="resetHandoffQuoteToFull()"
+                        >
+                          use full message
+                        </button>
+                      </div>
                     </div>
-                    <div
-                      class="chat-handoff-quote text-xs text-slate-300 leading-relaxed"
-                      x-text="chatHandoff.quote"
-                    ></div>
+                    <p
+                      x-show="chatHandoff.quoteTruncated"
+                      class="text-[10px] font-mono text-amber-400/90 mb-1.5"
+                    >
+                      Message exceeds
+                      <span x-text="chatHandoff.quoteMaxChars"></span>
+                      chars — showing the start. Edit the quote below to focus on the part you
+                      need.
+                    </p>
+                    <textarea
+                      x-ref="handoffQuote"
+                      x-model="chatHandoff.quote"
+                      rows="8"
+                      class="chat-handoff-quote w-full text-xs text-slate-300 leading-relaxed bg-ink-900/60 border border-purple-400/25 focus:border-purple-400/60 outline-none rounded-lg px-3 py-2 resize-y min-h-[9rem] max-h-[22rem]"
+                      placeholder="Paste or edit the passage to ground in the new chat…"
+                    ></textarea>
                   </div>
                   <label class="block space-y-1.5">
                     <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
@@ -759,8 +785,10 @@
                       @keydown.enter.prevent="if (!$event.shiftKey) confirmInsightHandoff()"
                     ></textarea>
                   </label>
-                  <p class="text-[10px] font-mono text-slate-600">
-                    Tip: highlight part of the answer before clicking Focus to quote only that passage.
+                  <p class="text-[10px] font-mono text-slate-600 leading-relaxed">
+                    Tip: drag to select text in the assistant answer, then click
+                    <span class="text-purple-300/90">Focus</span> (selection is captured on
+                    button press). Or edit the quote above to trim to the passage you want.
                   </p>
                 </div>
                 <div
@@ -781,7 +809,9 @@
                     :disabled="chatHandoff.sending || !chatHandoff.quote?.trim()"
                   >
                     <i data-lucide="git-branch" class="w-3.5 h-3.5"></i>
-                    <span x-text="chatHandoff.sending ? 'Starting…' : 'Start branch'"></span>
+                    <span
+                      x-text="chatHandoff.sending ? (chatHandoff.packaging ? 'Packaging insight…' : 'Starting…') : 'Start branch'"
+                    ></span>
                   </button>
                 </div>
               </div>

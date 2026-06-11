@@ -223,6 +223,7 @@ def _register_feature_routes(
         query_func=query_func,
         query_llm_func=query_llm_func,
         now=context.now,
+        settings_provider=get_settings,
     )
 
     register_entity_chunk_routes(app, workspace_dir=context.workspace_dir)

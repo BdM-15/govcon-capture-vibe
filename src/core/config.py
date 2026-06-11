@@ -106,9 +106,34 @@ class Settings(BaseSettings):
         description="Fast reasoning model for src/inference/ post-processing algorithms (NOT a LightRAG role)"
     )
     keyword_llm_name: str = Field(
-        default="grok-4-1-fast-non-reasoning",
+        default="grok-4.20-0309-non-reasoning",
         validation_alias="KEYWORD_LLM_MODEL",
-        description="Non-reasoning model for query-time keyword extraction (LightRAG `keyword` role)"
+        description="Non-reasoning model for query-time keyword extraction (LightRAG `keyword` role)",
+    )
+    theseus_keyword_use_ollama: bool = Field(
+        default=False,
+        validation_alias="THESEUS_KEYWORD_USE_OLLAMA",
+        description="Route LightRAG keyword role to local Ollama via OpenAI-compat /v1 (not native ollama binding)",
+    )
+    ollama_host: str = Field(
+        default="http://localhost:11434",
+        validation_alias="OLLAMA_HOST",
+        description="Ollama HTTP base URL for local insight handoff packaging"
+    )
+    ollama_model: str = Field(
+        default="qwen3.5:9b",
+        validation_alias="OLLAMA_MODEL",
+        description="Default local Ollama model for insight handoff packaging and UI curation"
+    )
+    ollama_temperature: float = Field(
+        default=0.3,
+        validation_alias="OLLAMA_TEMPERATURE",
+        description="Temperature for local Ollama handoff compose calls"
+    )
+    ollama_compose_timeout: float = Field(
+        default=120.0,
+        validation_alias="OLLAMA_COMPOSE_TIMEOUT",
+        description="Seconds to wait for local Ollama insight handoff packaging (qwen3.5 can be slow on first load)",
     )
     vlm_llm_name: str = Field(
         default="grok-4-1-fast-non-reasoning",
@@ -465,6 +490,16 @@ class Settings(BaseSettings):
     def llm_api_key(self) -> Optional[str]:
         """Alias for llm_binding_api_key."""
         return self.llm_binding_api_key
+
+    @property
+    def ollama_openai_base_url(self) -> str:
+        """OpenAI-compatible chat/completions base for Ollama."""
+        return f"{self.ollama_host.rstrip('/')}/v1"
+
+    @property
+    def keyword_uses_ollama(self) -> bool:
+        """True when LightRAG keyword role should route to local Ollama OpenAI-compat."""
+        return bool(self.theseus_keyword_use_ollama)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # HELPER METHODS for backward compatibility with MAX_ASYNC

@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from src.core.env import env_int
 from src.server.chat_store import ChatStore
+from src.server.handoff_compose import HandoffComposeInput, compose_insight_handoff, mechanical_handoff_seed
 from src.server.query_bridge import QueryLlmFunc, stream_bundle_from_llm_result
 from src.server.reasoning_filter import ThinkStripper, strip_think
 
@@ -216,6 +217,17 @@ class ChatUpdate(BaseModel):
     rfp_context: str | None = Field(default=None, max_length=200)
 
 
+class HandoffComposeRequest(BaseModel):
+    """Body for POST /api/ui/chats/handoff/compose."""
+
+    source_chat_id: str = Field(..., min_length=6, max_length=64)
+    message_index: int = Field(..., ge=0, le=5000)
+    quote: str = Field(..., min_length=1, max_length=8000)
+    framing_question: str | None = Field(default=None, max_length=500)
+    prior_user_question: str | None = Field(default=None, max_length=2000)
+    source_chat_title: str | None = Field(default=None, max_length=120)
+
+
 class ChatMessageCreate(BaseModel):
     """Body for chat message endpoints."""
 
@@ -291,6 +303,7 @@ def register_chat_routes(
     query_func: QueryFunc,
     query_llm_func: QueryLlmFunc | None = None,
     now: Callable[[], str],
+    settings_provider: Callable[[], Any] | None = None,
 ) -> None:
     """Register persistent chat CRUD plus chat message routes."""
 
@@ -298,6 +311,54 @@ def register_chat_routes(
     async def list_chats() -> JSONResponse:
         """List all saved chats for active workspace, newest first."""
         return JSONResponse({"chats": chat_store.list_summaries()})
+
+    @app.post("/api/ui/chats/handoff/compose", tags=["theseus-ui"])
+    async def compose_handoff(payload: HandoffComposeRequest) -> JSONResponse:
+        """Pack an insight handoff seed via local Ollama (503 when unavailable)."""
+        if settings_provider is None:
+            raise HTTPException(503, "Handoff compose is not configured")
+
+        try:
+            source = chat_store.read(payload.source_chat_id)
+        except HTTPException as exc:
+            if exc.status_code == 404:
+                raise HTTPException(404, "Source chat not found") from exc
+            raise
+
+        messages = source.get("messages") or []
+        if payload.message_index >= len(messages):
+            raise HTTPException(400, "message_index out of range")
+        message = messages[payload.message_index]
+        if not isinstance(message, dict) or message.get("role") != "assistant":
+            raise HTTPException(400, "message_index must reference an assistant message")
+
+        compose_input = HandoffComposeInput(
+            source_chat_title=(
+                payload.source_chat_title
+                or str(source.get("title") or "Prior chat")
+            ),
+            message_index=payload.message_index,
+            quote=payload.quote,
+            framing_question=payload.framing_question,
+            prior_user_question=payload.prior_user_question,
+        )
+        settings = settings_provider()
+        try:
+            result = await compose_insight_handoff(compose_input, settings=settings)
+        except RuntimeError as exc:
+            raise HTTPException(503, str(exc)) from exc
+
+        return JSONResponse(
+            {
+                "title": result.title,
+                "focus_summary": result.focus_summary,
+                "claims_to_ground": result.claims_to_ground,
+                "seed_prompt": result.seed_prompt,
+                "composed": result.composed,
+                "model": result.model or getattr(settings, "ollama_model", None),
+                "fallback_reason": result.fallback_reason,
+            }
+        )
 
     @app.post("/api/ui/chats", tags=["theseus-ui"])
     async def create_chat(payload: ChatCreate) -> JSONResponse:
@@ -673,8 +734,10 @@ __all__ = [
     "ChatMessageCreate",
     "ChatUpdate",
     "ChatStore",
+    "HandoffComposeRequest",
     "QuerySettingsStore",
     "ThinkStripper",
+    "mechanical_handoff_seed",
     "register_chat_routes",
     "register_query_settings_routes",
     "DEFAULT_RESPONSE_TYPE",

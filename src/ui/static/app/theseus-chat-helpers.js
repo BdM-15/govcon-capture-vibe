@@ -1,3 +1,5 @@
+const THESEUS_HANDOFF_QUOTE_MAX_CHARS = 6000;
+
 window.theseusChatSelectionInMessage = function theseusChatSelectionInMessage(
   containerEl,
 ) {
@@ -6,6 +8,31 @@ window.theseusChatSelectionInMessage = function theseusChatSelectionInMessage(
   const range = selection.rangeCount ? selection.getRangeAt(0) : null;
   if (!range || !containerEl.contains(range.commonAncestorContainer)) return "";
   return selection.toString().trim();
+};
+
+window.theseusHandoffQuoteFromMessage = function theseusHandoffQuoteFromMessage(
+  message,
+  selectedText,
+) {
+  const full = (message?.content || "").trim();
+  const selected = (selectedText || "").trim();
+  if (selected) {
+    return {
+      quote: selected.slice(0, THESEUS_HANDOFF_QUOTE_MAX_CHARS),
+      quoteIsSelection: true,
+      quoteTruncated: selected.length > THESEUS_HANDOFF_QUOTE_MAX_CHARS,
+      quoteCharCount: Math.min(selected.length, THESEUS_HANDOFF_QUOTE_MAX_CHARS),
+      quoteSource: "selection",
+    };
+  }
+  const truncated = full.length > THESEUS_HANDOFF_QUOTE_MAX_CHARS;
+  return {
+    quote: truncated ? full.slice(0, THESEUS_HANDOFF_QUOTE_MAX_CHARS) : full,
+    quoteIsSelection: false,
+    quoteTruncated: truncated,
+    quoteCharCount: truncated ? THESEUS_HANDOFF_QUOTE_MAX_CHARS : full.length,
+    quoteSource: truncated ? "truncated" : "full",
+  };
 };
 
 window.theseusHandoffTitleFromQuote = function theseusHandoffTitleFromQuote(
@@ -58,15 +85,20 @@ window.theseusOpenInsightHandoff = function theseusOpenInsightHandoff(
   const selected = bubble
     ? window.theseusChatSelectionInMessage(bubble)
     : "";
-  const quote = selected || message.content.trim().slice(0, 1200);
+  const quoteMeta = window.theseusHandoffQuoteFromMessage(message, selected);
   const priorUser = theseusPriorUserMessage(messages, messageIndex);
 
   app.chatHandoff = {
     open: true,
     sending: false,
+    packaging: false,
     messageIndex,
-    quote,
-    quoteIsSelection: Boolean(selected),
+    quote: quoteMeta.quote,
+    quoteIsSelection: quoteMeta.quoteIsSelection,
+    quoteTruncated: quoteMeta.quoteTruncated,
+    quoteCharCount: quoteMeta.quoteCharCount,
+    quoteSource: quoteMeta.quoteSource,
+    quoteMaxChars: THESEUS_HANDOFF_QUOTE_MAX_CHARS,
     framingQuestion: "",
     sourceChatId: app.currentChat.id,
     sourceChatTitle: app.currentChat.title || "Prior chat",
@@ -77,6 +109,20 @@ window.theseusOpenInsightHandoff = function theseusOpenInsightHandoff(
     if (input) input.focus();
     window.theseusRefreshIcons?.();
   });
+};
+
+window.theseusResetHandoffQuoteToFull = function theseusResetHandoffQuoteToFull(
+  app,
+) {
+  if (!app.currentChat || app.chatHandoff.messageIndex == null) return;
+  const message = (app.currentChat.messages || [])[app.chatHandoff.messageIndex];
+  if (!message?.content) return;
+  const quoteMeta = window.theseusHandoffQuoteFromMessage(message, "");
+  app.chatHandoff.quote = quoteMeta.quote;
+  app.chatHandoff.quoteIsSelection = false;
+  app.chatHandoff.quoteTruncated = quoteMeta.quoteTruncated;
+  app.chatHandoff.quoteCharCount = quoteMeta.quoteCharCount;
+  app.chatHandoff.quoteSource = quoteMeta.quoteSource;
 };
 
 window.theseusCloseInsightHandoff = function theseusCloseInsightHandoff(app) {
@@ -91,19 +137,59 @@ window.theseusConfirmInsightHandoff = async function theseusConfirmInsightHandof
   if (!app.currentChat) return;
 
   app.chatHandoff.sending = true;
+  app.chatHandoff.packaging = true;
   const handoff = { ...app.chatHandoff };
   const sourceChat = app.currentChat;
 
   try {
     const mode = window.theseusHandoffMode(sourceChat.mode);
-    const title = window.theseusHandoffTitleFromQuote(handoff.quote);
-    const seed = window.theseusBuildHandoffSeed({
+    let title = window.theseusHandoffTitleFromQuote(handoff.quote);
+    let seed = window.theseusBuildHandoffSeed({
       sourceTitle: handoff.sourceChatTitle,
       messageIndex: handoff.messageIndex,
       quote: handoff.quote,
       framingQuestion: handoff.framingQuestion,
       priorQuestion: handoff.priorUserQuestion,
     });
+
+    try {
+      app.chatHandoff.packaging = true;
+      const packed = await app.api("/api/ui/chats/handoff/compose", {
+        method: "POST",
+        body: JSON.stringify({
+          source_chat_id: handoff.sourceChatId,
+          message_index: handoff.messageIndex,
+          quote: handoff.quote,
+          framing_question: handoff.framingQuestion || null,
+          prior_user_question: handoff.priorUserQuestion || null,
+          source_chat_title: handoff.sourceChatTitle || null,
+        }),
+      });
+      if (packed?.seed_prompt) {
+        seed = packed.seed_prompt;
+        if (packed.title) title = packed.title;
+      }
+      if (packed && packed.composed === false && packed.fallback_reason) {
+        app.toast("Used basic handoff seed (local packer fallback)", "info");
+      }
+    } catch (composeError) {
+      const composeStatus = Number.parseInt(
+        String(composeError?.message || "").split(" ")[0],
+        10,
+      );
+      if (composeStatus === 404) {
+        throw composeError;
+      }
+      const offline = composeStatus === 503;
+      app.toast(
+        offline
+          ? "Local packer offline — using basic handoff seed"
+          : "Local packer unavailable — using basic handoff seed",
+        "info",
+      );
+    } finally {
+      app.chatHandoff.packaging = false;
+    }
 
     const chat = await app.api("/api/ui/chats", {
       method: "POST",
@@ -128,6 +214,7 @@ window.theseusConfirmInsightHandoff = async function theseusConfirmInsightHandof
     app.toast("Started grounded insight thread");
   } catch (error) {
     app.chatHandoff.sending = false;
+    app.chatHandoff.packaging = false;
     app.toast(`Handoff failed: ${error.message}`, "error");
   }
 };

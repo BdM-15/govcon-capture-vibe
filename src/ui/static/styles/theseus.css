@@ -811,13 +811,8 @@ details.acc .summary-actions {
 }
 
 .chat-handoff-quote {
-  max-height: 9rem;
-  overflow-y: auto;
-  padding: 0.65rem 0.75rem;
-  border-radius: 0.6rem;
-  border: 1px solid rgba(167, 139, 250, 0.25);
-  background: rgba(8, 12, 24, 0.55);
   white-space: pre-wrap;
+  font-family: inherit;
 }
 .chat-handoff-modal textarea:focus {
   box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.25);

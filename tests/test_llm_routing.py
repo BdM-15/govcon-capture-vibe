@@ -11,6 +11,8 @@ class _Settings:
     vlm_llm_name = "vlm-model"
     llm_max_output_tokens = 12345
     llm_timeout = 600
+    keyword_uses_ollama = False
+    ollama_openai_base_url = "http://localhost:11434/v1"
 
 
 def test_build_role_llm_routing_prompt_only(monkeypatch) -> None:
@@ -147,3 +149,31 @@ def test_vlm_llm_builds_image_message(monkeypatch) -> None:
     messages = calls[0][2]["messages"]
     assert messages[0] == {"role": "system", "content": "sys"}
     assert messages[1]["content"][1]["image_url"]["url"] == "data:image/jpeg;base64,abc"
+
+
+def test_keyword_role_routes_to_ollama_when_binding_enabled(monkeypatch) -> None:
+    calls = []
+    monkeypatch.delenv("ENTITY_EXTRACTION_STRICT_SCHEMA", raising=False)
+
+    async def fake_complete(model, prompt, **kwargs):
+        calls.append((model, kwargs.get("base_url"), kwargs.get("api_key")))
+        return {"ok": True}
+
+    monkeypatch.setattr(llm_routing, "openai_complete_if_cache", fake_complete)
+    settings = _Settings()
+    settings.keyword_uses_ollama = True
+    settings.keyword_llm_name = "qwen2.5:7b-instruct"
+    routing = llm_routing.build_role_llm_routing(
+        settings,
+        xai_api_key="xai-key",
+        xai_base_url="https://api.x.ai/v1",
+    )
+
+    asyncio.run(routing.role_llm_configs["keyword"].func("keywords please"))
+
+    assert calls == [("qwen2.5:7b-instruct", "http://localhost:11434/v1", "ollama")]
+    assert routing.role_llm_configs["keyword"].metadata == {
+        "model": "qwen2.5:7b-instruct",
+        "host": "http://localhost:11434/v1",
+        "binding": "openai-compat",
+    }
