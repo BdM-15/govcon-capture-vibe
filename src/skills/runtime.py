@@ -17,7 +17,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from pathlib import Path
+from typing import Any, Callable, Optional
 
 from src.skills.llm_chat import ChatResponse, ChatToolCall, chat_with_tools
 from src.skills.runtime_support import (
@@ -50,6 +51,7 @@ async def run_tool_loop(
     ctx: ToolContext,
     max_turns: int = 12,
     temperature: float = 0.2,
+    continue_if: Optional[Callable[[Path], Optional[str]]] = None,
 ) -> ToolLoopResult:
     """Drive the model through a tool-calling loop and return its final answer.
 
@@ -146,6 +148,20 @@ async def run_tool_loop(
         messages.append(chat.raw_message)
 
         if not chat.tool_calls:
+            if continue_if is not None and turn < max_turns:
+                continuation = continue_if(ctx.run_dir)
+                if continuation:
+                    messages.append({"role": "user", "content": continuation})
+                    append_transcript(
+                        transcript,
+                        {
+                            "kind": "continuation",
+                            "turn": turn,
+                            "content": continuation,
+                        },
+                    )
+                    persist_transcript(ctx.run_dir, transcript)
+                    continue
             final_response = chat.content or ""
             finish_reason = chat.finish_reason or "stop"
             break

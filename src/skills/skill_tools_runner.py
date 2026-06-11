@@ -120,6 +120,7 @@ async def run_tools_skill(
         max_kg_chunks=limits.max_kg_chunks,
         max_kg_chunks_per_entity=limits.max_kg_chunks_per_entity,
         max_kg_relationships_per_entity=limits.max_kg_relationships_per_entity,
+        max_chunk_content_chars=limits.max_chunk_content_chars,
         extra_script_roots=extra_script_roots,
         invoke_skill_fn=invoke_skill_fn,
         attached_artifacts=attached_artifacts,
@@ -142,6 +143,10 @@ async def run_tools_skill(
             logger.warning("MCP startup failed for skill %s run %s: %s", skill.name, run_id, exc)
             warnings.append(f"MCP startup failed: {exc}")
 
+    from src.skills.skill_local_tools import resolve_skill_tools_hooks
+
+    skill_hooks = resolve_skill_tools_hooks(Path(skill.path))
+
     try:
         loop_result = await run_tool_loop_fn(
             skill_name=skill.name,
@@ -149,6 +154,7 @@ async def run_tools_skill(
             user_prompt=user_prompt,
             ctx=ctx,
             max_turns=max_turns,
+            continue_if=skill_hooks.artifact_continue,
         )
     finally:
         if ctx.mcp_sessions:
@@ -160,6 +166,17 @@ async def run_tools_skill(
     warnings.extend(loop_result.warnings)
     elapsed_ms = int((datetime.now(timezone.utc) - started).total_seconds() * 1000)
     response_text = normalize_skill_text(loop_result.response)
+
+    if skill_hooks.validate_run is not None:
+        try:
+            depth_issues = skill_hooks.validate_run(Path(run_dir), user_prompt=user_prompt)
+            if skill_hooks.write_depth_audit is not None:
+                skill_hooks.write_depth_audit(Path(run_dir), depth_issues)
+            for issue in depth_issues:
+                warnings.append(f"depth_audit: {issue}")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Skill depth audit failed for %s run %s: %s", skill.name, run_id, exc)
+            warnings.append(f"depth audit failed: {exc}")
 
     try:
         run_store.persist_tools_run(
@@ -200,22 +217,6 @@ async def run_tools_skill(
         except Exception as exc:  # noqa: BLE001
             logger.warning("Huashu studio surface finalize failed for run %s: %s", run_id, exc)
             warnings.append(f"huashu studio finalize failed: {exc}")
-
-    if skill.name == "mission-readiness-framer":
-        try:
-            from src.skills.skill_local_tools import load_skill_tool_module
-
-            helpers = load_skill_tool_module(Path(skill.path), "mission_readiness_tools")
-            depth_issues = helpers.validate_mission_readiness_run(
-                Path(run_dir),
-                user_prompt=user_prompt,
-            )
-            helpers.write_depth_audit(Path(run_dir), depth_issues)
-            for issue in depth_issues:
-                warnings.append(f"depth_audit: {issue}")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Mission readiness depth audit failed for run %s: %s", run_id, exc)
-            warnings.append(f"mission readiness depth audit failed: {exc}")
 
     touch_invocation(skill.name)
 

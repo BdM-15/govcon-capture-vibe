@@ -33,6 +33,7 @@ class ToolContext:
     max_kg_chunks: int = 30
     max_kg_chunks_per_entity: int = 5
     max_kg_relationships_per_entity: int = 20
+    max_chunk_content_chars: int = 8000
     extra_script_roots: list[Path] = field(default_factory=list)
     mcp_sessions: dict[str, Any] = field(default_factory=dict)
     invoke_skill_fn: Optional[Callable[..., Awaitable[Any]]] = None

@@ -6,6 +6,8 @@ import re
 from typing import Any, Optional
 
 from src.core.neo4j_config import get_neo4j_connection_config
+from src.skills.context import SkillWorkspaceEvidenceStore
+from src.skills.tool_kg_neo4j import neo4j_entity_slice
 from src.skills.tool_types import ToolContext, ToolError, ToolResult
 
 _KG_QUERY_ALLOWED_PREFIX = re.compile(r"^\s*(MATCH|OPTIONAL MATCH|WITH|UNWIND|CALL|RETURN)\b", re.I)
@@ -13,6 +15,31 @@ _KG_QUERY_DENY = re.compile(
     r"\b(CREATE|MERGE|DELETE|DETACH|SET|REMOVE|DROP|FOREACH|LOAD\s+CSV)\b",
     re.I,
 )
+
+
+def _slice_is_empty(payload: dict[str, Any]) -> bool:
+    entities = payload.get("entities")
+    if not isinstance(entities, dict):
+        return False
+    if not entities:
+        return True
+    return not any(isinstance(bucket, list) and bucket for bucket in entities.values())
+
+
+def _load_retrieved_chunks(
+    ctx: ToolContext,
+    chunk_ids: set[str],
+) -> list[dict[str, Any]]:
+    if not chunk_ids:
+        return []
+    cap = max(500, int(getattr(ctx, "max_chunk_content_chars", 8000) or 8000))
+    store = SkillWorkspaceEvidenceStore(ctx.workspace_dir)
+    return store._load_source_chunks(  # noqa: SLF001
+        {},
+        max_chunks_per_entity=0,
+        retrieval_chunk_ids=chunk_ids,
+        max_chunk_content_chars=cap,
+    )
 
 
 async def tool_kg_query(ctx: ToolContext, cypher: str) -> ToolResult:
@@ -102,7 +129,28 @@ async def tool_kg_entities(
         if not isinstance(types, list):
             raise ToolError("types must be a list of strings")
         types_list = [str(value) for value in types if value]
+
     data = ctx.slice_fn(types_list, safe_limit, safe_chunks, safe_rels, None)
+    if _slice_is_empty(data):
+        fallback = await neo4j_entity_slice(
+            workspace_name=ctx.workspace_name,
+            workspace_dir=ctx.workspace_dir,
+            types=types_list,
+            limit_per_type=safe_limit,
+            max_chunks_per_entity=safe_chunks,
+            max_relationships_per_entity=safe_rels,
+            max_chunk_content_chars=int(getattr(ctx, "max_chunk_content_chars", 8000) or 8000),
+        )
+        if isinstance(fallback, dict):
+            data = fallback
+        elif types_list:
+            data = {
+                **data,
+                "warning": (
+                    "typed kg_entities slice returned 0 entities from workspace VDB; "
+                    "Neo4j fallback unavailable or also empty"
+                ),
+            }
     return ToolResult(payload=data)
 
 
@@ -120,10 +168,13 @@ async def tool_kg_chunks(
     valid_modes = {"hybrid", "local", "global", "naive", "mix"}
     safe_mode = mode if mode in valid_modes else "hybrid"
     payload = await ctx.retrieve_fn(query, "", safe_mode, safe_top_k)
+    chunk_ids = {str(chunk_id) for chunk_id in (payload.get("chunk_ids") or set()) if chunk_id}
+    source_chunks = _load_retrieved_chunks(ctx, chunk_ids)
     return ToolResult(
         payload={
             "matched_entity_names": sorted(payload.get("names") or []),
-            "matched_chunk_ids": sorted(payload.get("chunk_ids") or []),
+            "matched_chunk_ids": sorted(chunk_ids),
+            "source_chunks": source_chunks,
             "metadata": payload.get("metadata") or {},
         }
     )

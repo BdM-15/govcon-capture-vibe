@@ -50,8 +50,13 @@ class SkillWorkspaceEvidenceStore:
         entity_name_set: set[str] = set()
 
         for entity in records:
-            entity_type = str(entity.get("entity_type", "")).lower()
-            name = entity.get("entity_name") or entity.get("name") or ""
+            entity_type = str(entity.get("entity_type") or "").lower()
+            name = (
+                entity.get("entity_name")
+                or entity.get("entity_id")
+                or entity.get("name")
+                or ""
+            )
             name_lc = str(name).strip().lower()
             if relevant_entity_names is not None:
                 if not name_lc or name_lc not in relevant_entity_names:

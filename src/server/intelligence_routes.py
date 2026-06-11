@@ -288,8 +288,10 @@ INTEL_SLICE_CATALOG: list[dict[str, Any]] = [
             "Comprehensively surface pain points and theme opportunities — including non-obvious "
             "latent/structural challenges — each with cited rationale. Review current methods/tools "
             "implied by the PWS and identify customer-grounded innovation opportunities (quality up, "
-            "cost down, or both; value without bloat; methods not only technology). Do not map internal "
-            "company capabilities. Meet minimum depth contract; return full cited brief.md as final message."
+            "cost down, or both; value without bloat; methods not only technology). "
+            "Coverage is solicitation-driven — one eval crosswalk row per factor/subfactor retrieved. "
+            "Write artifacts/mission_readiness_frame.json and artifacts/brief.md via write_file; "
+            "return the full cited brief.md as your final message."
         ),
         "related_skills": [
             {

@@ -32,6 +32,7 @@ SKILL_TOOLS_RUNTIME_ENV_DEFAULTS = {
     "max_kg_chunks": 100,
     "max_kg_chunks_per_entity": 15,
     "max_kg_relationships_per_entity": 25,
+    "max_chunk_content_chars": 8000,
 }
 SKILL_TOOLS_RUNTIME_ENV_KEYS = {
     "max_turns": "SKILL_TOOLS_MAX_TURNS",
@@ -47,6 +48,7 @@ SKILL_TOOLS_RUNTIME_ENV_KEYS = {
     "max_kg_chunks": "SKILL_TOOLS_MAX_KG_CHUNKS",
     "max_kg_chunks_per_entity": "SKILL_TOOLS_MAX_CHUNKS_PER_ENTITY",
     "max_kg_relationships_per_entity": "SKILL_TOOLS_MAX_RELATIONSHIPS_PER_ENTITY",
+    "max_chunk_content_chars": "SKILL_TOOLS_MAX_CHUNK_CONTENT_CHARS",
 }
 
 
@@ -63,6 +65,7 @@ class SkillToolsRuntimeLimits:
     max_kg_chunks: int
     max_kg_chunks_per_entity: int
     max_kg_relationships_per_entity: int
+    max_chunk_content_chars: int
 
 
 def resolve_skill_runtime_mode(
@@ -111,6 +114,9 @@ def skill_tools_runtime_limits() -> SkillToolsRuntimeLimits:
         ),
         max_kg_relationships_per_entity=env_int(
             "SKILL_TOOLS_MAX_RELATIONSHIPS_PER_ENTITY", 25, 0, 500
+        ),
+        max_chunk_content_chars=env_int(
+            "SKILL_TOOLS_MAX_CHUNK_CONTENT_CHARS", 8000, 500, 50_000
         ),
     )
 

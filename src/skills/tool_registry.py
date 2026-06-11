@@ -273,9 +273,10 @@ def build_tool_specs(
             name="kg_chunks",
             description=(
                 "Run chat-grade hybrid retrieval (Phase 1.6) over the active "
-                "workspace. Returns ranked entity names + chunk IDs scored "
-                "against the query. Use when you don't know which entity "
-                "types to ask for, or when answering a free-text user question."
+                "workspace. Returns ranked entity names, chunk IDs, and "
+                "verbatim source_chunks content scored against the query. Use "
+                "when you don't know which entity types to ask for, or when "
+                "answering a free-text user question."
             ),
             parameters={
                 "type": "object",

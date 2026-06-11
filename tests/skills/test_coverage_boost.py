@@ -8,6 +8,9 @@ def test_detect_exhaustive_coverage_intent_matches_workspace_wide_prompts() -> N
     assert detect_exhaustive_coverage_intent("Build a full task area map for this workspace")
     assert detect_exhaustive_coverage_intent("Complete requirement traceability crosswalk")
     assert detect_exhaustive_coverage_intent("Map all evaluation factors")
+    assert detect_exhaustive_coverage_intent(
+        "Build the Mission Readiness Frame from the full solicitation package"
+    )
 
 
 def test_detect_exhaustive_coverage_intent_ignores_focused_prompts() -> None:

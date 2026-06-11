@@ -18,6 +18,8 @@ _EXHAUSTIVE_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
         r"\bwhole\b.{0,30}\b(solicitation|workspace|scope)\b",
         r"\bexhaustive\b.{0,30}\b(coverage|map|review|analysis)\b",
         r"\bmap\b.{0,20}\b(all|every|entire|full)\b",
+        r"\bfull\b.{0,40}\b(solicitation|package)\b",
+        r"\bmission\s+readiness\s+frame\b",
     )
 )
 

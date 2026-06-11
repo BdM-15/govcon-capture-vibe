@@ -71,6 +71,7 @@ def test_tool_kg_chunks_normalizes_mode_and_sets(tmp_path) -> None:
     assert result.payload == {
         "matched_entity_names": ["A", "B"],
         "matched_chunk_ids": ["c1", "c2"],
+        "source_chunks": [],
         "metadata": {"x": 1},
     }
 
@@ -138,10 +139,10 @@ def test_tools_mode_kg_tools_read_native_ingested_evidence(tmp_path) -> None:
 
     assert entities.payload["entities"]["requirement"][0]["name"] == "Native Workload Requirement"
     assert entities.payload["source_chunks"][0]["chunk_id"] == "chunk-native-workload"
-    assert chunks.payload == {
-        "matched_entity_names": ["native workload requirement"],
-        "matched_chunk_ids": ["chunk-native-workload"],
-        "metadata": {
+    assert chunks.payload["matched_entity_names"] == ["native workload requirement"]
+    assert chunks.payload["matched_chunk_ids"] == ["chunk-native-workload"]
+    assert chunks.payload["source_chunks"][0]["chunk_id"] == "chunk-native-workload"
+    assert chunks.payload["metadata"] == {
             "mode": "mix",
             "top_k": 5,
             "chunk_top_k": 5,
@@ -151,5 +152,4 @@ def test_tools_mode_kg_tools_read_native_ingested_evidence(tmp_path) -> None:
             "used": True,
             "reason": "",
             "query_overrides": {"top_k": 5, "chunk_top_k": 5},
-        },
-    }
+        }

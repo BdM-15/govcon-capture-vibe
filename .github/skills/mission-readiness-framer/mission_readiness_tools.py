@@ -41,6 +41,43 @@ def _join_list(value: Any) -> str:
     return str(value)
 
 
+def artifact_continue_message(run_dir: Path) -> str | None:
+    """Return a continuation nudge when required artifacts are still missing."""
+    artifacts_dir = Path(run_dir) / "artifacts"
+    missing: list[str] = []
+    frame_path = artifacts_dir / "mission_readiness_frame.json"
+    brief_path = artifacts_dir / "brief.md"
+    if not frame_path.is_file():
+        missing.append("artifacts/mission_readiness_frame.json")
+    else:
+        try:
+            payload = json.loads(frame_path.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict):
+                missing.append("artifacts/mission_readiness_frame.json (invalid JSON)")
+        except (OSError, json.JSONDecodeError):
+            missing.append("artifacts/mission_readiness_frame.json (unreadable)")
+    brief_text = ""
+    if not brief_path.is_file():
+        missing.append("artifacts/brief.md")
+    else:
+        try:
+            brief_text = brief_path.read_text(encoding="utf-8", errors="replace").strip()
+        except OSError:
+            missing.append("artifacts/brief.md (unreadable)")
+        if not brief_text:
+            missing.append("artifacts/brief.md (empty)")
+    if not missing:
+        return None
+    return (
+        "Run incomplete — do NOT finalize yet. Required deliverables are still missing: "
+        f"{', '.join(missing)}. "
+        "Continue agentic retrieval: call kg_entities for evaluation_factor and subfactor, "
+        "run additional kg_chunks until every material factor/subfactor is covered, then "
+        "write_file the full mission_readiness_frame.json and brief.md before stopping. "
+        "Your final assistant message must copy brief.md verbatim."
+    )
+
+
 def detect_capability_overlay_request(user_prompt: str) -> dict[str, Any] | None:
     """Return overlay hints when the user names an external vendor/platform/URL."""
     text = str(user_prompt or "").strip()
@@ -137,6 +174,15 @@ def _overlay_content_issues(overlay: dict[str, Any]) -> list[str]:
     if not isinstance(innovations, list) or not innovations:
         issues.append("capability_overlay.innovation_links is missing or empty")
     return issues
+
+
+def validate_skill_run(
+    run_dir: Path,
+    *,
+    user_prompt: str = "",
+) -> list[str]:
+    """Platform hook — post-run qualitative audit for this skill."""
+    return validate_mission_readiness_run(run_dir, user_prompt=user_prompt)
 
 
 def validate_mission_readiness_run(
