@@ -80,6 +80,25 @@ def count_vdb_entries(rag_storage_path: str, filename: str) -> int | None:
     return None
 
 
+def _entity_metadata_lookup(
+    entity_records: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Index Neo4j entity snapshots by canonical name and entity_id (case-insensitive)."""
+    lookup: dict[str, dict[str, Any]] = {}
+    for record in entity_records:
+        if not isinstance(record, dict):
+            continue
+        for key in (
+            record.get("entity_name"),
+            record.get("entity_id"),
+        ):
+            text = str(key or "").strip()
+            if not text:
+                continue
+            lookup.setdefault(text.casefold(), record)
+    return lookup
+
+
 def sync_entity_metadata_to_vdb(
     rag_storage_path: str,
     entity_records: list[dict[str, Any]],
@@ -107,12 +126,8 @@ def sync_entity_metadata_to_vdb(
     if not isinstance(rows, list):
         return 0
 
-    entity_by_name = {
-        str(record.get("entity_name") or "").strip(): record
-        for record in entity_records
-        if isinstance(record, dict) and record.get("entity_name")
-    }
-    if not entity_by_name:
+    entity_by_key = _entity_metadata_lookup(entity_records)
+    if not entity_by_key:
         return 0
 
     updated = 0
@@ -120,22 +135,28 @@ def sync_entity_metadata_to_vdb(
         if not isinstance(row, dict):
             continue
         name = str(row.get("entity_name") or "").strip()
-        current = entity_by_name.get(name)
+        current = entity_by_key.get(name.casefold()) if name else None
         if current is None:
             continue
 
+        row_changed = False
         current_type = current.get("entity_type")
         if current_type and row.get("entity_type") != current_type:
             row["entity_type"] = current_type
-            updated += 1
+            row_changed = True
 
         current_source = current.get("source_id")
         if current_source and row.get("source_id") != current_source:
             row["source_id"] = current_source
+            row_changed = True
 
         current_desc = current.get("description")
         if current_desc and row.get("description") != current_desc:
             row["description"] = current_desc
+            row_changed = True
+
+        if row_changed:
+            updated += 1
 
     if updated <= 0:
         return 0
@@ -147,6 +168,21 @@ def sync_entity_metadata_to_vdb(
         return 0
 
     return updated
+
+
+def sync_workspace_entity_metadata_from_neo4j(
+    *,
+    rag_storage_path: str,
+    entity_records: list[dict[str, Any]],
+) -> dict[str, int]:
+    """Patch ``vdb_entities.json`` metadata from a Neo4j entity snapshot."""
+    rows_total = count_vdb_entries(rag_storage_path, "vdb_entities.json") or 0
+    updated = sync_entity_metadata_to_vdb(rag_storage_path, entity_records)
+    return {
+        "vdb_rows": rows_total,
+        "neo4j_entities": len(entity_records),
+        "rows_updated": updated,
+    }
 
 
 def apply_entity_name_updates_to_vdb(

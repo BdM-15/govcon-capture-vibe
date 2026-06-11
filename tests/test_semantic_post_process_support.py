@@ -139,6 +139,48 @@ def test_plan_entity_type_updates_handles_table_hash_and_unknown() -> None:
     assert hash_cleaned == 1
 
 
+def test_sync_entity_metadata_to_vdb_matches_entity_id_when_vdb_uses_canonical_name(
+    tmp_path,
+) -> None:
+    path = tmp_path / "vdb_entities.json"
+    path.write_text(
+        json.dumps(
+            {
+                "data": [
+                    {
+                        "entity_name": "Factor 1 Management",
+                        "entity_type": None,
+                        "description": None,
+                        "source_id": "old-source",
+                        "vector": [1.0],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    updated = sync_entity_metadata_to_vdb(
+        str(tmp_path),
+        [
+            {
+                "entity_id": "Factor 1 Management",
+                "entity_name": None,
+                "entity_type": "evaluation_factor",
+                "description": "Management factor",
+                "source_id": "chunk-abc",
+            }
+        ],
+    )
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    row = payload["data"][0]
+    assert updated == 1
+    assert row["entity_type"] == "evaluation_factor"
+    assert row["description"] == "Management factor"
+    assert row["source_id"] == "chunk-abc"
+
+
 def test_sync_entity_metadata_to_vdb_updates_types_from_neo4j_snapshot(tmp_path) -> None:
     path = tmp_path / "vdb_entities.json"
     path.write_text(

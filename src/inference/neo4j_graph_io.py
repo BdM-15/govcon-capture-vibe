@@ -22,9 +22,13 @@ logger = logging.getLogger(__name__)
 
 def entity_record_to_dict(record: Any) -> dict[str, Any]:
     """Convert a Neo4j entity row into the post-processing entity contract."""
+    entity_id = record.get("entity_id")
+    entity_name = record.get("entity_name")
+    canonical_name = str(entity_name or entity_id or "").strip()
     return {
         "id": record["id"],
-        "entity_name": record["entity_name"],
+        "entity_id": entity_id,
+        "entity_name": canonical_name or entity_name,
         "entity_type": record["entity_type"],
         "description": record["description"],
         "source_id": record["source_id"],
@@ -208,7 +212,8 @@ class Neo4jGraphIO:
         query = f"""
         MATCH (n:`{self.workspace}`)
         RETURN elementId(n) as id,
-               n.entity_id as entity_name,
+               n.entity_id as entity_id,
+               n.entity_name as entity_name,
                n.entity_type as entity_type,
                n.description as description,
                n.source_id as source_id
