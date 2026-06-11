@@ -215,13 +215,17 @@ class SemanticPostProcessingRun:
                     vdb_name_stats["relationships_updated"],
                 )
 
-        if entity_updates or name_updates:
-            entities_synced = sync_entity_metadata_to_vdb(
-                self.rag_storage_path,
-                entities_after_update,
-            )
-            if entities_synced > 0:
-                logger.info("  ✅ Synced %s entity metadata updates back to vdb_entities.json", entities_synced)
+        # Always mirror Neo4j metadata into VDB JSON. LightRAG ingest does not
+        # reliably populate entity_type on vdb_entities.json; skipping sync when
+        # Phase 2 made no corrections left skills with empty typed slices.
+        entities_synced = sync_entity_metadata_to_vdb(
+            self.rag_storage_path,
+            entities_after_update,
+        )
+        if entities_synced > 0:
+            logger.info("  ✅ Synced %s entity metadata rows back to vdb_entities.json", entities_synced)
+        else:
+            logger.info("  ✅ VDB entity metadata already aligned with Neo4j")
 
         self._complete_phase(phase_name, phase_start)
 
