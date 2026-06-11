@@ -79,17 +79,7 @@ Every run emits **both**:
       "source_chunk_ids": []
     }
   ],
-  "company_capability_matches": [
-    {
-      "id": "CCM-001",
-      "capability_entity": "entity name from KG",
-      "entity_id": "...",
-      "match_basis": "why this capability supports the opportunity",
-      "linked_to": ["WT-001", "IO-001", "PP-002"],
-      "proof_strength": "strong|moderate|weak|gap",
-      "source_chunk_ids": []
-    }
-  ],
+
   "importance_signals": [
     {
       "id": "IS-001",
@@ -165,7 +155,7 @@ Every run emits **both**:
 - `customer_pain_points`: 4+ (include ≥2 `latent` or `structural`)
 - `current_methods`: 3+ task clusters
 - `innovation_opportunities`: 3+ (mix of types; not all `technology`)
-- `company_capability_matches`: 2+ when ontology entities exist; else document in `claim_gaps[]`
+
 - `importance_signals`: 4+
 - `implicit_criteria`: 3+
 - `win_theme_candidates`: 3 (priority 1–3)

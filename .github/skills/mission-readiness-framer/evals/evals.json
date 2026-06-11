@@ -56,21 +56,22 @@
     },
     {
       "id": "mrf-004",
-      "name": "Differentiation exploration with company capabilities",
-      "prompt": "Workspace with MCPP or sustainment PWS. Surface non-obvious pain points with rationale, current methods implied by the PWS, innovation opportunities (quality and cost), and cross-walk to company_capabilities entities where they exist.",
+      "name": "Customer-grounded differentiation exploration",
+      "prompt": "Workspace with MCPP or sustainment PWS. Surface non-obvious pain points with rationale, current methods implied by the PWS, and innovation opportunities (quality and cost; lean delivery; no internal capability claims).",
       "expected_signals": [
         "loads `references/differentiation_exploration.md`",
         "emits `customer_pain_points[]` with `visibility`, `rationale`, and at least one `latent` or `structural` entry",
         "emits `current_methods[]` with `systems_named` when PWS cites tools/systems",
         "emits `innovation_opportunities[]` with `quality_impact`, `cost_impact`, and `fit_to_scope`",
-        "queries or cites `technology` / `past_performance_reference` / `strategic_theme` entities for `company_capability_matches[]`",
-        "win_theme_candidates include `rationale_chain` with differentiation hypothesis"
+        "win_theme_candidates include `rationale_chain` with customer-grounded differentiation hypothesis",
+        "does not emit company_capabilities or internal proof inventory mapping"
       ],
       "anti_signals": [
         "generic AI innovation with no PWS anchor",
-        "fabricated company capability deployments (`proof_strength` not marked gap when absent)",
+        "mapping to company_capabilities ontology entities",
         "pain points listed without rationale justification",
-        "only explicit pains — no latent/structural mining"
+        "only explicit pains — no latent/structural mining",
+        "bloat proposals that expand scope beyond the solicitation"
       ]
     }
   ]

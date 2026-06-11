@@ -73,9 +73,9 @@ INTEL_SLICE_CATALOG: list[dict[str, Any]] = [
             "Program office = customer; contract = workload enabler for readiness. "
             "Comprehensively surface pain points and theme opportunities — including non-obvious "
             "latent/structural challenges — each with cited rationale. Review current methods/tools "
-            "implied by the PWS and identify innovation opportunities (quality up, cost down, or both; "
-            "methods not only technology). Cross-walk to company_capabilities entities in the KG for "
-            "differentiation proof. Meet minimum depth contract; return full cited brief.md as final message."
+            "implied by the PWS and identify customer-grounded innovation opportunities (quality up, "
+            "cost down, or both; value without bloat; methods not only technology). Do not map internal "
+            "company capabilities. Meet minimum depth contract; return full cited brief.md as final message."
         ),
         "related_skills": [
             {

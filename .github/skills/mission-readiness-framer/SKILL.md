@@ -9,7 +9,7 @@ metadata:
   capability: analyze
   runtime: tools
   category: capture_intelligence
-  version: 1.2.0
+  version: 1.2.1
   status: active
 ---
 
@@ -55,7 +55,7 @@ Unless the workspace truly lacks evidence (document each shortfall in `claim_gap
 | `customer_pain_points[]` | **≥ 4** | Mix anxiety levels; **≥ 2** `latent` or `structural`; each with `rationale` |
 | `current_methods[]` | **≥ 3** | Named systems/processes the PWS implies are in use today |
 | `innovation_opportunities[]` | **≥ 3** | Quality↑ and/or cost↓; not all `technology`; honest `fit_to_scope` |
-| `company_capability_matches[]` | **≥ 2** | Cross-walk to KG capabilities when entities exist; else `claim_gaps[]` |
+
 | `importance_signals[]` | **≥ 4** | Include ≥1 `repetition` or `background_eval_echo` when language echoes |
 | `implicit_criteria[]` | **≥ 3** | Each with `alternate_read` unless `confidence: high` |
 | `win_theme_candidates[]` | **3** | Full priority 1–3 spine tied to readiness |
@@ -94,17 +94,11 @@ Unless the workspace truly lacks evidence (document each shortfall in `claim_gap
     "period_of_performance",
     "place_of_performance",
     "pain_point",
-    "customer_priority",
-    "technology",
-    "past_performance_reference",
-    "strategic_theme",
-    "program"
+    "customer_priority"
   ],
   "limit": 400
 }
 ```
-
-Pull **company_capabilities** ontology entities when present (`technology`, `past_performance_reference`, `strategic_theme`, `program`) — these are proof inventory for differentiation, not solicitation text.
 
 Then run **at least six** focused `kg_chunks` queries (adapt to package labels):
 
@@ -137,10 +131,6 @@ Load `references/customer_intent_signals.md` and `references/differentiation_exp
 From PWS/SOW and attachments, emit `current_methods[]` (what the customer already uses to perform the workload).  
 Then emit `innovation_opportunities[]` — methods or technology that improve **quality, cost, or both**; cite scope fit honestly.
 
-### 3c. Cross-walk company capabilities
-
-Match pains, themes, and innovation opportunities to `technology`, `past_performance_reference`, and `strategic_theme` entities in the KG. Emit `company_capability_matches[]` with `proof_strength` — mark `gap` when we lack proof.
-
 ### 4. Cross-walk and importance signals
 
 Triangulate background ↔ PWS/SOW ↔ QASP ↔ eval ↔ amendments. Emit `importance_signals[]` with correct `signal_type` and `source_role`.
@@ -169,12 +159,11 @@ Write `{run_dir}/artifacts/brief.md` — a **capture-manager-ready** narrative:
 1. Mission Readiness Frame (outcome, failure modes, enablers, our read)
 2. Verbatim signal bank (top extracts with commentary)
 3. Customer pain and importance — include **non-obvious** pains with rationale
-4. Current methods vs innovation opportunities (quality/cost lens)
-5. Company capability cross-walk (what we can credibly prove)
-6. Eval cross-walk table (factor → PWS → readiness)
-7. Implicit criteria / tea leaves with alternate reads
-8. Win-theme candidate spine (3 seeds + rationale chains + proof checklist)
-9. Clarification questions + claim gaps
+4. Current methods vs innovation opportunities (quality/cost lens, value without bloat)
+5. Eval cross-walk table (factor → PWS → readiness)
+6. Implicit criteria / tea leaves with alternate reads
+7. Win-theme candidate spine (3 seeds + rationale chains + proof checklist)
+8. Clarification questions + claim gaps
 
 Load `references/narrative_template.md` if losing structure.
 
@@ -192,6 +181,7 @@ Copy the complete `brief.md` content into your final assistant response. Do not 
 - **FAR trap / CO error forensics** → `compliance-auditor` or deprecated `rfp-reverse-engineer`
 - **Proposal prose / FAB / themes narrative** → `proposal-generator`
 - **Competitor / incumbent fingerprinting** → `competitive-intel`
+- **Internal company capability / proof inventory mapping** → not in this skill (ontology not bid-ready); validate in capture team / future skill
 - **Pricing** → `price-to-win`
 
 ## References
@@ -199,5 +189,5 @@ Copy the complete `brief.md` content into your final assistant response. Do not 
 - [references/output_contract.md](references/output_contract.md) — JSON envelope schema
 - [references/readiness_signal_catalog.md](references/readiness_signal_catalog.md) — readiness and proxy patterns
 - [references/customer_intent_signals.md](references/customer_intent_signals.md) — pain, importance, cross-walk, tea leaves
-- [references/differentiation_exploration.md](references/differentiation_exploration.md) — latent pains, current methods, innovation, company_capabilities cross-walk
+- [references/differentiation_exploration.md](references/differentiation_exploration.md) — latent pains, current methods, innovation, lean-delivery differentiation ideation
 - [references/narrative_template.md](references/narrative_template.md) — optional bullet skeleton for brief.md

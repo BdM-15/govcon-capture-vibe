@@ -1,6 +1,6 @@
 # Differentiation Exploration — Pain, Themes, Methods, Innovation
 
-> Extend the Mission Readiness Frame with **exploratory but grounded** capture intelligence: non-obvious pains, theme opportunities with rationale, what methods the customer already uses, and where we can differentiate — including via `company_capabilities` in the KG.
+> Extend the Mission Readiness Frame with **exploratory but grounded** capture intelligence: non-obvious pains, theme opportunities with rationale, what methods the customer already uses, and where a bidder could differentiate — **customer-grounded ideation only**. Internal company proof inventory is out of scope until capability data is bid-ready.
 
 ## Layer A — Comprehensive pain & theme opportunity mining
 
@@ -81,35 +81,20 @@ Each entry MUST include:
 
 **Anti-pattern:** Generic "use AI" with no task anchor. Tie every opportunity to a **cited** requirement or performance anxiety.
 
-## Layer C — `company_capabilities` cross-walk (KG ontology)
+### Value without waste / bloat
 
-The workspace may include ontology entities (`technology`, `past_performance_reference`, `strategic_theme`, `program`) from `company_capabilities`.
+Every `innovation_opportunities[]` entry should pass a **lean-delivery test**:
 
-### Workflow
+- Does this reduce manual burden the PWS already imposes? (`cost_impact: reduce`)
+- Does it tighten a readiness outcome the customer already measures? (`quality_impact`)
+- Would it add scope, licenses, or headcount the customer did not ask for? → `fit_to_scope: stretch` or `requires_qa`
 
-1. `kg_entities` — pull capability-related types (see SKILL.md step 1).
-2. For each `innovation_opportunity` or `win_theme_candidate`, search for **supporting** capability entities:
-   - Match on: system names, mission domain (sustainment, prepositioning, BOS), technology keywords in PWS.
-3. Emit `company_capability_matches[]`:
+**Our read:** differentiation in the AI era is often **fewer failure modes and less rework**, not more widgets. Prefer process clarity, automation of reporting burden, and measurable quality gains over novelty.
 
-```json
-{
-  "id": "CCM-001",
-  "capability_entity": "Intelligent Asset Management (IAM)",
-  "match_basis": "PWS mandates PMCS throughput; IAM supports predictive maintenance",
-  "linked_to": ["WT-001", "IO-002"],
-  "proof_strength": "strong|moderate|weak|gap",
-  "entity_id": "...",
-  "source_chunk_ids": ["..."]
-}
-```
+## Out of scope (this skill)
 
-- `proof_strength: gap` when we have no ontology proof — say so; do not fabricate deployments.
-- Prefer `SUPPORTED_BY` relationships in KG when present (`kg_query` optional).
-
-### Chain handoff
-
-`company_capability_matches[]` feeds `proposal-generator` / future win-theme-spine skill — this skill only **maps** opportunities to proof inventory.
+- Mapping to internal **company_capabilities** or proof inventory — not reliable enough for real bids yet; handle in a future skill when ontology matures.
+- Claiming our platforms, past performance, or discriminators — that is `proposal-generator` / capture team validation, not solicitation reverse-engineering.
 
 ## Educational tone in `brief.md`
 
@@ -117,4 +102,4 @@ Remain **insightful and educational** (explain *why* a signal matters to a captu
 
 - **What the document says** (Class A)
 - **What we infer and why** (Class B with visible markers)
-- **What we could offer** (Class B + capability match, with `fit_to_scope` honesty)
+- **Where a bidder might differentiate** (Class B, customer-grounded, with `fit_to_scope` honesty — no internal capability claims)

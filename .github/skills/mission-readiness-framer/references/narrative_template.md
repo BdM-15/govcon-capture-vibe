@@ -28,9 +28,6 @@ Use when the run drifts into unsourced paragraph synthesis. Bullets only.
 - CM-001: <method in place> [see current_methods[0]] — IO-001 opportunity: <quality/cost angle> [see innovation_opportunities[0]]
 - **Our read:** <differentiation angle grounded in scope fit>
 
-## Company capability cross-walk
-- CCM-001: <entity> supports WT-001 [see company_capability_matches[0]] — proof strength: <level>
-
 ## Win-theme candidates (seeds only)
 - WT-001: <label> — readiness link: <line> [see win_theme_candidates[0]]
 - **Play:** Feed WT-001..003 into proposal-generator after eval decoder check.
