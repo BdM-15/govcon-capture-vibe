@@ -107,23 +107,19 @@
 
                       <template x-if="slice.action === 'chat'">
                         <div class="space-y-2">
-                          <div class="flex items-center gap-1.5">
-                            <label
-                              class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
-                              :title="slice.context_tooltip || ''"
-                            >
-                              Optional context
-                            </label>
-                            <i
-                              data-lucide="info"
-                              class="w-3 h-3 text-slate-600 cursor-help"
-                              :title="slice.context_tooltip || ''"
-                            ></i>
-                          </div>
+                          <label
+                            class="flex items-center text-[10px] font-mono uppercase tracking-wider text-slate-500"
+                          >
+                            Optional context
+                            <span
+                              class="settings-label-tip"
+                              :title="intelContextTooltip(slice)"
+                            >?</span>
+                          </label>
                           <textarea
                             class="w-full min-h-[4.5rem] bg-ink-900 border border-edge rounded-lg px-3 py-2 text-xs text-slate-200 font-mono leading-relaxed resize-y"
                             :placeholder="slice.context_placeholder || 'URLs, partner notes, or focus areas (optional)'"
-                            :title="slice.context_tooltip || ''"
+                            :title="intelContextTooltip(slice)"
                             x-model="intel.sliceContext[slice.id]"
                           ></textarea>
                           <div class="flex items-center gap-2 flex-wrap">
@@ -143,23 +139,19 @@
 
                       <template x-if="slice.action === 'skill'">
                         <div class="space-y-2">
-                          <div class="flex items-center gap-1.5">
-                            <label
-                              class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
-                              :title="slice.context_tooltip || ''"
-                            >
-                              Optional context
-                            </label>
-                            <i
-                              data-lucide="info"
-                              class="w-3 h-3 text-slate-600 cursor-help"
-                              :title="slice.context_tooltip || ''"
-                            ></i>
-                          </div>
+                          <label
+                            class="flex items-center text-[10px] font-mono uppercase tracking-wider text-slate-500"
+                          >
+                            Optional context
+                            <span
+                              class="settings-label-tip"
+                              :title="intelContextTooltip(slice)"
+                            >?</span>
+                          </label>
                           <textarea
                             class="w-full min-h-[4.5rem] bg-ink-900 border border-edge rounded-lg px-3 py-2 text-xs text-slate-200 font-mono leading-relaxed resize-y"
                             :placeholder="slice.context_placeholder || 'e.g. web_fetch URL · Subcontractor · Incumbent'"
-                            :title="slice.context_tooltip || ''"
+                            :title="intelContextTooltip(slice)"
                             x-model="intel.sliceContext[slice.id]"
                           ></textarea>
                           <div class="flex items-center gap-2 flex-wrap">
@@ -201,18 +193,18 @@
                           <template x-for="rel in (slice.related_skills || [])" :key="rel.skill">
                             <div class="pt-2 border-t border-edge/50 space-y-2">
                               <div class="flex items-center justify-between gap-2 flex-wrap">
-                                <div class="flex items-center gap-1.5 min-w-0">
-                                  <label
-                                    class="text-[10px] font-mono uppercase tracking-wider text-slate-600 truncate"
+                                <label
+                                  class="flex items-center min-w-0 text-[10px] font-mono uppercase tracking-wider text-slate-600"
+                                >
+                                  <span
+                                    class="truncate"
                                     x-text="'Context for ' + (rel.label || rel.skill)"
-                                    :title="rel.context_tooltip || ''"
-                                  ></label>
-                                  <i
-                                    data-lucide="info"
-                                    class="w-3 h-3 text-slate-600 cursor-help shrink-0"
-                                    :title="rel.context_tooltip || ''"
-                                  ></i>
-                                </div>
+                                  ></span>
+                                  <span
+                                    class="settings-label-tip shrink-0"
+                                    :title="intelContextTooltip(rel)"
+                                  >?</span>
+                                </label>
                                 <button
                                   class="btn btn-ghost text-[10px] py-0.5 px-1.5 shrink-0"
                                   type="button"
@@ -227,7 +219,7 @@
                               <textarea
                                 class="w-full min-h-[3.5rem] bg-ink-900 border border-edge rounded-lg px-3 py-2 text-xs text-slate-200 font-mono leading-relaxed resize-y"
                                 :placeholder="rel.context_placeholder || 'Optional notes for this related skill run'"
-                                :title="rel.context_tooltip || ''"
+                                :title="intelContextTooltip(rel)"
                                 x-model="intel.sliceContext[intelSliceContextKey(slice.id, rel.skill)]"
                               ></textarea>
                               <div class="flex items-center gap-2 flex-wrap">
@@ -322,7 +314,7 @@
                           ></p>
                           <p
                             class="text-[11px] text-slate-500 mt-2 font-mono leading-relaxed"
-                            x-text="intelBriefingGuideTarget().context_tooltip"
+                            x-text="intelContextTooltip(intelBriefingGuideTarget())"
                           ></p>
                         </section>
                         <section x-show="(intelBriefingGuideTarget().guide.tips || []).length">

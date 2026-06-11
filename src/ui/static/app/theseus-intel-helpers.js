@@ -1,3 +1,16 @@
+window.THESEUS_INTEL_CONTEXT_TOOLTIP_DEFAULT =
+  "Optional first-run notes appended to this briefing's prompt as " +
+  "User-supplied context. High impact for facts the KG may not encode: " +
+  "incumbent name, partner URLs (web_fetch), teaming focus, or constraints " +
+  "like 'no company capability mapping'. Leave empty for the catalog prompt only.";
+
+window.theseusIntelContextTooltip = function theseusIntelContextTooltip(
+  sliceOrRel,
+) {
+  const text = String(sliceOrRel?.context_tooltip || "").trim();
+  return text || window.THESEUS_INTEL_CONTEXT_TOOLTIP_DEFAULT;
+};
+
 window.theseusOpenIntelBriefingGuide = function theseusOpenIntelBriefingGuide(
   app,
   slice,

@@ -1022,6 +1022,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusIntelBriefingGuideTarget(this);
     },
 
+    intelContextTooltip(sliceOrRel) {
+      return window.theseusIntelContextTooltip(sliceOrRel);
+    },
+
     openIntelSliceInStudio(run) {
       return window.theseusOpenIntelSliceInStudio(this, run);
     },

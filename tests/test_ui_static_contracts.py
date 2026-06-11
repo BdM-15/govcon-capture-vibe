@@ -244,6 +244,10 @@ def test_intel_briefings_expose_optional_slice_context_field() -> None:
     assert "intel.briefingGuide.open" in intel_view
     assert "tuning-guide-body" in intel_view
     assert "theseusOpenIntelBriefingGuide" in intel_helpers
+    assert 'class="settings-label-tip"' in intel_view
+    assert "intelContextTooltip(slice)" in intel_view
+    assert "theseusIntelContextTooltip" in intel_helpers
+    assert 'data-lucide="info"' not in intel_view
 
 
 def test_chain_helpers_support_partial_status_and_chain_grouping() -> None:
