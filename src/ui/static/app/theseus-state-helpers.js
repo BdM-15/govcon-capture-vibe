@@ -304,6 +304,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       loading: false,
       slicesLoading: false,
       sliceRunning: null,
+      sliceContext: {},
       showCovered: true,
       showGaps: true,
       traceFilter: "",

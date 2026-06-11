@@ -328,6 +328,40 @@ def test_skill_invoke_route_tools_mode(tmp_path) -> None:
     assert captured["retrieve"]["query_overrides"]["top_k"] == 9
 
 
+def test_skill_invoke_route_appends_user_addendum_on_first_run(tmp_path) -> None:
+    manager = _FakeManager("tools")
+    app = FastAPI()
+    register_skill_invoke_ui_routes(
+        app,
+        workspace_dir=lambda: tmp_path,
+        query_settings_store=_query_store(tmp_path),
+        data_func=None,
+        llm_func=_llm,
+        workspace_name=lambda: "ws-a",
+        manager_factory=lambda: manager,
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/ui/skills/demo/invoke",
+        json={
+            "prompt": "Build the readiness frame.",
+            "user_addendum": "web_fetch https://example.com/platform\nIncumbent: KBR",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    _, invoke_kwargs = manager.invoke_calls[0]
+    assert "Build the readiness frame." in invoke_kwargs["user_prompt"]
+    assert "User-supplied context:" in invoke_kwargs["user_prompt"]
+    assert "web_fetch https://example.com/platform" in invoke_kwargs["user_prompt"]
+    assert invoke_kwargs["entity_payload"] == {
+        "user_supplied_context": {
+            "first_run_notes": "web_fetch https://example.com/platform\nIncumbent: KBR",
+        },
+    }
+
+
 def test_proposal_skill_tools_mode_can_use_native_ingested_evidence(tmp_path) -> None:
     (tmp_path / "vdb_entities.json").write_text(
         json.dumps(

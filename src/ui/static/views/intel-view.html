@@ -61,8 +61,9 @@
                 <h2 class="font-semibold mb-1">Workspace briefings</h2>
                 <p class="text-xs text-slate-500 mb-4 max-w-2xl">
                   One focused run per slice — chat prompts for orientation, agent skills for
-                  forensic payment/logistics/capital work. Re-run anytime after workspace refresh;
-                  latest skill runs show below.
+                  forensic payment/logistics/capital work. Add optional context (URLs, partner
+                  notes, incumbent hints) before the first run; re-run anytime after workspace
+                  refresh. Latest skill runs show below.
                 </p>
                 <div
                   x-show="intel.slicesLoading && !intel.slices.length"
@@ -94,26 +95,44 @@
                       </div>
 
                       <template x-if="slice.action === 'chat'">
-                        <div class="flex items-center gap-2 flex-wrap">
-                          <button
-                            class="btn btn-primary text-xs"
-                            @click="runIntelChatSlice(slice)"
-                          >
-                            <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
-                            Run in Capture Chat
-                          </button>
-                          <span class="text-[10px] font-mono text-slate-600"
-                            >grounded retrieval · mix mode</span
-                          >
+                        <div class="space-y-2">
+                          <label class="block text-[10px] font-mono uppercase tracking-wider text-slate-500">
+                            Optional context
+                          </label>
+                          <textarea
+                            class="w-full min-h-[4.5rem] bg-ink-900 border border-edge rounded-lg px-3 py-2 text-xs text-slate-200 font-mono leading-relaxed resize-y"
+                            :placeholder="'URLs, partner notes, or focus areas for this briefing (optional)'"
+                            x-model="intel.sliceContext[slice.id]"
+                          ></textarea>
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <button
+                              class="btn btn-primary text-xs"
+                              @click="runIntelChatSlice(slice, slice.id)"
+                            >
+                              <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                              Run in Capture Chat
+                            </button>
+                            <span class="text-[10px] font-mono text-slate-600"
+                              >grounded retrieval · mix mode</span
+                            >
+                          </div>
                         </div>
                       </template>
 
                       <template x-if="slice.action === 'skill'">
                         <div class="space-y-2">
+                          <label class="block text-[10px] font-mono uppercase tracking-wider text-slate-500">
+                            Optional context
+                          </label>
+                          <textarea
+                            class="w-full min-h-[4.5rem] bg-ink-900 border border-edge rounded-lg px-3 py-2 text-xs text-slate-200 font-mono leading-relaxed resize-y"
+                            :placeholder="'e.g. web_fetch https://example.com · Subcontractor: Acme · Incumbent: KBR'"
+                            x-model="intel.sliceContext[slice.id]"
+                          ></textarea>
                           <div class="flex items-center gap-2 flex-wrap">
                             <button
                               class="btn btn-primary text-xs"
-                              @click="invokeIntelSkill(slice.skill, slice.skill_prompt, slice.id)"
+                              @click="invokeIntelSkill(slice.skill, slice.skill_prompt, slice.id, slice.id)"
                               :disabled="intel.sliceRunning === slice.id"
                             >
                               <i data-lucide="play" class="w-3.5 h-3.5"></i>
@@ -147,12 +166,20 @@
                             </div>
                           </template>
                           <template x-for="rel in (slice.related_skills || [])" :key="rel.skill">
-                            <div
-                              class="pt-2 border-t border-edge/50 flex items-center gap-2 flex-wrap"
-                            >
+                            <div class="pt-2 border-t border-edge/50 space-y-2">
+                              <label
+                                class="block text-[10px] font-mono uppercase tracking-wider text-slate-600"
+                                x-text="'Context for ' + (rel.label || rel.skill)"
+                              ></label>
+                              <textarea
+                                class="w-full min-h-[3.5rem] bg-ink-900 border border-edge rounded-lg px-3 py-2 text-xs text-slate-200 font-mono leading-relaxed resize-y"
+                                placeholder="Optional notes for this related skill run"
+                                x-model="intel.sliceContext[intelSliceContextKey(slice.id, rel.skill)]"
+                              ></textarea>
+                              <div class="flex items-center gap-2 flex-wrap">
                               <button
                                 class="btn btn-soft text-xs"
-                                @click="invokeIntelSkill(rel.skill, rel.prompt, slice.id + ':' + rel.skill)"
+                                @click="invokeIntelSkill(rel.skill, rel.prompt, slice.id + ':' + rel.skill, intelSliceContextKey(slice.id, rel.skill))"
                                 :disabled="intel.sliceRunning === (slice.id + ':' + rel.skill)"
                               >
                                 <i data-lucide="play" class="w-3.5 h-3.5"></i>
@@ -164,6 +191,7 @@
                                   x-text="'last: ' + rel.latest_run.run_id"
                                 ></span>
                               </template>
+                              </div>
                             </div>
                           </template>
                         </div>

@@ -363,6 +363,14 @@ def register_skill_invoke_ui_routes(
             le=500,
             description="Optional per-request override; defaults to Query Tuning top_k.",
         )
+        user_addendum: str = Field(
+            "",
+            max_length=8000,
+            description=(
+                "Optional first-run context from Intel Briefings or Agent Skills "
+                "(URLs, partner notes, incumbent hints). Appended to prompt."
+            ),
+        )
 
     class SkillChainInvokePayload(BaseModel):
         """Body for POST /api/ui/skill-chains/invoke."""
@@ -458,10 +466,15 @@ def register_skill_invoke_ui_routes(
                 lines.append(f"- {label}: {rendered}")
         return "\n".join(lines)
 
-    def _skill_prompt(prompt: str, *, user_addendum: str = "") -> str:
+    def _skill_prompt(
+        prompt: str,
+        *,
+        user_addendum: str = "",
+        addendum_heading: str = "User-supplied missing input",
+    ) -> str:
         parts = [str(prompt or "").strip()]
         if user_addendum.strip():
-            parts.append("User-supplied missing input:\n" + user_addendum.strip())
+            parts.append(f"{addendum_heading}:\n" + user_addendum.strip())
         return "\n\n".join(part for part in parts if part)
 
     def _skill_response_with_run(
@@ -565,19 +578,30 @@ def register_skill_invoke_ui_routes(
         skill_desc = skill.frontmatter.description if skill is not None else ""
         frontmatter_mode = skill.frontmatter.runtime_mode if skill is not None else "legacy"
         effective_mode = resolve_skill_runtime_mode(frontmatter_mode)
+        user_addendum = str(payload.user_addendum or "").strip()
+        effective_prompt = _skill_prompt(
+            payload.prompt,
+            user_addendum=user_addendum,
+            addendum_heading="User-supplied context",
+        )
 
         plan = resolve_plan_from_store(
             query_settings_store,
-            payload.prompt,
+            effective_prompt,
             payload=payload,
         )
+        invoke_extras: dict[str, Any] = {}
+        if user_addendum:
+            invoke_extras = {
+                "user_supplied_context": {"first_run_notes": user_addendum},
+            }
         if effective_mode == "tools":
             try:
                 result = await mgr.invoke(
                     name,
                     workspace=workspace_name(),
-                    user_prompt=payload.prompt,
-                    entity_payload={},
+                    user_prompt=effective_prompt,
+                    entity_payload=invoke_extras,
                     llm=llm_func,
                     workspace_root=workspace_dir(),
                     slice_fn=make_slice_fn(
@@ -602,7 +626,7 @@ def register_skill_invoke_ui_routes(
                 )
             )
 
-        retrieval = await _retrieve_for_plan(payload.prompt, skill_desc, plan)
+        retrieval = await _retrieve_for_plan(effective_prompt, skill_desc, plan)
         context = build_briefing_context(
             workspace_dir(),
             plan=plan,
@@ -610,11 +634,13 @@ def register_skill_invoke_ui_routes(
             entity_types=payload.entity_types,
             slice_fn=slice_workspace_entities,
         )
+        if invoke_extras:
+            context = {**context, **invoke_extras}
         try:
             result = await mgr.invoke(
                 name,
                 workspace=workspace_name(),
-                user_prompt=payload.prompt,
+                user_prompt=effective_prompt,
                 entity_payload=context,
                 llm=llm_func,
                 workspace_root=workspace_dir(),

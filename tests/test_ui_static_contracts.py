@@ -228,6 +228,17 @@ def test_chain_trace_missing_input_panel_reuses_chat_like_composer_language() ->
     assert source.count('x-init="mountChainInputPanel($el)"') == 2
 
 
+def test_intel_briefings_expose_optional_slice_context_field() -> None:
+    source = _index_html()
+    intel_helpers = (
+        _ROOT / "src" / "ui" / "static" / "app" / "theseus-intel-helpers.js"
+    ).read_text(encoding="utf-8")
+
+    assert 'x-model="intel.sliceContext[slice.id]"' in source
+    assert "user_addendum" in intel_helpers
+    assert "theseusIntelSliceContextText" in intel_helpers
+
+
 def test_chain_helpers_support_partial_status_and_chain_grouping() -> None:
     preview_helpers = _PREVIEW_HELPERS.read_text(encoding="utf-8")
     chain_helpers = _CHAIN_HELPERS.read_text(encoding="utf-8")

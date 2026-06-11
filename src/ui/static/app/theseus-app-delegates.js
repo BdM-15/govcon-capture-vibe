@@ -992,12 +992,22 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusAskIntel(this, prompt);
     },
 
-    runIntelChatSlice(slice) {
-      return window.theseusRunIntelChatSlice(this, slice);
+    runIntelChatSlice(slice, contextKey) {
+      return window.theseusRunIntelChatSlice(this, slice, contextKey);
     },
 
-    invokeIntelSkill(skillName, prompt, runningKey) {
-      return window.theseusInvokeIntelSkill(this, skillName, prompt, runningKey);
+    invokeIntelSkill(skillName, prompt, runningKey, contextKey) {
+      return window.theseusInvokeIntelSkill(
+        this,
+        skillName,
+        prompt,
+        runningKey,
+        contextKey,
+      );
+    },
+
+    intelSliceContextKey(sliceId, relatedSkill) {
+      return window.theseusIntelSliceContextKey(sliceId, relatedSkill);
     },
 
     openIntelSliceInStudio(run) {

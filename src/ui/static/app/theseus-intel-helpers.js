@@ -17,9 +17,40 @@ window.theseusLoadIntel = async function theseusLoadIntel(app) {
   }
 };
 
-window.theseusRunIntelChatSlice = function theseusRunIntelChatSlice(app, slice) {
+window.theseusIntelSliceContextKey = function theseusIntelSliceContextKey(
+  sliceId,
+  relatedSkill,
+) {
+  if (relatedSkill) return String(sliceId) + ":" + String(relatedSkill);
+  return String(sliceId || "");
+};
+
+window.theseusIntelSliceContextText = function theseusIntelSliceContextText(
+  app,
+  contextKey,
+) {
+  const key = String(contextKey || "");
+  if (!key) return "";
+  if (!app.intel.sliceContext || typeof app.intel.sliceContext !== "object") {
+    app.intel.sliceContext = {};
+  }
+  return String(app.intel.sliceContext[key] || "");
+};
+
+window.theseusRunIntelChatSlice = function theseusRunIntelChatSlice(
+  app,
+  slice,
+  contextKey,
+) {
   if (!slice?.prompt) return;
-  window.theseusStartChatWithComposer(app, slice.prompt);
+  const extra = window.theseusIntelSliceContextText(
+    app,
+    contextKey || slice.id,
+  ).trim();
+  const prompt = extra
+    ? slice.prompt + "\n\nUser-supplied context:\n" + extra
+    : slice.prompt;
+  window.theseusStartChatWithComposer(app, prompt);
 };
 
 window.theseusInvokeIntelSkill = async function theseusInvokeIntelSkill(
@@ -27,16 +58,23 @@ window.theseusInvokeIntelSkill = async function theseusInvokeIntelSkill(
   skillName,
   prompt,
   runningKey,
+  contextKey,
 ) {
   if (!skillName) return;
   app.intel.sliceRunning = runningKey || skillName;
+  const userAddendum = window
+    .theseusIntelSliceContextText(app, contextKey || runningKey)
+    .trim();
   try {
     const response = await app.api(
       "/api/ui/skills/" + encodeURIComponent(skillName) + "/invoke",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt || "" }),
+        body: JSON.stringify({
+          prompt: prompt || "",
+          user_addendum: userAddendum,
+        }),
       },
     );
     if (response.run_id) {
