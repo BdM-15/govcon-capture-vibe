@@ -3,7 +3,13 @@ import json
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.server.intelligence_routes import compute_intel, load_vdb, register_intelligence_routes, split_keywords
+from src.server.intelligence_routes import (
+    build_intel_slices,
+    compute_intel,
+    load_vdb,
+    register_intelligence_routes,
+    split_keywords,
+)
 
 
 def _write_vdb(path, data) -> None:
@@ -101,3 +107,40 @@ def test_intelligence_route_returns_computed_summary(tmp_path) -> None:
     payload = response.json()
     assert payload["totals"] == {"entities": 0, "relationships": 0, "by_type": {}}
     assert payload["lm_matrix"] == {"instructions": [], "factors": []}
+
+
+def test_build_intel_slices_includes_catalog_and_latest_runs(tmp_path) -> None:
+    run_dir = tmp_path / "skill_runs" / "payment-terms-auditor" / "20260611_120000_test"
+    run_dir.mkdir(parents=True)
+    (run_dir / "run.md").write_text(
+        "---\nrun_id: 20260611_120000_test\nskill: payment-terms-auditor\n"
+        "created_at: 2026-06-11T12:00:00+00:00\nelapsed_ms: 4200\nfinish_reason: stop\n---\n",
+        encoding="utf-8",
+    )
+    (run_dir / "response.md").write_text("Payment terms summary.", encoding="utf-8")
+
+    slices = build_intel_slices(tmp_path)
+    ids = [item["id"] for item in slices]
+
+    assert ids == ["overview", "sites", "evaluation", "financial", "logistics"]
+    financial = next(item for item in slices if item["id"] == "financial")
+    assert financial["action"] == "skill"
+    assert financial["skill"] == "payment-terms-auditor"
+    assert financial["latest_run"]["run_id"] == "20260611_120000_test"
+
+    overview = next(item for item in slices if item["id"] == "overview")
+    assert overview["action"] == "chat"
+    assert overview["latest_run"] is None
+
+
+def test_intelligence_slices_route_returns_catalog(tmp_path) -> None:
+    app = FastAPI()
+    register_intelligence_routes(app, workspace_dir=lambda: tmp_path)
+    client = TestClient(app)
+
+    response = client.get("/api/ui/intel/slices")
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert len(payload["slices"]) == 5
+    assert payload["slices"][0]["id"] == "overview"

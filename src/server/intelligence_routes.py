@@ -12,7 +12,86 @@ from typing import Any, Callable
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from src.skills.run_index import SkillRunIndex
+
 logger = logging.getLogger(__name__)
+
+INTEL_SLICE_CATALOG: list[dict[str, Any]] = [
+    {
+        "id": "overview",
+        "label": "Contract overview",
+        "icon": "layout-dashboard",
+        "description": "Scope primer — contract type, periods, task areas, deliverables, and performance mechanisms.",
+        "action": "chat",
+        "prompt": (
+            "Provide an overview of the scope and services for this contract. "
+            "Use an educational tone in plain language; expand acronyms on first use. "
+            "Stay grounded in retrieved document terminology and facts — cite with [N]. "
+            "Explain structure: contract type, periods, task/service areas, major deliverables, "
+            "and key performance mechanisms."
+        ),
+    },
+    {
+        "id": "sites",
+        "label": "Sites & locations",
+        "icon": "map-pin",
+        "description": "Geographic inventory — CONUS/OCONUS clusters, site counts, and appendix patterns.",
+        "action": "chat",
+        "prompt": (
+            "Summarize all sites and locations in scope. Organize by country, then region. "
+            "Note counts where the documents support them. Identify geographic clusters, "
+            "OCONUS vs CONUS concentration, and any site-specific appendix patterns. "
+            "Flag data gaps. Cite every factual claim with [N]."
+        ),
+    },
+    {
+        "id": "evaluation",
+        "label": "Evaluation decoder",
+        "icon": "scale",
+        "description": "Decode evaluation_factor entities — weights, proof expected, strong vs weak responses.",
+        "action": "chat",
+        "prompt": (
+            "Decode all evaluation_factor and subfactor entities (UCF Section M or equivalent). "
+            "For each: what the government is evaluating; stated weights or rating definitions if present; "
+            "evidence or proof they expect; what a strong vs weak response looks like per document language. "
+            "Ground every row in [N] citations."
+        ),
+    },
+    {
+        "id": "financial",
+        "label": "Financial risk",
+        "icon": "banknote",
+        "description": "Payment terms, CLIN cash flow, and capital/inventory obligations (forensic skills).",
+        "action": "skill",
+        "skill": "payment-terms-auditor",
+        "skill_prompt": (
+            "Forensic focus: payment terms and cash-flow timing by CLIN. "
+            "Require verbatim extracts, a CLIN cash-flow table, H/M/L risks, and BOE implications."
+        ),
+        "related_skills": [
+            {
+                "skill": "capital-obligations-auditor",
+                "label": "Capital obligations",
+                "prompt": (
+                    "Forensic focus: upfront capital, inventory ownership, disposition, "
+                    "and transition property obligations."
+                ),
+            }
+        ],
+    },
+    {
+        "id": "logistics",
+        "label": "Logistics SLAs",
+        "icon": "truck",
+        "description": "Shipping destinations, OTD/FR metrics, and surge logistics performance standards.",
+        "action": "skill",
+        "skill": "logistics-sla-auditor",
+        "skill_prompt": (
+            "Forensic focus: shipping destinations, on-time delivery, fill rate, "
+            "and surge logistics SLAs. Require verbatim extracts and H/M/L risks."
+        ),
+    },
+]
 
 def now_iso() -> str:
     """Return compact UTC timestamp for UI rollups."""
@@ -247,6 +326,49 @@ def compute_intel(
     }
 
 
+def _latest_skill_run(workspace_dir: Path, skill_name: str) -> dict[str, Any] | None:
+    """Return the most recent persisted run summary for one skill, if any."""
+    index = SkillRunIndex(workspace_dir / "skill_runs")
+    runs = index.list_runs(skill_name=skill_name, limit=1)
+    if not runs:
+        return None
+    run = runs[0]
+    return {
+        "run_id": run.get("run_id"),
+        "skill": run.get("skill") or skill_name,
+        "created_at": run.get("created_at"),
+        "elapsed_ms": run.get("elapsed_ms"),
+        "finish_reason": run.get("finish_reason"),
+        "prompt_preview": run.get("prompt_preview"),
+    }
+
+
+def build_intel_slices(workspace_dir: Path) -> list[dict[str, Any]]:
+    """Attach latest run metadata to each catalogued intelligence slice."""
+    slices: list[dict[str, Any]] = []
+    for entry in INTEL_SLICE_CATALOG:
+        item = dict(entry)
+        if item.get("action") == "skill" and item.get("skill"):
+            item["latest_run"] = _latest_skill_run(workspace_dir, str(item["skill"]))
+            related = []
+            for rel in item.get("related_skills") or []:
+                if not isinstance(rel, dict) or not rel.get("skill"):
+                    continue
+                related.append(
+                    {
+                        **rel,
+                        "latest_run": _latest_skill_run(
+                            workspace_dir, str(rel["skill"])
+                        ),
+                    }
+                )
+            item["related_skills"] = related
+        else:
+            item["latest_run"] = None
+        slices.append(item)
+    return slices
+
+
 def register_intelligence_routes(
     app: FastAPI,
     *,
@@ -258,4 +380,9 @@ def register_intelligence_routes(
     async def intel_summary() -> JSONResponse:
         """Compute L↔M matrix, traceability chains, factor coverage, and gaps."""
         return JSONResponse(compute_intel(workspace_dir()))
+
+    @app.get("/api/ui/intel/slices", tags=["theseus-ui"])
+    async def intel_slices() -> JSONResponse:
+        """Return briefing slice catalog with latest skill-run status per slice."""
+        return JSONResponse({"slices": build_intel_slices(workspace_dir())})
 

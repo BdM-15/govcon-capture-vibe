@@ -1,12 +1,70 @@
 window.theseusLoadIntel = async function theseusLoadIntel(app) {
   app.intel.loading = true;
+  app.intel.slicesLoading = true;
   try {
-    app.intel.data = await app.api("/api/ui/intel/summary");
+    const [summary, slicesPayload] = await Promise.all([
+      app.api("/api/ui/intel/summary"),
+      app.api("/api/ui/intel/slices"),
+    ]);
+    app.intel.data = summary;
+    app.intel.slices = slicesPayload.slices || [];
   } catch (error) {
     app.toast("Intel compute failed: " + error.message, "error");
   } finally {
     app.intel.loading = false;
+    app.intel.slicesLoading = false;
+    window.theseusAfterRender(app);
   }
+};
+
+window.theseusRunIntelChatSlice = function theseusRunIntelChatSlice(app, slice) {
+  if (!slice?.prompt) return;
+  window.theseusStartChatWithComposer(app, slice.prompt);
+};
+
+window.theseusInvokeIntelSkill = async function theseusInvokeIntelSkill(
+  app,
+  skillName,
+  prompt,
+  runningKey,
+) {
+  if (!skillName) return;
+  app.intel.sliceRunning = runningKey || skillName;
+  try {
+    const response = await app.api(
+      "/api/ui/skills/" + encodeURIComponent(skillName) + "/invoke",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt || "" }),
+      },
+    );
+    if (response.run_id) {
+      app.toast("Briefing run saved: " + response.run_id, "ok");
+    } else {
+      app.toast("Skill run completed", "ok");
+    }
+    const slicesPayload = await app.api("/api/ui/intel/slices");
+    app.intel.slices = slicesPayload.slices || [];
+    window.theseusAfterRender(app);
+  } catch (error) {
+    app.toast("Skill run failed: " + (error.message || error), "error");
+  } finally {
+    app.intel.sliceRunning = null;
+  }
+};
+
+window.theseusOpenIntelSliceInStudio = function theseusOpenIntelSliceInStudio(
+  app,
+  run,
+) {
+  if (!run?.run_id || !run?.skill) return;
+  app.active = "studio";
+  app.$nextTick(() => {
+    if (typeof app.loadStudio === "function") {
+      app.loadStudio().then(() => window.theseusAfterRender(app));
+    }
+  });
 };
 
 window.theseusFilteredLmRows = function theseusFilteredLmRows(app) {

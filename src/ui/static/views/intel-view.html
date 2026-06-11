@@ -55,6 +55,125 @@
               </div>
             </div>
 
+            <!-- ===== Tab: Briefings (prompt-library / skill slices) ===== -->
+            <div x-show="intel.tab === 'briefings'" x-cloak class="space-y-4">
+              <div class="card p-5">
+                <h2 class="font-semibold mb-1">Workspace briefings</h2>
+                <p class="text-xs text-slate-500 mb-4 max-w-2xl">
+                  One focused run per slice — chat prompts for orientation, agent skills for
+                  forensic payment/logistics/capital work. Re-run anytime after workspace refresh;
+                  latest skill runs show below.
+                </p>
+                <div
+                  x-show="intel.slicesLoading && !intel.slices.length"
+                  class="text-xs text-slate-500 font-mono py-6 text-center"
+                >
+                  loading briefing catalog…
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <template x-for="slice in intel.slices" :key="slice.id">
+                    <div
+                      class="bg-ink-900/50 border border-edge rounded-xl p-4 flex flex-col gap-3"
+                    >
+                      <div class="flex items-start gap-3">
+                        <div
+                          class="w-9 h-9 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 flex items-center justify-center shrink-0"
+                        >
+                          <i
+                            :data-lucide="slice.icon || 'file-text'"
+                            class="w-4 h-4 text-neon-cyan"
+                          ></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <div class="font-semibold text-sm" x-text="slice.label"></div>
+                          <div
+                            class="text-[11px] text-slate-500 mt-1 leading-relaxed"
+                            x-text="slice.description"
+                          ></div>
+                        </div>
+                      </div>
+
+                      <template x-if="slice.action === 'chat'">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <button
+                            class="btn btn-primary text-xs"
+                            @click="runIntelChatSlice(slice)"
+                          >
+                            <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                            Run in Capture Chat
+                          </button>
+                          <span class="text-[10px] font-mono text-slate-600"
+                            >grounded retrieval · mix mode</span
+                          >
+                        </div>
+                      </template>
+
+                      <template x-if="slice.action === 'skill'">
+                        <div class="space-y-2">
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <button
+                              class="btn btn-primary text-xs"
+                              @click="invokeIntelSkill(slice.skill, slice.skill_prompt, slice.id)"
+                              :disabled="intel.sliceRunning === slice.id"
+                            >
+                              <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                              <span
+                                x-text="intel.sliceRunning === slice.id ? 'Running…' : 'Run ' + slice.skill"
+                              ></span>
+                            </button>
+                            <template x-if="slice.latest_run">
+                              <button
+                                class="btn btn-ghost text-xs"
+                                @click="openIntelSliceInStudio(slice.latest_run)"
+                              >
+                                <i data-lucide="folder-open" class="w-3.5 h-3.5"></i>
+                                Studio
+                              </button>
+                            </template>
+                          </div>
+                          <template x-if="slice.latest_run">
+                            <div class="text-[10px] font-mono text-slate-500">
+                              Last run
+                              <span class="text-neon-cyan" x-text="slice.latest_run.run_id"></span>
+                              <span x-show="slice.latest_run.created_at">
+                                ·
+                                <span x-text="(slice.latest_run.created_at || '').slice(0, 19)"></span>
+                              </span>
+                            </div>
+                          </template>
+                          <template x-if="!slice.latest_run">
+                            <div class="text-[10px] font-mono text-slate-600">
+                              No saved run yet for this workspace.
+                            </div>
+                          </template>
+                          <template x-for="rel in (slice.related_skills || [])" :key="rel.skill">
+                            <div
+                              class="pt-2 border-t border-edge/50 flex items-center gap-2 flex-wrap"
+                            >
+                              <button
+                                class="btn btn-soft text-xs"
+                                @click="invokeIntelSkill(rel.skill, rel.prompt, slice.id + ':' + rel.skill)"
+                                :disabled="intel.sliceRunning === (slice.id + ':' + rel.skill)"
+                              >
+                                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                                <span x-text="rel.label || rel.skill"></span>
+                              </button>
+                              <template x-if="rel.latest_run">
+                                <span
+                                  class="text-[10px] font-mono text-slate-500"
+                                  x-text="'last: ' + rel.latest_run.run_id"
+                                ></span>
+                              </template>
+                            </div>
+                          </template>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+
             <!-- ===== Tab: Instructions ↔ Evaluation Matrix ===== -->
             <div x-show="intel.tab === 'lm'" x-cloak class="space-y-6">
               <div class="card overflow-hidden">

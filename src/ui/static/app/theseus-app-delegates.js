@@ -979,5 +979,17 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
     askIntel(prompt) {
       return window.theseusAskIntel(this, prompt);
     },
+
+    runIntelChatSlice(slice) {
+      return window.theseusRunIntelChatSlice(this, slice);
+    },
+
+    invokeIntelSkill(skillName, prompt, runningKey) {
+      return window.theseusInvokeIntelSkill(this, skillName, prompt, runningKey);
+    },
+
+    openIntelSliceInStudio(run) {
+      return window.theseusOpenIntelSliceInStudio(this, run);
+    },
   };
 };

@@ -21,7 +21,7 @@ const THESEUS_VIEW_META = {
   },
   intel: {
     title: "RFP Intelligence",
-    subtitle: "instructions ↔ evaluation · traceability · coverage · gaps",
+    subtitle: "briefings · instructions ↔ evaluation · traceability · coverage · gaps",
   },
   studio: {
     title: "Studio",

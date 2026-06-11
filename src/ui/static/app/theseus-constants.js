@@ -87,6 +87,11 @@ window.createTheseusNavGroups = function createTheseusNavGroups() {
 window.createTheseusIntelTabs = function createTheseusIntelTabs() {
   return [
     {
+      id: "briefings",
+      label: "Briefings",
+      icon: "book-open",
+    },
+    {
       id: "lm",
       label: "Instructions ↔ Evaluation",
       icon: "arrow-left-right",
