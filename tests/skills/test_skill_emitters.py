@@ -231,8 +231,12 @@ def test_auto_emit_artifacts_shapes_competitive_intel_brief(tmp_path: Path) -> N
         # Manifest still uses descriptive labels
         assert manifest["report.md"]["display_name"] == "FA805122F0001 Task Order Burn Final Response"
         assert manifest["competitive_intel_brief.md"]["display_name"] == "FA805122F0001 Task Order Burn Brief Source"
-        assert manifest["competitive_intel_brief.docx"]["display_name"] == "FA805122F0001 Task Order Burn Brief"
-        assert manifest["competitive_intel_obligation.xlsx"]["display_name"] == "FA805122F0001 Task Order Burn Workbook"
+        assert manifest["competitive_intel_brief.docx"]["display_name"] == (
+            "FA805122F0001 Task Order Burn · Brief"
+        )
+        assert manifest["competitive_intel_obligation.xlsx"]["display_name"] == (
+            "FA805122F0001 Task Order Burn · Workbook"
+        )
 
 
 def test_build_competitive_intel_brief_markdown_keeps_vehicle_story_sharp() -> None:

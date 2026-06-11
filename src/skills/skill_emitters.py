@@ -9,6 +9,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from src.skills.artifact_labels import (
+    derive_run_content_title,
+    format_product_display_name,
+)
 from src.skills.run_metadata import read_artifact_manifest, write_artifact_manifest
 from src.skills.skill_local_tools import load_skill_tool_module
 from src.skills.skill_models import Skill
@@ -295,11 +299,14 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
 
         profile = _profile(skill)
         base = _safe_output_stem(str(profile["base"]))
-        title = _descriptive_profile_title(
-            skill,
-            artifacts_dir,
-            profile,
-            str(profile["label"]),
+        title = (
+            derive_run_content_title(skill.name, Path(run_dir))
+            or _descriptive_profile_title(
+                skill,
+                artifacts_dir,
+                profile,
+                str(profile["label"]),
+            )
         )
 
         report_md = artifacts_dir / "report.md"
@@ -401,7 +408,11 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
                 args.extend(["--reference", str(ref)])
             result = _run_script(docx_script, args, "render_docx")
             if out_docx.is_file():
-                labels[out_docx.name] = f"{title} Brief"
+                labels[out_docx.name] = format_product_display_name(
+                    title,
+                    filename=out_docx.name,
+                    ext="docx",
+                )
                 _clear_render_status(Path(run_dir), docx_input.name)
             else:
                 _mark_render_failed(
@@ -430,7 +441,11 @@ def auto_emit_artifacts(skill: Skill, run_dir: Path, repo_root: Path | None = No
                 ]
                 result = _run_script(xlsx_script, args, f"render_xlsx_{stem}")
                 if out_xlsx.is_file():
-                    labels[out_xlsx.name] = f"{title} Workbook"
+                    labels[out_xlsx.name] = format_product_display_name(
+                        title,
+                        filename=out_xlsx.name,
+                        ext="xlsx",
+                    )
                     _clear_render_status(Path(run_dir), xlsx_source.name)
                 else:
                     _mark_render_failed(

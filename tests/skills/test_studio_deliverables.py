@@ -59,7 +59,10 @@ def test_list_deliverables_flattens_across_skills(tmp_path: Path) -> None:
         tmp_path,
         skill="competitive-intel",
         run_id="20250428_130000_second",
-        artifacts={"brief.md": b"# brief", "brief.html": b"<h1>brief</h1>"},
+        artifacts={
+            "brief.md": b"# MCPP Competitive Intel Brief\n",
+            "brief.html": b"<h1>MCPP Competitive Intel Brief</h1>",
+        },
         created_at="2025-04-28T13:00:00",
     )
 
@@ -68,7 +71,8 @@ def test_list_deliverables_flattens_across_skills(tmp_path: Path) -> None:
 
     # Newest-first ordering by created_at.
     assert rows[0]["filename"] == "brief.html"
-    assert rows[0]["display_name"] == "Brief"
+    assert rows[0]["display_name"] == "MCPP Competitive Intel Brief"
+    assert rows[0]["run_label"] == "28 Apr 13:00 · second"
     assert rows[0]["skill"] == "competitive-intel"
     assert rows[0]["created_at"] == "2025-04-28T13:00:00"
 

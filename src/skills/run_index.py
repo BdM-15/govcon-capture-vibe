@@ -15,12 +15,15 @@ from src.skills.run_metadata import (
     read_artifact_manifest,
     read_run_metadata,
     read_run_transcript,
-    resolve_artifact_display_name,
     resolve_artifact_mime,
 )
 from src.skills.run_projections import project_run_summary_payload
+from src.skills.artifact_labels import (
+    derive_run_content_title,
+    humanize_run_label,
+    resolve_studio_display_name,
+)
 from src.skills.studio_surfaces import (
-    deck_display_name,
     iter_studio_deliverable_paths,
     validate_deck_index,
 )
@@ -141,6 +144,8 @@ class SkillRunIndex:
             manifest = read_artifact_manifest(run_dir)
             created_at = meta.get("created_at") or ""
             title = meta.get("title")
+            content_title = derive_run_content_title(skill_name, run_dir)
+            run_label = humanize_run_label(run_dir.name)
 
             for rel, artifact in iter_studio_deliverable_paths(artifacts_dir):
                 if skill_name == "huashu-design" and rel.lower().endswith(".docx"):
@@ -160,17 +165,18 @@ class SkillRunIndex:
                     and not deck
                 ):
                     deck = validate_deck_index(artifact)
-                display_name = resolve_artifact_display_name(rel, manifest_entry)
-                if (
-                    skill_name == "huashu-design"
-                    and rel.endswith("index.html")
-                    and display_name == resolve_artifact_display_name(rel, None)
-                ):
-                    display_name = deck_display_name(artifact)
+                display_name = resolve_studio_display_name(
+                    skill_name=skill_name,
+                    run_dir=run_dir,
+                    artifact_rel=rel,
+                    manifest_entry=manifest_entry,
+                    content_title=content_title,
+                )
                 rows.append(
                     {
                         "skill": skill_name,
                         "run_id": run_dir.name,
+                        "run_label": run_label,
                         "filename": rel,
                         "display_name": display_name,
                         "mime": resolve_artifact_mime(artifact.name),

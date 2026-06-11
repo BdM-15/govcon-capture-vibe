@@ -989,6 +989,11 @@ window.theseusStudioFormatOptions = function theseusStudioFormatOptions(app) {
   return Array.from(set).filter(Boolean).sort();
 };
 
+window.theseusStudioRunLabel = function theseusStudioRunLabel(deliverable) {
+  if (!deliverable) return "";
+  return deliverable.run_label || deliverable.run_id || "";
+};
+
 window.theseusStudioKey = function theseusStudioKey(deliverable) {
   return (
     (deliverable.skill || "") +
@@ -1020,9 +1025,10 @@ window.theseusStudioGroupDescriptor = function theseusStudioGroupDescriptor(
     }
     const skill = deliverable.skill || "unknown-skill";
     const runId = deliverable.run_id || "unknown-run";
+    const runLabel = window.theseusStudioRunLabel(deliverable) || runId;
     return {
       key: "single/" + skill + "/" + runId,
-      title: runId,
+      title: runLabel,
       metaPrefix: "Single run · " + skill,
     };
   }
@@ -1037,9 +1043,10 @@ window.theseusStudioGroupDescriptor = function theseusStudioGroupDescriptor(
   if (mode === "run") {
     const skill = deliverable.skill || "unknown-skill";
     const runId = deliverable.run_id || "unknown-run";
+    const runLabel = window.theseusStudioRunLabel(deliverable) || runId;
     return {
       key: "run/" + skill + "/" + runId,
-      title: runId,
+      title: runLabel,
       metaPrefix: skill,
     };
   }
@@ -1084,6 +1091,7 @@ window.theseusStudioFiltered = function theseusStudioFiltered(app) {
     if (
       query &&
       !(deliverable.display_name || "").toLowerCase().includes(query) &&
+      !(deliverable.run_label || "").toLowerCase().includes(query) &&
       !(deliverable.filename || "").toLowerCase().includes(query) &&
       !(deliverable.title || "").toLowerCase().includes(query)
     ) {

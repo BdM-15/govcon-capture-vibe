@@ -412,9 +412,7 @@ window.theseusSkillContextArtifactKey =
 window.theseusSkillContextArtifactLabel =
   function theseusSkillContextArtifactLabel(ref) {
     if (!ref) return "";
-    const label = ref.display_name || ref.filename || "artifact";
-    const skill = ref.skill || "skill";
-    return label + " · " + skill;
+    return ref.display_name || ref.filename || "artifact";
   };
 
 window.theseusLoadSkillInvokeArtifacts =
@@ -474,6 +472,7 @@ window.theseusToggleSkillContextArtifact =
         run_id: deliverable.run_id,
         filename: deliverable.filename,
         display_name: deliverable.display_name || deliverable.filename,
+        run_label: deliverable.run_label || "",
       },
     ]);
     window.theseusAfterRender(app);

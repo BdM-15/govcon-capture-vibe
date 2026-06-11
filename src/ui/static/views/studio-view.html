@@ -170,7 +170,7 @@
                 <label class="text-xs uppercase text-slate-500">Search</label>
                 <input
                   type="text"
-                  placeholder="filename, label, or title…"
+                  placeholder="name, run label, or filename…"
                   class="bg-ink-800 border border-edge text-slate-200 text-sm rounded px-2 py-1.5 flex-1"
                   x-model="studio.search"
                 />
@@ -424,6 +424,11 @@
                               x-text="row.deliverable.display_name || row.deliverable.filename"
                             ></span>
                           </button>
+                          <div
+                            x-show="row.deliverable.run_label"
+                            class="text-xs font-mono text-slate-500 mt-0.5"
+                            x-text="row.deliverable.run_label"
+                          ></div>
                           <span
                             x-show="row.deliverable.deck_slides_expected > 0"
                             class="pill border text-[10px] font-mono ml-1 align-middle"
