@@ -70,6 +70,21 @@ _PRODUCT_PROFILES: dict[str, dict[str, object]] = {
         "label": "Workload Analysis",
         "xlsx_sources": ["workload_analysis.json", "workload_handoff.json"],
     },
+    "payment-terms-auditor": {
+        "base": "payment_terms_audit",
+        "label": "Payment Terms Audit",
+        "xlsx_sources": ["payment_terms_audit.json", "report.json"],
+    },
+    "logistics-sla-auditor": {
+        "base": "logistics_sla_audit",
+        "label": "Logistics SLA Audit",
+        "xlsx_sources": ["logistics_sla_audit.json", "report.json"],
+    },
+    "capital-obligations-auditor": {
+        "base": "capital_obligations_audit",
+        "label": "Capital Obligations Audit",
+        "xlsx_sources": ["capital_obligations_audit.json", "report.json"],
+    },
     "data-analyzer": {
         "base": "data_analysis",
         "label": "Data Analysis",
