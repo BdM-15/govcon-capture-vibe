@@ -11,8 +11,11 @@ from src.server.langgraph_studio_lifecycle import (
     LangGraphStudioController,
     LangGraphStudioEndpoint,
     build_controller_from_env,
+    find_available_studio_port,
     is_auto_start_enabled,
+    is_tunnel_enabled,
     listener_pids_on_port,
+    parse_public_api_url_from_log,
     studio_langsmith_enabled,
     studio_status_payload,
     terminate_listeners_on_port,
@@ -66,6 +69,84 @@ def test_start_reuses_existing_listener_without_spawn(monkeypatch) -> None:
     )
     assert controller.started_by_us is False
     assert controller.process is None
+
+
+def test_is_tunnel_enabled_defaults_true() -> None:
+    assert is_tunnel_enabled({}) is True
+    assert is_tunnel_enabled({"THESEUS_LANGGRAPH_STUDIO_TUNNEL": "false"}) is False
+
+
+def test_parse_public_api_url_from_log_finds_tunnel() -> None:
+    from pathlib import Path
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as handle:
+        handle.write("Starting Cloudflare Tunnel...\n")
+        handle.write("https://abc-123.trycloudflare.com\n")
+        path = Path(handle.name)
+    try:
+        assert parse_public_api_url_from_log(path) == "https://abc-123.trycloudflare.com"
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def test_find_available_studio_port_skips_listening_ports() -> None:
+    port = find_available_studio_port(
+        "127.0.0.1",
+        2024,
+        port_check=lambda _host, candidate: candidate == 2024,
+    )
+    assert port != 2024
+
+
+def test_start_relocates_when_ghost_port_stays_open(monkeypatch) -> None:
+    info_calls = {"count": 0}
+
+    def _info(_endpoint):
+        info_calls["count"] += 1
+        enabled = info_calls["count"] > 1
+        return {"flags": {"langsmith": enabled}}
+
+    monkeypatch.setattr(
+        "src.server.langgraph_studio_lifecycle.fetch_studio_info",
+        _info,
+    )
+    monkeypatch.setattr(
+        "src.server.langgraph_studio_lifecycle.langsmith_configured",
+        lambda *_args, **_kwargs: True,
+    )
+    monkeypatch.setattr(
+        "src.server.langgraph_studio_lifecycle.terminate_listeners_on_port",
+        lambda *_args, **_kwargs: [],
+    )
+    monkeypatch.setattr(
+        "src.server.langgraph_studio_lifecycle.wait_for_port_free",
+        lambda *_args, **_kwargs: False,
+    )
+    monkeypatch.setattr(
+        "src.server.langgraph_studio_lifecycle.find_available_studio_port",
+        lambda _host, _preferred, **kwargs: 2025,
+    )
+
+    endpoint = LangGraphStudioEndpoint(host="127.0.0.1", port=2024)
+    controller = LangGraphStudioController(endpoint=endpoint, repo_root=Path("."))
+    proc = MagicMock()
+    proc.poll.return_value = None
+    captured_cmd: list[str] = []
+
+    def _popen(cmd, **kwargs):
+        captured_cmd.extend(cmd)
+        return proc
+
+    assert controller.start(
+        port_check=lambda _host, _port: True,
+        wait=lambda _endpoint, **_kwargs: True,
+        popen=_popen,
+        command_builder=lambda: ["langgraph"],
+        tunnel_enabled=False,
+    )
+    assert controller.endpoint.port == 2025
+    assert "--tunnel" not in captured_cmd
 
 
 def test_start_recycles_listener_missing_langsmith_key(monkeypatch) -> None:
@@ -141,6 +222,7 @@ def test_start_spawns_when_port_closed() -> None:
         assert "dev" in cmd
         assert "--no-browser" in cmd
         assert "--no-reload" in cmd
+        assert "--tunnel" in cmd
         return proc
 
     assert controller.start(
@@ -148,6 +230,7 @@ def test_start_spawns_when_port_closed() -> None:
         wait=lambda _endpoint, **_kwargs: True,
         popen=_popen,
         command_builder=lambda: ["langgraph"],
+        tunnel_enabled=True,
     )
     assert controller.started_by_us is True
     assert controller.process is proc

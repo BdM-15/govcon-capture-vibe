@@ -59,7 +59,7 @@ def register_pipeline_routes(app: Any) -> None:
     async def pipeline_library_route() -> JSONResponse:
         runtime = studio_status_payload(get_langgraph_studio_status())
         studio_ready = bool(runtime.get("ok"))
-        studio_api = str(runtime.get("url") or _studio_url())
+        studio_api = str(runtime.get("api_base_url") or runtime.get("url") or _studio_url())
         studio_graph = str(runtime.get("graph_url") or "")
         items = []
         for entry in PIPELINE_LIBRARY:

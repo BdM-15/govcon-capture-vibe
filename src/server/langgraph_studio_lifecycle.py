@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -24,20 +26,27 @@ from src.server.runtime_state import get_langsmith_status
 logger = logging.getLogger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+_TUNNEL_URL_RE = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com", re.IGNORECASE)
+_PUBLIC_API_URL_RE = re.compile(r"LANGGRAPH_API_URL=(https?://\S+)")
 
 
 @dataclass(frozen=True)
 class LangGraphStudioEndpoint:
     host: str
     port: int
+    public_api_url: str | None = None
 
     @property
     def url(self) -> str:
         return f"http://{self.host}:{self.port}"
 
     @property
+    def api_base_url(self) -> str:
+        return self.public_api_url or self.url
+
+    @property
     def graph_url(self) -> str:
-        return studio_ui_url(self.url, graph_id="mission_readiness")
+        return studio_ui_url(self.api_base_url, graph_id="mission_readiness")
 
 
 def studio_ui_url(api_url: str, *, graph_id: str = "mission_readiness") -> str:
@@ -54,6 +63,80 @@ def is_auto_start_enabled(env: dict[str, str] | None = None) -> bool:
     source = env if env is not None else os.environ
     raw = str(source.get("THESEUS_LANGGRAPH_STUDIO_AUTO_START", "true")).strip().lower()
     return raw not in {"0", "false", "no", "off"}
+
+
+def is_tunnel_enabled(env: dict[str, str] | None = None) -> bool:
+    """Cloudflare tunnel avoids hosted Studio blocking localhost/private-network."""
+    source = env if env is not None else os.environ
+    raw = str(source.get("THESEUS_LANGGRAPH_STUDIO_TUNNEL", "true")).strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
+def process_exists(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        completed = subprocess.run(
+            ["tasklist", "/FI", f"PID eq {pid}", "/NH"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except (FileNotFoundError, OSError):
+        return False
+    return str(pid) in completed.stdout
+
+
+def find_available_studio_port(
+    host: str,
+    preferred: int,
+    *,
+    port_check: Callable[[str, int], bool] = is_port_listening,
+) -> int:
+    """Pick a bindable port; skips ghost listeners that netstat still reports."""
+    for candidate in (preferred, *range(preferred + 1, preferred + 25)):
+        if port_check(host, candidate):
+            continue
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.bind((host, candidate))
+            return candidate
+        except OSError:
+            continue
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((host, 0))
+        return int(sock.getsockname()[1])
+
+
+def parse_public_api_url_from_log(path: Path, *, max_chars: int = 12000) -> str | None:
+    text = _read_log_tail(path, max_chars=max_chars)
+    if not text:
+        return None
+    tunnel_matches = _TUNNEL_URL_RE.findall(text)
+    if tunnel_matches:
+        return tunnel_matches[-1].rstrip("/")
+    for match in reversed(_PUBLIC_API_URL_RE.findall(text)):
+        url = match.rstrip("/")
+        if "trycloudflare.com" in url or not url.endswith(":2024"):
+            return url
+    return None
+
+
+def wait_for_public_api_url(
+    log_path: Path,
+    *,
+    timeout: float = 45.0,
+    interval: float = 1.0,
+    sleep: Callable[[float], None] = time.sleep,
+    clock: Callable[[], float] = time.monotonic,
+) -> str | None:
+    deadline = clock() + timeout
+    while clock() < deadline:
+        found = parse_public_api_url_from_log(log_path)
+        if found:
+            return found
+        sleep(interval)
+    return None
 
 
 def langgraph_package_version() -> str | None:
@@ -198,10 +281,18 @@ def terminate_listeners_on_port(
     exclude_pid: int | None = None,
     kill: Callable[[int], None] | None = None,
     netstat_runner: Callable[..., Any] | None = None,
+    process_checker: Callable[[int], bool] = process_exists,
 ) -> list[int]:
     stopped: list[int] = []
     for pid in listener_pids_on_port(port, netstat_runner=netstat_runner):
         if pid <= 0 or pid == exclude_pid:
+            continue
+        if not process_checker(pid):
+            logger.warning(
+                "Ghost listener on port %s (pid=%s not found) — port may stay stuck",
+                port,
+                pid,
+            )
             continue
         try:
             if kill is None:
@@ -263,10 +354,28 @@ class LangGraphStudioController:
     _stderr_log: Any | None = None
     _started_by_us: bool = False
     _last_error: str | None = None
+    _tunnel_enabled: bool = False
 
     @property
     def started_by_us(self) -> bool:
         return self._started_by_us
+
+    def _relocate_endpoint(self, port_check: Callable[[str, int], bool]) -> None:
+        new_port = find_available_studio_port(
+            self.endpoint.host,
+            self.endpoint.port + 1,
+            port_check=port_check,
+        )
+        logger.warning(
+            "Relocating LangGraph Studio from port %s to %s (stale or ghost listener)",
+            self.endpoint.port,
+            new_port,
+        )
+        self.endpoint = LangGraphStudioEndpoint(
+            host=self.endpoint.host,
+            port=new_port,
+            public_api_url=None,
+        )
 
     def start(
         self,
@@ -275,7 +384,11 @@ class LangGraphStudioController:
         port_check: Callable[[str, int], bool] = is_port_listening,
         wait: Callable[[LangGraphStudioEndpoint], bool] = wait_for_studio,
         command_builder: Callable[[], list[str]] | None = None,
+        tunnel_enabled: bool | None = None,
     ) -> bool:
+        use_tunnel = is_tunnel_enabled() if tunnel_enabled is None else tunnel_enabled
+        self._tunnel_enabled = use_tunnel
+
         if port_check(self.endpoint.host, self.endpoint.port):
             if wait(self.endpoint, timeout=5.0, interval=0.5):
                 info = fetch_studio_info(self.endpoint)
@@ -289,11 +402,7 @@ class LangGraphStudioController:
                         exclude_pid=os.getpid(),
                     )
                     if not wait_for_port_free(self.endpoint.host, self.endpoint.port):
-                        self._last_error = (
-                            f"port {self.endpoint.port} still in use after recycling Studio"
-                        )
-                        logger.error(self._last_error)
-                        return False
+                        self._relocate_endpoint(port_check)
                 else:
                     logger.info(
                         "LangGraph Studio already listening on %s (skip spawn, langsmith=%s)",
@@ -303,11 +412,7 @@ class LangGraphStudioController:
                     self._started_by_us = False
                     return True
             else:
-                self._last_error = (
-                    f"port {self.endpoint.port} is open but does not respond like LangGraph Studio"
-                )
-                logger.error(self._last_error)
-                return False
+                self._relocate_endpoint(port_check)
 
         base_cmd = (command_builder or _resolve_langgraph_command)()
         cmd = [
@@ -324,6 +429,8 @@ class LangGraphStudioController:
             "--config",
             str(self.repo_root / "langgraph.json"),
         ]
+        if use_tunnel:
+            cmd.append("--tunnel")
         logger.info("Starting LangGraph Studio: %s", " ".join(cmd))
         log_path = _studio_log_path(self.repo_root)
         try:
@@ -368,6 +475,23 @@ class LangGraphStudioController:
             logger.error("LangGraph Studio not ready at %s", self.endpoint.url)
             self.stop()
             return False
+
+        public_url: str | None = None
+        if use_tunnel:
+            public_url = wait_for_public_api_url(log_path)
+            if public_url:
+                self.endpoint = LangGraphStudioEndpoint(
+                    host=self.endpoint.host,
+                    port=self.endpoint.port,
+                    public_api_url=public_url,
+                )
+                logger.info("LangGraph Studio tunnel URL: %s", public_url)
+            else:
+                logger.warning(
+                    "Tunnel enabled but public URL not found in %s — Studio may block localhost",
+                    log_path,
+                )
+
         info = fetch_studio_info(self.endpoint)
         if langsmith_configured() and not studio_langsmith_enabled(info):
             self._last_error = (
@@ -377,9 +501,10 @@ class LangGraphStudioController:
             self.stop()
             return False
         logger.info(
-            "LangGraph Studio ready at %s (langsmith=%s)",
+            "LangGraph Studio ready at %s (langsmith=%s, api=%s)",
             self.endpoint.graph_url,
             studio_langsmith_enabled(info),
+            self.endpoint.api_base_url,
         )
         return True
 
@@ -426,8 +551,11 @@ class LangGraphStudioController:
             "ok": ready,
             "state": "ready" if ready else "unavailable",
             "url": self.endpoint.url,
+            "api_base_url": self.endpoint.api_base_url,
             "graph_url": self.endpoint.graph_url,
             "port": self.endpoint.port,
+            "tunnel": self._tunnel_enabled,
+            "public_api_url": self.endpoint.public_api_url,
             "version": pkg_version,
             "orchestration": "langgraph",
             "langsmith": langsmith,
