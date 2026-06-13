@@ -17,9 +17,11 @@ discovery without misclassification:
 
 | Axis             | Question it answers                  | Discovery surface                               |
 | ---------------- | ------------------------------------ | ----------------------------------------------- |
-| `personas_*`     | **Who you are** on the capture team  | Sidebar grouping (primary) + "also for…" badge  |
+| `personas_*`     | **Who you are** on the capture team  | Filter pill row + "also for…" badge on cards    |
 | `shipley_phases` | **When in the lifecycle** you'll use | Filter pill row at top of skills page           |
 | `capability`     | **What action** you need right now   | Filter pill row + command-palette quick-routing |
+| `skill_role`     | **How the skill is invoked**         | Skills page section: orchestrators vs slices    |
+| `skill_family`   | **Which decomposition family**       | Skills page collapsible family sections         |
 
 Each axis is closed-vocabulary: unknown values fail the contract test in
 [tests/skills/test_skill_taxonomy.py](../tests/skills/test_skill_taxonomy.py).
@@ -177,16 +179,48 @@ Core GovCon/platform skills use the closed taxonomy axes directly:
 
 ## 7. UI consumption pattern
 
-The skills page in [src/ui/static/index.html](../src/ui/static/index.html)
-groups cards by `personas_primary` (one section header per persona ID,
-plus a "Utility" section for `none`). At the top of the page, two pill
-rows let the user filter the visible set:
+The **Agent Skills** page ([src/ui/static/views/skills-view.html](../src/ui/static/views/skills-view.html))
+is the authoring/tuning surface — every skill card stays visible. **RFP Intelligence**
+is the operator surface for heavy-lifting workflows (e.g. Mission Readiness Frame).
 
-- **Phase pills** — toggleable; click multiple to OR-filter.
-- **Capability pills** — toggleable; click multiple to OR-filter.
+Skills page layout (view modes: **Families** · **Orchestrators** · **All flat**).
+Sections use the same `<details class="acc">` accordion as Settings:
+
+1. **Utility & Infrastructure** (top) — `personas_primary: none` or `capability: meta`.
+2. **Orchestrators** — `skill_role: orchestrator`; open by default; subtitle shows `chain.accepts` handoffs.
+3. **Family sections** — skills sharing `skill_family` (e.g. all `readiness-frame-*` slices).
+4. **Standalone domain** — `skill_role: standalone` with no family.
+
+Filter rail (orthogonal to grouping):
+
+- **Persona / Phase / Capability pills** — toggleable OR-filters.
+- **Search** — name + description tokens.
 
 When a card has `personas_secondary`, those personas surface as small
 "also relevant for: …" tags on the card itself.
+
+### 7.1 `skill_role` vocabulary
+
+| Value          | Meaning |
+| -------------- | ------- |
+| `standalone`   | User invokes directly; not a chain slice |
+| `slice`        | Narrow handoff producer inside a family |
+| `orchestrator` | Compiles multiple upstream handoffs into deliverables |
+
+### 7.2 `skill_family` metadata
+
+Optional slug grouping related skills. Known families:
+
+| `skill_family`      | Label                    | Example skills |
+| ------------------- | ------------------------ | -------------- |
+| `readiness-frame`   | Mission Readiness Frame  | `readiness-frame-*`, `mission-readiness-framer` |
+| `pricing`           | Pricing & Workload       | `workload-analyzer`, `price-to-win` |
+| `proposal-pipeline` | Proposal Pipeline        | `proposal-generator`, `subcontractor-sow-builder` |
+| `capture-intel`     | Capture Intelligence     | `competitive-intel` |
+| `compliance`        | Compliance & Risk        | `compliance-auditor`, `oci-sweeper` |
+
+Convention fallback: `readiness-frame-*` prefix → family `readiness-frame` when metadata omits `skill_family`.
+Chain enrichment (`chain.accepts`, `chain.produces`, `upstream_skills`, `downstream_skills`) is attached in `enrich_skill_summary()` from [src/skills/chain_contracts.py](../src/skills/chain_contracts.py).
 
 ---
 

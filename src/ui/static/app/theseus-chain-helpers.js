@@ -36,6 +36,12 @@ window.theseusOpenChain = async function theseusOpenChain(
     if (typeof app.chains.resumeDrafts?.[chainId] !== "string") {
       app.chains.resumeDrafts[chainId] = "";
     }
+    if (response.status === "running") {
+      window.theseusStartChainEventsPoll(app, chainId);
+    } else {
+      window.theseusStopChainEventsPoll(app);
+      await window.theseusLoadChainEvents(app, chainId);
+    }
     if (options.activate !== false) app.active = "chains";
   } catch (error) {
     app.toast("Chain load failed: " + (error?.message || error), "error");
@@ -326,4 +332,76 @@ window.theseusOpenChainStepRun = async function theseusOpenChainStepRun(
   app.active = "skills";
   await app.openSkill(step.skill);
   await app.loadSkillRun(step.skill, step.run_id);
+};
+
+window.theseusLoadPipelineLibrary = async function theseusLoadPipelineLibrary(
+  app,
+) {
+  try {
+    const response = await app.api("/api/ui/pipelines/library");
+    app.chains.pipelines = response.pipelines || [];
+    app.chains.studioUrl =
+      response.studio_graph_url || response.studio_url || "";
+    app.chains.pipelinesLoaded = true;
+    app.chains.pipelinesError = response.studio_ready
+      ? null
+      : "LangGraph Studio is starting or unavailable — restart Theseus if this persists.";
+  } catch (error) {
+    app.chains.pipelinesError =
+      "Pipeline library load failed: " + (error?.message || error);
+    app.chains.pipelines = [];
+  } finally {
+    window.theseusAfterRender(app);
+  }
+};
+
+window.theseusLoadChainEvents = async function theseusLoadChainEvents(
+  app,
+  chainId,
+) {
+  if (!chainId) return;
+  try {
+    const response = await app.api(
+      "/api/ui/skill-chains/" + encodeURIComponent(chainId) + "/events?tail=120",
+    );
+    app.chains.events = response.events || [];
+  } catch (_error) {
+    app.chains.events = [];
+  } finally {
+    window.theseusAfterRender(app);
+  }
+};
+
+window.theseusStartChainEventsPoll = function theseusStartChainEventsPoll(
+  app,
+  chainId,
+) {
+  window.theseusStopChainEventsPoll(app);
+  if (!chainId) return;
+  window.theseusLoadChainEvents(app, chainId);
+  app.chains.eventsPolling = setInterval(() => {
+    window.theseusLoadChainEvents(app, chainId);
+  }, 2500);
+};
+
+window.theseusStopChainEventsPoll = function theseusStopChainEventsPoll(app) {
+  if (app.chains.eventsPolling) {
+    clearInterval(app.chains.eventsPolling);
+    app.chains.eventsPolling = null;
+  }
+};
+
+window.theseusChainEventClass = function theseusChainEventClass(event) {
+  const status = String(event?.status || "").toLowerCase();
+  if (status === "completed" || status === "running") {
+    return status === "completed"
+      ? "text-neon-lime border-neon-lime/30"
+      : "text-neon-cyan border-neon-cyan/30";
+  }
+  if (status === "failed" || status === "partial") {
+    return status === "failed"
+      ? "text-neon-red border-neon-red/30"
+      : "text-neon-amber border-neon-amber/30";
+  }
+  return "text-slate-400 border-edge";
 };

@@ -52,3 +52,21 @@ def test_resolve_skill_retrieval_plan_applies_coverage_boost(tmp_path) -> None:
 
     assert plan.coverage_boost_applied is True
     assert plan.query_overrides["top_k"] > store.read()["top_k"]
+
+
+def test_resolve_skill_retrieval_plan_skips_boost_when_requested(tmp_path) -> None:
+    workspace = tmp_path / "demo"
+    workspace.mkdir()
+    store = QuerySettingsStore(
+        workspace_dir=lambda: workspace,
+        settings_provider=lambda: FakeSettings(),
+    )
+
+    plan = resolve_skill_retrieval_plan(
+        store.read(),
+        "Produce a full mapping of all task areas in this solicitation",
+        skip_coverage_boost=True,
+    )
+
+    assert plan.coverage_boost_applied is False
+    assert plan.query_overrides["top_k"] == store.read()["top_k"]

@@ -8,6 +8,9 @@ metadata:
   personas_secondary: [capture_manager]
   shipley_phases: [capture, strategy, proposal_development]
   capability: estimate
+  skill_role: standalone
+  skill_family: pricing
+  skill_family_label: Pricing & Workload
   runtime: tools
   category: pricing
   version: 0.4.0

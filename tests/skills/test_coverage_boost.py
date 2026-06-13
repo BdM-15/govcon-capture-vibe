@@ -9,7 +9,7 @@ def test_detect_exhaustive_coverage_intent_matches_workspace_wide_prompts() -> N
     assert detect_exhaustive_coverage_intent("Complete requirement traceability crosswalk")
     assert detect_exhaustive_coverage_intent("Map all evaluation factors")
     assert detect_exhaustive_coverage_intent(
-        "Build the Mission Readiness Frame from the full solicitation package"
+        "Build a full mapping of the entire solicitation package"
     )
 
 
@@ -32,4 +32,5 @@ def test_apply_coverage_boost_widens_query_settings() -> None:
     assert boosted["top_k"] > settings["top_k"]
     assert boosted["chunk_top_k"] > settings["chunk_top_k"]
     assert boosted["max_total_tokens"] > settings["max_total_tokens"]
+    assert boosted["max_total_tokens"] <= 200_000
     assert meta["coverage_boost_applied"] is True

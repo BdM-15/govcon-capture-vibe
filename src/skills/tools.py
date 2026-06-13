@@ -40,6 +40,40 @@ from src.skills.tool_registry import ToolSpec, build_tool_specs
 from src.skills.tool_types import ToolContext, ToolError, ToolResult
 
 
+def compact_harness_tool_payload(tool_name: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Shrink kg tool payloads for the model when the harness owns full excerpts."""
+    if tool_name == "kg_chunks":
+        chunk_ids = payload.get("matched_chunk_ids") or []
+        if not isinstance(chunk_ids, list):
+            chunk_ids = []
+        names = payload.get("matched_entity_names") or []
+        if not isinstance(names, list):
+            names = []
+        return {
+            "matched_entity_names": [str(name) for name in names[:40]],
+            "matched_chunk_ids": [str(chunk_id) for chunk_id in chunk_ids[:80]],
+            "chunk_count": len(chunk_ids),
+            "evidence_bank": "artifacts/research_scratchpad.md",
+            "note": (
+                "Full excerpts were appended to the research scratchpad automatically. "
+                "Use scratchpad + JSON citations for synthesis — do not re-query the same topic."
+            ),
+        }
+    if tool_name == "kg_entities":
+        entities = payload.get("entities")
+        counts: dict[str, int] = {}
+        if isinstance(entities, dict):
+            for key, bucket in entities.items():
+                if isinstance(bucket, list):
+                    counts[str(key)] = len(bucket)
+        return {
+            "entity_counts_by_type": counts,
+            "evidence_bank": "artifacts/research_scratchpad.md",
+            "note": "Entity slice appended to scratchpad; read scratchpad for descriptions.",
+        }
+    return payload
+
+
 def serialize_tool_payload_for_model(
   result: ToolResult,
   *,

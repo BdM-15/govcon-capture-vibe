@@ -1,0 +1,241 @@
+[
+  {
+    "id": "background",
+    "label": "Background / mission / program-office context",
+    "keywords": [
+      "background",
+      "mission",
+      "program",
+      "purpose",
+      "objective",
+      "pain"
+    ],
+    "suggested_query": "mission background program office objectives readiness outcome failure modes mission context",
+    "feeds": [
+      "readiness_outcome",
+      "failure_modes_feared[]",
+      "workload_enablers[]"
+    ]
+  },
+  {
+    "id": "pws_sow",
+    "label": "PWS/SOW tasks, deliverables, scope",
+    "keywords": [
+      "pws",
+      "sow",
+      "task",
+      "deliverable",
+      "statement of work",
+      "cdrl"
+    ],
+    "suggested_query": "PWS SOW statement of work task areas deliverables CDRL work scope requirements"
+  },
+  {
+    "id": "qasp",
+    "label": "QASP / performance standards / SLAs",
+    "keywords": [
+      "qasp",
+      "performance",
+      "standard",
+      "sla",
+      "inspection",
+      "metric"
+    ],
+    "suggested_query": "QASP performance standards inspection acceptance criteria quality metrics SLAs"
+  },
+  {
+    "id": "evaluation",
+    "label": "Evaluation factors and subfactors",
+    "keywords": [
+      "evaluation",
+      "factor",
+      "subfactor",
+      "section m",
+      "technical approach"
+    ],
+    "suggested_query": "evaluation factors subfactors Section M source selection technical management past performance best value"
+  },
+  {
+    "id": "transition",
+    "label": "Transition, amendments, period of performance",
+    "keywords": [
+      "transition",
+      "amendment",
+      "pop",
+      "period of performance",
+      "ramp"
+    ],
+    "suggested_query": "transition plan phase-in phase-out knowledge transfer amendments period of performance"
+  },
+  {
+    "id": "methods_modernization",
+    "label": "Modernization inquiry \u2014 current methods, systems, tooling in scope",
+    "keywords": [
+      "system",
+      "tool",
+      "software",
+      "manual",
+      "process",
+      "digital",
+      "automation",
+      "legacy",
+      "modernization",
+      "qmss",
+      "omms",
+      "wawf",
+      "eqms"
+    ],
+    "suggested_query": "current methods systems tools software manual processes digital automation legacy modernization incumbent implied tooling named in PWS SOW attachments",
+    "inquiry": "modernization",
+    "feeds": [
+      "current_methods[]",
+      "workload_enablers[]"
+    ]
+  },
+  {
+    "id": "innovation_inquiry",
+    "label": "Innovation inquiry \u2014 efficiency, lean delivery, quality/cost openings",
+    "keywords": [
+      "innovation",
+      "innovative",
+      "efficient",
+      "efficiency",
+      "improvement",
+      "continuous",
+      "lean",
+      "analytics",
+      "predictive",
+      "automation",
+      "technology"
+    ],
+    "suggested_query": "innovation innovative efficient efficiency continuous improvement lean delivery automation analytics technology quality cost reduce waste eval emphasis",
+    "inquiry": "innovation",
+    "feeds": [
+      "innovation_opportunities[]",
+      "win_theme_candidates[]"
+    ]
+  },
+  {
+    "id": "operational_mission",
+    "label": "Operational mission context \u2014 sites, surge, OCONUS, readiness metrics",
+    "keywords": [
+      "site",
+      "location",
+      "oconus",
+      "conus",
+      "surge",
+      "shipboard",
+      "readiness",
+      "installation",
+      "geographic",
+      "place of performance",
+      "operational"
+    ],
+    "suggested_query": "sites locations OCONUS CONUS surge capacity shipboard operations installation place of performance readiness metrics workload operational constraints mission",
+    "inquiry": "mission_operations",
+    "feeds": [
+      "readiness_outcome",
+      "customer_pain_points[]",
+      "workload_enablers[]"
+    ]
+  },
+  {
+    "id": "tea_leaves",
+    "label": "Tea leaves \u2014 importance signals, implicit criteria, hot buttons, discriminators",
+    "keywords": [
+      "hot button",
+      "discriminator",
+      "emphasis",
+      "repetition",
+      "priority",
+      "concern",
+      "risk",
+      "weakness",
+      "strength",
+      "importance",
+      "implicit"
+    ],
+    "suggested_query": "importance signals repetition background eval echo hot button discriminator program office concerns latent structural pain threshold omission tea leaves implicit criteria acquisition read",
+    "inquiry": "tea_leaves",
+    "feeds": [
+      "importance_signals[]",
+      "implicit_criteria[]"
+    ]
+  },
+  {
+    "id": "shipley_pains",
+    "label": "Shipley \u2014 customer pains (explicit, latent, structural)",
+    "keywords": [
+      "pain",
+      "challenge",
+      "problem",
+      "failure",
+      "delay",
+      "shortfall",
+      "deficiency",
+      "risk",
+      "concern",
+      "previous contractor",
+      "audit",
+      "finding",
+      "surge",
+      "coverage"
+    ],
+    "suggested_query": "customer pain points program office challenges previous contractor failures audit findings transition confession latent structural pain QASP teeth threshold obsession staffing surge gap performance shortfall",
+    "inquiry": "shipley_pains",
+    "shipley": "capture",
+    "feeds": [
+      "customer_pain_points[]"
+    ]
+  },
+  {
+    "id": "shipley_needs_wants",
+    "label": "Shipley \u2014 customer needs, wants, priorities, buying vision",
+    "keywords": [
+      "need",
+      "want",
+      "priority",
+      "objective",
+      "goal",
+      "outcome",
+      "customer priority",
+      "mission",
+      "readiness",
+      "benefit",
+      "value",
+      "buying"
+    ],
+    "suggested_query": "customer needs wants priorities buying vision program office objectives customer priority readiness outcome what customer values mission success program office really cares about",
+    "inquiry": "shipley_needs_wants",
+    "shipley": "capture",
+    "feeds": [
+      "readiness_outcome",
+      "importance_signals[]",
+      "verbatim_extracts[]"
+    ]
+  },
+  {
+    "id": "shipley_win_themes",
+    "label": "Shipley \u2014 win themes, discriminators, hot buttons, proof hooks",
+    "keywords": [
+      "win theme",
+      "discriminator",
+      "hot button",
+      "strength",
+      "weakness",
+      "proof",
+      "differentiat",
+      "outstanding",
+      "confidence",
+      "rating",
+      "subfactor"
+    ],
+    "suggested_query": "win theme discriminator hot button evaluation proof expected strengths weaknesses differentiators source selection best value outstanding rating what strong proposal looks like capture hooks",
+    "inquiry": "shipley_win_themes",
+    "shipley": "strategy",
+    "feeds": [
+      "win_theme_candidates[]",
+      "eval_crosswalk[]"
+    ]
+  }
+]

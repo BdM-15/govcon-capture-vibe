@@ -8,6 +8,9 @@ metadata:
   personas_secondary: [cost_estimator, proposal_manager]
   shipley_phases: [pursuit, capture, strategy]
   capability: research
+  skill_role: standalone
+  skill_family: capture-intel
+  skill_family_label: Capture Intelligence
   category: intel
   version: 0.8.2
   status: active

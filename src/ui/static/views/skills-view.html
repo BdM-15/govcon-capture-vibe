@@ -12,9 +12,11 @@
                   <span class="h1-gradient">Agent Skills</span>
                 </h1>
                 <p class="text-sm text-slate-500 mt-1">
-                  Discoverable, installable, invocable agent skills — the same
-                  files Copilot reads from
+                  Authoring surface for every skill in
                   <code class="font-mono text-neon-cyan">.github/skills/</code>.
+                  Use <span class="text-slate-400">RFP Intelligence</span> for
+                  operator workflows; use this page to edit, tune, and invoke
+                  slices and orchestrators directly.
                 </p>
               </div>
               <div class="flex items-center gap-2">
@@ -163,186 +165,169 @@
               </div>
             </div>
 
-            <!-- Meta / utility skills section -->
-            <div x-show="skillsFilteredMeta().length > 0" class="mb-6">
-              <div class="flex items-center gap-3 mb-3">
+            <div
+              x-show="skills.items.length > 0"
+              class="flex flex-wrap items-center justify-between gap-3 mb-5"
+            >
+              <div class="flex flex-wrap items-center gap-2">
                 <span
-                  class="text-[10px] font-mono uppercase tracking-widest text-neon-cyan/70"
-                  >Utility &amp; Infrastructure</span
+                  class="text-[10px] font-mono uppercase tracking-widest text-slate-500 mr-1"
+                  >View</span
                 >
-                <div class="flex-1 h-px bg-neon-cyan/20"></div>
-                <span
-                  class="text-[10px] font-mono text-slate-600"
-                  x-text="skillsFilteredMeta().length"
-                ></span>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                <template x-for="s in skillsFilteredMeta()" :key="s.name">
-                  <div
-                    class="card card-accent accent-cyan p-4 flex flex-col gap-3 cursor-pointer card-hover border-neon-cyan/40"
-                    @click="openSkill(s.name)"
-                  >
-                    <div class="flex items-start justify-between gap-2">
-                      <div class="flex items-center gap-2 min-w-0">
-                        <i
-                          data-lucide="sparkles"
-                          class="w-4 h-4 flex-shrink-0 text-neon-cyan"
-                        ></i>
-                        <h3
-                          class="text-sm font-semibold text-slate-100 leading-snug truncate"
-                          x-text="s.name"
-                        ></h3>
-                      </div>
-                      <span
-                        x-show="s.capability"
-                        class="pill whitespace-nowrap text-[10px] bg-ink-800 text-neon-cyan border border-neon-cyan/40"
-                        x-text="s.capability"
-                      ></span>
-                    </div>
-                    <div
-                      class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
-                      x-text="personaLabel(s.personas_primary)"
-                    ></div>
-                    <p
-                      class="text-xs text-slate-400 leading-snug line-clamp-3"
-                      x-text="s.description"
-                    ></p>
-                    <div
-                      x-show="s.personas_secondary && s.personas_secondary.length"
-                      class="text-[10px] text-slate-500"
-                    >
-                      <span class="text-slate-600">also for:</span>
-                      <template
-                        x-for="(p, idx) in s.personas_secondary"
-                        :key="'sec-' + s.name + '-' + p"
-                      >
-                        <span>
-                          <span
-                            class="text-slate-400"
-                            x-text="personaLabel(p)"
-                          ></span
-                          ><span x-show="idx < s.personas_secondary.length - 1"
-                            >,
-                          </span>
-                        </span>
-                      </template>
-                    </div>
-                    <div
-                      class="flex items-center gap-2 text-[10px] font-mono text-slate-500 mt-auto"
-                    >
-                      <span x-text="'v' + (s.version || '0.0.0')"></span>
-                      <span
-                        x-show="s.source === 'installed'"
-                        class="text-neon-magenta"
-                        >installed</span
-                      >
-                      <span
-                        x-show="s.status"
-                        class="text-amber-400"
-                        x-text="s.status"
-                      ></span>
-                      <span class="ml-auto" x-show="s.has_references"
-                        >refs</span
-                      >
-                      <span x-show="s.has_assets || s.has_templates"
-                        >assets</span
-                      >
-                      <span x-show="s.has_scripts">scripts</span>
-                    </div>
-                  </div>
+                <template x-for="mode in skillViewModes()" :key="'vm-' + mode.id">
+                  <button
+                    class="filter-pill"
+                    :class="skills.viewMode === mode.id ? 'filter-pill-active-cyan' : ''"
+                    @click="setSkillViewMode(mode.id)"
+                    x-text="mode.label"
+                  ></button>
                 </template>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  class="btn btn-ghost text-xs"
+                  @click="skillsExpandAll()"
+                  title="Open every section"
+                >
+                  <i data-lucide="chevrons-down" class="w-3.5 h-3.5"></i>
+                  Expand all
+                </button>
+                <button
+                  class="btn btn-ghost text-xs"
+                  @click="skillsCollapseAll()"
+                  title="Close every section"
+                >
+                  <i data-lucide="chevrons-up" class="w-3.5 h-3.5"></i>
+                  Collapse all
+                </button>
               </div>
             </div>
 
-            <!-- Domain skills section -->
-            <div x-show="skillsFilteredDomain().length > 0" class="mb-2">
-              <div class="flex items-center gap-3 mb-3">
-                <span
-                  class="text-[10px] font-mono uppercase tracking-widest text-neon-magenta/70"
-                  >Domain Skills</span
-                >
-                <div class="flex-1 h-px bg-neon-magenta/20"></div>
-                <span
-                  class="text-[10px] font-mono text-slate-600"
-                  x-text="skillsFilteredDomain().length"
-                ></span>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                <template x-for="s in skillsFilteredDomain()" :key="s.name">
-                  <div
-                    class="card card-accent accent-magenta p-4 flex flex-col gap-3 cursor-pointer card-hover border-neon-magenta/30"
-                    @click="openSkill(s.name)"
-                  >
-                    <div class="flex items-start justify-between gap-2">
-                      <div class="flex items-center gap-2 min-w-0">
-                        <i
-                          data-lucide="wand-2"
-                          class="w-4 h-4 flex-shrink-0 text-neon-magenta"
-                        ></i>
-                        <h3
-                          class="text-sm font-semibold text-slate-100 leading-snug truncate"
-                          x-text="s.name"
-                        ></h3>
-                      </div>
-                      <span
-                        x-show="s.capability"
-                        class="pill whitespace-nowrap text-[10px] bg-ink-800 text-neon-magenta border border-neon-magenta/40"
-                        x-text="s.capability"
-                      ></span>
-                    </div>
-                    <div
-                      class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
-                      x-text="personaLabel(s.personas_primary)"
-                    ></div>
-                    <p
-                      class="text-xs text-slate-400 leading-snug line-clamp-3"
-                      x-text="s.description"
-                    ></p>
-                    <div
-                      x-show="s.personas_secondary && s.personas_secondary.length"
-                      class="text-[10px] text-slate-500"
-                    >
-                      <span class="text-slate-600">also for:</span>
-                      <template
-                        x-for="(p, idx) in s.personas_secondary"
-                        :key="'sec-' + s.name + '-' + p"
-                      >
-                        <span>
-                          <span
-                            class="text-slate-400"
-                            x-text="personaLabel(p)"
-                          ></span
-                          ><span x-show="idx < s.personas_secondary.length - 1"
-                            >,
-                          </span>
-                        </span>
-                      </template>
-                    </div>
-                    <div
-                      class="flex items-center gap-2 text-[10px] font-mono text-slate-500 mt-auto"
-                    >
-                      <span x-text="'v' + (s.version || '0.0.0')"></span>
-                      <span
-                        x-show="s.source === 'installed'"
-                        class="text-neon-magenta"
-                        >installed</span
-                      >
-                      <span
-                        x-show="s.status"
-                        class="text-amber-400"
-                        x-text="s.status"
-                      ></span>
-                      <span class="ml-auto" x-show="s.has_references"
-                        >refs</span
-                      >
-                      <span x-show="s.has_assets || s.has_templates"
-                        >assets</span
-                      >
-                      <span x-show="s.has_scripts">scripts</span>
+            <div class="space-y-5" data-skills-sections>
+            <template x-for="section in skillsGroupedSections()" :key="section.id">
+              <details
+                class="acc"
+                :class="'accent-' + section.accent"
+                :data-acc-key="'skill-' + section.id"
+                :open="section.defaultOpen || null"
+              >
+                <summary>
+                  <div class="flex items-center gap-3 min-w-0">
+                    <i data-lucide="chevron-right" class="acc-chevron w-4 h-4"></i>
+                    <i
+                      :data-lucide="skillSectionAccent(section.accent).icon"
+                      class="w-4 h-4 shrink-0"
+                      :class="skillSectionAccent(section.accent).iconColor"
+                    ></i>
+                    <div class="min-w-0">
+                      <div class="font-semibold text-sm" x-text="section.label"></div>
+                      <div
+                        x-show="section.hint"
+                        class="text-[11px] text-slate-500 mt-0.5 truncate"
+                        x-text="section.hint"
+                      ></div>
                     </div>
                   </div>
-                </template>
-              </div>
+                  <span
+                    class="text-[10px] font-mono text-slate-600 shrink-0"
+                    x-text="section.skills.length"
+                  ></span>
+                </summary>
+                <div class="acc-body">
+                <div
+                  class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+                >
+                  <template x-for="s in section.skills" :key="section.id + '-' + s.name">
+                    <div
+                      class="card card-accent p-4 flex flex-col gap-3 cursor-pointer card-hover"
+                      :class="[skillSectionAccent(section.accent).card, skillSectionAccent(section.accent).border]"
+                      @click="openSkill(s.name)"
+                    >
+                      <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <i
+                            :data-lucide="skillSectionAccent(section.accent).icon"
+                            class="w-4 h-4 flex-shrink-0"
+                            :class="skillSectionAccent(section.accent).iconColor"
+                          ></i>
+                          <h3
+                            class="text-sm font-semibold text-slate-100 leading-snug truncate"
+                            x-text="s.name"
+                          ></h3>
+                        </div>
+                        <div class="flex flex-col items-end gap-1">
+                          <span
+                            x-show="s.capability"
+                            class="pill whitespace-nowrap text-[10px] bg-ink-800 border"
+                            :class="skillSectionAccent(section.accent).pill"
+                            x-text="s.capability"
+                          ></span>
+                          <span
+                            x-show="s.skill_role && s.skill_role !== 'standalone'"
+                            class="pill whitespace-nowrap text-[10px] bg-ink-900 text-slate-400 border border-edge"
+                            x-text="skillRoleLabel(s.skill_role)"
+                          ></span>
+                        </div>
+                      </div>
+                      <div
+                        class="text-[10px] font-mono uppercase tracking-wider text-slate-500"
+                        x-text="personaLabel(s.personas_primary)"
+                      ></div>
+                      <p
+                        x-show="s.orchestrator_compiles"
+                        class="text-[10px] text-amber-300/90 font-mono leading-snug line-clamp-2"
+                      >
+                        <span class="text-slate-500">compiles:</span>
+                        <span x-text="s.orchestrator_compiles"></span>
+                      </p>
+                      <p
+                        class="text-xs text-slate-400 leading-snug line-clamp-3"
+                        x-text="s.description"
+                      ></p>
+                      <div
+                        x-show="s.personas_secondary && s.personas_secondary.length"
+                        class="text-[10px] text-slate-500"
+                      >
+                        <span class="text-slate-600">also for:</span>
+                        <template
+                          x-for="(p, idx) in s.personas_secondary"
+                          :key="'sec-' + s.name + '-' + p"
+                        >
+                          <span>
+                            <span
+                              class="text-slate-400"
+                              x-text="personaLabel(p)"
+                            ></span
+                            ><span x-show="idx < s.personas_secondary.length - 1"
+                              >,
+                            </span>
+                          </span>
+                        </template>
+                      </div>
+                      <div
+                        class="flex items-center gap-2 text-[10px] font-mono text-slate-500 mt-auto"
+                      >
+                        <span x-text="'v' + (s.version || '0.0.0')"></span>
+                        <span
+                          x-show="s.source === 'installed'"
+                          class="text-neon-magenta"
+                          >installed</span
+                        >
+                        <span
+                          x-show="s.status"
+                          class="text-amber-400"
+                          x-text="s.status"
+                        ></span>
+                        <span class="ml-auto" x-show="s.has_references">refs</span>
+                        <span x-show="s.has_assets || s.has_templates">assets</span>
+                        <span x-show="s.has_scripts">scripts</span>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+                </div>
+              </details>
+            </template>
             </div>
 
             <div

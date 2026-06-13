@@ -1,0 +1,27 @@
+[
+  {
+    "id": "background",
+    "label": "Background / mission / program-office context",
+    "keywords": ["background", "mission", "program", "purpose", "objective", "pain"],
+    "suggested_query": "mission background program office objectives readiness outcome failure modes mission context",
+    "feeds": ["readiness_outcome", "failure_modes_feared[]", "workload_enablers[]"]
+  },
+  {
+    "id": "pws_sow",
+    "label": "PWS/SOW tasks, deliverables, scope",
+    "keywords": ["pws", "sow", "task", "deliverable", "statement of work", "cdrl"],
+    "suggested_query": "PWS SOW statement of work task areas deliverables CDRL work scope requirements"
+  },
+  {
+    "id": "qasp",
+    "label": "QASP / performance standards / SLAs",
+    "keywords": ["qasp", "performance", "standard", "sla", "inspection", "metric"],
+    "suggested_query": "QASP performance standards inspection acceptance criteria quality metrics SLAs"
+  },
+  {
+    "id": "transition",
+    "label": "Transition, amendments, period of performance",
+    "keywords": ["transition", "amendment", "pop", "period of performance", "ramp"],
+    "suggested_query": "transition plan phase-in phase-out knowledge transfer amendments period of performance"
+  }
+]

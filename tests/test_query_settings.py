@@ -124,6 +124,16 @@ def test_query_settings_routes_update_and_reset(
     bad = client.put("/api/ui/settings/query", json={"mode": "weird"})
     assert bad.status_code == 400
 
+    rec = client.get("/api/ui/settings/query/recommendations")
+    assert rec.status_code == 200
+    body = rec.json()
+    assert "tier" in body
+    assert "recommended" in body
+
+    apply = client.post("/api/ui/settings/query/recommendations/apply")
+    assert apply.status_code == 200
+    assert "settings" in apply.json()
+
     reset = client.post("/api/ui/settings/query/reset")
     assert reset.status_code == 200, reset.text
     assert reset.json()["settings"]["top_k"] == 40

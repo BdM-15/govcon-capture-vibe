@@ -30,6 +30,10 @@ from importlib.metadata import PackageNotFoundError, version as package_version
 from typing import Any, Awaitable, Callable, Iterator
 load_dotenv(override=True)
 
+from src.server.langsmith_runtime import apply_langsmith_env
+
+apply_langsmith_env()
+
 # Windows MAX_PATH mitigation for MinerU document processing
 # MinerU CLI creates mineru-api-client-{random} temp dirs under the system temp
 # directory. Long document names (≥60 chars) push the output path:
@@ -130,6 +134,7 @@ def build_startup_banner_items(
     version_resolver: Callable[[str], str] = resolve_package_version,
     pipeline_health: Any | None = None,
     ollama_status: dict[str, Any] | None = None,
+    langgraph_studio_status: dict[str, Any] | None = None,
 ) -> list[tuple[str, str]]:
     """Build the startup banner rows for log_banner()."""
     mineru_version = version_resolver("mineru")
@@ -141,6 +146,7 @@ def build_startup_banner_items(
     device = settings.mineru_device_mode.upper()
     device_color = colors.GREEN if device == "CUDA" else colors.YELLOW
 
+    from src.server.langgraph_studio_lifecycle import format_langgraph_banner_line
     from src.server.ollama_llm import format_ollama_banner_line
 
     startup_items = [
@@ -157,6 +163,7 @@ def build_startup_banner_items(
         ("Extract  (LightRAG)", f"{colors.CYAN}{settings.extraction_llm_name}{colors.RESET}"),
         ("Keyword  (LightRAG)", f"{colors.CYAN}{settings.keyword_llm_name}{colors.RESET}"),
         ("Ollama   (local)", format_ollama_banner_line(ollama_status, settings, colors)),
+        ("LangGraph", format_langgraph_banner_line(langgraph_studio_status, colors)),
         ("VLM      (LightRAG)", f"{colors.CYAN}{settings.vlm_llm_name}{colors.RESET}"),
         ("Query    (LightRAG)", f"{colors.MAGENTA}{settings.reasoning_llm_name}{colors.RESET}"),
         ("Post-Process", f"{colors.YELLOW}{settings.post_processing_llm_name}{colors.RESET}"),
@@ -369,6 +376,10 @@ async def initialize_theseus_rag_runtime(
             ollama_status = ollama_status or {"ok": False, "state": "unavailable", "error": str(exc)[:160]}
             set_ollama_status(ollama_status)
     log_ollama_startup(ollama_status, logger_obj=logger)
+    from src.server.langgraph_studio_lifecycle import log_langgraph_studio_startup
+    from src.server.runtime_state import get_langgraph_studio_status
+
+    log_langgraph_studio_startup(get_langgraph_studio_status(), logger_obj=logger)
 
     native_runtime = await initialize_native_lightrag_fn(
         settings,
@@ -595,6 +606,7 @@ def build_server_runtime(
     relationship_types: list[Any] | None = None,
     pipeline_health: Any | None = None,
     ollama_status: dict[str, Any] | None = None,
+    langgraph_studio_status: dict[str, Any] | None = None,
 ) -> ServerRuntime:
     """Build app, wire routes/UI, log banner, return launch config."""
 
@@ -652,6 +664,7 @@ def build_server_runtime(
         colors=colors,
         pipeline_health=pipeline_health,
         ollama_status=ollama_status,
+        langgraph_studio_status=langgraph_studio_status,
     )
     log_banner_fn(
         f"{colors.BOLD}✅ LIGHTRAG-FIRST CAPTURE WORKBENCH READY{colors.RESET}",
@@ -708,6 +721,7 @@ async def main():
     from lightrag.api.config import global_args
     from lightrag.api.lightrag_server import create_app
     from src.server.routes import register_custom_ingestion_routes
+    from src.server.runtime_state import get_langgraph_studio_status
     from src.server.ui_routes import register_ui
     import uvicorn
 
@@ -727,6 +741,7 @@ async def main():
         build_startup_banner_items_fn=build_startup_banner_items,
         pipeline_health=rag_runtime.health,
         ollama_status=rag_runtime.ollama_status,
+        langgraph_studio_status=get_langgraph_studio_status(),
     )
 
     # Step 5: Start server

@@ -11,8 +11,8 @@ from typing import Any
 
 from src.skills.llm_chat import ChatToolCall
 from src.skills.tool_registry import ToolSpec
-from src.skills.tool_types import ToolContext, ToolError
-from src.skills.tools import serialize_tool_payload_for_model
+from src.skills.tool_types import ToolContext, ToolError, ToolResult
+from src.skills.tools import compact_harness_tool_payload, serialize_tool_payload_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +61,14 @@ def compose_system_prompt(
         "every claim that came from workspace data. If a chunk_id is not "
         "available, say so explicitly rather than inventing one.\n"
         "- Follow the skill's depth, retrieval, and artifact rules in Skill "
-        "Instructions — they override generic efficiency heuristics. Do not "
-        "stop early while required artifacts or solicitation surfaces are still missing.\n"
+        "Instructions — they override generic efficiency heuristics.\n"
+        "- When the research harness is active, follow the injected retrieval plan: "
+        "one kg_entities pass, then one focused kg_chunks pass per package surface. "
+        "Do not repeat queries or re-hit saturated surfaces — tools will short-circuit "
+        "redundant VDB calls. Evidence appends to artifacts/research_scratchpad.md; "
+        "when the plan is complete, draft deliverables and stop retrieving.\n"
+        "- write_file may be blocked until retrieval gates pass — if blocked, "
+        "complete the next planned retrieval step before rewriting deliverables.\n"
         "- When write_file deliverables required by the skill exist and "
         "coverage is complete, stop calling tools and produce your final answer. "
         "The final assistant message (no tool calls) is what the user sees.\n"
@@ -123,6 +129,17 @@ async def dispatch_tool_call(
         err = {"error": f"unhandled tool exception: {exc.__class__.__name__}: {exc}"}
         return json.dumps(err), {"error": str(exc)}
 
-    payload_str = serialize_tool_payload_for_model(result)
     extra = {"truncated": result.truncated, **(result.transcript_extra or {})}
+    harness_config = getattr(ctx, "research_harness_config", None)
+    if harness_config is not None and call.name in {"kg_chunks", "kg_entities"}:
+        try:
+            extra["harness_payload"] = json.dumps(
+                result.payload, ensure_ascii=False, default=str
+            )
+        except (TypeError, ValueError):
+            extra["harness_payload"] = json.dumps({"error": "unable to serialize harness payload"})
+        compact = compact_harness_tool_payload(call.name, result.payload)
+        payload_str = serialize_tool_payload_for_model(ToolResult(payload=compact))
+    else:
+        payload_str = serialize_tool_payload_for_model(result)
     return payload_str, extra

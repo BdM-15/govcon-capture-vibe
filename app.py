@@ -41,6 +41,12 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
+from src.server.langsmith_runtime import apply_langsmith_env, log_langsmith_startup, verify_langsmith_connection
+from src.server.runtime_state import set_langsmith_status
+
+apply_langsmith_env()
+set_langsmith_status(verify_langsmith_connection())
+
 # Legacy .env files may set KEYWORD_LLM_BINDING=ollama; LightRAG then requires the ollama pip package.
 if os.getenv("KEYWORD_LLM_BINDING", "").strip().lower() == "ollama":
     os.environ["KEYWORD_LLM_BINDING"] = "openai"
@@ -231,6 +237,45 @@ def manage_ollama_startup(settings) -> dict:
     return status
 
 
+def manage_langgraph_studio_startup():
+    """Start LangGraph Studio before the async RAG server (no manual langgraph dev)."""
+    from src.server.langgraph_studio_lifecycle import build_controller_from_env
+    from src.server.runtime_state import get_langsmith_status, set_langgraph_studio_status
+
+    langsmith = get_langsmith_status() or {}
+    log_langsmith_startup(langsmith)
+    if not langsmith.get("ok"):
+        print(
+            f"⚠️  LangGraph Studio skipped: LangSmith not connected "
+            f"({langsmith.get('error', 'set LANGSMITH_API_KEY in .env')})\n"
+        )
+        set_langgraph_studio_status(None)
+        return None
+
+    controller = build_controller_from_env()
+    if controller is None:
+        set_langgraph_studio_status(None)
+        return None
+
+    print("🔍 Checking LangGraph Studio...")
+    if not controller.start():
+        status = controller.status_payload()
+        set_langgraph_studio_status(status)
+        print(
+            f"⚠️  LangGraph Studio unavailable: "
+            f"{status.get('error', 'unknown')} (pipeline debug offline)\n"
+        )
+        return controller
+
+    status = controller.status_payload()
+    set_langgraph_studio_status(status)
+    if controller.started_by_us:
+        print(f"✅ LangGraph Studio started at {status.get('graph_url')}\n")
+    else:
+        print(f"✅ LangGraph Studio already running at {status.get('graph_url')}\n")
+    return controller
+
+
 if __name__ == "__main__":
     # ANSI color codes for PowerShell
     CYAN = '\033[96m'
@@ -269,6 +314,7 @@ if __name__ == "__main__":
 
     neo4j_started_by_us = False
     mineru_controller = None
+    langgraph_studio_controller = None
 
     try:
         # Manage Neo4j startup
@@ -295,21 +341,23 @@ if __name__ == "__main__":
 
         manage_ollama_startup(_settings)
 
+        langgraph_studio_controller = manage_langgraph_studio_startup()
+
         # Start the RAG server
         print("🚀 Starting Project Theseus...\n")
         asyncio.run(main())
 
     except KeyboardInterrupt:
         print("\n\n🛑 Server stopped by user")
-        if mineru_controller is not None:
-            mineru_controller.stop()
-        if neo4j_started_by_us:
-            stop_neo4j()
 
     except Exception as e:
         print(f"\n❌ Server error: {e}")
+        sys.exit(1)
+
+    finally:
+        if langgraph_studio_controller is not None:
+            langgraph_studio_controller.stop()
         if mineru_controller is not None:
             mineru_controller.stop()
         if neo4j_started_by_us:
             stop_neo4j()
-        sys.exit(1)

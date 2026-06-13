@@ -46,13 +46,28 @@ def resolve_plan_from_store(
     prompt: str,
     *,
     payload: Any = None,
+    skip_coverage_boost: bool = False,
 ) -> SkillRetrievalPlan:
     """Build the effective retrieval plan for one skill invocation."""
     return resolve_skill_retrieval_plan(
         query_settings_store.read(),
         prompt,
         request_overrides=payload_to_query_overrides(payload),
+        skip_coverage_boost=skip_coverage_boost,
     )
+
+
+def skill_skips_coverage_boost(skill: Any) -> bool:
+    """Research-harness skills enforce their own retrieval depth — no catalog boost."""
+    if skill is None:
+        return False
+    meta = getattr(getattr(skill, "frontmatter", None), "metadata", None) or {}
+    raw = meta.get("research_harness")
+    if raw is False or str(raw).strip().lower() in {"0", "false", "no", "off"}:
+        return False
+    if raw is True or str(raw).strip().lower() in {"1", "true", "yes", "on"}:
+        return True
+    return isinstance(raw, dict)
 
 
 def build_briefing_context(

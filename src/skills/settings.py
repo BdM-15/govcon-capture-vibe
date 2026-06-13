@@ -93,6 +93,59 @@ def skill_tools_max_turns(metadata: Mapping[str, Any]) -> int:
     return env_max_turns
 
 
+def skill_tools_depth_extension_turns(
+    metadata: Mapping[str, Any],
+    *,
+    has_depth_gate: bool,
+) -> int:
+    """Extra turns granted when a skill declares depth-gate hooks."""
+    if not has_depth_gate:
+        return 0
+    env_default = env_int("SKILL_TOOLS_DEPTH_EXTENSION_TURNS", 15, 0, 50)
+    raw = metadata.get("depth_extension_turns")
+    if isinstance(raw, int):
+        return max(0, min(int(raw), 50))
+    return env_default
+
+
+def merge_tool_context_limits(
+    base: SkillToolsRuntimeLimits,
+    plan_limits: Mapping[str, Any] | None,
+) -> SkillToolsRuntimeLimits:
+    """Widen per-run tool caps when retrieval plan / coverage boost requests it."""
+    if not plan_limits:
+        return base
+
+    def _max_int(key: str, current: int) -> int:
+        raw = plan_limits.get(key)
+        try:
+            candidate = int(raw)
+        except (TypeError, ValueError):
+            return current
+        return max(current, candidate)
+
+    return SkillToolsRuntimeLimits(
+        llm_timeout_seconds=base.llm_timeout_seconds,
+        max_tool_result_chars=base.max_tool_result_chars,
+        max_read_bytes=base.max_read_bytes,
+        max_write_bytes=base.max_write_bytes,
+        max_script_seconds=base.max_script_seconds,
+        max_kg_entities_per_type=_max_int(
+            "max_kg_entities_per_type", base.max_kg_entities_per_type
+        ),
+        max_kg_chunks=_max_int("max_kg_chunks", base.max_kg_chunks),
+        max_kg_chunks_per_entity=_max_int(
+            "max_kg_chunks_per_entity", base.max_kg_chunks_per_entity
+        ),
+        max_kg_relationships_per_entity=_max_int(
+            "max_kg_relationships_per_entity", base.max_kg_relationships_per_entity
+        ),
+        max_chunk_content_chars=_max_int(
+            "max_chunk_content_chars", base.max_chunk_content_chars
+        ),
+    )
+
+
 def skill_tools_runtime_limits() -> SkillToolsRuntimeLimits:
     """Return the effective tools-mode hard caps from `.env`."""
     return SkillToolsRuntimeLimits(

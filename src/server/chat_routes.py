@@ -208,6 +208,51 @@ def register_query_settings_routes(
             raise HTTPException(500, f"Failed resetting settings: {exc}") from exc
         return JSONResponse({"settings": settings})
 
+    @app.get("/api/ui/settings/query/recommendations", tags=["theseus-ui"])
+    async def get_query_recommendations() -> JSONResponse:
+        """Workspace-size-aware query tuning recommendations for Settings UI."""
+        from src.server.workspace_maintenance import safe_count_json_keys
+        from src.skills.settings_recommendations import recommend_query_settings
+
+        workspace = store._workspace_dir()
+        entity_count = safe_count_json_keys(workspace / "vdb_entities.json")
+        chunk_count = safe_count_json_keys(workspace / "vdb_chunks.json")
+        payload = recommend_query_settings(
+            entity_count=entity_count,
+            chunk_count=chunk_count,
+            current=store.read(),
+        )
+        return JSONResponse(
+            {
+                "workspace": workspace_name(),
+                "settings": store.read(),
+                **payload,
+            }
+        )
+
+    @app.post("/api/ui/settings/query/recommendations/apply", tags=["theseus-ui"])
+    async def apply_query_recommendations() -> JSONResponse:
+        """Merge recommended values into active query settings."""
+        from src.server.workspace_maintenance import safe_count_json_keys
+        from src.skills.settings_recommendations import recommend_query_settings
+
+        workspace = store._workspace_dir()
+        entity_count = safe_count_json_keys(workspace / "vdb_entities.json")
+        chunk_count = safe_count_json_keys(workspace / "vdb_chunks.json")
+        rec = recommend_query_settings(
+            entity_count=entity_count,
+            chunk_count=chunk_count,
+            current=store.read(),
+        )
+        current = store.read()
+        current.update(rec.get("recommended") or {})
+        try:
+            store.write(current)
+        except OSError as exc:
+            raise HTTPException(500, f"Failed applying recommendations: {exc}") from exc
+        return JSONResponse({"settings": current, "applied": rec.get("recommended") or {}})
+
+
 class ChatHandoffFrom(BaseModel):
     """Provenance when a chat branches from a prior assistant insight."""
 

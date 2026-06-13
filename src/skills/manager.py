@@ -44,6 +44,7 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
 from src.skills.chain_executor import SkillChainExecutor
+from src.skills.graphs.langgraph_chain_runner import LangGraphChainRunner, use_langgraph_for_spec
 from src.skills.chain_models import ChainRunState, ChainSpec
 from src.skills.chain_planner import ChainPlan, SkillChainPlanner
 from src.skills.runs import SkillRunStore
@@ -442,9 +443,27 @@ class SkillManager:
         source_chain_id: str = "",
         mode: str = "original",
     ) -> ChainRunState:
-        """Run a deterministic multi-skill chain through SkillChainExecutor."""
+        """Run a multi-skill chain (LangGraph for mission-readiness, else legacy executor)."""
         if workspace_root is None:
             workspace_root = _REPO_ROOT / "rag_storage" / workspace
+        if use_langgraph_for_spec(spec):
+            runner = LangGraphChainRunner(
+                invoke_skill=self.invoke,
+                run_store=self._run_store,
+            )
+            return await runner.invoke(
+                spec,
+                workspace=workspace,
+                workspace_root=workspace_root,
+                llm=llm,
+                entity_payload=entity_payload,
+                max_payload_chars=max_payload_chars,
+                slice_fn=slice_fn,
+                retrieve_fn=retrieve_fn,
+                runtime_mode_override=runtime_mode_override,
+                source_chain_id=source_chain_id,
+                mode=mode,
+            )
         executor = SkillChainExecutor(
             invoke_skill=self.invoke,
             run_store=self._run_store,

@@ -76,6 +76,7 @@ def resolve_skill_retrieval_plan(
     prompt: str,
     *,
     request_overrides: Optional[Mapping[str, Any]] = None,
+    skip_coverage_boost: bool = False,
 ) -> SkillRetrievalPlan:
     """Merge Query Tuning settings, optional request overrides, and coverage boost."""
     effective = dict(settings)
@@ -86,7 +87,7 @@ def resolve_skill_retrieval_plan(
 
     coverage_boost_applied = False
     coverage_boost_reason = ""
-    if detect_exhaustive_coverage_intent(prompt):
+    if not skip_coverage_boost and detect_exhaustive_coverage_intent(prompt):
         effective, boost_meta = apply_coverage_boost(effective)
         coverage_boost_applied = bool(boost_meta.get("coverage_boost_applied"))
         coverage_boost_reason = str(boost_meta.get("coverage_boost_reason") or "")

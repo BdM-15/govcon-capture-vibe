@@ -30,6 +30,7 @@ class SkillToolsHooks:
     artifact_continue: Optional[Callable[[Path], Optional[str]]] = None
     validate_run: Optional[Callable[..., list[str]]] = None
     write_depth_audit: Optional[Callable[[Path, list[str]], Path]] = None
+    validate_write_file: Optional[Callable[..., Optional[str]]] = None
 
 
 def resolve_skill_tools_hooks(skill_dir: Path) -> SkillToolsHooks:
@@ -38,6 +39,7 @@ def resolve_skill_tools_hooks(skill_dir: Path) -> SkillToolsHooks:
     artifact_continue = None
     validate_run = None
     write_depth_audit = None
+    validate_write_file = None
 
     for path in sorted(root.glob("*_tools.py")):
         try:
@@ -56,11 +58,16 @@ def resolve_skill_tools_hooks(skill_dir: Path) -> SkillToolsHooks:
             candidate = getattr(module, "write_depth_audit", None)
             if callable(candidate):
                 write_depth_audit = candidate
+        if validate_write_file is None:
+            candidate = getattr(module, "validate_write_file", None)
+            if callable(candidate):
+                validate_write_file = candidate
 
     return SkillToolsHooks(
         artifact_continue=artifact_continue,
         validate_run=validate_run,
         write_depth_audit=write_depth_audit,
+        validate_write_file=validate_write_file,
     )
 
 

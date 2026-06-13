@@ -60,6 +60,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
     promptLibraryMeta: { customized: false, workspace: "" },
     promptFilter: "",
     promptFilterMine: false,
+    promptCollectionFilter: "all",
     promptPicker: { open: false, query: "" },
     promptEditor: {
       open: false,
@@ -107,6 +108,7 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       activePhases: [],
       activeCapabilities: [],
       searchQuery: "",
+      viewMode: "families",
     },
     studio: {
       deliverables: [],
@@ -170,6 +172,12 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       resuming: "",
       resumeDrafts: {},
       search: "",
+      pipelines: [],
+      pipelinesLoaded: false,
+      pipelinesError: null,
+      studioUrl: "",
+      events: [],
+      eventsPolling: null,
     },
     reasoning: {
       open: false,
@@ -245,6 +253,8 @@ window.createTheseusInitialState = function createTheseusInitialState() {
       saving: false,
       values: {},
       defaults: {},
+      recommendations: null,
+      applyingRecommendations: false,
     },
     skillSettings: {
       loaded: false,

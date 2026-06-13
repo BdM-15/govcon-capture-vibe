@@ -10,6 +10,7 @@ from src.server.intelligence_routes import (
     register_intelligence_routes,
     split_keywords,
 )
+from src.server.prompt_library import PromptLibraryStore
 
 
 def _write_vdb(path, data) -> None:
@@ -119,7 +120,8 @@ def test_build_intel_slices_includes_catalog_and_latest_runs(tmp_path) -> None:
     )
     (run_dir / "response.md").write_text("Payment terms summary.", encoding="utf-8")
 
-    slices = build_intel_slices(tmp_path)
+    store = PromptLibraryStore(workspace_dir=lambda: tmp_path)
+    slices = build_intel_slices(tmp_path, prompt_library=store)
     ids = [item["id"] for item in slices]
 
     assert ids == [
@@ -142,15 +144,22 @@ def test_build_intel_slices_includes_catalog_and_latest_runs(tmp_path) -> None:
     mission_readiness = next(item for item in slices if item["id"] == "mission-readiness")
     assert mission_readiness["action"] == "skill"
     assert mission_readiness["skill"] == "mission-readiness-framer"
-    assert "Mission Readiness Frame" in mission_readiness["skill_prompt"]
+    assert mission_readiness.get("chain_preset") == "mission-readiness"
+    assert "claim_gaps" in mission_readiness["skill_prompt"]
+    assert mission_readiness["prompt_library_id"]
     assert mission_readiness.get("guide", {}).get("purpose")
     assert mission_readiness.get("context_tooltip")
     assert mission_readiness["related_skills"][0].get("guide", {}).get("purpose")
 
 
 def test_intelligence_slices_route_returns_catalog(tmp_path) -> None:
+    store = PromptLibraryStore(workspace_dir=lambda: tmp_path)
     app = FastAPI()
-    register_intelligence_routes(app, workspace_dir=lambda: tmp_path)
+    register_intelligence_routes(
+        app,
+        workspace_dir=lambda: tmp_path,
+        prompt_library=store,
+    )
     client = TestClient(app)
 
     response = client.get("/api/ui/intel/slices")

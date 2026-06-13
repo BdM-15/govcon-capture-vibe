@@ -7,7 +7,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
-from src.skills.settings import skill_tools_max_turns, skill_tools_runtime_limits
+from src.skills.depth_gate import (
+    depth_gate_issues,
+    resolve_finish_reason,
+)
+from src.skills.research_harness import (
+    make_research_continue_fn,
+    resolve_harness_config,
+    skill_uses_research_harness,
+)
+from src.skills.research_harness_runner import (
+    finalize_research_harness,
+    make_tool_result_recorder,
+    prepare_research_harness,
+    seed_harness_bootstrap_retrieval,
+)
+from src.skills.settings import (
+    merge_tool_context_limits,
+    skill_tools_depth_extension_turns,
+    skill_tools_max_turns,
+    skill_tools_runtime_limits,
+)
+from src.skills.runtime_support import ToolLoopResult
 from src.skills.skill_emitters import auto_emit_artifacts
 from src.skills.skill_models import Skill, SkillInvocationResult
 from src.skills.text_normalization import normalize_skill_text
@@ -100,7 +121,10 @@ async def run_tools_skill(
     )
 
     max_turns = skill_tools_max_turns(skill.frontmatter.metadata)
-    limits = skill_tools_runtime_limits()
+    limits = merge_tool_context_limits(
+        skill_tools_runtime_limits(),
+        (entity_payload or {}).get("retrieval_plan_limits"),
+    )
     extra_script_roots, extra_warnings = resolve_extra_script_roots(skill)
     warnings.extend(extra_warnings)
 
@@ -111,6 +135,7 @@ async def run_tools_skill(
         run_dir=run_dir,
         workspace_dir=workspace_root,
         workspace_name=workspace,
+        user_prompt=user_prompt,
         slice_fn=slice_fn,
         retrieve_fn=retrieve_fn,
         max_read_bytes=limits.max_read_bytes,
@@ -146,16 +171,134 @@ async def run_tools_skill(
     from src.skills.skill_local_tools import resolve_skill_tools_hooks
 
     skill_hooks = resolve_skill_tools_hooks(Path(skill.path))
+    harness_enabled = skill_uses_research_harness(skill, skill_hooks)
+    harness_config = (
+        resolve_harness_config(skill, entity_payload)
+        if harness_enabled
+        else None
+    )
+    compiler_mode = False
+    if harness_config is not None:
+        from src.skills.mission_readiness_merge import (
+            is_compiler_chain_context,
+            merge_upstream_handoffs,
+            prepare_compiler_harness_state,
+        )
+
+        compiler_mode = is_compiler_chain_context(entity_payload)
+        prepare_research_harness(run_dir=Path(run_dir), config=harness_config)
+        ctx.research_harness_config = harness_config
+        if compiler_mode:
+            chain_ctx = (entity_payload or {}).get("chain_step_context") or {}
+            merge_report = merge_upstream_handoffs(
+                attached_artifacts,
+                Path(run_dir),
+                chain_step_context=chain_ctx,
+            )
+            scratchpad_path = Path(run_dir) / "artifacts" / "research_scratchpad.md"
+            scratchpad_chars = (
+                len(scratchpad_path.read_text(encoding="utf-8", errors="replace"))
+                if scratchpad_path.is_file()
+                else 0
+            )
+            prepare_compiler_harness_state(Path(run_dir), scratchpad_chars=scratchpad_chars)
+            warnings.append(
+                "compiler_mode: merged "
+                f"{merge_report.get('handoffs_loaded', 0)} upstream handoff(s); "
+                f"{merge_report.get('eval_crosswalk_rows', 0)} eval_crosswalk rows"
+            )
+            user_prompt = (
+                f"{user_prompt.rstrip()}\n\n"
+                "## Compiler merge complete\n"
+                "Upstream handoffs were merged into artifacts/mission_readiness_frame.json. "
+                "Use read_workspace_artifact on input_artifacts[] for any handoff detail; "
+                "expand brief.md from the merged frame — do not re-run full-package retrieval."
+            ).strip()
+        elif retrieve_fn is not None:
+            bootstrap_top_k = int(limits.max_kg_chunks or 40)
+            warnings.extend(
+                await seed_harness_bootstrap_retrieval(
+                    run_dir=Path(run_dir),
+                    config=harness_config,
+                    retrieve_fn=retrieve_fn,
+                    user_prompt=user_prompt,
+                    skill_description=skill.frontmatter.description or "",
+                    mode="mix",
+                    top_k=bootstrap_top_k,
+                )
+            )
+        if not compiler_mode:
+            from src.skills.research_harness import build_retrieval_plan_user_addendum
+
+            plan_block = build_retrieval_plan_user_addendum(Path(run_dir))
+            if plan_block:
+                user_prompt = f"{user_prompt.rstrip()}\n\n{plan_block}".strip()
+
+    depth_extensions = skill_tools_depth_extension_turns(
+        skill.frontmatter.metadata,
+        has_depth_gate=harness_enabled or skill_hooks.validate_run is not None,
+    )
+
+    transcript_holder: list[dict] = []
+
+    def _transcript_provider() -> list[dict]:
+        return transcript_holder
+
+    if harness_config is not None:
+        continue_if = make_research_continue_fn(
+            config=harness_config,
+            hooks=skill_hooks,
+            user_prompt=user_prompt,
+            transcript_provider=_transcript_provider,
+        )
+        on_tool_result = lambda call, payload, extra: make_tool_result_recorder(
+            run_dir, harness_config
+        )(call.name, call.arguments_json, payload, extra)
+    else:
+        from src.skills.depth_gate import make_depth_continue_fn
+
+        continue_if = make_depth_continue_fn(skill_hooks, user_prompt=user_prompt)
+        on_tool_result = None
 
     try:
-        loop_result = await run_tool_loop_fn(
-            skill_name=skill.name,
-            skill_body=skill.body_md,
-            user_prompt=user_prompt,
-            ctx=ctx,
-            max_turns=max_turns,
-            continue_if=skill_hooks.artifact_continue,
-        )
+        if compiler_mode:
+            warnings.append(
+                "compiler_mode: skipped tool loop — synthesis/reflexion runs from merged handoffs"
+            )
+            loop_result = ToolLoopResult(
+                response="",
+                transcript=[],
+                turns=0,
+                tool_calls=0,
+                finish_reason="compiler_merge",
+                usage_total={},
+                warnings=[],
+            )
+        else:
+            loop_result = await run_tool_loop_fn(
+                skill_name=skill.name,
+                skill_body=skill.body_md,
+                user_prompt=user_prompt,
+                ctx=ctx,
+                max_turns=max_turns,
+                depth_extension_turns=depth_extensions,
+                continue_if=continue_if,
+                on_tool_result=on_tool_result,
+            )
+            loop_transcript = getattr(loop_result, "transcript", None) or []
+            if loop_transcript:
+                transcript_holder.extend(loop_transcript)
+
+        if harness_config is not None:
+            loop_result = await finalize_research_harness(
+                skill=skill,
+                user_prompt=user_prompt,
+                run_dir=Path(run_dir),
+                config=harness_config,
+                hooks=skill_hooks,
+                loop_result=loop_result,
+                workspace_dir=workspace_root,
+            )
     finally:
         if ctx.mcp_sessions:
             try:
@@ -167,9 +310,14 @@ async def run_tools_skill(
     elapsed_ms = int((datetime.now(timezone.utc) - started).total_seconds() * 1000)
     response_text = normalize_skill_text(loop_result.response)
 
+    depth_issues: list[str] = []
     if skill_hooks.validate_run is not None:
         try:
-            depth_issues = skill_hooks.validate_run(Path(run_dir), user_prompt=user_prompt)
+            depth_issues = depth_gate_issues(
+                Path(run_dir),
+                hooks=skill_hooks,
+                user_prompt=user_prompt,
+            )
             if skill_hooks.write_depth_audit is not None:
                 skill_hooks.write_depth_audit(Path(run_dir), depth_issues)
             for issue in depth_issues:
@@ -177,6 +325,12 @@ async def run_tools_skill(
         except Exception as exc:  # noqa: BLE001
             logger.warning("Skill depth audit failed for %s run %s: %s", skill.name, run_id, exc)
             warnings.append(f"depth audit failed: {exc}")
+
+    effective_finish_reason = resolve_finish_reason(
+        loop_finish_reason=loop_result.finish_reason,
+        depth_issues=depth_issues,
+        hard_cap_hit=loop_result.finish_reason in {"depth_incomplete", "max_turns"},
+    )
 
     try:
         run_store.persist_tools_run(
@@ -188,7 +342,7 @@ async def run_tools_skill(
             response=response_text,
             turns=loop_result.turns,
             tool_calls=loop_result.tool_calls,
-            finish_reason=loop_result.finish_reason,
+            finish_reason=effective_finish_reason,
             usage_total=loop_result.usage_total,
             warnings=warnings,
             elapsed_ms=elapsed_ms,
@@ -230,5 +384,5 @@ async def run_tools_skill(
         prompt_tokens_estimate=int(loop_result.usage_total.get("total_tokens", 0)),
         run_id=run_id,
         run_dir=str(Path(run_dir).resolve()),
-        finish_reason=loop_result.finish_reason,
+        finish_reason=effective_finish_reason,
     )

@@ -70,6 +70,28 @@ def test_build_startup_banner_items_includes_endpoints_and_optional_neo4j() -> N
     assert any("33" in value and "35" in value for label, value in items if label == "Schema")
 
 
+def test_build_startup_banner_items_reports_langgraph_studio_state() -> None:
+    items = build_startup_banner_items(
+        _settings(),
+        host="127.0.0.1",
+        port=9621,
+        graph_storage="Neo4JStorage",
+        working_dir="rag_storage/demo",
+        entity_count=33,
+        relationship_count=35,
+        colors=_Colors,
+        langgraph_studio_status={
+            "ok": True,
+            "graph_url": "https://smith.langchain.com/studio/?baseUrl=http%3A//127.0.0.1%3A2024&graph=mission_readiness",
+            "version": "1.2.5",
+        },
+    )
+
+    langgraph_row = next(value for label, value in items if label == "LangGraph")
+    assert "1.2.5" in langgraph_row
+    assert "mission_readiness" in langgraph_row
+
+
 def test_build_startup_banner_items_reports_ollama_warmup_state() -> None:
     items = build_startup_banner_items(
         _settings(),

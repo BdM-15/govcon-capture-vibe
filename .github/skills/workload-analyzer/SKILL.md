@@ -7,6 +7,9 @@ metadata:
   personas_secondary: [capture_manager]
   shipley_phases: [capture, strategy]
   capability: analyze
+  skill_role: standalone
+  skill_family: pricing
+  skill_family_label: Pricing & Workload
   category: govcon-platform
   version: 1.0.0
   status: active

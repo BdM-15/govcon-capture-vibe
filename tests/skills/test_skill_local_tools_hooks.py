@@ -16,5 +16,6 @@ def test_resolve_skill_tools_hooks_finds_mission_readiness_hooks() -> None:
     )
     hooks = resolve_skill_tools_hooks(skill_dir)
     assert hooks.artifact_continue is not None
+    assert hooks.validate_write_file is not None
     assert hooks.validate_run is not None
     assert hooks.write_depth_audit is not None

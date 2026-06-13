@@ -148,6 +148,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusLoadChains(this);
     },
 
+    async loadPipelineLibrary() {
+      return window.theseusLoadPipelineLibrary(this);
+    },
+
+    chainEventClass(event) {
+      return window.theseusChainEventClass(event);
+    },
+
     async openChain(chainId) {
       return window.theseusOpenChain(this, chainId);
     },
@@ -448,6 +456,34 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusSkillsFilteredMeta(this);
     },
 
+    skillViewModes() {
+      return window.theseusSkillViewModes();
+    },
+
+    skillsGroupedSections() {
+      return window.theseusSkillsGroupedSections(this);
+    },
+
+    skillSectionAccent(accent) {
+      return window.theseusSkillSectionAccent(accent);
+    },
+
+    skillRoleLabel(role) {
+      return window.theseusSkillRoleLabel(role);
+    },
+
+    skillsExpandAll() {
+      return window.theseusSkillsExpandAll();
+    },
+
+    skillsCollapseAll() {
+      return window.theseusSkillsCollapseAll();
+    },
+
+    setSkillViewMode(mode) {
+      this.skills.viewMode = mode;
+    },
+
     skillsCountForPersona(id) {
       return window.theseusSkillsCountForPersona(this, id);
     },
@@ -582,6 +618,46 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
 
     promptPhases() {
       return window.theseusPromptPhases(this);
+    },
+
+    promptCollectionFilters() {
+      return window.theseusPromptCollectionFilters();
+    },
+
+    promptLibrarySections() {
+      return window.theseusPromptLibrarySections(this);
+    },
+
+    promptDestinationMeta(prompt) {
+      return window.theseusPromptDestinationMeta(prompt);
+    },
+
+    promptPrimaryAction(prompt) {
+      return window.theseusPromptPrimaryAction(prompt);
+    },
+
+    async runPromptPrimaryAction(prompt) {
+      return window.theseusRunPromptPrimaryAction(this, prompt);
+    },
+
+    usePromptInChat(prompt) {
+      return window.theseusUsePromptInChat(this, prompt);
+    },
+
+    promptsExpandAll() {
+      return window.theseusPromptsExpandAll();
+    },
+
+    promptsCollapseAll() {
+      return window.theseusPromptsCollapseAll();
+    },
+
+    promptSectionCount(section) {
+      return window.theseusPromptSectionCount(section);
+    },
+
+    isBriefingPrompt(prompt) {
+      return window.theseusIsBriefingPrompt(prompt);
     },
 
     _phaseMeta() {
@@ -924,6 +1000,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusResetQuerySettings(this);
     },
 
+    async applyQueryRecommendations() {
+      return window.theseusApplyQueryRecommendations(this);
+    },
+
     async loadSkillSettings() {
       return window.theseusLoadSkillSettings(this);
     },
@@ -1020,13 +1100,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusRunIntelChatSlice(this, slice, contextKey);
     },
 
-    invokeIntelSkill(skillName, prompt, runningKey, contextKey) {
+    invokeIntelSkill(skillName, prompt, runningKey, contextKey, chainPreset) {
       return window.theseusInvokeIntelSkill(
         this,
         skillName,
         prompt,
         runningKey,
         contextKey,
+        chainPreset,
       );
     },
 
@@ -1048,6 +1129,14 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
 
     intelContextTooltip(sliceOrRel) {
       return window.theseusIntelContextTooltip(sliceOrRel);
+    },
+
+    intelCatalogPrompt(sliceOrRel) {
+      return window.theseusIntelCatalogPrompt(sliceOrRel);
+    },
+
+    openBriefingPromptEditor(promptLibraryId) {
+      return window.theseusOpenBriefingPromptEditor(this, promptLibraryId);
     },
 
     openIntelSliceInStudio(run) {

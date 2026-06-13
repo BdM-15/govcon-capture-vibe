@@ -83,6 +83,7 @@ from src.server.web_research_routes import register_web_research_settings_routes
 from src.server.entity_chunk_routes import register_entity_chunk_routes
 from src.server.graph_routes import register_graph_routes
 from src.server.intelligence_routes import register_intelligence_routes
+from src.server.pipeline_routes import register_pipeline_routes
 from src.server.workspace_maintenance import self_restart as _self_restart, set_env_var as _set_env_var
 from src.server.workspace_ui_routes import register_workspace_ui_routes
 
@@ -228,7 +229,11 @@ def _register_feature_routes(
     )
 
     register_entity_chunk_routes(app, workspace_dir=context.workspace_dir)
-    register_intelligence_routes(app, workspace_dir=context.workspace_dir)
+    register_intelligence_routes(
+        app,
+        workspace_dir=context.workspace_dir,
+        prompt_library=context.prompt_library,
+    )
 
     register_graph_routes(
         app,
@@ -266,6 +271,8 @@ def _register_feature_routes(
         set_env_var=context.set_env_var,
         query_settings_store=context.query_settings,
     )
+
+    register_pipeline_routes(app)
 
     register_mcp_ui_routes(
         app,

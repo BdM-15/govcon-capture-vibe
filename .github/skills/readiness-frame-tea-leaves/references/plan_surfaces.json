@@ -1,0 +1,10 @@
+[
+  {
+    "id": "tea_leaves",
+    "label": "Tea leaves — importance signals, implicit criteria, hot buttons, discriminators",
+    "keywords": ["hot button", "discriminator", "emphasis", "repetition", "priority", "concern", "risk", "importance", "implicit"],
+    "suggested_query": "importance signals repetition background eval echo hot button discriminator program office concerns latent structural pain threshold omission tea leaves implicit criteria acquisition read",
+    "inquiry": "tea_leaves",
+    "feeds": ["importance_signals[]", "implicit_criteria[]"]
+  }
+]

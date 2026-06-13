@@ -1,0 +1,9 @@
+[
+  {
+    "id": "evaluation",
+    "label": "Evaluation factors and subfactors",
+    "keywords": ["evaluation", "factor", "subfactor", "section m", "technical approach"],
+    "suggested_query": "evaluation factors subfactors Section M source selection technical management past performance best value",
+    "feeds": ["eval_crosswalk[]"]
+  }
+]

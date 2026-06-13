@@ -117,19 +117,18 @@ body {
 .card-accent {
   position: relative;
   overflow: hidden;
+  border-radius: 1rem;
+  isolation: isolate;
 }
-/* Prompt library cards need visible overflow so action bars are not clipped. */
-.prompt-library-card.card-accent {
-  overflow: visible;
-}
-.prompt-library-card .prompt-card-preview {
+.prompt-library-card .prompt-card-preview,
+.prompt-lib-card .prompt-lib-preview {
   display: -webkit-box;
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   flex: 1 1 auto;
-  min-height: 4.5rem;
+  min-height: 3.25rem;
 }
 .prompt-library-card .prompt-card-actions {
   flex-wrap: wrap;
@@ -139,6 +138,9 @@ body {
 .prompt-library-card .prompt-card-actions button {
   white-space: nowrap;
 }
+.prompt-lib-card {
+  min-height: 0;
+}
 
 .card-accent::before {
   content: "";
@@ -147,12 +149,16 @@ body {
   top: 0;
   bottom: 0;
   width: 3px;
+  border-top-left-radius: 1rem;
+  border-bottom-left-radius: 1rem;
   background: linear-gradient(
     180deg,
-    var(--accent, var(--neon-cyan)) 0%,
-    rgba(255, 255, 255, 0) 100%
+    color-mix(in srgb, var(--accent, var(--neon-cyan)) 92%, white 8%) 0%,
+    color-mix(in srgb, var(--accent, var(--neon-cyan)) 55%, transparent) 42%,
+    transparent 100%
   );
-  opacity: 0.85;
+  opacity: 0.9;
+  pointer-events: none;
 }
 .accent-cyan {
   --accent: var(--neon-cyan);

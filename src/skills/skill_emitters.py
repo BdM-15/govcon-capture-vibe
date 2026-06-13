@@ -214,12 +214,31 @@ def _safe_artifact_path(artifacts_dir: Path, rel: str) -> Path | None:
     return candidate
 
 
+_XLSX_SKIP_JSON = frozenset(
+    {
+        "report.json",
+        "audit_report.json",
+        "harness_state.json",
+        "retrieval_plan.json",
+        "retrieval_forensics.json",
+        "chain_context.json",
+        "handoff_merge_report.json",
+        "depth_audit.json",
+        "artifacts_manifest.json",
+    }
+)
+
+
 def _xlsx_source_paths(skill: Skill, artifacts_dir: Path, profile: dict[str, object]) -> list[Path]:
     seen: set[Path] = set()
     out: list[Path] = []
     configured = _metadata_xlsx_sources(skill)
     profiled = [str(item) for item in profile.get("xlsx_sources", []) if str(item).strip()]
-    discovered = [path.name for path in sorted(artifacts_dir.glob("*.json")) if path.name != "report.json"]
+    discovered = [
+        path.name
+        for path in sorted(artifacts_dir.glob("*.json"))
+        if path.name not in _XLSX_SKIP_JSON
+    ]
     for rel in configured + profiled + discovered:
         candidate = _safe_artifact_path(artifacts_dir, rel)
         if candidate is None or not candidate.is_file() or candidate.suffix.lower() != ".json":

@@ -62,12 +62,35 @@ window.theseusCloseQueryTuningGuide = function theseusCloseQueryTuningGuide(
 };
 
 window.theseusLoadQuerySettings = async function theseusLoadQuerySettings(app) {
-  return theseusLoadSettingsSection(app, {
-    stateKey: "querySettings",
-    endpoint: "/api/ui/settings/query",
-    loadErrorLabel: "Failed loading query settings",
-  });
+  try {
+    const data = await app.api("/api/ui/settings/query");
+    app.querySettings.values = { ...data.settings };
+    app.querySettings.defaults = { ...data.defaults };
+    app.querySettings.loaded = true;
+    const rec = await app.api("/api/ui/settings/query/recommendations");
+    app.querySettings.recommendations = rec;
+  } catch (error) {
+    app.toast(`Failed loading query settings: ${error.message}`, "error");
+  }
 };
+
+window.theseusApplyQueryRecommendations =
+  async function theseusApplyQueryRecommendations(app) {
+    app.querySettings.applyingRecommendations = true;
+    try {
+      const data = await app.api("/api/ui/settings/query/recommendations/apply", {
+        method: "POST",
+      });
+      app.querySettings.values = { ...data.settings };
+      const rec = await app.api("/api/ui/settings/query/recommendations");
+      app.querySettings.recommendations = rec;
+      app.toast("Query recommendations applied");
+    } catch (error) {
+      app.toast("Apply failed: " + error.message, "error");
+    } finally {
+      app.querySettings.applyingRecommendations = false;
+    }
+  };
 
 window.theseusSaveQuerySettings = async function theseusSaveQuerySettings(app) {
   return theseusSaveSettingsSection(app, {

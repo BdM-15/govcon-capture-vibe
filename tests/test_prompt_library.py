@@ -7,6 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.server.briefing_prompts import BRIEFING_PROMPT_LIBRARY
 from src.server.prompt_library import (
     PROMPT_LIBRARY,
     PromptEntryCreate,
@@ -33,7 +34,7 @@ def test_prompt_library_shape_and_phase_coverage() -> None:
 
 def test_shipped_defaults_have_stable_ids() -> None:
     defaults = shipped_defaults()
-    assert len(defaults) == len(PROMPT_LIBRARY)
+    assert len(defaults) == len(PROMPT_LIBRARY) + len(BRIEFING_PROMPT_LIBRARY)
     ids = [entry["id"] for entry in defaults]
     assert len(ids) == len(set(ids))
     first = defaults[0]
@@ -122,7 +123,7 @@ def test_prompt_library_route_returns_catalog(prompt_client: TestClient) -> None
     body = response.json()
     assert body["workspace"] == "test_ws"
     assert body["customized"] is False
-    assert len(body["prompts"]) == len(PROMPT_LIBRARY)
+    assert len(body["prompts"]) == len(PROMPT_LIBRARY) + len(BRIEFING_PROMPT_LIBRARY)
     assert body["prompts"][0]["source"] == "shipped"
     assert "id" in body["prompts"][0]
 
@@ -152,7 +153,7 @@ def test_prompt_library_crud_routes(prompt_client: TestClient, tmp_path: Path) -
 
     dup = prompt_client.post(f"/api/ui/prompt-library/{entry_id}/duplicate")
     assert dup.status_code == 200, dup.text
-    assert len(dup.json()["prompts"]) == len(PROMPT_LIBRARY) + 2
+    assert len(dup.json()["prompts"]) == len(PROMPT_LIBRARY) + len(BRIEFING_PROMPT_LIBRARY) + 2
 
     delete = prompt_client.delete(f"/api/ui/prompt-library/{entry_id}")
     assert delete.status_code == 200, delete.text
@@ -161,6 +162,16 @@ def test_prompt_library_crud_routes(prompt_client: TestClient, tmp_path: Path) -
     assert reset.status_code == 200, reset.text
     assert reset.json()["customized"] is False
     assert not (tmp_path / "ui_prompt_library.json").exists()
+
+
+def test_skill_default_prompt_route(prompt_client: TestClient) -> None:
+    response = prompt_client.get(
+        "/api/ui/prompt-library/skill-default/mission-readiness-framer"
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["skill"] == "mission-readiness-framer"
+    assert "mission_readiness_frame.json" in body["entry"]["prompt"]
 
 
 def test_prompt_library_import_and_refine(prompt_client: TestClient) -> None:

@@ -19,17 +19,19 @@ _EXHAUSTIVE_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
         r"\bexhaustive\b.{0,30}\b(coverage|map|review|analysis)\b",
         r"\bmap\b.{0,20}\b(all|every|entire|full)\b",
         r"\bfull\b.{0,40}\b(solicitation|package)\b",
-        r"\bmission\s+readiness\s+frame\b",
     )
 )
 
 _BOOST_MULTIPLIER = 1.75
+# Keep boosted LightRAG budgets at or below 200K — xAI reasoning above that tier doubles cost.
+_TOKEN_BUDGET_CEILING = 200_000
+
 _INT_CEILINGS: dict[str, int] = {
     "top_k": 500,
     "chunk_top_k": 500,
-    "max_entity_tokens": 200_000,
-    "max_relation_tokens": 200_000,
-    "max_total_tokens": 500_000,
+    "max_entity_tokens": _TOKEN_BUDGET_CEILING,
+    "max_relation_tokens": _TOKEN_BUDGET_CEILING,
+    "max_total_tokens": _TOKEN_BUDGET_CEILING,
     "skill_max_entities_per_type": 500,
     "skill_max_chunks_per_entity": 50,
     "skill_max_relationships_per_entity": 50,

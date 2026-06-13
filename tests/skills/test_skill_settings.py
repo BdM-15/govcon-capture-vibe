@@ -5,6 +5,7 @@ from src.skills.settings import (
     SkillSettingsStore,
     env_float,
     env_int,
+    merge_tool_context_limits,
     mcp_handshake_timeout,
     mcp_shutdown_timeout,
     mcp_stdio_buffer_limit,
@@ -105,6 +106,23 @@ def test_skill_tools_runtime_limits_are_env_backed(monkeypatch) -> None:
     assert limits.max_kg_chunks == 44
     assert limits.max_kg_chunks_per_entity == 7
     assert limits.max_kg_relationships_per_entity == 21
+
+
+def test_merge_tool_context_limits_widens_from_retrieval_plan() -> None:
+    base = skill_tools_runtime_limits()
+    merged = merge_tool_context_limits(
+        base,
+        {
+            "max_chunk_content_chars": 50_000,
+            "max_kg_chunks_per_entity": 50,
+            "max_kg_entities_per_type": 500,
+            "max_kg_chunks": 500,
+        },
+    )
+    assert merged.max_chunk_content_chars == 50_000
+    assert merged.max_kg_chunks_per_entity == 50
+    assert merged.max_kg_entities_per_type == 500
+    assert merged.max_kg_chunks == 500
 
 
 def test_skill_settings_store_merges_workspace_overrides(

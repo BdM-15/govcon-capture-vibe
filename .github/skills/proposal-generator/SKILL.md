@@ -8,6 +8,9 @@ metadata:
   personas_secondary: [proposal_manager, capture_manager]
   shipley_phases: [proposal_development]
   capability: draft
+  skill_role: orchestrator
+  skill_family: proposal-pipeline
+  skill_family_label: Proposal Pipeline
   runtime: tools
   category: proposal
   version: 0.7.1

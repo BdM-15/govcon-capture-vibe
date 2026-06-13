@@ -1,0 +1,11 @@
+[
+  {
+    "id": "shipley_pains",
+    "label": "Shipley — customer pains (explicit, latent, structural)",
+    "keywords": ["pain", "challenge", "problem", "failure", "delay", "shortfall", "deficiency", "risk", "concern", "audit", "finding", "surge"],
+    "suggested_query": "customer pain points program office challenges previous contractor failures audit findings latent structural pain QASP teeth threshold obsession staffing surge gap",
+    "inquiry": "shipley_pains",
+    "shipley": "capture",
+    "feeds": ["customer_pain_points[]"]
+  }
+]

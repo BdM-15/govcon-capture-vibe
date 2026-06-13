@@ -60,6 +60,11 @@ _ALLOWED_CAPABILITIES = {
     "render",
     "meta",
 }
+_ALLOWED_SKILL_ROLES = {
+    "standalone",
+    "slice",
+    "orchestrator",
+}
 
 
 def _discover_skill_dirs() -> list[Path]:
@@ -143,6 +148,17 @@ def test_every_skill_has_valid_shipley_phases(all_skills) -> None:
         assert not invalid, (
             f"{name}: metadata.shipley_phases has invalid values {sorted(invalid)}. "
             f"Allowed: {sorted(_ALLOWED_PHASES)}"
+        )
+
+
+def test_every_skill_has_valid_skill_role_when_declared(all_skills) -> None:
+    for name, fm in all_skills:
+        meta = fm.get("metadata", {}) or {}
+        val = meta.get("skill_role")
+        if val is None:
+            continue
+        assert val in _ALLOWED_SKILL_ROLES, (
+            f"{name}: metadata.skill_role={val!r} is not in {_ALLOWED_SKILL_ROLES}"
         )
 
 

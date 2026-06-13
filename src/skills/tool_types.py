@@ -39,6 +39,8 @@ class ToolContext:
     invoke_skill_fn: Optional[Callable[..., Awaitable[Any]]] = None
     attached_artifacts: list[dict[str, Any]] = field(default_factory=list)
     call_seq: list[int] = field(default_factory=lambda: [0])
+    user_prompt: str = ""
+    research_harness_config: Any = None
 
 
 @dataclass

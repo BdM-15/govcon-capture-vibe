@@ -50,8 +50,12 @@ async def run_tool_loop(
     user_prompt: str,
     ctx: ToolContext,
     max_turns: int = 12,
+    depth_extension_turns: int = 0,
     temperature: float = 0.2,
     continue_if: Optional[Callable[[Path], Optional[str]]] = None,
+    on_tool_result: Optional[
+        Callable[[ChatToolCall, str, Optional[dict[str, Any]]], None]
+    ] = None,
 ) -> ToolLoopResult:
     """Drive the model through a tool-calling loop and return its final answer.
 
@@ -62,9 +66,9 @@ async def run_tool_loop(
         user_prompt: The user's request (may be empty for default-trigger
             skills).
         ctx: Wired :class:`ToolContext` (skill_dir, run_dir, KG bindings).
-        max_turns: Hard cap on assistant turns (each turn is one model call).
-            Default 12 is generous for most skills; set lower for cost
-            control.
+        max_turns: Nominal assistant-turn budget (each turn is one model call).
+        depth_extension_turns: When ``continue_if`` reports incomplete depth,
+            the loop may burn up to this many additional turns before stopping.
         temperature: Sampling temperature for the model.
 
     Returns:
@@ -103,8 +107,10 @@ async def run_tool_loop(
     final_response = ""
     finish_reason = ""
     turns = 0
+    hard_cap = max_turns + max(0, int(depth_extension_turns or 0))
+    depth_extensions_used = 0
 
-    for turn in range(1, max_turns + 1):
+    for turn in range(1, hard_cap + 1):
         turns = turn
         ctx.call_seq[0] = tool_calls_total
         t0 = now_ms()
@@ -148,9 +154,15 @@ async def run_tool_loop(
         messages.append(chat.raw_message)
 
         if not chat.tool_calls:
-            if continue_if is not None and turn < max_turns:
+            if continue_if is not None and turn < hard_cap:
                 continuation = continue_if(ctx.run_dir)
                 if continuation:
+                    if turn > max_turns:
+                        depth_extensions_used += 1
+                        warnings.append(
+                            "depth_gate_extension: "
+                            f"turn {turn}/{hard_cap} — deliverables incomplete"
+                        )
                     messages.append({"role": "user", "content": continuation})
                     append_transcript(
                         transcript,
@@ -158,12 +170,20 @@ async def run_tool_loop(
                             "kind": "continuation",
                             "turn": turn,
                             "content": continuation,
+                            "depth_extension": turn > max_turns,
                         },
                     )
                     persist_transcript(ctx.run_dir, transcript)
                     continue
             final_response = chat.content or ""
             finish_reason = chat.finish_reason or "stop"
+            if continue_if is not None and turn >= hard_cap:
+                continuation = continue_if(ctx.run_dir)
+                if continuation:
+                    finish_reason = "depth_incomplete"
+                    warnings.append(
+                        "depth_gate_failed: exhausted turn budget with incomplete deliverables"
+                    )
             break
 
         # Execute every tool call from this turn before looping back.
@@ -212,47 +232,66 @@ async def run_tool_loop(
                     "content": payload_str,
                 }
             )
+            if on_tool_result is not None:
+                try:
+                    on_tool_result(call, payload_str, extra)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("on_tool_result hook failed for %s: %s", call.name, exc)
         # Persist after each turn so a crash leaves a usable transcript.
         persist_transcript(ctx.run_dir, transcript)
 
     else:
-        # Hit the turn cap without a final answer — force one closing call
-        # without tools so the model summarizes what it has.
-        warnings.append(f"hit max_turns={max_turns} without final answer; forcing summary")
-        try:
-            messages.append(
-                {
-                    "role": "user",
-                    "content": (
-                        "You have reached the tool-call budget. Stop calling tools "
-                        "and write the best final answer you can with the evidence "
-                        "you have so far."
-                    ),
-                }
+        # Hit the hard turn cap without a final answer.
+        pending_continuation = (
+            continue_if(ctx.run_dir) if continue_if is not None else None
+        )
+        if pending_continuation:
+            warnings.append(
+                f"hit hard_cap={hard_cap} with incomplete deliverables; "
+                "skipping forced summary"
             )
-            chat = await chat_with_tools(messages=messages, tools=None, temperature=temperature)
-            final_response = chat.content or "(no response)"
-            finish_reason = "max_turns"
-            for k, v in (chat.usage or {}).items():
-                usage_total[k] = usage_total.get(k, 0) + int(v or 0)
-            append_transcript(
-                transcript,
-                {
-                    "kind": "assistant",
-                    "turn": turns + 1,
-                    "content": final_response,
-                    "tool_calls": [],
-                    "finish_reason": finish_reason,
-                    "usage": chat.usage,
-                    "forced_summary": True,
-                },
+            finish_reason = "depth_incomplete"
+            final_response = (
+                "Run exhausted its depth-extension budget before deliverables "
+                "passed the depth gate. See artifacts/depth_audit.json and "
+                "transcript.json for what remains incomplete."
             )
-        except Exception as exc:  # noqa: BLE001
-            warnings.append(f"forced summary failed: {exc}")
-            final_response = "⚠️ Skill exhausted its tool budget without a final answer."
-            finish_reason = "max_turns_no_summary"
+        else:
+            warnings.append(f"hit max_turns={hard_cap} without final answer; forcing summary")
+            try:
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "You have reached the tool-call budget. Stop calling tools "
+                            "and write the best final answer you can with the evidence "
+                            "you have so far."
+                        ),
+                    }
+                )
+                chat = await chat_with_tools(messages=messages, tools=None, temperature=temperature)
+                final_response = chat.content or "(no response)"
+                finish_reason = "max_turns"
+                for k, v in (chat.usage or {}).items():
+                    usage_total[k] = usage_total.get(k, 0) + int(v or 0)
+                append_transcript(
+                    transcript,
+                    {
+                        "kind": "assistant",
+                        "turn": turns + 1,
+                        "content": final_response,
+                        "tool_calls": [],
+                        "finish_reason": finish_reason,
+                        "usage": chat.usage,
+                        "forced_summary": True,
+                    },
+                )
+            except Exception as exc:  # noqa: BLE001
+                warnings.append(f"forced summary failed: {exc}")
+                final_response = "⚠️ Skill exhausted its tool budget without a final answer."
+                finish_reason = "max_turns_no_summary"
 
-            persist_transcript(ctx.run_dir, transcript)
+        persist_transcript(ctx.run_dir, transcript)
 
     return ToolLoopResult(
         response=final_response,

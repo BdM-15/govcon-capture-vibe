@@ -196,6 +196,31 @@ async def tool_write_file(
 ) -> ToolResult:
     if not isinstance(content, str):
         raise ToolError("content must be a string")
+
+    from src.skills.research_harness import validate_harness_write_file
+    from src.skills.skill_local_tools import resolve_skill_tools_hooks
+
+    harness_config = getattr(ctx, "research_harness_config", None)
+    if harness_config is not None:
+        blocked = validate_harness_write_file(
+            ctx.run_dir,
+            path=path,
+            config=harness_config,
+        )
+        if blocked:
+            raise ToolError(blocked)
+
+    hooks = resolve_skill_tools_hooks(ctx.skill_dir)
+    if hooks.validate_write_file is not None:
+        blocked = hooks.validate_write_file(
+            ctx.run_dir,
+            path=path,
+            content=content,
+            user_prompt=ctx.user_prompt,
+        )
+        if blocked:
+            raise ToolError(blocked)
+
     if len(content.encode("utf-8")) > ctx.max_write_bytes:
         raise ToolError(
             f"content exceeds max_write_bytes ({ctx.max_write_bytes}); split into smaller artifacts"

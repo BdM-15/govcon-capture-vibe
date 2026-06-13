@@ -497,9 +497,14 @@ window.theseusOpenSkill = async function theseusOpenSkill(app, name) {
   app.skills.runTrash = [];
   app.skills.runTrashOpen = false;
   try {
+    await window.theseusEnsurePromptLibraryLoaded(app);
     const detail = await app.api("/api/ui/skills/" + encodeURIComponent(name));
     app.skills.current = detail;
     app.skills.detailOpen = true;
+    const libraryPrompt = window.theseusResolveSkillDefaultPrompt(app, name);
+    if (libraryPrompt) {
+      app.skills.invokePrompt = libraryPrompt;
+    }
     window.theseusAfterRender(app);
     app.loadSkillRuns(name);
     app.loadSkillRunTrash(name);

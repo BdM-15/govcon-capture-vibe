@@ -14,7 +14,12 @@ from src.server.admin_routes import (
     release_version,
     ui_chat_history_pairs,
 )
-from src.server.runtime_state import clear_ollama_status, set_ollama_status
+from src.server.runtime_state import (
+    clear_langgraph_studio_status,
+    clear_ollama_status,
+    set_langgraph_studio_status,
+    set_ollama_status,
+)
 
 
 def _settings() -> SimpleNamespace:
@@ -93,6 +98,34 @@ def test_gather_stats_counts_workspace_and_shapes_payload(tmp_path, monkeypatch)
     assert payload["ollama"]["state"] == "unknown"
     assert payload["stack"] == {"lightrag": "test"}
     assert payload["timestamp"] == "2026-05-03T12:00:00-05:00"
+
+
+def test_gather_stats_includes_langgraph_studio_status(tmp_path) -> None:
+    workspace = tmp_path / "demo"
+    chats = workspace / "chats"
+    chats.mkdir(parents=True)
+    set_langgraph_studio_status(
+        {
+            "ok": True,
+            "state": "ready",
+            "url": "http://127.0.0.1:2024",
+            "graph_url": "https://smith.langchain.com/studio/?baseUrl=http%3A//127.0.0.1%3A2024&graph=mission_readiness",
+            "version": "1.2.5",
+            "started_by_us": True,
+        }
+    )
+    try:
+        payload = gather_stats(
+            workspace_dir=lambda: workspace,
+            chats_dir=lambda: chats,
+            settings_provider=_settings,
+        )
+    finally:
+        clear_langgraph_studio_status()
+
+    assert payload["langgraph_studio"]["ok"] is True
+    assert payload["langgraph_studio"]["state"] == "ready"
+    assert "mission_readiness" in payload["langgraph_studio"]["graph_url"]
 
 
 def test_gather_stats_includes_ollama_warmup_status(tmp_path) -> None:

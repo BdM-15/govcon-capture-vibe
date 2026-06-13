@@ -42,8 +42,11 @@ async def _chain_executor_runs_steps_and_persists_state(tmp_path: Path) -> None:
     store = SkillRunStore()
     calls: list[tuple[str, str]] = []
 
+    payloads: list[dict[str, Any]] = []
+
     async def invoke_skill(name: str, **kwargs: Any) -> SkillInvocationResult:
         prompt = kwargs["user_prompt"]
+        payloads.append(dict(kwargs.get("entity_payload") or {}))
         calls.append((name, prompt))
         run_id, run_dir = store.create_run_dir(
             workspace_root=kwargs["workspace_root"],
@@ -108,6 +111,8 @@ async def _chain_executor_runs_steps_and_persists_state(tmp_path: Path) -> None:
     handoff = json.loads(handoff_json)
     assert handoff["input_artifacts"][0]["path"] == expected_artifact_path
     assert "Use input_artifacts[].path when a tool needs an upstream file path" in calls[1][1]
+    assert payloads[1]["input_artifacts"][0]["path"] == expected_artifact_path
+    assert payloads[1]["input_artifacts"][0]["step_id"] == "intel"
     persisted = store.get_chain_run(tmp_path, result.chain_id)
     assert persisted is not None
     assert persisted["status"] == "completed"
@@ -525,6 +530,65 @@ async def _chain_executor_allows_downstream_after_partial_upstream(tmp_path: Pat
     assert result.steps["intel"].status == "partial"
     assert result.steps["ptw"].status == "completed"
     assert result.status == "partial"
+
+
+def test_chain_executor_runs_parallel_independent_steps(tmp_path: Path) -> None:
+    asyncio.run(_chain_executor_runs_parallel_independent_steps(tmp_path))
+
+
+async def _chain_executor_runs_parallel_independent_steps(tmp_path: Path) -> None:
+    import time
+
+    store = SkillRunStore()
+    calls: list[str] = []
+    start_times: dict[str, float] = {}
+
+    async def invoke_skill(name: str, **kwargs: Any) -> SkillInvocationResult:
+        calls.append(name)
+        start_times[name] = time.monotonic()
+        await asyncio.sleep(0.15)
+        run_id, run_dir = store.create_run_dir(
+            workspace_root=kwargs["workspace_root"],
+            skill_name=name,
+            user_prompt=kwargs["user_prompt"],
+            started_at=datetime.now(timezone.utc),
+        )
+        return _fake_result(name, run_id, run_dir, kwargs["user_prompt"])
+
+    executor = SkillChainExecutor(invoke_skill=invoke_skill, run_store=store)
+    spec = ChainSpec(
+        name="parallel-wave-chain",
+        steps=[
+            ChainStepSpec(id="eval", skill="readiness-frame-eval"),
+            ChainStepSpec(id="workload", skill="readiness-frame-workload"),
+            ChainStepSpec(
+                id="compile",
+                skill="mission-readiness-framer",
+                depends_on=["eval", "workload"],
+            ),
+        ],
+    )
+
+    started = time.monotonic()
+    result = await executor.invoke(
+        spec,
+        workspace="test-workspace",
+        workspace_root=tmp_path,
+        llm=_noop_llm,
+        entity_payload={},
+    )
+    elapsed = time.monotonic() - started
+
+    assert result.status == "completed"
+    assert set(calls[0:2]) == {"readiness-frame-eval", "readiness-frame-workload"}
+    assert calls[2] == "mission-readiness-framer"
+    assert abs(start_times["readiness-frame-eval"] - start_times["readiness-frame-workload"]) < 0.05
+    assert elapsed < 0.4
+
+    chain_dir = store.chain_run_dir(tmp_path, result.chain_id)
+    plan = json.loads((chain_dir / "execution_plan.json").read_text(encoding="utf-8"))
+    assert plan["waves"][0] == ["eval", "workload"]
+    assert plan["parallelism"] >= 2
 
 
 def test_chain_spec_rejects_unknown_or_later_dependencies() -> None:

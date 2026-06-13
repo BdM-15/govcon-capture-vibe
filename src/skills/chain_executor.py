@@ -1,11 +1,19 @@
-"""Sequential execution for Theseus skill chains."""
+"""DAG wave execution for Theseus skill chains (parallel steps within a wave)."""
 
 from __future__ import annotations
 
+import asyncio
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
+from src.skills.chain_dag import (
+    all_steps_terminal,
+    compute_execution_waves,
+    ready_step_ids,
+    transitive_dependent_ids,
+)
 from src.skills.chain_models import (
     ChainArtifactRef,
     ChainArtifactRequirement,
@@ -21,8 +29,16 @@ from src.skills.skill_models import SkillInvocationResult
 InvokeSkillCallable = Callable[..., Awaitable[SkillInvocationResult]]
 
 
+@dataclass(frozen=True)
+class _StepExecutionOutcome:
+    step_id: str
+    result: SkillInvocationResult | None = None
+    error: str = ""
+    contract_errors: list[str] | None = None
+
+
 class SkillChainExecutor:
-    """Execute a validated chain spec with existing skill invocation primitives."""
+    """Execute a validated chain spec with parallel DAG waves and per-step checkpointing."""
 
     _OUTCOME_FORMAT_HINTS: dict[str, tuple[str, ...]] = {
         "docx": ("docx", "word", "brief", "document", "draft", "report"),
@@ -75,6 +91,7 @@ class SkillChainExecutor:
                 for step in spec.steps
             },
         )
+        self._write_execution_plan(chain_dir, spec)
         self._run_store.write_chain_run(chain_dir, initial.model_dump())
 
         return await self._run_steps(
@@ -127,6 +144,20 @@ class SkillChainExecutor:
             runtime_mode_override=runtime_mode_override,
         )
 
+    @staticmethod
+    def _write_execution_plan(chain_dir: Path, spec: ChainSpec) -> None:
+        waves = compute_execution_waves(spec)
+        payload = {
+            "waves": waves,
+            "parallelism": max((len(wave) for wave in waves), default=1),
+            "step_count": len(spec.steps),
+        }
+        chain_dir.mkdir(parents=True, exist_ok=True)
+        (chain_dir / "execution_plan.json").write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
     async def _run_steps(
         self,
         chain: ChainRunState,
@@ -142,107 +173,188 @@ class SkillChainExecutor:
         runtime_mode_override: Optional[str],
     ) -> ChainRunState:
         blocked = False
-        for step in chain.spec.steps:
-            if chain.steps[step.id].status in {"completed", "partial"}:
-                continue
 
+        while not all_steps_terminal(chain.steps):
             if blocked:
-                chain.steps[step.id].status = "skipped"
-                chain.steps[step.id].error = "chain blocked by earlier failure"
+                self._skip_pending_steps(chain, reason="chain blocked by earlier failure")
                 chain.updated_at = utc_now_iso()
                 self._finalize_if_terminal(chain, chain.updated_at)
                 self._run_store.write_chain_run(chain_dir, chain.model_dump())
-                continue
+                break
 
-            missing = [
-                dep
-                for dep in step.depends_on
-                if chain.steps[dep].status not in {"completed", "partial"}
-            ]
-            if missing:
-                chain.steps[step.id].status = "skipped"
-                chain.steps[step.id].error = (
-                    "dependency not completed: " + ", ".join(missing)
-                )
-                chain.status = "failed"
-                chain.error = chain.steps[step.id].error
-                chain.updated_at = utc_now_iso()
-                self._finalize_if_terminal(chain, chain.updated_at)
-                self._run_store.write_chain_run(chain_dir, chain.model_dump())
-                blocked = chain.spec.stop_on_error
-                continue
-
-            step_run = chain.steps[step.id]
-            input_artifacts, contract_errors = self._resolve_input_artifacts(chain, step)
-            step_run.input_artifacts = input_artifacts
-            if contract_errors:
-                step_run.status = "failed"
-                step_run.error = "; ".join(contract_errors)
-                step_run.finished_at = utc_now_iso()
+            ready_ids = ready_step_ids(chain.spec, chain.steps)
+            if not ready_ids:
+                pending = [
+                    step_id
+                    for step_id, run in chain.steps.items()
+                    if run.status == "pending"
+                ]
                 chain.status = "failed"
                 chain.error = (
-                    f"step {step.id} artifact contract failed: {step_run.error}"
+                    "chain deadlock: pending steps have unsatisfied dependencies: "
+                    + ", ".join(pending)
                 )
-                chain.updated_at = step_run.finished_at
-                self._finalize_if_terminal(chain, step_run.finished_at)
+                chain.updated_at = utc_now_iso()
+                self._skip_pending_steps(chain, reason=chain.error)
+                self._finalize_if_terminal(chain, chain.updated_at)
                 self._run_store.write_chain_run(chain_dir, chain.model_dump())
-                blocked = chain.spec.stop_on_error
+                break
+
+            ready_steps = [
+                step for step in chain.spec.steps if step.id in ready_ids
+            ]
+            for step in ready_steps:
+                step_run = chain.steps[step.id]
+                input_artifacts, contract_errors = self._resolve_input_artifacts(
+                    chain, step
+                )
+                step_run.input_artifacts = input_artifacts
+                if contract_errors:
+                    step_run.status = "failed"
+                    step_run.error = "; ".join(contract_errors)
+                    step_run.finished_at = utc_now_iso()
+                    chain.status = "failed"
+                    chain.error = (
+                        f"step {step.id} artifact contract failed: {step_run.error}"
+                    )
+                    chain.updated_at = step_run.finished_at
+                    self._finalize_if_terminal(chain, step_run.finished_at)
+                    self._run_store.write_chain_run(chain_dir, chain.model_dump())
+                    blocked = chain.spec.stop_on_error
+                    break
+                step_run.status = "running"
+                step_run.started_at = utc_now_iso()
+
+            if blocked:
                 continue
 
-            step_run.status = "running"
-            step_run.started_at = utc_now_iso()
-            chain.updated_at = step_run.started_at
+            chain.updated_at = utc_now_iso()
             self._run_store.write_chain_run(chain_dir, chain.model_dump())
 
-            try:
-                result = await self._invoke_skill(
-                    step.skill,
-                    workspace=workspace,
-                    user_prompt=self._compose_step_prompt(chain, step),
-                    entity_payload=entity_payload,
-                    llm=llm,
-                    max_payload_chars=max_payload_chars,
-                    workspace_root=workspace_root,
-                    slice_fn=slice_fn,
-                    retrieve_fn=retrieve_fn,
-                    runtime_mode_override=runtime_mode_override,
-                    _chain_depth=1,
-                    _chain=(step.skill,),
-                )
-            except Exception as exc:  # noqa: BLE001
-                step_run.status = "failed"
-                step_run.error = str(exc)
+            outcomes = await asyncio.gather(
+                *[
+                    self._execute_step(
+                        chain,
+                        step=step,
+                        workspace=workspace,
+                        workspace_root=workspace_root,
+                        entity_payload=entity_payload,
+                        llm=llm,
+                        max_payload_chars=max_payload_chars,
+                        slice_fn=slice_fn,
+                        retrieve_fn=retrieve_fn,
+                        runtime_mode_override=runtime_mode_override,
+                    )
+                    for step in ready_steps
+                    if chain.steps[step.id].status == "running"
+                ]
+            )
+
+            wave_failed = False
+            for outcome in outcomes:
+                step_run = chain.steps[outcome.step_id]
+                if outcome.contract_errors:
+                    step_run.status = "failed"
+                    step_run.error = "; ".join(outcome.contract_errors)
+                    step_run.finished_at = utc_now_iso()
+                    wave_failed = True
+                    chain.status = "failed"
+                    chain.error = (
+                        f"step {outcome.step_id} artifact contract failed: {step_run.error}"
+                    )
+                    continue
+                if outcome.error:
+                    step_run.status = "failed"
+                    step_run.error = outcome.error
+                    step_run.finished_at = utc_now_iso()
+                    wave_failed = True
+                    chain.status = "failed"
+                    chain.error = f"step {outcome.step_id} failed: {outcome.error}"
+                    continue
+                if outcome.result is None:
+                    step_run.status = "failed"
+                    step_run.error = "step returned no result"
+                    step_run.finished_at = utc_now_iso()
+                    wave_failed = True
+                    chain.status = "failed"
+                    chain.error = f"step {outcome.step_id} failed: no result"
+                    continue
+
+                result = outcome.result
+                step_run.status = "completed"
+                step_run.run_id = result.run_id
+                step_run.run_dir = result.run_dir
+                step_run.response_preview = result.response[:2000]
+                step_run.warnings = list(result.warnings or [])
+                step_run.elapsed_ms = result.elapsed_ms
                 step_run.finished_at = utc_now_iso()
-                chain.status = "failed"
-                chain.error = f"step {step.id} failed: {exc}"
-                chain.updated_at = step_run.finished_at
-                self._finalize_if_terminal(chain, step_run.finished_at)
-                self._run_store.write_chain_run(chain_dir, chain.model_dump())
-                blocked = chain.spec.stop_on_error
-                continue
-
-            step_run.status = "completed"
-            step_run.run_id = result.run_id
-            step_run.run_dir = result.run_dir
-            step_run.response_preview = result.response[:2000]
-            step_run.warnings = list(result.warnings or [])
-            step_run.elapsed_ms = result.elapsed_ms
-            step_run.finished_at = utc_now_iso()
-            if result.run_id:
-                detail = self._run_store.get_run(
-                    workspace_root, step.skill, result.run_id
+                if result.run_id:
+                    detail = self._run_store.get_run(
+                        workspace_root, step_run.skill, result.run_id
+                    )
+                    if detail:
+                        step_run.artifacts = list(detail.get("artifacts") or [])
+                step_run.missing_inputs = self._extract_missing_inputs(result.response)
+                step_run.missing_outputs = self._extract_missing_outputs(
+                    step_run.artifacts
                 )
-                if detail:
-                    step_run.artifacts = list(detail.get("artifacts") or [])
-            step_run.missing_inputs = self._extract_missing_inputs(result.response)
-            step_run.missing_outputs = self._extract_missing_outputs(step_run.artifacts)
-            if step_run.missing_inputs or step_run.missing_outputs:
-                step_run.status = "partial"
-            chain.updated_at = step_run.finished_at
-            self._finalize_if_terminal(chain, step_run.finished_at)
+                if step_run.missing_inputs or step_run.missing_outputs:
+                    step_run.status = "partial"
+
+            chain.updated_at = utc_now_iso()
+            self._finalize_if_terminal(chain, chain.updated_at)
             self._run_store.write_chain_run(chain_dir, chain.model_dump())
+            if wave_failed and chain.spec.stop_on_error:
+                blocked = True
 
         return chain
+
+    async def _execute_step(
+        self,
+        chain: ChainRunState,
+        *,
+        step: ChainStepSpec,
+        workspace: str,
+        workspace_root: Path,
+        entity_payload: dict[str, Any],
+        llm: Callable[[str], Awaitable[str]],
+        max_payload_chars: Optional[int],
+        slice_fn: Optional[Callable[..., dict[str, Any]]],
+        retrieve_fn: Optional[Callable[..., Awaitable[dict[str, Any]]]],
+        runtime_mode_override: Optional[str],
+    ) -> _StepExecutionOutcome:
+        step_run = chain.steps[step.id]
+        input_artifacts = list(step_run.input_artifacts)
+        try:
+            step_payload = self._build_step_entity_payload(
+                entity_payload,
+                input_artifacts=input_artifacts,
+                step_context=step.context,
+            )
+            result = await self._invoke_skill(
+                step.skill,
+                workspace=workspace,
+                user_prompt=self._compose_step_prompt(chain, step),
+                entity_payload=step_payload,
+                llm=llm,
+                max_payload_chars=max_payload_chars,
+                workspace_root=workspace_root,
+                slice_fn=slice_fn,
+                retrieve_fn=retrieve_fn,
+                runtime_mode_override=runtime_mode_override,
+                _chain_depth=1,
+                _chain=(step.skill,),
+            )
+        except Exception as exc:  # noqa: BLE001
+            return _StepExecutionOutcome(step_id=step.id, error=str(exc))
+        return _StepExecutionOutcome(step_id=step.id, result=result)
+
+    @staticmethod
+    def _skip_pending_steps(chain: ChainRunState, *, reason: str) -> None:
+        for run in chain.steps.values():
+            if run.status == "pending":
+                run.status = "skipped"
+                run.error = reason
 
     @staticmethod
     def _reset_for_resume(
@@ -254,13 +366,20 @@ class SkillChainExecutor:
         if from_step_id and from_step_id not in chain.steps:
             raise ValueError(f"Unknown chain step: {from_step_id}")
         resume = chain.model_copy(deep=True)
-        reset_started = not from_step_id
-        for step in resume.spec.steps:
-            if step.id == from_step_id:
-                reset_started = True
-            current = resume.steps[step.id]
-            if reset_started and (from_step_id or current.status != "completed"):
-                resume.steps[step.id] = ChainStepRun(id=step.id, skill=step.skill)
+        invalidate: set[str] = set()
+        if from_step_id:
+            invalidate.add(from_step_id)
+            invalidate.update(transitive_dependent_ids(resume.spec, from_step_id))
+        else:
+            for step in resume.spec.steps:
+                current = resume.steps[step.id]
+                if current.status != "completed":
+                    invalidate.add(step.id)
+
+        for step_id in invalidate:
+            step = next(item for item in resume.spec.steps if item.id == step_id)
+            resume.steps[step_id] = ChainStepRun(id=step_id, skill=step.skill)
+
         resume.status = "running"
         resume.mode = "resume"
         resume.source_chain_id = resume.source_chain_id or resume.chain_id
@@ -561,15 +680,52 @@ class SkillChainExecutor:
 
     @staticmethod
     def _extract_missing_inputs(response: str) -> list[str]:
+        """Parse explicit user-supply gap lists from dedicated sections only."""
         lines = str(response or "").splitlines()
         collecting = False
         missing: list[str] = []
         seen: set[str] = set()
+        success_markers = (
+            "artifact `",
+            "artifact complete",
+            "handoff complete",
+            "json is ready",
+            "json ready for",
+            "emitted with",
+            "coverage note",
+        )
+        section_triggers = (
+            "missing inputs:",
+            "missing input:",
+            "exact gaps:",
+            "gaps the user must supply:",
+            "gaps the customer must supply:",
+        )
         for raw in lines:
             stripped = raw.strip()
             lowered = stripped.lower()
-            if "exact gaps" in lowered or "missing inputs" in lowered:
+            if any(marker in lowered for marker in success_markers):
+                collecting = False
+                continue
+            if lowered.startswith("##") and any(token in lowered for token in ("missing", "gap")):
                 collecting = True
+                continue
+            if "**exact gaps" in lowered or "**gap identified" in lowered:
+                collecting = True
+                continue
+            triggered = False
+            for trigger in section_triggers:
+                if lowered.startswith(trigger):
+                    collecting = True
+                    triggered = True
+                    remainder = stripped[len(trigger) :].strip()
+                    if remainder.startswith(("- ", "* ")):
+                        cleaned = remainder[2:].strip()
+                        if cleaned and cleaned not in seen:
+                            seen.add(cleaned)
+                            missing.append(cleaned)
+                    break
+            if triggered:
                 continue
             if collecting and stripped.startswith(("- ", "* ")):
                 cleaned = stripped[2:].strip()
@@ -579,12 +735,7 @@ class SkillChainExecutor:
                 continue
             if collecting and stripped and not stripped.startswith(("- ", "* ")):
                 break
-        if missing:
-            return missing
-        generic_markers = ("gap identified", "missing input", "missing inputs")
-        if any(marker in str(response or "").lower() for marker in generic_markers):
-            return ["See response_preview for exact gaps."]
-        return []
+        return missing
 
     @classmethod
     def _extract_missing_outputs(cls, artifacts: list[dict[str, Any]]) -> list[str]:
@@ -600,6 +751,37 @@ class SkillChainExecutor:
                     seen.add(ext)
                     missing.append(ext)
         return missing
+
+    @staticmethod
+    def _build_step_entity_payload(
+        base_payload: dict[str, Any],
+        *,
+        input_artifacts: list[ChainArtifactRef],
+        step_context: dict[str, Any],
+    ) -> dict[str, Any]:
+        merged = dict(base_payload)
+        if input_artifacts:
+            merged["input_artifacts"] = [
+                {
+                    "step_id": ref.step_id,
+                    "skill": ref.skill,
+                    "run_id": ref.run_id,
+                    "filename": ref.filename,
+                    "path": ref.path,
+                    "display_name": ref.display_name or ref.filename,
+                    "mime": ref.mime,
+                    "size": ref.size,
+                    "products": list(ref.products),
+                }
+                for ref in input_artifacts
+            ]
+        else:
+            merged.pop("input_artifacts", None)
+        if step_context:
+            merged["chain_step_context"] = step_context
+        else:
+            merged.pop("chain_step_context", None)
+        return merged
 
     @staticmethod
     def _compose_step_prompt(chain: ChainRunState, step: ChainStepSpec) -> str:

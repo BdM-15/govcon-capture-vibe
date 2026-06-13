@@ -30,6 +30,11 @@ _active_min_rerank_score: contextvars.ContextVar[float | None] = contextvars.Con
     default=None,
 )
 
+_last_rerank_stats: contextvars.ContextVar[dict[str, Any] | None] = contextvars.ContextVar(
+    "govcon_last_rerank_stats",
+    default=None,
+)
+
 # Singleton state — loaded lazily by _get_reranker() on first query
 _reranker_instance: Any = None
 _reranker_model_name: str | None = None
@@ -43,6 +48,17 @@ def set_active_min_rerank_score(score: float | None) -> contextvars.Token[float 
 def reset_active_min_rerank_score(token: contextvars.Token[float | None]) -> None:
     """Restore the prior min rerank threshold after a query completes."""
     _active_min_rerank_score.reset(token)
+
+
+def _store_rerank_stats(stats: dict[str, Any]) -> None:
+    _last_rerank_stats.set(dict(stats))
+
+
+def pop_last_rerank_stats() -> dict[str, Any] | None:
+    """Return and clear rerank stats for the most recent query in this context."""
+    stats = _last_rerank_stats.get()
+    _last_rerank_stats.set(None)
+    return dict(stats) if isinstance(stats, dict) else None
 
 
 def resolve_min_rerank_score() -> float:
@@ -110,7 +126,40 @@ async def govcon_rerank_func(
         Entries below `min_rerank_score` are filtered out.
     """
     if not documents:
+        _store_rerank_stats(
+            {
+                "skipped": True,
+                "reason": "no_documents",
+                "candidates": 0,
+                "top_n": top_n,
+            }
+        )
         return []
+
+    # When the candidate pool already fits chunk_top_k, embedding order is enough —
+    # cross-encoder rerank only reorders without filtering (saves ~1–7s per kg_chunks pass).
+    if top_n is not None and top_n > 0 and len(documents) <= top_n:
+        logger.info(
+            "⏭️ Rerank skipped: %d candidates <= top_n=%d (embedding order retained)",
+            len(documents),
+            top_n,
+        )
+        _store_rerank_stats(
+            {
+                "skipped": True,
+                "reason": "candidates_within_top_n",
+                "candidates": len(documents),
+                "top_n": top_n,
+                "top_score": None,
+                "pre_filter_top": None,
+                "elapsed_ms": 0,
+                "filtered_below_min": 0,
+            }
+        )
+        return [
+            {"index": index, "relevance_score": max(0.0, 1.0 - (index * 0.001))}
+            for index in range(len(documents))
+        ]
 
     settings = get_settings()
     reranker = _get_reranker()
@@ -144,6 +193,19 @@ async def govcon_rerank_func(
         top_score,
         min_score,
         n_filtered,
+    )
+    _store_rerank_stats(
+        {
+            "skipped": False,
+            "candidates": len(documents),
+            "top_n": top_n,
+            "pre_filter_top": round(pre_filter_top, 4),
+            "top_score": round(top_score, 4),
+            "min_rerank_score": round(min_score, 4),
+            "elapsed_ms": round(elapsed_ms, 1),
+            "filtered_below_min": n_filtered,
+            "returned": len(indexed_scores[:top_n] if top_n else indexed_scores),
+        }
     )
 
     return indexed_scores[:top_n] if top_n else indexed_scores

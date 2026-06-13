@@ -15,8 +15,10 @@ from pydantic import BaseModel, Field
 
 from src.core import get_settings
 from src.core.env import env_int
+from src.server.langgraph_studio_lifecycle import studio_status_payload
+from src.server.langsmith_runtime import langsmith_stats_payload
 from src.server.ollama_llm import ollama_stats_payload
-from src.server.runtime_state import get_ollama_status
+from src.server.runtime_state import get_langgraph_studio_status, get_langsmith_status, get_ollama_status
 from src.ontology.schema import VALID_ENTITY_TYPES, VALID_RELATIONSHIP_TYPES
 from src.server.workspace_maintenance import safe_count_json_keys
 from src.utils.time_utils import now_local_iso
@@ -55,6 +57,7 @@ def stack_versions() -> dict[str, Optional[str]]:
         ("lightrag", "lightrag-hku"),
         ("mineru", "mineru"),
         ("transformers", "transformers"),
+        ("langgraph", "langgraph"),
     ):
         try:
             versions[key] = version(distribution)
@@ -152,6 +155,8 @@ def gather_stats(
             "rerank_enabled": settings.enable_rerank,
         },
         "ollama": ollama_stats_payload(get_ollama_status(), settings),
+        "langgraph_studio": studio_status_payload(get_langgraph_studio_status()),
+        "langsmith": langsmith_stats_payload(get_langsmith_status()),
         "storage": {
             "graph": graph_storage(),
             "vector": vector_storage(),

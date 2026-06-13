@@ -210,6 +210,7 @@ def test_build_server_runtime_wires_app_routes_ui_and_banner() -> None:
                 "colors": colors,
                 "pipeline_health": None,
                 "ollama_status": None,
+                "langgraph_studio_status": None,
             },
         ),
         (

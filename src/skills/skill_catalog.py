@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from src.skills.skill_grouping import enrich_skill_summary
 from src.skills.skill_models import Skill, parse_frontmatter
 
 logger = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ class SkillCatalog:
         if not self._skills:
             self.discover()
         return [
-            skill.to_summary()
+            enrich_skill_summary(skill)
             for skill in self._skills.values()
             if include_developer or not (skill.frontmatter.metadata or {}).get("developer_only", False)
         ]
@@ -72,7 +73,7 @@ class SkillCatalog:
         skill = self.get_skill(name)
         if not skill:
             return None
-        detail = skill.to_summary()
+        detail = enrich_skill_summary(skill)
         detail["body_md"] = skill.body_md
         detail["references"] = self._list_subdir(Path(skill.path) / "references", ".md")
         detail["assets"] = self._list_subdir(

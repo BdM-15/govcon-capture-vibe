@@ -12,6 +12,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from src.server.briefing_catalog import resolve_skill_default_prompt
+from src.server.briefing_prompts import BRIEFING_PROMPT_LIBRARY
+
 logger = logging.getLogger(__name__)
 
 LlmFunc = Callable[[str], Awaitable[str]]
@@ -154,12 +157,28 @@ def shipped_prompt_id(phase: str, category: str, title: str) -> str:
     return str(uuid.uuid5(_SHIPPED_NAMESPACE, key))
 
 
-def _normalize_shipped(entry: dict[str, str]) -> dict[str, str]:
+_ENTRY_CORE_KEYS = ("phase", "category", "title", "prompt")
+_ENTRY_METADATA_KEYS = (
+    "channel",
+    "slice_id",
+    "parent_slice_id",
+    "skill",
+    "chain_preset",
+    "icon",
+    "label",
+    "description",
+    "sort_order",
+    "context_placeholder",
+    "context_tooltip",
+)
+
+
+def _normalize_shipped(entry: dict[str, Any]) -> dict[str, Any]:
     phase = str(entry["phase"]).strip()
     category = str(entry["category"]).strip()
     title = str(entry["title"]).strip()
     prompt = str(entry["prompt"]).strip()
-    return {
+    normalized: dict[str, Any] = {
         "id": shipped_prompt_id(phase, category, title),
         "phase": phase,
         "category": category,
@@ -167,11 +186,19 @@ def _normalize_shipped(entry: dict[str, str]) -> dict[str, str]:
         "prompt": prompt,
         "source": "shipped",
     }
+    for key in _ENTRY_METADATA_KEYS:
+        if key in entry and entry[key] is not None:
+            normalized[key] = entry[key]
+    if "channel" not in normalized:
+        normalized["channel"] = "chat"
+    return normalized
 
 
-def shipped_defaults() -> list[dict[str, str]]:
-    """Return shipped catalog with stable ids."""
-    return [_normalize_shipped(entry) for entry in PROMPT_LIBRARY]
+def shipped_defaults() -> list[dict[str, Any]]:
+    """Return shipped chat + briefing catalog with stable ids."""
+    entries = [_normalize_shipped(entry) for entry in PROMPT_LIBRARY]
+    entries.extend(_normalize_shipped(entry) for entry in BRIEFING_PROMPT_LIBRARY)
+    return entries
 
 
 class PromptEntryCreate(BaseModel):
@@ -195,6 +222,17 @@ class PromptImportPayload(BaseModel):
 class PromptRefinePayload(BaseModel):
     prompt: str = Field(min_length=1, max_length=20000)
     action: str = Field(default="clarity", max_length=32)
+
+
+def _apply_entry_patch(entry: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(entry)
+    for key in _ENTRY_CORE_KEYS:
+        if key in patch:
+            merged[key] = str(patch[key]).strip()
+    for key in _ENTRY_METADATA_KEYS:
+        if key in patch:
+            merged[key] = patch[key]
+    return merged
 
 
 class PromptLibraryStore:
@@ -240,12 +278,12 @@ class PromptLibraryStore:
     def _entry_sort_key(self, entry: dict[str, str]) -> tuple[str, str, str]:
         return (entry.get("phase", ""), entry.get("category", ""), entry.get("title", ""))
 
-    def read(self) -> list[dict[str, str]]:
+    def read(self) -> list[dict[str, Any]]:
         """Merge shipped defaults with workspace overrides."""
         raw = self.read_raw()
         hidden = {str(item) for item in raw["hidden"]}
         overrides: dict[str, Any] = raw["overrides"]
-        merged: list[dict[str, str]] = []
+        merged: list[dict[str, Any]] = []
 
         for entry in self.defaults():
             entry_id = entry["id"]
@@ -253,14 +291,7 @@ class PromptLibraryStore:
                 continue
             patch = overrides.get(entry_id)
             if isinstance(patch, dict):
-                merged.append({
-                    **entry,
-                    "phase": str(patch.get("phase", entry["phase"])).strip(),
-                    "category": str(patch.get("category", entry["category"])).strip(),
-                    "title": str(patch.get("title", entry["title"])).strip(),
-                    "prompt": str(patch.get("prompt", entry["prompt"])).strip(),
-                    "source": "shipped",
-                })
+                merged.append(_apply_entry_patch(entry, patch) | {"source": "shipped"})
             else:
                 merged.append(dict(entry))
 
@@ -274,17 +305,26 @@ class PromptLibraryStore:
             entry_id = str(item.get("id") or uuid.uuid4())
             if not (phase and category and title and prompt):
                 continue
-            merged.append({
+            custom_entry: dict[str, Any] = {
                 "id": entry_id,
                 "phase": phase,
                 "category": category,
                 "title": title,
                 "prompt": prompt,
                 "source": "user",
-            })
+                "channel": str(item.get("channel") or "chat").strip() or "chat",
+            }
+            for key in _ENTRY_METADATA_KEYS:
+                if key in item and item[key] is not None:
+                    custom_entry[key] = item[key]
+            merged.append(custom_entry)
 
         merged.sort(key=self._entry_sort_key)
         return merged
+
+    def skill_default_prompt(self, skill_name: str) -> dict[str, Any] | None:
+        """Return the packaged default invoke prompt for an agent skill, if bound."""
+        return resolve_skill_default_prompt(self.read(), skill_name)
 
     def write_raw(self, data: dict[str, Any]) -> None:
         path = self.path()
@@ -326,11 +366,13 @@ class PromptLibraryStore:
         shipped_ids = {item["id"] for item in self.defaults()}
 
         if entry_id in shipped_ids:
-            current = next(item for item in self.defaults() if item["id"] == entry_id)
             patch = dict(raw["overrides"].get(entry_id, {}))
-            for key in ("phase", "category", "title", "prompt"):
+            for key in _ENTRY_CORE_KEYS:
                 if key in updates:
                     patch[key] = str(updates[key]).strip()
+            for key in _ENTRY_METADATA_KEYS:
+                if key in updates:
+                    patch[key] = updates[key]
             raw["overrides"][entry_id] = patch
             self.write_raw(raw)
             merged = next(item for item in self.read() if item["id"] == entry_id)
@@ -339,19 +381,26 @@ class PromptLibraryStore:
         for idx, item in enumerate(raw["custom"]):
             if not isinstance(item, dict) or str(item.get("id")) != entry_id:
                 continue
-            for key in ("phase", "category", "title", "prompt"):
+            for key in _ENTRY_CORE_KEYS:
                 if key in updates:
                     item[key] = str(updates[key]).strip()
+            for key in _ENTRY_METADATA_KEYS:
+                if key in updates:
+                    item[key] = updates[key]
             raw["custom"][idx] = item
             self.write_raw(raw)
-            return {
-                "id": entry_id,
-                "phase": str(item["phase"]).strip(),
-                "category": str(item["category"]).strip(),
-                "title": str(item["title"]).strip(),
-                "prompt": str(item["prompt"]).strip(),
-                "source": "user",
-            }
+            return _apply_entry_patch(
+                {
+                    "id": entry_id,
+                    "phase": str(item["phase"]).strip(),
+                    "category": str(item["category"]).strip(),
+                    "title": str(item["title"]).strip(),
+                    "prompt": str(item["prompt"]).strip(),
+                    "source": "user",
+                    "channel": str(item.get("channel") or "chat").strip() or "chat",
+                },
+                {key: item[key] for key in _ENTRY_METADATA_KEYS if key in item},
+            )
 
         raise KeyError(entry_id)
 
@@ -422,6 +471,14 @@ def register_prompt_library_routes(
     async def get_prompt_library() -> JSONResponse:
         """Return merged shipped + workspace prompt starters."""
         return JSONResponse(_library_payload())
+
+    @app.get("/api/ui/prompt-library/skill-default/{skill_name}", tags=["theseus-ui"])
+    async def get_skill_default_prompt(skill_name: str) -> JSONResponse:
+        """Return the packaged default invoke prompt for a skill, if library-bound."""
+        entry = store.skill_default_prompt(skill_name.strip())
+        if entry is None:
+            raise HTTPException(404, f"No library default prompt for skill: {skill_name}")
+        return JSONResponse({"skill": skill_name, "entry": entry})
 
     @app.post("/api/ui/prompt-library", tags=["theseus-ui"])
     async def create_prompt_library_entry(payload: PromptEntryCreate) -> JSONResponse:

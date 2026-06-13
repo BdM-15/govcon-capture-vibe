@@ -236,84 +236,29 @@ async def retrieve_relevant_entities_for_skill(
     mode: str,
     query_overrides: dict[str, Any],
 ) -> dict[str, Any]:
-    """Run structured retrieval and return entity and chunk identifiers.
+    """Run structured retrieval and return full grounded context + compat keys.
 
-    The return shape is ``{names, chunk_ids, metadata}``, where ``names`` is a
-    lowercased entity-name whitelist and ``chunk_ids`` are retrieval-ranked
-    chunks available to augment the briefing book.
+    Return shape includes ``names``, ``chunk_ids``, ``metadata`` (backward
+    compatible), plus ``entities``, ``relationships``, ``chunks``,
+    ``references`` from the full ``aquery_data`` payload.
     """
-    top_k = int(query_overrides.get("top_k") or 40)
-    meta: dict[str, Any] = {
-        "mode": mode,
-        "top_k": top_k,
-        "chunk_top_k": query_overrides.get("chunk_top_k"),
-        "max_total_tokens": query_overrides.get("max_total_tokens"),
-        "matched_entities": 0,
-        "matched_chunks": 0,
-        "used": False,
-        "reason": "",
-        "query_overrides": {
-            key: query_overrides[key]
-            for key in (
-                "top_k",
-                "chunk_top_k",
-                "max_entity_tokens",
-                "max_relation_tokens",
-                "max_total_tokens",
-                "enable_rerank",
-            )
-            if key in query_overrides
-        },
+    from src.skills.researcher_retrieval import (
+        retrieve_grounded_context_for_researcher_artifact,
+    )
+
+    grounded = await retrieve_grounded_context_for_researcher_artifact(
+        data_func,
+        prompt=prompt,
+        skill_description=skill_description,
+        mode=mode,
+        query_overrides=query_overrides,
+    )
+    return {
+        "names": grounded.get("names") or set(),
+        "chunk_ids": grounded.get("chunk_ids") or set(),
+        "entities": grounded.get("entities") or [],
+        "relationships": grounded.get("relationships") or [],
+        "chunks": grounded.get("chunks") or [],
+        "references": grounded.get("references") or [],
+        "metadata": grounded.get("metadata") or {},
     }
-    if mode == "off":
-        meta["reason"] = "retrieval disabled (mode=off)"
-        return {"names": set(), "chunk_ids": set(), "metadata": meta}
-    if data_func is None:
-        meta["reason"] = "server has no data_func; falling back to bulk slice"
-        return {"names": set(), "chunk_ids": set(), "metadata": meta}
-
-    user_prompt = (prompt or "").strip()
-    hint = (skill_description or "").strip()
-    if not user_prompt and not hint:
-        meta["reason"] = "empty prompt + skill description; bulk slice"
-        return {"names": set(), "chunk_ids": set(), "metadata": meta}
-
-    retrieval_query = f"{user_prompt}\n\n[Skill context: {hint}]" if hint else user_prompt
-    overrides = dict(query_overrides)
-    overrides.setdefault("only_need_context", True)
-    try:
-        data = await data_func(retrieval_query, mode, [], overrides)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Skill retrieval failed (mode=%s): %s", mode, exc)
-        meta["reason"] = f"retrieval error: {exc}"
-        return {"names": set(), "chunk_ids": set(), "metadata": meta}
-
-    payload = data.get("data") if isinstance(data, dict) else None
-    if not isinstance(payload, dict):
-        meta["reason"] = "retrieval returned no data block"
-        return {"names": set(), "chunk_ids": set(), "metadata": meta}
-
-    names: set[str] = set()
-    for entity in payload.get("entities") or []:
-        if not isinstance(entity, dict):
-            continue
-        name = entity.get("entity_name") or entity.get("entity_id") or entity.get("name")
-        if name:
-            names.add(str(name).strip().lower())
-    if len(names) > top_k:
-        names = set(list(names)[:top_k])
-
-    chunk_ids: set[str] = set()
-    for chunk in payload.get("chunks") or []:
-        if not isinstance(chunk, dict):
-            continue
-        chunk_id = chunk.get("chunk_id") or chunk.get("__id__")
-        if chunk_id:
-            chunk_ids.add(str(chunk_id))
-
-    meta["matched_entities"] = len(names)
-    meta["matched_chunks"] = len(chunk_ids)
-    meta["used"] = bool(names or chunk_ids)
-    if not names and not chunk_ids:
-        meta["reason"] = "retrieval returned 0 entities/chunks; falling back to bulk slice"
-    return {"names": names, "chunk_ids": chunk_ids, "metadata": meta}

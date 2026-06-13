@@ -240,6 +240,35 @@
 
                 <template x-if="querySettings.loaded">
                   <div class="space-y-6">
+                    <template
+                      x-if="querySettings.recommendations && querySettings.recommendations.should_notify"
+                    >
+                      <div
+                        class="settings-tip-box max-w-2xl border border-neon-cyan/30 bg-neon-cyan/5"
+                      >
+                        <div class="text-slate-200 text-sm mb-2">
+                          <strong>Workspace tuning available</strong>
+                          <span
+                            class="text-slate-400 font-mono text-xs ml-2"
+                            x-text="'tier=' + (querySettings.recommendations.tier || '')"
+                          ></span>
+                        </div>
+                        <p
+                          class="text-xs text-slate-400 mb-3"
+                          x-text="querySettings.recommendations.reason"
+                        ></p>
+                        <button
+                          type="button"
+                          class="btn btn-primary text-xs"
+                          @click="applyQueryRecommendations()"
+                          :disabled="querySettings.applyingRecommendations"
+                        >
+                          <span
+                            x-text="querySettings.applyingRecommendations ? 'Applying…' : 'Apply recommendations'"
+                          ></span>
+                        </button>
+                      </div>
+                    </template>
                     <div class="settings-tip-box max-w-2xl">
                       <strong class="text-slate-300">Start here:</strong>
                       This panel controls <span class="text-slate-300">how much RFP + knowledge-graph context</span> gets found and packed for
@@ -1396,6 +1425,19 @@
                         x-text="stats.stack?.transformers ? 'v' + stats.stack.transformers : '—'"
                       ></div>
                     </div>
+                    <div
+                      class="bg-ink-900/60 border border-edge rounded-lg p-3"
+                    >
+                      <div
+                        class="text-slate-500 uppercase tracking-wider text-[10px] mb-1"
+                      >
+                        langgraph
+                      </div>
+                      <div
+                        class="text-neon-cyan tabular-nums"
+                        x-text="stats.stack?.langgraph ? 'v' + stats.stack.langgraph : '—'"
+                      ></div>
+                    </div>
                   </div>
                 </div>
                 <!-- Models -->
@@ -1436,6 +1478,18 @@
                       class="col-span-2 truncate"
                       :class="stats.ollama?.ready ? 'text-neon-lime' : 'text-slate-500'"
                       x-text="stats.ollama ? `${stats.ollama.model || '—'} · ${stats.ollama.state || 'unknown'}` : '—'"
+                    ></dd>
+                    <dt class="text-slate-500">langsmith</dt>
+                    <dd
+                      class="col-span-2 truncate"
+                      :class="stats.langsmith?.ok ? 'text-neon-lime' : 'text-slate-500'"
+                      x-text="stats.langsmith ? `${stats.langsmith.state || 'unknown'} · ${stats.langsmith.project || '—'}` : '—'"
+                    ></dd>
+                    <dt class="text-slate-500">studio</dt>
+                    <dd
+                      class="col-span-2 truncate"
+                      :class="stats.langgraph_studio?.ok ? 'text-neon-lime' : 'text-slate-500'"
+                      x-text="stats.langgraph_studio ? `${stats.langgraph_studio.state || 'unknown'} · ${stats.langgraph_studio.graph_url || stats.langgraph_studio.url || '—'}` : '—'"
                     ></dd>
                     <dt class="text-slate-500">rerank</dt>
                     <dd

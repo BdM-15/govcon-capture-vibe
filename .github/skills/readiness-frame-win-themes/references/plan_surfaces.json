@@ -1,0 +1,20 @@
+[
+  {
+    "id": "shipley_needs_wants",
+    "label": "Shipley — customer needs, wants, priorities, buying vision",
+    "keywords": ["need", "want", "priority", "objective", "goal", "outcome", "mission", "readiness", "benefit", "value", "buying"],
+    "suggested_query": "customer needs wants priorities buying vision program office objectives customer priority readiness outcome what customer values mission success",
+    "inquiry": "shipley_needs_wants",
+    "shipley": "capture",
+    "feeds": ["readiness_outcome", "importance_signals[]", "verbatim_extracts[]"]
+  },
+  {
+    "id": "shipley_win_themes",
+    "label": "Shipley — win themes, discriminators, hot buttons, proof hooks",
+    "keywords": ["win theme", "discriminator", "hot button", "strength", "weakness", "proof", "differentiat", "outstanding", "rating", "subfactor"],
+    "suggested_query": "win theme discriminator hot button evaluation proof expected strengths weaknesses differentiators source selection best value outstanding rating capture hooks",
+    "inquiry": "shipley_win_themes",
+    "shipley": "strategy",
+    "feeds": ["win_theme_candidates[]", "eval_crosswalk[]"]
+  }
+]

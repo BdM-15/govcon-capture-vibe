@@ -12,6 +12,8 @@ from typing import Any, Callable
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from src.server.briefing_catalog import build_intel_slices_from_library
+from src.server.prompt_library import PromptLibraryStore
 from src.skills.run_index import SkillRunIndex
 
 logger = logging.getLogger(__name__)
@@ -229,116 +231,6 @@ INTEL_RELATED_SKILL_GUIDE_FIELDS: dict[str, dict[str, Any]] = {
         },
     },
 }
-
-INTEL_SLICE_CATALOG: list[dict[str, Any]] = [
-    {
-        "id": "overview",
-        "label": "Contract overview",
-        "icon": "layout-dashboard",
-        "description": "Scope primer — contract type, periods, task areas, deliverables, and performance mechanisms.",
-        "action": "chat",
-        "prompt": (
-            "Provide an overview of the scope and services for this contract. "
-            "Use an educational tone in plain language; expand acronyms on first use. "
-            "Stay grounded in retrieved document terminology and facts — cite with [N]. "
-            "Explain structure: contract type, periods, task/service areas, major deliverables, "
-            "and key performance mechanisms."
-        ),
-    },
-    {
-        "id": "sites",
-        "label": "Sites & locations",
-        "icon": "map-pin",
-        "description": "Geographic inventory — CONUS/OCONUS clusters, site counts, and appendix patterns.",
-        "action": "chat",
-        "prompt": (
-            "Summarize all sites and locations in scope. Organize by country, then region. "
-            "Note counts where the documents support them. Identify geographic clusters, "
-            "OCONUS vs CONUS concentration, and any site-specific appendix patterns. "
-            "Flag data gaps. Cite every factual claim with [N]."
-        ),
-    },
-    {
-        "id": "evaluation",
-        "label": "Evaluation decoder",
-        "icon": "scale",
-        "description": "Decode evaluation_factor entities — weights, proof expected, strong vs weak responses.",
-        "action": "chat",
-        "prompt": (
-            "Decode all evaluation_factor and subfactor entities (UCF Section M or equivalent). "
-            "For each: what the government is evaluating; stated weights or rating definitions if present; "
-            "evidence or proof they expect; what a strong vs weak response looks like per document language. "
-            "Ground every row in [N] citations."
-        ),
-    },
-    {
-        "id": "mission-readiness",
-        "label": "Mission Readiness Frame",
-        "icon": "target",
-        "description": (
-            "Program-office priorities from the full solicitation package — readiness outcome, "
-            "pain points, and win-theme candidates."
-        ),
-        "action": "skill",
-        "skill": "mission-readiness-framer",
-        "skill_prompt": (
-            "Build the Mission Readiness Frame from the full solicitation package "
-            "(PWS/SOW, background, QASP, deliverables, evaluation criteria, amendments). "
-            "Program office = customer; contract = workload enabler for readiness. "
-            "Comprehensively surface pain points and theme opportunities — including non-obvious "
-            "latent/structural challenges — each with cited rationale. Review current methods/tools "
-            "implied by the PWS and identify customer-grounded innovation opportunities (quality up, "
-            "cost down, or both; value without bloat; methods not only technology). "
-            "Coverage is solicitation-driven — one eval crosswalk row per factor/subfactor retrieved. "
-            "Write artifacts/mission_readiness_frame.json and artifacts/brief.md via write_file; "
-            "return the full cited brief.md as your final message."
-        ),
-        "related_skills": [
-            {
-                "skill": "compliance-auditor",
-                "label": "Acquisition traps",
-                "prompt": (
-                    "Forensic focus: FAR clause traps, Section L/M compliance gaps, "
-                    "and contracts-shop errors — not program-office readiness."
-                ),
-            },
-        ],
-    },
-    {
-        "id": "financial",
-        "label": "Financial risk",
-        "icon": "banknote",
-        "description": "Payment terms, CLIN cash flow, and capital/inventory obligations (forensic skills).",
-        "action": "skill",
-        "skill": "payment-terms-auditor",
-        "skill_prompt": (
-            "Forensic focus: payment terms and cash-flow timing by CLIN. "
-            "Require verbatim extracts, a CLIN cash-flow table, H/M/L risks, and BOE implications."
-        ),
-        "related_skills": [
-            {
-                "skill": "capital-obligations-auditor",
-                "label": "Capital obligations",
-                "prompt": (
-                    "Forensic focus: upfront capital, inventory ownership, disposition, "
-                    "and transition property obligations."
-                ),
-            }
-        ],
-    },
-    {
-        "id": "logistics",
-        "label": "Logistics SLAs",
-        "icon": "truck",
-        "description": "Shipping destinations, OTD/FR metrics, and surge logistics performance standards.",
-        "action": "skill",
-        "skill": "logistics-sla-auditor",
-        "skill_prompt": (
-            "Forensic focus: shipping destinations, on-time delivery, fill rate, "
-            "and surge logistics SLAs. Require verbatim extracts and H/M/L risks."
-        ),
-    },
-]
 
 def now_iso() -> str:
     """Return compact UTC timestamp for UI rollups."""
@@ -590,10 +482,15 @@ def _latest_skill_run(workspace_dir: Path, skill_name: str) -> dict[str, Any] | 
     }
 
 
-def build_intel_slices(workspace_dir: Path) -> list[dict[str, Any]]:
-    """Attach latest run metadata to each catalogued intelligence slice."""
+def build_intel_slices(
+    workspace_dir: Path,
+    *,
+    prompt_library: PromptLibraryStore | None = None,
+) -> list[dict[str, Any]]:
+    """Attach guide + run metadata to briefing slices resolved from the prompt library."""
+    store = prompt_library or PromptLibraryStore(workspace_dir=lambda: workspace_dir)
     slices: list[dict[str, Any]] = []
-    for entry in INTEL_SLICE_CATALOG:
+    for entry in build_intel_slices_from_library(store.read()):
         item = dict(entry)
         guide_fields = INTEL_SLICE_GUIDE_FIELDS.get(str(item.get("id") or ""), {})
         item.update(guide_fields)
@@ -624,8 +521,14 @@ def register_intelligence_routes(
     app: FastAPI,
     *,
     workspace_dir: Callable[[], Path],
+    prompt_library: PromptLibraryStore | None = None,
 ) -> None:
     """Register RFP intelligence routes for Theseus UI."""
+
+    def _prompt_store() -> PromptLibraryStore:
+        if prompt_library is not None:
+            return prompt_library
+        return PromptLibraryStore(workspace_dir=workspace_dir)
 
     @app.get("/api/ui/intel/summary", tags=["theseus-ui"])
     async def intel_summary() -> JSONResponse:
@@ -635,5 +538,12 @@ def register_intelligence_routes(
     @app.get("/api/ui/intel/slices", tags=["theseus-ui"])
     async def intel_slices() -> JSONResponse:
         """Return briefing slice catalog with latest skill-run status per slice."""
-        return JSONResponse({"slices": build_intel_slices(workspace_dir())})
+        return JSONResponse(
+            {
+                "slices": build_intel_slices(
+                    workspace_dir(),
+                    prompt_library=_prompt_store(),
+                ),
+            }
+        )
 

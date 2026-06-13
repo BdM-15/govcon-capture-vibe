@@ -40,6 +40,29 @@ window.theseusIntelBriefingGuideTarget = function theseusIntelBriefingGuideTarge
   return app.intel.briefingGuide.slice;
 };
 
+window.theseusIntelCatalogPrompt = function theseusIntelCatalogPrompt(sliceOrRel) {
+  if (!sliceOrRel) return "";
+  if (sliceOrRel.action === "skill") {
+    return String(sliceOrRel.skill_prompt || "").trim();
+  }
+  return String(sliceOrRel.prompt || "").trim();
+};
+
+window.theseusOpenBriefingPromptEditor =
+  async function theseusOpenBriefingPromptEditor(app, promptLibraryId) {
+    const entryId = String(promptLibraryId || "").trim();
+    if (!entryId) return;
+    await window.theseusEnsurePromptLibraryLoaded(app);
+    const entry = window.theseusFindPromptLibraryEntry(app, entryId);
+    if (!entry) {
+      app.toast("Prompt library entry not found — refresh Prompt Library", "error");
+      return;
+    }
+    app.active = "prompts";
+    window.theseusOpenPromptEditor(app, entry);
+    window.theseusAfterRender(app);
+  };
+
 window.theseusLoadIntel = async function theseusLoadIntel(app) {
   app.intel.loading = true;
   app.intel.slicesLoading = true;
@@ -47,6 +70,7 @@ window.theseusLoadIntel = async function theseusLoadIntel(app) {
     const [summary, slicesPayload] = await Promise.all([
       app.api("/api/ui/intel/summary"),
       app.api("/api/ui/intel/slices"),
+      window.theseusEnsurePromptLibraryLoaded(app).then(() => null),
     ]);
     app.intel.data = summary;
     app.intel.slices = slicesPayload.slices || [];
@@ -101,25 +125,40 @@ window.theseusInvokeIntelSkill = async function theseusInvokeIntelSkill(
   prompt,
   runningKey,
   contextKey,
+  chainPreset,
 ) {
   if (!skillName) return;
   app.intel.sliceRunning = runningKey || skillName;
   const userAddendum = window
     .theseusIntelSliceContextText(app, contextKey || runningKey)
     .trim();
+  const preset = String(chainPreset || "").trim();
   try {
-    const response = await app.api(
-      "/api/ui/skills/" + encodeURIComponent(skillName) + "/invoke",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: prompt || "",
-          user_addendum: userAddendum,
-        }),
-      },
-    );
-    if (response.run_id) {
+    const response = preset
+      ? await app.api("/api/ui/skill-chains/invoke", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            preset,
+            name: preset + "-chain",
+            prompt: prompt || "",
+            user_addendum: userAddendum,
+          }),
+        })
+      : await app.api(
+          "/api/ui/skills/" + encodeURIComponent(skillName) + "/invoke",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: prompt || "",
+              user_addendum: userAddendum,
+            }),
+          },
+        );
+    if (response.chain?.chain_id) {
+      app.toast("Briefing chain saved: " + response.chain.chain_id, "ok");
+    } else if (response.run_id) {
       app.toast("Briefing run saved: " + response.run_id, "ok");
     } else {
       app.toast("Skill run completed", "ok");

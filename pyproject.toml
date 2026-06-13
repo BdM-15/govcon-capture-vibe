@@ -63,6 +63,9 @@ dependencies = [
     # Pin both to the same version so file overlap is byte-identical.
     "opencv-python==4.12.0.88",
     "opencv-python-headless==4.12.0.88",
+    "langgraph>=0.4",
+    "langgraph-checkpoint>=2.0",
+    "langgraph-cli[inmem]>=0.2",
 ]
 
 # ============================================================================

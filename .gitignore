@@ -164,6 +164,12 @@ external_analysis/
 navy_mbos_baseline/
 rfp_analysis_*/
 
+# LangGraph Studio local dev cache (auto-created by `langgraph dev`)
+.langgraph_api/
+
+# IDE MCP tool descriptors (local Cursor harness; not project source)
+mcps/
+
 # ============================================================================
 # API Keys and Secrets
 # ============================================================================

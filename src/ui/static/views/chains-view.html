@@ -28,6 +28,69 @@
             ></div>
 
             <div
+              class="card card-accent accent-cyan p-4 mb-4"
+              x-init="if (!chains.pipelinesLoaded) loadPipelineLibrary()"
+            >
+              <div class="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <h2 class="text-sm font-semibold text-slate-100">
+                    Pipeline Library
+                  </h2>
+                  <p class="text-xs text-slate-500 mt-1 max-w-2xl">
+                    Packaged multi-skill graphs (like Prompt Library, but for
+                    orchestration). Mission Readiness uses LangGraph wave
+                    execution with deterministic merge.
+                  </p>
+                </div>
+                <a
+                  x-show="chains.studioUrl"
+                  class="pill bg-neon-cyan/10 border border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/20 px-3 py-1.5 text-xs"
+                  :href="chains.studioUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open LangGraph Studio (auto-started with Theseus)"
+                >
+                  <i data-lucide="workflow" class="w-3.5 h-3.5"></i>
+                  LangGraph Studio
+                </a>
+              </div>
+              <div
+                x-show="chains.pipelinesError"
+                class="text-xs text-neon-red mt-2"
+                x-text="chains.pipelinesError"
+              ></div>
+              <ul class="mt-3 space-y-2">
+                <template
+                  x-for="pipeline in chains.pipelines"
+                  :key="pipeline.pipeline_id"
+                >
+                  <li
+                    class="bg-ink-800/60 border border-edge rounded-md p-3 text-xs"
+                  >
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span
+                        class="text-sm font-semibold text-slate-100"
+                        x-text="pipeline.name"
+                      ></span>
+                      <span
+                        class="pill text-[10px] border border-neon-cyan/40 text-neon-cyan"
+                        x-text="pipeline.engine"
+                      ></span>
+                    </div>
+                    <p
+                      class="text-slate-500 mt-1"
+                      x-text="pipeline.description"
+                    ></p>
+                    <div
+                      class="text-[10px] font-mono text-slate-600 mt-2"
+                      x-text="'Waves: ' + (pipeline.waves || []).map((w) => w.join(' + ')).join(' → ')"
+                    ></div>
+                  </li>
+                </template>
+              </ul>
+            </div>
+
+            <div
               class="grid grid-cols-1 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)] gap-4"
             >
               <div class="card p-4">
@@ -219,6 +282,39 @@
                       x-show="chainInputRequest(chains.current)"
                       x-init="mountChainInputPanel($el)"
                     ></div>
+
+                    <div
+                      x-show="(chains.events || []).length"
+                      class="border border-edge rounded-md p-3"
+                    >
+                      <div class="flex items-center gap-2 mb-2">
+                        <i data-lucide="list-tree" class="w-3.5 h-3.5 text-neon-cyan"></i>
+                        <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wide">
+                          Live timeline
+                        </h3>
+                        <span
+                          x-show="chains.current?.status === 'running'"
+                          class="text-[10px] font-mono text-neon-lime animate-pulse"
+                        >
+                          polling
+                        </span>
+                      </div>
+                      <ol class="space-y-1 max-h-48 overflow-y-auto pr-1">
+                        <template
+                          x-for="(evt, idx) in chains.events"
+                          :key="idx + '-' + (evt.ts || '')"
+                        >
+                          <li
+                            class="text-[10px] font-mono border-l-2 pl-2 py-0.5"
+                            :class="chainEventClass(evt)"
+                          >
+                            <span class="text-slate-500" x-text="evt.ts || ''"></span>
+                            <span class="text-slate-400" x-text="' · ' + (evt.phase || '')"></span>
+                            <span x-text="evt.summary || evt.event"></span>
+                          </li>
+                        </template>
+                      </ol>
+                    </div>
 
                     <ol class="space-y-2">
                       <template

@@ -14,6 +14,7 @@ from src.core import get_settings
 from src.server.chunk_store import get_text_chunk
 from src.skills import get_skill_manager
 from src.skills.chain_models import ChainRunState, ChainSpec, ChainStepSpec
+from src.skills.mission_readiness_chain import build_mission_readiness_chain_spec
 from src.skills.context_artifacts import (
     ContextArtifactRef,
     format_context_artifacts_prompt_block,
@@ -31,6 +32,7 @@ from src.server.skill_invoke_support import (
     make_retrieve_fn,
     make_slice_fn,
     resolve_plan_from_store,
+    skill_skips_coverage_boost,
 )
 from src.skills.retrieval_plan import retrieval_metadata_from_plan
 from src.skills.settings import (
@@ -390,13 +392,41 @@ def register_skill_invoke_ui_routes(
 
         name: str = Field("skill-chain", min_length=1, max_length=128)
         prompt: str = ""
-        steps: list[ChainStepSpec] = Field(..., min_length=1, max_length=20)
+        preset: str = Field(
+            "",
+            max_length=64,
+            description="Optional built-in chain preset (e.g. mission-readiness).",
+        )
+        user_addendum: str = Field(
+            "",
+            max_length=8000,
+            description="Optional Intel context appended to the chain prompt.",
+        )
+        steps: list[ChainStepSpec] = Field(default_factory=list, max_length=20)
         stop_on_error: bool = True
         max_entities_per_type: Optional[int] = Field(None, ge=1, le=500)
         max_chunks_per_entity: Optional[int] = Field(None, ge=0, le=50)
         max_relationships_per_entity: Optional[int] = Field(None, ge=0, le=50)
         retrieval_mode: Optional[str] = None
         retrieval_top_k: Optional[int] = Field(None, ge=5, le=500)
+
+        def resolved_spec(self) -> ChainSpec:
+            preset = str(self.preset or "").strip().lower()
+            if preset == "mission-readiness":
+                return build_mission_readiness_chain_spec(
+                    self.prompt,
+                    user_addendum=self.user_addendum,
+                )
+            if preset:
+                raise ValueError(f"Unknown chain preset: {preset}")
+            if not self.steps:
+                raise ValueError("steps required when preset is omitted")
+            return ChainSpec(
+                name=self.name,
+                prompt=self.prompt,
+                steps=self.steps,
+                stop_on_error=self.stop_on_error,
+            )
 
     class SkillRunRepeatPayload(BaseModel):
         """Body for POST /api/ui/skills/{name}/runs/{run_id}/resume."""
@@ -649,6 +679,7 @@ def register_skill_invoke_ui_routes(
             query_settings_store,
             effective_prompt,
             payload=payload,
+            skip_coverage_boost=skill_skips_coverage_boost(skill),
         )
         invoke_extras: dict[str, Any] = {}
         if user_addendum:
@@ -660,6 +691,14 @@ def register_skill_invoke_ui_routes(
             resolved=resolved_artifacts,
             input_artifacts=input_artifacts,
         )
+        invoke_extras["retrieval_plan_limits"] = {
+            "max_kg_entities_per_type": plan.briefing.max_entities_per_type,
+            "max_kg_chunks_per_entity": plan.briefing.max_chunks_per_entity,
+            "max_kg_relationships_per_entity": plan.briefing.max_relationships_per_entity,
+            "max_chunk_content_chars": plan.briefing.max_chunk_content_chars,
+            "max_kg_chunks": int(plan.query_overrides.get("top_k") or 0),
+            "coverage_boost_applied": plan.coverage_boost_applied,
+        }
         if effective_mode == "tools":
             try:
                 result = await mgr.invoke(
@@ -771,6 +810,7 @@ def register_skill_invoke_ui_routes(
             query_settings_store,
             effective_prompt,
             payload=payload,
+            skip_coverage_boost=skill_skips_coverage_boost(skill),
         )
         resume_extras = {
             "user_supplied_context": {
@@ -854,12 +894,10 @@ def register_skill_invoke_ui_routes(
                 "Skill-chain invocation requires an llm_func; server was started without one",
             )
         mgr = manager_factory()
-        spec = ChainSpec(
-            name=payload.name,
-            prompt=payload.prompt,
-            steps=payload.steps,
-            stop_on_error=payload.stop_on_error,
-        )
+        try:
+            spec = payload.resolved_spec()
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
         context, retrieval, slice_fn, retrieve_fn = await _prepare_chain_execution(
             mgr,
             spec,
