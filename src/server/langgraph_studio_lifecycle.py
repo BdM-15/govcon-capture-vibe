@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
@@ -130,6 +131,120 @@ def _read_log_tail(path: Path, *, max_chars: int = 1200) -> str:
         return ""
 
 
+def fetch_studio_info(
+    endpoint: LangGraphStudioEndpoint,
+    *,
+    url_opener: Callable[[str, float], object] | None = None,
+    timeout: float = 5.0,
+) -> dict[str, Any]:
+    opener = url_opener or (lambda url, to: urllib.request.urlopen(url, timeout=to))
+    try:
+        response = opener(f"{endpoint.url}/info", timeout)
+        raw = response.read()  # type: ignore[union-attr]
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8", errors="replace")
+        payload = json.loads(raw)
+        return payload if isinstance(payload, dict) else {}
+    except (urllib.error.URLError, ConnectionError, OSError, ValueError, json.JSONDecodeError):
+        return {}
+
+
+def studio_langsmith_enabled(
+    info: dict[str, Any] | None = None,
+    *,
+    endpoint: LangGraphStudioEndpoint | None = None,
+) -> bool:
+    payload = info if info is not None else (
+        fetch_studio_info(endpoint) if endpoint is not None else {}
+    )
+    flags = payload.get("flags")
+    if not isinstance(flags, dict):
+        return False
+    return bool(flags.get("langsmith"))
+
+
+def listener_pids_on_port(port: int, *, netstat_runner: Callable[..., Any] | None = None) -> list[int]:
+    runner = netstat_runner or subprocess.run
+    try:
+        completed = runner(
+            ["netstat", "-ano"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except (FileNotFoundError, OSError):
+        return []
+    pids: list[int] = []
+    needle = f":{port}"
+    for line in completed.stdout.splitlines():
+        if "LISTENING" not in line.upper() or needle not in line:
+            continue
+        parts = line.split()
+        if not parts:
+            continue
+        try:
+            pids.append(int(parts[-1]))
+        except ValueError:
+            continue
+    return list(dict.fromkeys(pids))
+
+
+def terminate_listeners_on_port(
+    port: int,
+    *,
+    exclude_pid: int | None = None,
+    kill: Callable[[int], None] | None = None,
+    netstat_runner: Callable[..., Any] | None = None,
+) -> list[int]:
+    stopped: list[int] = []
+    for pid in listener_pids_on_port(port, netstat_runner=netstat_runner):
+        if pid <= 0 or pid == exclude_pid:
+            continue
+        try:
+            if kill is None:
+                completed = subprocess.run(
+                    ["taskkill", "/PID", str(pid), "/F", "/T"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if completed.returncode != 0:
+                    logger.warning(
+                        "taskkill pid=%s on port %s failed: %s",
+                        pid,
+                        port,
+                        (completed.stderr or completed.stdout or "").strip()[:160],
+                    )
+                    continue
+            else:
+                kill(pid)
+            stopped.append(pid)
+        except OSError:
+            logger.warning("Failed to terminate pid=%s on port %s", pid, port)
+    return stopped
+
+
+def wait_for_port_free(
+    host: str,
+    port: int,
+    *,
+    timeout: float = 15.0,
+    interval: float = 0.5,
+    port_check: Callable[[str, int], bool] = is_port_listening,
+    sleep: Callable[[float], None] = time.sleep,
+    clock: Callable[[], float] = time.monotonic,
+) -> bool:
+    deadline = clock() + timeout
+    while clock() < deadline:
+        if not port_check(host, port):
+            return True
+        sleep(interval)
+    return False
+
+
 def _resolve_langgraph_command() -> list[str]:
     venv_exe = _REPO_ROOT / ".venv" / "Scripts" / "langgraph.exe"
     if venv_exe.is_file():
@@ -163,17 +278,36 @@ class LangGraphStudioController:
     ) -> bool:
         if port_check(self.endpoint.host, self.endpoint.port):
             if wait(self.endpoint, timeout=5.0, interval=0.5):
-                logger.info(
-                    "LangGraph Studio already listening on %s (skip spawn)",
-                    self.endpoint.url,
+                info = fetch_studio_info(self.endpoint)
+                if langsmith_configured() and not studio_langsmith_enabled(info):
+                    logger.warning(
+                        "Recycling LangGraph Studio on %s — listener missing LANGSMITH_API_KEY",
+                        self.endpoint.url,
+                    )
+                    terminate_listeners_on_port(
+                        self.endpoint.port,
+                        exclude_pid=os.getpid(),
+                    )
+                    if not wait_for_port_free(self.endpoint.host, self.endpoint.port):
+                        self._last_error = (
+                            f"port {self.endpoint.port} still in use after recycling Studio"
+                        )
+                        logger.error(self._last_error)
+                        return False
+                else:
+                    logger.info(
+                        "LangGraph Studio already listening on %s (skip spawn, langsmith=%s)",
+                        self.endpoint.url,
+                        studio_langsmith_enabled(info),
+                    )
+                    self._started_by_us = False
+                    return True
+            else:
+                self._last_error = (
+                    f"port {self.endpoint.port} is open but does not respond like LangGraph Studio"
                 )
-                self._started_by_us = False
-                return True
-            self._last_error = (
-                f"port {self.endpoint.port} is open but does not respond like LangGraph Studio"
-            )
-            logger.error(self._last_error)
-            return False
+                logger.error(self._last_error)
+                return False
 
         base_cmd = (command_builder or _resolve_langgraph_command)()
         cmd = [
@@ -184,6 +318,9 @@ class LangGraphStudioController:
             "--port",
             str(self.endpoint.port),
             "--no-browser",
+            # Hot reload spawns a worker that imports langgraph_api.config before .env
+            # is patched, so LANGSMITH_API_KEY is invisible and Studio shows the banner.
+            "--no-reload",
             "--config",
             str(self.repo_root / "langgraph.json"),
         ]
@@ -231,7 +368,19 @@ class LangGraphStudioController:
             logger.error("LangGraph Studio not ready at %s", self.endpoint.url)
             self.stop()
             return False
-        logger.info("LangGraph Studio ready at %s", self.endpoint.graph_url)
+        info = fetch_studio_info(self.endpoint)
+        if langsmith_configured() and not studio_langsmith_enabled(info):
+            self._last_error = (
+                "studio started but /info reports langsmith=false — check LANGSMITH_API_KEY in .env"
+            )
+            logger.error(self._last_error)
+            self.stop()
+            return False
+        logger.info(
+            "LangGraph Studio ready at %s (langsmith=%s)",
+            self.endpoint.graph_url,
+            studio_langsmith_enabled(info),
+        )
         return True
 
     def stop(self, *, terminate_timeout: float = 10.0) -> None:
@@ -263,6 +412,12 @@ class LangGraphStudioController:
         ready = wait_for_studio(self.endpoint, timeout=3.0, interval=0.5)
         pkg_version = langgraph_package_version()
         langsmith = langsmith_stats_payload(get_langsmith_status())
+        info = fetch_studio_info(self.endpoint) if ready else {}
+        studio_tracing = studio_langsmith_enabled(info) if ready else False
+        if ready and langsmith_configured() and not studio_tracing:
+            ready = False
+            if not self._last_error:
+                self._last_error = "local studio missing LANGSMITH_API_KEY (recycle app to respawn)"
         if ready and not langsmith.get("ok"):
             ready = False
             if not self._last_error:
@@ -276,6 +431,7 @@ class LangGraphStudioController:
             "version": pkg_version,
             "orchestration": "langgraph",
             "langsmith": langsmith,
+            "studio_langsmith_enabled": studio_tracing,
             "started_by_us": self._started_by_us,
             "error": None if ready else (self._last_error or "studio unreachable"),
         }

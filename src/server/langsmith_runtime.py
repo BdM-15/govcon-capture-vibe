@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 from typing import Any, Callable
+
+from dotenv import dotenv_values
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +57,13 @@ def apply_langsmith_env(
     else:
         env["LANGSMITH_TRACING"] = "false"
 
-    if _truthy(src.get("LANGCHAIN_TRACING_V2"), default=_truthy(env.get("LANGSMITH_TRACING"))):
+    tracing_on = _truthy(src.get("LANGCHAIN_TRACING_V2"), default=_truthy(env.get("LANGSMITH_TRACING")))
+    if tracing_on:
         env["LANGCHAIN_TRACING_V2"] = "true"
+        env["LANGSMITH_TRACING_V2"] = "true"
     else:
         env["LANGCHAIN_TRACING_V2"] = "false"
+        env["LANGSMITH_TRACING_V2"] = "false"
 
     endpoint = str(src.get("LANGSMITH_ENDPOINT") or src.get("LANGCHAIN_ENDPOINT") or "").strip()
     if endpoint:
@@ -142,10 +148,21 @@ def langsmith_stats_payload(status: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
+def _repo_env_path() -> Path:
+    return Path(__file__).resolve().parents[2] / ".env"
+
+
 def studio_subprocess_env(source: dict[str, str] | None = None) -> dict[str, str]:
-    """Full env dict for langgraph dev — inherits process env + LangSmith aliases."""
+    """Full env dict for langgraph dev — inherits process env + .env LangSmith keys."""
     env = dict(source if source is not None else os.environ)
-    apply_langsmith_env(env)
+    env_path = _repo_env_path()
+    if env_path.is_file():
+        for key, value in dotenv_values(env_path).items():
+            if value is None:
+                continue
+            if key in LANGSMITH_ENV_KEYS:
+                env[key] = value
+    apply_langsmith_env(env, source=env)
     return env
 
 
