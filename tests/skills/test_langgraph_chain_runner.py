@@ -88,9 +88,14 @@ async def _langgraph_runner_emits_events(tmp_path: Path) -> None:
                 id="eval",
                 skill="readiness-frame-eval",
                 prompt="e",
-                context={"langgraph_eval_pipeline": True, "eval_retrieve_only": True},
+                context={"langgraph_step_pipeline": True, "eval_retrieve_only": True},
             ),
-            ChainStepSpec(id="workload", skill="readiness-frame-workload", prompt="w"),
+            ChainStepSpec(
+                id="workload",
+                skill="readiness-frame-workload",
+                prompt="w",
+                context={"langgraph_step_pipeline": True, "eval_retrieve_only": True},
+            ),
         ],
     )
 
@@ -104,7 +109,7 @@ async def _langgraph_runner_emits_events(tmp_path: Path) -> None:
         }
     )
     with patch(
-        "src.skills.graphs.eval_pipeline_graph.finalize_eval_handoff",
+        "src.skills.graphs.step_pipeline_graph.finalize_step_handoff",
         finalize_mock,
     ):
         result = await runner.invoke(
@@ -116,7 +121,7 @@ async def _langgraph_runner_emits_events(tmp_path: Path) -> None:
         )
 
     assert result.status in {"completed", "partial"}
-    finalize_mock.assert_awaited()
+    assert finalize_mock.await_count >= 2
     chain_dir = tmp_path / "skill_chains" / result.chain_id
     events = read_chain_events(chain_dir)
     assert any(evt.get("event") == "chain_started" for evt in events)

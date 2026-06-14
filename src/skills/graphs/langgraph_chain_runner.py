@@ -22,14 +22,13 @@ from src.skills.chain_models import (
 )
 from src.skills.graphs.chain_events import ChainEvent, emit_chain_event, read_chain_events
 from src.skills.chain_step_gates import apply_step_quality_gate
-from src.skills.graphs.eval_pipeline_graph import run_eval_pipeline_step
+from src.skills.graphs.mission_readiness_graph import (
+    MissionReadinessState,
+    build_mission_readiness_graph,
+)
+from src.skills.graphs.step_pipeline_graph import run_step_pipeline_step, use_step_pipeline
 
 InvokeSkillCallable = Callable[..., Awaitable[Any]]
-
-
-def _use_eval_pipeline(step: ChainStepSpec) -> bool:
-    ctx = step.context or {}
-    return bool(ctx.get("langgraph_eval_pipeline")) and step.skill == "readiness-frame-eval"
 
 
 class ChainGraphState(TypedDict):
@@ -101,12 +100,26 @@ class LangGraphChainRunner:
             ),
         )
 
-        waves = compute_execution_waves(spec)
-        graph = self._build_graph()
+        mission_readiness = use_langgraph_for_spec(spec)
+        if mission_readiness:
+            graph = build_mission_readiness_graph(spec)
+            initial_state: dict[str, Any] = {
+                "chain": initial.model_dump(),
+                "chain_dir": str(chain_dir),
+            }
+        else:
+            graph = self._build_wave_graph()
+            initial_state = {
+                "chain": initial.model_dump(),
+                "chain_dir": str(chain_dir),
+                "wave_index": 0,
+                "events": [],
+            }
+
         checkpointer = MemorySaver()
         compiled = graph.compile(checkpointer=checkpointer)
 
-        run_config = {
+        run_config: dict[str, Any] = {
             "configurable": {
                 "thread_id": chain_id,
                 "workspace": workspace,
@@ -117,24 +130,17 @@ class LangGraphChainRunner:
                 "retrieve_fn": retrieve_fn,
                 "runtime_mode_override": runtime_mode_override,
                 "entity_payload": entity_payload or {},
-                "waves": waves,
                 "runner": self,
             }
         }
+        if not mission_readiness:
+            run_config["configurable"]["waves"] = compute_execution_waves(spec)
 
-        result = await compiled.ainvoke(
-            {
-                "chain": initial.model_dump(),
-                "chain_dir": str(chain_dir),
-                "wave_index": 0,
-                "events": [],
-            },
-            config=run_config,
-        )
+        result = await compiled.ainvoke(initial_state, config=run_config)
         return ChainRunState.model_validate(result["chain"])
 
     @staticmethod
-    def _build_graph():
+    def _build_wave_graph():
         graph = StateGraph(ChainGraphState)
         graph.add_node("run_wave", _run_wave_node)
         graph.add_node("finalize", _finalize_node)
@@ -253,8 +259,8 @@ async def _run_wave_node(state: ChainGraphState, *, config: RunnableConfig) -> d
             "retrieve_fn": cfg["retrieve_fn"],
             "runtime_mode_override": cfg["runtime_mode_override"],
         }
-        if _use_eval_pipeline(step):
-            return await run_eval_pipeline_step(
+        if use_step_pipeline(step):
+            return await run_step_pipeline_step(
                 chain=chain,
                 step=step,
                 chain_dir=chain_dir,
@@ -317,7 +323,7 @@ async def _run_wave_node(state: ChainGraphState, *, config: RunnableConfig) -> d
             step_run.missing_outputs = SkillChainExecutor._extract_missing_outputs(  # noqa: SLF001
                 step_run.artifacts
             )
-            pipeline_gated = _use_eval_pipeline(step) and not outcome.error
+            pipeline_gated = use_step_pipeline(step) and not outcome.error
             if not pipeline_gated and apply_step_quality_gate(
                 step_run,
                 finish_reason=str(outcome.result.finish_reason or ""),
@@ -409,40 +415,12 @@ async def _finalize_node(state: ChainGraphState, *, config: RunnableConfig) -> d
     return {"chain": chain.model_dump(), "events": []}
 
 
-# Expose for LangGraph Studio (static mission-readiness topology)
-def _studio_passthrough(state: ChainGraphState) -> ChainGraphState:
-    return state
-
-
-def _studio_eval_route(_: ChainGraphState) -> str:
-    """Static Studio view — eval finalize normally continues to workload wave."""
-    return "continue"
-
-
 def build_studio_graph():
-    """Mission-readiness DAG topology for LangGraph Studio (passthrough nodes)."""
-    graph = StateGraph(ChainGraphState)
-    for label in (
-        "eval_retrieve",
-        "eval_finalize",
-        "wave_workload",
-        "wave_pains_mod_tea",
-        "wave_win_themes",
-        "merge_compile",
-    ):
-        graph.add_node(label, _studio_passthrough)
-    graph.add_edge(START, "eval_retrieve")
-    graph.add_edge("eval_retrieve", "eval_finalize")
-    graph.add_conditional_edges(
-        "eval_finalize",
-        _studio_eval_route,
-        {"retry": "eval_retrieve", "continue": "wave_workload"},
-    )
-    graph.add_edge("wave_workload", "wave_pains_mod_tea")
-    graph.add_edge("wave_pains_mod_tea", "wave_win_themes")
-    graph.add_edge("wave_win_themes", "merge_compile")
-    graph.add_edge("merge_compile", END)
-    return graph.compile()
+    """Mission-readiness DAG for LangGraph Studio — same graph as production."""
+    from src.skills.mission_readiness_chain import build_mission_readiness_chain_spec
+
+    spec = build_mission_readiness_chain_spec("LangGraph Studio topology.")
+    return build_mission_readiness_graph(spec).compile()
 
 
 __all__ = [

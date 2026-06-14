@@ -30,12 +30,25 @@ _MICRO_SKILL_CONTEXT = (
     "never emit scaffold or template crosswalk rows."
 )
 
-_EVAL_RETRIEVE_CONTEXT = (
-    "Platform expander and admin LLM finalize crosswalk coverage and acronyms after your "
-    "retrieve pass. Write best-effort eval_crosswalk rows from scratchpad evidence; log "
-    "unmappable factors in claim_gaps[] only. Do not spend turns fighting coverage ratio "
-    "or acronym expansion — partial handoff is OK."
+_STEP_RETRIEVE_CONTEXT = (
+    "Platform finalize runs after retrieve — expands coverage, validates handoff, fixes acronyms "
+    "where configured. Write best-effort handoff JSON from scratchpad evidence; log gaps in "
+    "claim_gaps[] only. Do not burn turns fighting platform gates — partial handoff is OK."
 )
+
+
+def _pipeline_context(*, slice_name: str = "", extra: dict | None = None) -> dict:
+    ctx: dict = {
+        "langgraph_step_pipeline": True,
+        "eval_retrieve_only": True,
+        "eval_retrieve_max_turns": 24,
+        "workflow": f"{_MICRO_SKILL_CONTEXT}\n{_STEP_RETRIEVE_CONTEXT}",
+    }
+    if slice_name:
+        ctx["slice"] = slice_name
+    if extra:
+        ctx.update(extra)
+    return ctx
 
 
 def _compose_prompt(base_prompt: str, user_addendum: str) -> str:
@@ -61,47 +74,41 @@ def build_mission_readiness_chain_spec(
             id="eval",
             skill="readiness-frame-eval",
             prompt=full_prompt,
-            context={
-                "slice": "evaluation",
-                "workflow": f"{_MICRO_SKILL_CONTEXT}\n{_EVAL_RETRIEVE_CONTEXT}",
-                "langgraph_eval_pipeline": True,
-                "eval_retrieve_only": True,
-                "eval_retrieve_max_turns": 24,
-            },
+            context=_pipeline_context(slice_name="evaluation"),
         ),
         ChainStepSpec(
             id="workload",
             skill="readiness-frame-workload",
             prompt=full_prompt,
-            context={"slice": "package", "workflow": _MICRO_SKILL_CONTEXT},
+            context=_pipeline_context(slice_name="package"),
         ),
         ChainStepSpec(
             id="pains",
             skill="readiness-frame-pains",
             prompt=full_prompt,
             depends_on=["workload"],
-            context={"workflow": _MICRO_SKILL_CONTEXT},
+            context=_pipeline_context(),
         ),
         ChainStepSpec(
             id="modernization",
             skill="readiness-frame-modernization",
             prompt=full_prompt,
             depends_on=["workload"],
-            context={"workflow": _MICRO_SKILL_CONTEXT},
+            context=_pipeline_context(),
         ),
         ChainStepSpec(
             id="tea-leaves",
             skill="readiness-frame-tea-leaves",
             prompt=full_prompt,
             depends_on=["eval", "workload"],
-            context={"workflow": _MICRO_SKILL_CONTEXT},
+            context=_pipeline_context(),
         ),
         ChainStepSpec(
             id="win-themes",
             skill="readiness-frame-win-themes",
             prompt=full_prompt,
             depends_on=["eval", "pains", "tea-leaves"],
-            context={"workflow": _MICRO_SKILL_CONTEXT},
+            context=_pipeline_context(),
         ),
     ]
 
@@ -113,13 +120,14 @@ def build_mission_readiness_chain_spec(
                 skill="readiness-frame-external-research",
                 prompt=full_prompt,
                 depends_on=["pains", "modernization"],
-                context={
-                    "workflow": _MICRO_SKILL_CONTEXT,
-                    "external_research": {
-                        "vendor_hint": external.vendor_hint,
-                        "seed_urls": list(external.seed_urls),
-                    },
-                },
+                context=_pipeline_context(
+                    extra={
+                        "external_research": {
+                            "vendor_hint": external.vendor_hint,
+                            "seed_urls": list(external.seed_urls),
+                        },
+                    }
+                ),
             )
         )
         compile_depends.insert(0, "external")
@@ -186,7 +194,11 @@ def build_mission_readiness_chain_spec(
             skill="mission-readiness-framer",
             prompt=full_prompt + "\n\n" + _COMPILER_PROMPT,
             depends_on=compile_depends,
-            context={"role": "compiler", "workflow": _MICRO_SKILL_CONTEXT},
+            context={
+                "role": "compiler",
+                "langgraph_step_pipeline": True,
+                "workflow": _MICRO_SKILL_CONTEXT,
+            },
             artifact_requirements=compile_requirements,
         )
     )

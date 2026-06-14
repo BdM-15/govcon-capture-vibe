@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, patch
 
 from src.skills.chain_executor import SkillChainExecutor
 from src.skills.chain_models import ChainRunState, ChainSpec, ChainStepRun, ChainStepSpec
-from src.skills.graphs.eval_pipeline_graph import run_eval_pipeline_step
+from src.skills.graphs.step_pipeline_graph import run_step_pipeline_step
 from src.skills.runs import SkillRunStore
 from src.skills.skill_models import SkillInvocationResult
 
@@ -74,14 +74,14 @@ async def _eval_pipeline_passes_after_platform_finalize(tmp_path: Path) -> None:
     step = step.model_copy(
         update={
             "context": {
-                "langgraph_eval_pipeline": True,
+                "langgraph_step_pipeline": True,
                 "eval_retrieve_only": True,
             }
         }
     )
 
     with patch(
-        "src.skills.graphs.eval_pipeline_graph.finalize_eval_handoff",
+        "src.skills.graphs.step_pipeline_graph.finalize_step_handoff",
         new_callable=AsyncMock,
         return_value={
             "passed": True,
@@ -91,7 +91,7 @@ async def _eval_pipeline_passes_after_platform_finalize(tmp_path: Path) -> None:
             "warnings": [],
         },
     ):
-        outcome = await run_eval_pipeline_step(
+        outcome = await run_step_pipeline_step(
             chain=chain,
             step=step,
             chain_dir=chain_dir,
@@ -150,7 +150,7 @@ async def _eval_pipeline_retries_on_retriable_gate(tmp_path: Path) -> None:
         id="eval",
         skill="readiness-frame-eval",
         prompt="e",
-        context={"langgraph_eval_pipeline": True, "eval_retrieve_only": True},
+        context={"langgraph_step_pipeline": True, "eval_retrieve_only": True},
     )
     spec = ChainSpec(name="eval-only", prompt="test", steps=[step])
     chain = ChainRunState(
@@ -179,11 +179,11 @@ async def _eval_pipeline_retries_on_retriable_gate(tmp_path: Path) -> None:
     ]
 
     with patch(
-        "src.skills.graphs.eval_pipeline_graph.finalize_eval_handoff",
+        "src.skills.graphs.step_pipeline_graph.finalize_step_handoff",
         new_callable=AsyncMock,
         side_effect=finalize_results,
     ):
-        outcome = await run_eval_pipeline_step(
+        outcome = await run_step_pipeline_step(
             chain=chain,
             step=step,
             chain_dir=chain_dir,
