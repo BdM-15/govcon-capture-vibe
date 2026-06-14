@@ -12,6 +12,7 @@ from src.skills.chain_models import ChainSpec, ChainStepSpec
 from src.skills.graphs.chain_events import read_chain_events
 from src.skills.graphs.langgraph_chain_runner import LangGraphChainRunner, use_langgraph_for_spec
 from src.skills.mission_readiness_chain import build_mission_readiness_chain_spec
+from src.skills.readiness_solo_invoke import build_readiness_solo_chain_spec
 from src.skills.runs import SkillRunStore
 from src.skills.skill_models import SkillInvocationResult
 
@@ -23,6 +24,8 @@ async def _noop_llm(prompt: str) -> str:
 def test_use_langgraph_for_mission_readiness_preset() -> None:
     spec = build_mission_readiness_chain_spec("Build MRF.")
     assert use_langgraph_for_spec(spec) is True
+    solo = build_readiness_solo_chain_spec("workload", "Build MRF.")
+    assert use_langgraph_for_spec(solo) is True
     other = ChainSpec(name="x", prompt="y", steps=[ChainStepSpec(id="a", skill="b", prompt="c")])
     assert use_langgraph_for_spec(other) is False
 

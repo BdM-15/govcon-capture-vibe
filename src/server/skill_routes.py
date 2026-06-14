@@ -15,6 +15,12 @@ from src.server.chunk_store import get_text_chunk
 from src.skills import get_skill_manager
 from src.skills.chain_models import ChainRunState, ChainSpec, ChainStepSpec
 from src.skills.mission_readiness_chain import build_mission_readiness_chain_spec
+from src.skills.local_llm_admin import admin_llm_status
+from src.skills.readiness_solo_invoke import (
+    build_readiness_solo_chain_spec,
+    preflight_readiness_chain,
+    preflight_readiness_solo,
+)
 from src.skills.context_artifacts import (
     ContextArtifactRef,
     format_context_artifacts_prompt_block,
@@ -395,7 +401,12 @@ def register_skill_invoke_ui_routes(
         preset: str = Field(
             "",
             max_length=64,
-            description="Optional built-in chain preset (e.g. mission-readiness).",
+            description="Optional built-in chain preset (e.g. mission-readiness, readiness-solo).",
+        )
+        solo_step_id: str = Field(
+            "",
+            max_length=64,
+            description="Step id for readiness-solo preset (eval, workload, pains, ...).",
         )
         user_addendum: str = Field(
             "",
@@ -414,6 +425,15 @@ def register_skill_invoke_ui_routes(
             preset = str(self.preset or "").strip().lower()
             if preset == "mission-readiness":
                 return build_mission_readiness_chain_spec(
+                    self.prompt,
+                    user_addendum=self.user_addendum,
+                )
+            if preset == "readiness-solo":
+                step_id = str(self.solo_step_id or "").strip().lower()
+                if not step_id:
+                    raise ValueError("solo_step_id required for readiness-solo preset")
+                return build_readiness_solo_chain_spec(
+                    step_id,
                     self.prompt,
                     user_addendum=self.user_addendum,
                 )
@@ -898,6 +918,19 @@ def register_skill_invoke_ui_routes(
             spec = payload.resolved_spec()
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
+        preset = str(payload.preset or "").strip().lower()
+        if preset == "readiness-solo":
+            preflight_error = preflight_readiness_solo(str(payload.solo_step_id or ""))
+        else:
+            preflight_error = preflight_readiness_chain(spec)
+        if preflight_error:
+            raise HTTPException(
+                503,
+                detail={
+                    "error": preflight_error,
+                    "admin_llm": admin_llm_status(),
+                },
+            )
         context, retrieval, slice_fn, retrieve_fn = await _prepare_chain_execution(
             mgr,
             spec,
@@ -920,6 +953,7 @@ def register_skill_invoke_ui_routes(
                 "workspace": get_settings().workspace,
                 "chain": _project_chain_payload(mgr, result.model_dump()),
                 "retrieval": retrieval,
+                "admin_llm": admin_llm_status(),
             }
         )
 

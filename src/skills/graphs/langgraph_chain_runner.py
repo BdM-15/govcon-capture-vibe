@@ -40,7 +40,7 @@ class ChainGraphState(TypedDict):
 
 def use_langgraph_for_spec(spec: ChainSpec) -> bool:
     preset = str((spec.context or {}).get("preset") or "").strip().lower()
-    return preset == "mission-readiness"
+    return preset in {"mission-readiness", "readiness-solo"}
 
 
 class LangGraphChainRunner:
