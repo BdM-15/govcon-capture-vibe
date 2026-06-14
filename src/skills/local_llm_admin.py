@@ -1,17 +1,19 @@
-"""Cheap local-model helpers for light administrative tasks only."""
+"""Local Ollama helpers for light administrative tasks (acronym expand, etc.)."""
 
 from __future__ import annotations
 
 import logging
-import os
 import re
 from typing import Any
+
+from src.core import get_settings
+from src.server.ollama_llm import is_ollama_available, ollama_chat, ollama_stats_payload
+from src.server.runtime_state import get_ollama_status
 
 logger = logging.getLogger(__name__)
 
 _ACRONYM_RE = re.compile(r"\b[A-Z]{2,}(?:-[A-Z]{2,})?\b")
 
-# Tasks suitable for a local / small model — never research, merge, or full brief synthesis.
 ADMIN_TASKS = frozenset(
     {
         "expand_acronyms",
@@ -21,24 +23,46 @@ ADMIN_TASKS = frozenset(
     }
 )
 
-
-def _admin_llm_host() -> str:
-    explicit = str(os.getenv("THESEUS_ADMIN_LLM_HOST") or "").strip()
-    if explicit:
-        return explicit
-    ollama = str(os.getenv("OLLAMA_HOST") or "http://localhost:11434").strip().rstrip("/")
-    return f"{ollama}/v1"
-
-
-def _admin_llm_model() -> str:
-    return (
-        str(os.getenv("THESEUS_ADMIN_LLM_MODEL") or "").strip()
-        or str(os.getenv("OLLAMA_MODEL") or "qwen3.5:9b").strip()
-    )
+_FIX_HINT = "Start Ollama, confirm Settings → Ollama host/model, then retry."
 
 
 def admin_model_configured() -> bool:
-    return bool(_admin_llm_host() and _admin_llm_model())
+    """True when Ollama is reachable (same host/model as Settings → Ollama)."""
+    return is_ollama_available(get_settings())
+
+
+def admin_llm_status() -> dict[str, Any]:
+    """Unified admin LLM status — always the configured Ollama instance."""
+    settings = get_settings()
+    payload = ollama_stats_payload(get_ollama_status(), settings)
+    payload["roles"] = ["admin_tasks", "handoff_compose"]
+    payload["label"] = "Ollama (local admin)"
+    if not payload.get("ready"):
+        payload["fix_hint"] = _FIX_HINT
+        if not payload.get("error"):
+            state = str(payload.get("state") or "unavailable")
+            if state == "unavailable":
+                payload["error"] = "Ollama unreachable"
+            elif state == "warmup_failed":
+                payload["error"] = payload.get("error") or "Ollama warmup failed"
+    return payload
+
+
+async def build_admin_chat_fn() -> Any:
+    """Chat fn for admin tasks — uses Ollama /api/chat via shared settings."""
+    settings = get_settings()
+
+    async def _chat(prompt: str) -> str:
+        timeout = float(getattr(settings, "ollama_compose_timeout", 120.0) or 120.0)
+        return await ollama_chat(
+            [{"role": "user", "content": prompt}],
+            settings=settings,
+            temperature=0.1,
+            max_tokens=8192,
+            timeout=timeout,
+        )
+
+    return _chat
 
 
 def undefined_acronyms(text: str, *, allowlist: frozenset[str] | None = None) -> list[str]:
@@ -52,30 +76,6 @@ def undefined_acronyms(text: str, *, allowlist: frozenset[str] | None = None) ->
         seen.add(token)
         found.append(token)
     return found
-
-
-async def build_admin_chat_fn() -> Any:
-    """OpenAI-compatible chat fn for THESEUS_ADMIN_LLM_* (local Ollama, etc.)."""
-    import os
-
-    from openai import AsyncOpenAI
-
-    client = AsyncOpenAI(
-        api_key=os.getenv("THESEUS_ADMIN_LLM_API_KEY", "local"),
-        base_url=_admin_llm_host(),
-    )
-    model = _admin_llm_model()
-
-    async def _chat(prompt: str) -> str:
-        response = await client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            max_tokens=8192,
-        )
-        return str(response.choices[0].message.content or "")
-
-    return _chat
 
 
 def _extract_json_object(content: str) -> dict[str, Any] | None:
@@ -105,13 +105,11 @@ async def expand_acronyms_in_text(
     undefined: list[str] | None = None,
     chat_fn: Any = None,
 ) -> str:
-    """Expand undefined acronyms in a text block using the admin model when configured."""
     targets = undefined or undefined_acronyms(text)
     if not targets or not admin_model_configured():
         return text
     if chat_fn is None:
-        logger.info("admin_llm: expand_acronyms skipped (no chat_fn)")
-        return text
+        chat_fn = await build_admin_chat_fn()
 
     prompt = (
         "Expand ONLY these acronyms on first use as Full Term (ACR). "
@@ -132,7 +130,6 @@ async def expand_acronyms_in_eval_handoff_json(
     *,
     chat_fn: Any = None,
 ) -> str:
-    """Expand acronyms in eval handoff prose fields via admin LLM — cheap, not main model."""
     import json
 
     from src.skills.readiness_content_gates import (
@@ -172,3 +169,14 @@ async def expand_acronyms_in_eval_handoff_json(
     except Exception as exc:  # noqa: BLE001
         logger.warning("admin_llm eval_handoff expand_acronyms failed: %s", exc)
         return content
+
+
+__all__ = [
+    "ADMIN_TASKS",
+    "admin_llm_status",
+    "admin_model_configured",
+    "build_admin_chat_fn",
+    "expand_acronyms_in_eval_handoff_json",
+    "expand_acronyms_in_text",
+    "undefined_acronyms",
+]

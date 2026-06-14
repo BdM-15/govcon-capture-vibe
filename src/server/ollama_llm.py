@@ -290,6 +290,8 @@ def ollama_stats_payload(status: dict[str, Any] | None, settings: Any) -> dict[s
     base = {
         "host": getattr(settings, "ollama_host", "http://localhost:11434"),
         "model": getattr(settings, "ollama_model", "qwen3.5:9b"),
+        "label": "Ollama (local admin)",
+        "roles": ["admin_tasks", "handoff_compose"],
         "state": "unknown",
         "ready": False,
         "available_models": [],

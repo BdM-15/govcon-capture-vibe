@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from unittest.mock import patch
 
 import pytest
 
@@ -43,15 +44,14 @@ def test_expand_acronyms_in_eval_handoff_json_uses_admin_chat(monkeypatch: pytes
         }
         return json.dumps(fixed)
 
-    monkeypatch.delenv("THESEUS_ADMIN_LLM_MODEL", raising=False)
-    monkeypatch.delenv("THESEUS_ADMIN_LLM_HOST", raising=False)
     monkeypatch.setenv("OLLAMA_MODEL", "qwen3.5:9b")
     monkeypatch.setenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 
-    assert admin_model_configured()
-    revised = asyncio.run(
-        expand_acronyms_in_eval_handoff_json(original, chat_fn=_fake_chat)
-    )
+    with patch("src.skills.local_llm_admin.is_ollama_available", return_value=True):
+        assert admin_model_configured()
+        revised = asyncio.run(
+            expand_acronyms_in_eval_handoff_json(original, chat_fn=_fake_chat)
+        )
     loaded = json.loads(revised)
     readiness = loaded["eval_crosswalk"][0]["readiness_link"]
     assert "Contractor Performance Assessment Reporting System (CPARS)" in readiness

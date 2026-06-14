@@ -1473,10 +1473,11 @@
                       class="col-span-2 text-neon-cyan truncate"
                       x-text="stats.models?.vlm || '—'"
                     ></dd>
-                    <dt class="text-slate-500">ollama</dt>
+                    <dt class="text-slate-500">ollama · admin</dt>
                     <dd
                       class="col-span-2 truncate"
-                      :class="stats.ollama?.ready ? 'text-neon-lime' : 'text-slate-500'"
+                      :class="stats.ollama?.ready ? 'text-neon-lime' : 'text-amber-400/90'"
+                      :title="stats.ollama?.ready ? 'Ready for admin tasks and handoff compose' : (stats.ollama?.error || 'Ollama required for eval/compile acronym finalize')"
                       x-text="stats.ollama ? `${stats.ollama.model || '—'} · ${stats.ollama.state || 'unknown'}` : '—'"
                     ></dd>
                     <dt class="text-slate-500">langsmith</dt>
