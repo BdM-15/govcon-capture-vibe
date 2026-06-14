@@ -1,0 +1,10 @@
+{
+  "step_id": "workload",
+  "skill": "readiness-frame-workload",
+  "workspace": "mcpp_rfp",
+  "run_id": "20260614_235655_build_the_mission_readiness_fram",
+  "run_dir": "rag_storage/mcpp_rfp/skill_runs/readiness-frame-workload/20260614_235655_build_the_mission_readiness_fram",
+  "gate_passed": true,
+  "elapsed_note": "~60s solo invoke 2026-06-14",
+  "handoff": "artifacts/workload_handoff.json"
+}
