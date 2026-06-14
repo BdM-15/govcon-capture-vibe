@@ -11,7 +11,7 @@ from src.skills.handoff_quality import (
     _SKILL_EXPECTED_HANDOFF,
     step_quality_errors,
 )
-from src.skills.local_llm_admin import admin_llm_status
+from src.skills.local_llm_admin import admin_llm_status, admin_model_configured
 from src.skills.mission_readiness_chain import build_mission_readiness_chain_spec
 
 READINESS_ADMIN_STEP_IDS = frozenset({"eval", "compile"})
@@ -76,9 +76,9 @@ def preflight_readiness_solo(step_id: str) -> str | None:
     """Return user-facing error when admin Ollama required but not ready; else None."""
     if not readiness_step_requires_admin_llm(step_id):
         return None
-    status = admin_llm_status()
-    if status.get("ready"):
+    if admin_model_configured():
         return None
+    status = admin_llm_status()
     host = status.get("host") or "Ollama"
     model = status.get("model") or "configured model"
     state = status.get("state") or "unavailable"
@@ -98,9 +98,9 @@ def chain_spec_requires_admin_llm(spec: ChainSpec) -> bool:
 def preflight_readiness_chain(spec: ChainSpec) -> str | None:
     if not chain_spec_requires_admin_llm(spec):
         return None
-    status = admin_llm_status()
-    if status.get("ready"):
+    if admin_model_configured():
         return None
+    status = admin_llm_status()
     host = status.get("host") or "Ollama"
     model = status.get("model") or "configured model"
     state = status.get("state") or "unavailable"

@@ -34,11 +34,33 @@ def test_preflight_eval_blocks_when_ollama_down() -> None:
         "error": "no models reported",
         "fix_hint": "Start Ollama and pull the configured model.",
     }
-    with patch("src.skills.readiness_solo_invoke.admin_llm_status", return_value=status):
+    with (
+        patch("src.skills.readiness_solo_invoke.admin_model_configured", return_value=False),
+        patch("src.skills.readiness_solo_invoke.admin_llm_status", return_value=status),
+    ):
         err = preflight_readiness_solo("eval")
     assert err is not None
     assert "Ollama" in err
     assert "eval" in err.lower()
+
+
+def test_admin_llm_status_live_probe_when_warmup_cache_empty(monkeypatch) -> None:
+    monkeypatch.setenv("OLLAMA_HOST", "http://127.0.0.1:11434")
+    monkeypatch.setenv("OLLAMA_MODEL", "qwen3.5:9b")
+    with (
+        patch("src.skills.local_llm_admin.get_ollama_status", return_value=None),
+        patch(
+            "src.skills.local_llm_admin.list_available_models",
+            return_value=["qwen3.5:9b"],
+        ),
+        patch(
+            "src.skills.local_llm_admin.resolve_ollama_model",
+            return_value="qwen3.5:9b",
+        ),
+    ):
+        status = admin_llm_status()
+    assert status["ready"] is True
+    assert status["state"] == "reachable"
 
 
 def test_admin_llm_status_uses_settings_ollama(monkeypatch) -> None:

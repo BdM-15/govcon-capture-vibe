@@ -7,7 +7,13 @@ import re
 from typing import Any
 
 from src.core import get_settings
-from src.server.ollama_llm import is_ollama_available, ollama_chat, ollama_stats_payload
+from src.server.ollama_llm import (
+    is_ollama_available,
+    list_available_models,
+    ollama_chat,
+    ollama_stats_payload,
+    resolve_ollama_model,
+)
 from src.server.runtime_state import get_ollama_status
 
 logger = logging.getLogger(__name__)
@@ -31,17 +37,26 @@ def admin_model_configured() -> bool:
     return is_ollama_available(get_settings())
 
 
-def admin_llm_status() -> dict[str, Any]:
+def admin_llm_status(*, live_probe: bool = True) -> dict[str, Any]:
     """Unified admin LLM status — always the configured Ollama instance."""
     settings = get_settings()
     payload = ollama_stats_payload(get_ollama_status(), settings)
     payload["roles"] = ["admin_tasks", "handoff_compose"]
     payload["label"] = "Ollama (local admin)"
+    if live_probe and not payload.get("ready"):
+        host = str(payload.get("host") or settings.ollama_host)
+        models = list_available_models(host)
+        if models:
+            payload["ready"] = True
+            payload["state"] = "reachable"
+            payload["available_models"] = models
+            payload["model"] = resolve_ollama_model(settings)
+            payload["error"] = None
     if not payload.get("ready"):
         payload["fix_hint"] = _FIX_HINT
         if not payload.get("error"):
             state = str(payload.get("state") or "unavailable")
-            if state == "unavailable":
+            if state in {"unavailable", "unknown"}:
                 payload["error"] = "Ollama unreachable"
             elif state == "warmup_failed":
                 payload["error"] = payload.get("error") or "Ollama warmup failed"
