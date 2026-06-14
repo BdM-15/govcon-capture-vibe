@@ -363,6 +363,7 @@ async def finalize_research_harness(
     hooks: SkillToolsHooks,
     loop_result: ToolLoopResult,
     workspace_dir: Path | None = None,
+    entity_payload: dict[str, Any] | None = None,
 ) -> ToolLoopResult:
     """Run synthesis and reflexion passes after the tool loop when needed."""
     from src.skills.mission_readiness_merge import (
@@ -400,7 +401,14 @@ async def finalize_research_harness(
                     f"research_harness: persisted {config.frame_artifact} from tool-loop response"
                 )
 
-    if skill.name == "readiness-frame-eval" and workspace_dir is not None and not compiler_run:
+    chain_ctx = (entity_payload or {}).get("chain_step_context") or {}
+    eval_retrieve_only = bool(chain_ctx.get("eval_retrieve_only"))
+    if (
+        skill.name == "readiness-frame-eval"
+        and workspace_dir is not None
+        and not compiler_run
+        and not eval_retrieve_only
+    ):
         try:
             from src.skills.eval_handoff_expander import expand_eval_handoff
 
@@ -410,6 +418,24 @@ async def finalize_research_harness(
                 loop_response=str(response or ""),
             )
             warnings.extend(expand_warnings)
+            handoff_path = run_dir / "artifacts" / "eval_handoff.json"
+            if handoff_path.is_file():
+                try:
+                    from src.skills.local_llm_admin import (
+                        admin_model_configured,
+                        expand_acronyms_in_eval_handoff_json,
+                    )
+
+                    if admin_model_configured():
+                        original = handoff_path.read_text(encoding="utf-8", errors="replace")
+                        revised = await expand_acronyms_in_eval_handoff_json(original)
+                        if revised.strip() and revised != original:
+                            handoff_path.write_text(revised, encoding="utf-8")
+                            warnings.append(
+                                "readiness-frame-eval: admin_llm expanded acronyms in eval_handoff.json"
+                            )
+                except Exception as exc:  # noqa: BLE001
+                    warnings.append(f"admin_llm_eval_handoff_acronym_pass_failed: {exc}")
         except Exception as exc:  # noqa: BLE001
             logger.warning("Eval handoff expansion failed for %s: %s", skill.name, exc)
             warnings.append(f"eval_handoff_expander_failed: {exc}")
@@ -613,33 +639,20 @@ async def finalize_research_harness(
         ]
         if acronym_issues:
             try:
-                import os
-
-                from src.skills.local_llm_admin import admin_model_configured, expand_acronyms_in_text
+                from src.skills.local_llm_admin import (
+                    admin_model_configured,
+                    build_admin_chat_fn,
+                    expand_acronyms_in_text,
+                )
 
                 if admin_model_configured():
                     brief_path = run_dir / "artifacts" / config.synthesis_artifact
                     if brief_path.is_file():
                         original = brief_path.read_text(encoding="utf-8", errors="replace")
-
-                        async def _admin_chat(prompt: str) -> str:
-                            from openai import AsyncOpenAI
-
-                            client = AsyncOpenAI(
-                                api_key=os.getenv("THESEUS_ADMIN_LLM_API_KEY", "local"),
-                                base_url=os.getenv("THESEUS_ADMIN_LLM_HOST"),
-                            )
-                            response = await client.chat.completions.create(
-                                model=str(os.getenv("THESEUS_ADMIN_LLM_MODEL")),
-                                messages=[{"role": "user", "content": prompt}],
-                                temperature=0.1,
-                                max_tokens=4096,
-                            )
-                            return str(response.choices[0].message.content or "")
-
+                        admin_chat = await build_admin_chat_fn()
                         revised = await expand_acronyms_in_text(
                             original,
-                            chat_fn=_admin_chat,
+                            chat_fn=admin_chat,
                         )
                         if revised.strip() and revised != original:
                             brief_path.write_text(revised, encoding="utf-8")

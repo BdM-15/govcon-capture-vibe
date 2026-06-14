@@ -831,6 +831,14 @@ class SkillChainExecutor:
                 else ""
             )
             + "\nIf critical evidence is missing, emit an explicit missing-input list the user can supply and still produce the best partial artifact."
+            + (
+                "\n\n## Platform gate gaps (retrieve retry)\n"
+                + "\n".join(f"- {gap}" for gap in step.context.get("platform_gate_gaps")[:12])
+                + "\nAddress these with additional retrieval or honest claim_gaps[] — platform expander handles coverage ratio."
+                if isinstance(step.context.get("platform_gate_gaps"), list)
+                and step.context.get("platform_gate_gaps")
+                else ""
+            )
             + "\n\n## Theseus Chain Handoff\n"
             + "```json\n"
             + json.dumps(handoff, ensure_ascii=False, indent=2, default=str)

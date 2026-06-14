@@ -61,6 +61,16 @@ def make_depth_continue_fn(
     return _continue
 
 
+def filter_retrieve_only_depth_issues(issues: list[str]) -> list[str]:
+    """Drop platform-owned coverage/acronym issues during eval retrieve-only passes."""
+    if not issues:
+        return []
+    from src.skills.platform_eval_finalize import split_eval_gate_issues
+
+    blocking, _ = split_eval_gate_issues(issues)
+    return blocking
+
+
 def depth_gate_issues(
     run_dir: Path,
     *,

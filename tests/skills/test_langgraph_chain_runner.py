@@ -6,6 +6,7 @@ import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from unittest.mock import AsyncMock, patch
 
 from src.skills.chain_models import ChainSpec, ChainStepSpec
 from src.skills.graphs.chain_events import read_chain_events
@@ -83,20 +84,39 @@ async def _langgraph_runner_emits_events(tmp_path: Path) -> None:
         prompt="test",
         context={"preset": "mission-readiness"},
         steps=[
-            ChainStepSpec(id="eval", skill="readiness-frame-eval", prompt="e"),
+            ChainStepSpec(
+                id="eval",
+                skill="readiness-frame-eval",
+                prompt="e",
+                context={"langgraph_eval_pipeline": True, "eval_retrieve_only": True},
+            ),
             ChainStepSpec(id="workload", skill="readiness-frame-workload", prompt="w"),
         ],
     )
 
-    result = await runner.invoke(
-        spec,
-        workspace="test-workspace",
-        workspace_root=tmp_path,
-        llm=_noop_llm,
-        entity_payload={},
+    finalize_mock = AsyncMock(
+        return_value={
+            "passed": True,
+            "issues": [],
+            "blocking_issues": [],
+            "retriable_issues": [],
+            "warnings": [],
+        }
     )
+    with patch(
+        "src.skills.graphs.eval_pipeline_graph.finalize_eval_handoff",
+        finalize_mock,
+    ):
+        result = await runner.invoke(
+            spec,
+            workspace="test-workspace",
+            workspace_root=tmp_path,
+            llm=_noop_llm,
+            entity_payload={},
+        )
 
     assert result.status in {"completed", "partial"}
+    finalize_mock.assert_awaited()
     chain_dir = tmp_path / "skill_chains" / result.chain_id
     events = read_chain_events(chain_dir)
     assert any(evt.get("event") == "chain_started" for evt in events)

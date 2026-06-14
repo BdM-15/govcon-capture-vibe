@@ -13,11 +13,23 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import RunnableConfig
 from src.skills.chain_dag import all_steps_terminal, compute_execution_waves, ready_step_ids
 from src.skills.chain_executor import SkillChainExecutor
-from src.skills.chain_models import ChainRunState, ChainSpec, ChainStepRun, utc_now_iso
+from src.skills.chain_models import (
+    ChainRunState,
+    ChainSpec,
+    ChainStepRun,
+    ChainStepSpec,
+    utc_now_iso,
+)
 from src.skills.graphs.chain_events import ChainEvent, emit_chain_event, read_chain_events
 from src.skills.chain_step_gates import apply_step_quality_gate
+from src.skills.graphs.eval_pipeline_graph import run_eval_pipeline_step
 
 InvokeSkillCallable = Callable[..., Awaitable[Any]]
+
+
+def _use_eval_pipeline(step: ChainStepSpec) -> bool:
+    ctx = step.context or {}
+    return bool(ctx.get("langgraph_eval_pipeline")) and step.skill == "readiness-frame-eval"
 
 
 class ChainGraphState(TypedDict):
@@ -228,12 +240,25 @@ async def _run_wave_node(state: ChainGraphState, *, config: RunnableConfig) -> d
     chain.updated_at = utc_now_iso()
     runner._run_store.write_chain_run(chain_dir, chain.model_dump())
 
-    outcomes = await asyncio.gather(
-        *[
-            runner._executor._execute_step(  # noqa: SLF001
-                chain,
+    async def _run_step(step: ChainStepSpec):
+        execute_kwargs = {
+            "chain": chain,
+            "step": step,
+            "workspace": chain.workspace,
+            "workspace_root": Path(cfg["workspace_root"]),
+            "entity_payload": cfg["entity_payload"],
+            "llm": cfg["llm"],
+            "max_payload_chars": cfg["max_payload_chars"],
+            "slice_fn": cfg["slice_fn"],
+            "retrieve_fn": cfg["retrieve_fn"],
+            "runtime_mode_override": cfg["runtime_mode_override"],
+        }
+        if _use_eval_pipeline(step):
+            return await run_eval_pipeline_step(
+                chain=chain,
                 step=step,
-                workspace=chain.workspace,
+                chain_dir=chain_dir,
+                executor=runner._executor,  # noqa: SLF001
                 workspace_root=Path(cfg["workspace_root"]),
                 entity_payload=cfg["entity_payload"],
                 llm=cfg["llm"],
@@ -242,6 +267,11 @@ async def _run_wave_node(state: ChainGraphState, *, config: RunnableConfig) -> d
                 retrieve_fn=cfg["retrieve_fn"],
                 runtime_mode_override=cfg["runtime_mode_override"],
             )
+        return await runner._executor._execute_step(**execute_kwargs)  # noqa: SLF001
+
+    outcomes = await asyncio.gather(
+        *[
+            _run_step(step)
             for step in ready_steps
             if chain.steps[step.id].status == "running"
         ]
@@ -287,7 +317,8 @@ async def _run_wave_node(state: ChainGraphState, *, config: RunnableConfig) -> d
             step_run.missing_outputs = SkillChainExecutor._extract_missing_outputs(  # noqa: SLF001
                 step_run.artifacts
             )
-            if apply_step_quality_gate(
+            pipeline_gated = _use_eval_pipeline(step) and not outcome.error
+            if not pipeline_gated and apply_step_quality_gate(
                 step_run,
                 finish_reason=str(outcome.result.finish_reason or ""),
                 warnings=list(outcome.result.warnings or []),
@@ -383,18 +414,31 @@ def _studio_passthrough(state: ChainGraphState) -> ChainGraphState:
     return state
 
 
+def _studio_eval_route(_: ChainGraphState) -> str:
+    """Static Studio view — eval finalize normally continues to workload wave."""
+    return "continue"
+
+
 def build_studio_graph():
     """Mission-readiness DAG topology for LangGraph Studio (passthrough nodes)."""
     graph = StateGraph(ChainGraphState)
     for label in (
-        "wave_eval_workload",
+        "eval_retrieve",
+        "eval_finalize",
+        "wave_workload",
         "wave_pains_mod_tea",
         "wave_win_themes",
         "merge_compile",
     ):
         graph.add_node(label, _studio_passthrough)
-    graph.add_edge(START, "wave_eval_workload")
-    graph.add_edge("wave_eval_workload", "wave_pains_mod_tea")
+    graph.add_edge(START, "eval_retrieve")
+    graph.add_edge("eval_retrieve", "eval_finalize")
+    graph.add_conditional_edges(
+        "eval_finalize",
+        _studio_eval_route,
+        {"retry": "eval_retrieve", "continue": "wave_workload"},
+    )
+    graph.add_edge("wave_workload", "wave_pains_mod_tea")
     graph.add_edge("wave_pains_mod_tea", "wave_win_themes")
     graph.add_edge("wave_win_themes", "merge_compile")
     graph.add_edge("merge_compile", END)

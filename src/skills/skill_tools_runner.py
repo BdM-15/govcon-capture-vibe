@@ -120,7 +120,13 @@ async def run_tools_skill(
         create_tool_outputs=True,
     )
 
+    chain_ctx = (entity_payload or {}).get("chain_step_context") or {}
+    eval_retrieve_only = bool(chain_ctx.get("eval_retrieve_only"))
+
     max_turns = skill_tools_max_turns(skill.frontmatter.metadata)
+    if eval_retrieve_only:
+        cap = int(chain_ctx.get("eval_retrieve_max_turns") or 24)
+        max_turns = min(max_turns, max(8, cap))
     limits = merge_tool_context_limits(
         skill_tools_runtime_limits(),
         (entity_payload or {}).get("retrieval_plan_limits"),
@@ -237,7 +243,7 @@ async def run_tools_skill(
             if plan_block:
                 user_prompt = f"{user_prompt.rstrip()}\n\n{plan_block}".strip()
 
-    depth_extensions = skill_tools_depth_extension_turns(
+    depth_extensions = 0 if eval_retrieve_only else skill_tools_depth_extension_turns(
         skill.frontmatter.metadata,
         has_depth_gate=harness_enabled or skill_hooks.validate_run is not None,
     )
@@ -253,6 +259,7 @@ async def run_tools_skill(
             hooks=skill_hooks,
             user_prompt=user_prompt,
             transcript_provider=_transcript_provider,
+            chain_step_context=chain_ctx,
         )
         on_tool_result = lambda call, payload, extra: make_tool_result_recorder(
             run_dir, harness_config
@@ -301,6 +308,7 @@ async def run_tools_skill(
                 hooks=skill_hooks,
                 loop_result=loop_result,
                 workspace_dir=workspace_root,
+                entity_payload=entity_payload,
             )
     finally:
         if ctx.mcp_sessions:
@@ -316,11 +324,15 @@ async def run_tools_skill(
     depth_issues: list[str] = []
     if skill_hooks.validate_run is not None:
         try:
+            from src.skills.depth_gate import filter_retrieve_only_depth_issues
+
             depth_issues = depth_gate_issues(
                 Path(run_dir),
                 hooks=skill_hooks,
                 user_prompt=user_prompt,
             )
+            if eval_retrieve_only:
+                depth_issues = filter_retrieve_only_depth_issues(depth_issues)
             if skill_hooks.write_depth_audit is not None:
                 skill_hooks.write_depth_audit(Path(run_dir), depth_issues)
             for issue in depth_issues:

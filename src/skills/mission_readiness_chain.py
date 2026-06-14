@@ -30,6 +30,13 @@ _MICRO_SKILL_CONTEXT = (
     "never emit scaffold or template crosswalk rows."
 )
 
+_EVAL_RETRIEVE_CONTEXT = (
+    "Platform expander and admin LLM finalize crosswalk coverage and acronyms after your "
+    "retrieve pass. Write best-effort eval_crosswalk rows from scratchpad evidence; log "
+    "unmappable factors in claim_gaps[] only. Do not spend turns fighting coverage ratio "
+    "or acronym expansion — partial handoff is OK."
+)
+
 
 def _compose_prompt(base_prompt: str, user_addendum: str) -> str:
     parts = [str(base_prompt or "").strip()]
@@ -54,7 +61,13 @@ def build_mission_readiness_chain_spec(
             id="eval",
             skill="readiness-frame-eval",
             prompt=full_prompt,
-            context={"slice": "evaluation", "workflow": _MICRO_SKILL_CONTEXT},
+            context={
+                "slice": "evaluation",
+                "workflow": f"{_MICRO_SKILL_CONTEXT}\n{_EVAL_RETRIEVE_CONTEXT}",
+                "langgraph_eval_pipeline": True,
+                "eval_retrieve_only": True,
+                "eval_retrieve_max_turns": 24,
+            },
         ),
         ChainStepSpec(
             id="workload",

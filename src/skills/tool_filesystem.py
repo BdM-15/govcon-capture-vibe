@@ -211,15 +211,37 @@ async def tool_write_file(
             raise ToolError(blocked)
 
     hooks = resolve_skill_tools_hooks(ctx.skill_dir)
+    content_to_write = content
     if hooks.validate_write_file is not None:
         blocked = hooks.validate_write_file(
             ctx.run_dir,
             path=path,
-            content=content,
+            content=content_to_write,
             user_prompt=ctx.user_prompt,
         )
+        if (
+            blocked
+            and "undefined acronyms" in blocked.lower()
+            and "eval_handoff.json" in str(path or "").lower()
+        ):
+            from src.skills.local_llm_admin import (
+                admin_model_configured,
+                expand_acronyms_in_eval_handoff_json,
+            )
+
+            if admin_model_configured():
+                expanded = await expand_acronyms_in_eval_handoff_json(content_to_write)
+                if expanded != content_to_write:
+                    content_to_write = expanded
+                    blocked = hooks.validate_write_file(
+                        ctx.run_dir,
+                        path=path,
+                        content=content_to_write,
+                        user_prompt=ctx.user_prompt,
+                    )
         if blocked:
             raise ToolError(blocked)
+    content = content_to_write
 
     if len(content.encode("utf-8")) > ctx.max_write_bytes:
         raise ToolError(
