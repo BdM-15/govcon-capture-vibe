@@ -241,6 +241,50 @@
                       >
                     </span>
                   </button>
+                  <a
+                    x-show="stats.langgraph_studio?.graph_url"
+                    :href="stats.langgraph_studio.graph_url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/60 border border-edge-strong hover:border-neon-cyan/40 hover:bg-neon-cyan/5 transition text-left"
+                    title="Open LangGraph Studio (mission-readiness pipeline)"
+                  >
+                    <span
+                      class="w-9 h-9 rounded-md bg-neon-cyan/10 border border-neon-cyan/30 flex items-center justify-center text-neon-cyan shrink-0"
+                    >
+                      <i data-lucide="workflow" class="w-4 h-4"></i>
+                    </span>
+                    <span class="flex-1">
+                      <span class="block text-sm font-medium text-slate-100"
+                        >LangGraph Studio</span
+                      >
+                      <span class="block text-[11px] text-slate-500"
+                        >Mission-readiness pipeline debugger</span
+                      >
+                    </span>
+                  </a>
+                  <button
+                    x-show="!stats.langgraph_studio?.graph_url"
+                    class="group flex items-center gap-3 p-3 rounded-lg bg-ink-900/40 border border-edge opacity-70 cursor-not-allowed text-left"
+                    type="button"
+                    disabled
+                    title="Restart Theseus after setting LANGSMITH_API_KEY in .env"
+                  >
+                    <span
+                      class="w-9 h-9 rounded-md bg-slate-800/80 border border-edge flex items-center justify-center text-slate-500 shrink-0"
+                    >
+                      <i data-lucide="workflow" class="w-4 h-4"></i>
+                    </span>
+                    <span class="flex-1">
+                      <span class="block text-sm font-medium text-slate-400"
+                        >LangGraph Studio</span
+                      >
+                      <span
+                        class="block text-[11px] text-slate-600"
+                        x-text="stats.langgraph_studio?.error || 'Starting or unavailable — restart Theseus'"
+                      ></span>
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>

@@ -163,6 +163,9 @@ def studio_subprocess_env(source: dict[str, str] | None = None) -> dict[str, str
             if key in LANGSMITH_ENV_KEYS:
                 env[key] = value
     apply_langsmith_env(env, source=env)
+    # Windows: langgraph/dotenv default to cp1252; .env uses UTF-8 section headers.
+    env.setdefault("PYTHONUTF8", "1")
+    env.setdefault("PYTHONIOENCODING", "utf-8")
     return env
 
 

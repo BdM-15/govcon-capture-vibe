@@ -6,6 +6,7 @@ from src.server.langsmith_runtime import (
     apply_langsmith_env,
     langsmith_configured,
     langsmith_stats_payload,
+    studio_subprocess_env,
     verify_langsmith_connection,
 )
 
@@ -55,6 +56,12 @@ def test_verify_langsmith_connection_uses_client_factory() -> None:
     )
     assert payload["ok"] is True
     assert payload["workspace_projects"] == 1
+
+
+def test_studio_subprocess_env_sets_utf8_on_windows() -> None:
+    env = studio_subprocess_env({})
+    assert env.get("PYTHONUTF8") == "1"
+    assert env.get("PYTHONIOENCODING") == "utf-8"
 
 
 def test_langsmith_stats_payload_shapes_ui_row() -> None:

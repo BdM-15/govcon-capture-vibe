@@ -18,9 +18,28 @@ from src.server.langgraph_studio_lifecycle import (
     parse_public_api_url_from_log,
     studio_langsmith_enabled,
     studio_status_payload,
+    studio_ui_url,
     terminate_listeners_on_port,
     wait_for_studio,
 )
+
+
+def test_studio_ui_url_empty_when_api_missing() -> None:
+    assert studio_ui_url("") == ""
+    assert studio_ui_url("  ") == ""
+
+
+def test_studio_status_payload_hides_graph_url_when_unavailable() -> None:
+    payload = studio_status_payload(
+        {
+            "ok": False,
+            "url": "http://127.0.0.1:2024",
+            "graph_url": "https://smith.langchain.com/studio/?baseUrl=x",
+            "error": "studio process exited (1)",
+        }
+    )
+    assert payload["graph_url"] == ""
+    assert payload["error"] == "studio process exited (1)"
 
 
 def test_is_auto_start_enabled_defaults_true() -> None:

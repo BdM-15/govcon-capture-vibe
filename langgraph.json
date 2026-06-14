@@ -2,6 +2,5 @@
   "dependencies": ["."],
   "graphs": {
     "mission_readiness": "./src/skills/graphs/studio_entry.py:graph"
-  },
-  "env": ".env"
+  }
 }

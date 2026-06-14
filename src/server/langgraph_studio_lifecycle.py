@@ -51,7 +51,10 @@ class LangGraphStudioEndpoint:
 
 def studio_ui_url(api_url: str, *, graph_id: str = "mission_readiness") -> str:
     """LangGraph dev serves API locally; Studio UI is hosted on LangSmith."""
-    base = quote(api_url, safe="")
+    cleaned = str(api_url or "").strip()
+    if not cleaned:
+        return ""
+    base = quote(cleaned, safe="")
     return f"https://smith.langchain.com/studio/?baseUrl={base}&graph={graph_id}"
 
 
@@ -596,11 +599,14 @@ def studio_status_payload(status: dict[str, Any] | None) -> dict[str, Any]:
             "orchestration": "langgraph",
             "error": "not started",
         }
+    ready = bool(status.get("ok"))
+    graph_url = str(status.get("graph_url") or "").strip() if ready else ""
     return {
-        "ok": bool(status.get("ok")),
-        "state": status.get("state") or ("ready" if status.get("ok") else "unavailable"),
+        "ok": ready,
+        "state": status.get("state") or ("ready" if ready else "unavailable"),
         "url": status.get("url") or "",
-        "graph_url": status.get("graph_url") or "",
+        "api_base_url": status.get("api_base_url") or status.get("url") or "",
+        "graph_url": graph_url,
         "version": status.get("version") or langgraph_package_version(),
         "orchestration": status.get("orchestration") or "langgraph",
         "started_by_us": bool(status.get("started_by_us")),
