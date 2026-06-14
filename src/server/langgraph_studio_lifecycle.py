@@ -69,6 +69,13 @@ def is_auto_start_enabled(env: dict[str, str] | None = None) -> bool:
     return raw not in {"0", "false", "no", "off"}
 
 
+def is_recycle_on_start_enabled(env: dict[str, str] | None = None) -> bool:
+    """Recycle an existing Studio listener on app start so graph code reloads."""
+    source = env if env is not None else os.environ
+    raw = str(source.get("THESEUS_LANGGRAPH_STUDIO_RECYCLE_ON_START", "true")).strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
 def is_tunnel_enabled(env: dict[str, str] | None = None) -> bool:
     """Optional Cloudflare tunnel for Safari/Brave; requires manual Studio allowlist."""
     source = env if env is not None else os.environ
@@ -412,10 +419,18 @@ class LangGraphStudioController:
         if port_check(self.endpoint.host, self.endpoint.port):
             if wait(self.endpoint, timeout=5.0, interval=0.5):
                 info = fetch_studio_info(self.endpoint)
-                if langsmith_configured() and not studio_langsmith_enabled(info):
+                recycle = is_recycle_on_start_enabled()
+                missing_langsmith = langsmith_configured() and not studio_langsmith_enabled(info)
+                if recycle or missing_langsmith:
+                    reason = (
+                        "listener missing LANGSMITH_API_KEY"
+                        if missing_langsmith
+                        else "recycle on app start (pick up graph code changes)"
+                    )
                     logger.warning(
-                        "Recycling LangGraph Studio on %s — listener missing LANGSMITH_API_KEY",
+                        "Recycling LangGraph Studio on %s — %s",
                         self.endpoint.url,
+                        reason,
                     )
                     terminate_listeners_on_port(
                         self.endpoint.port,

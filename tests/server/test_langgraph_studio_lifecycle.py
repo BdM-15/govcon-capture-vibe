@@ -13,6 +13,7 @@ from src.server.langgraph_studio_lifecycle import (
     build_controller_from_env,
     find_available_studio_port,
     is_auto_start_enabled,
+    is_recycle_on_start_enabled,
     is_tunnel_enabled,
     listener_pids_on_port,
     parse_public_api_url_from_log,
@@ -89,6 +90,11 @@ def test_start_reuses_existing_listener_without_spawn(monkeypatch) -> None:
     )
     assert controller.started_by_us is False
     assert controller.process is None
+
+
+def test_is_recycle_on_start_defaults_true() -> None:
+    assert is_recycle_on_start_enabled({}) is True
+    assert is_recycle_on_start_enabled({"THESEUS_LANGGRAPH_STUDIO_RECYCLE_ON_START": "false"}) is False
 
 
 def test_is_tunnel_enabled_defaults_false() -> None:
