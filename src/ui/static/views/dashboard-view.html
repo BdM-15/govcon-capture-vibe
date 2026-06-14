@@ -261,6 +261,11 @@
                       <span class="block text-[11px] text-slate-500"
                         >Mission-readiness pipeline debugger</span
                       >
+                      <span
+                        class="block text-[10px] text-slate-600 mt-0.5 leading-snug"
+                        x-show="stats.langgraph_studio?.connect_hint"
+                        x-text="stats.langgraph_studio.connect_hint"
+                      ></span>
                     </span>
                   </a>
                   <button

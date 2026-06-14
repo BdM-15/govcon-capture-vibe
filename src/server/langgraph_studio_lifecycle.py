@@ -42,11 +42,12 @@ class LangGraphStudioEndpoint:
 
     @property
     def api_base_url(self) -> str:
-        return self.public_api_url or self.url
+        return self.url
 
     @property
     def graph_url(self) -> str:
-        return studio_ui_url(self.api_base_url, graph_id="mission_readiness")
+        # Hosted Studio allowlists domains manually — never auto-link trycloudflare URLs.
+        return studio_ui_url(self.url, graph_id="mission_readiness")
 
 
 def studio_ui_url(api_url: str, *, graph_id: str = "mission_readiness") -> str:
@@ -69,10 +70,26 @@ def is_auto_start_enabled(env: dict[str, str] | None = None) -> bool:
 
 
 def is_tunnel_enabled(env: dict[str, str] | None = None) -> bool:
-    """Cloudflare tunnel avoids hosted Studio blocking localhost/private-network."""
+    """Optional Cloudflare tunnel for Safari/Brave; requires manual Studio allowlist."""
     source = env if env is not None else os.environ
-    raw = str(source.get("THESEUS_LANGGRAPH_STUDIO_TUNNEL", "true")).strip().lower()
+    raw = str(source.get("THESEUS_LANGGRAPH_STUDIO_TUNNEL", "false")).strip().lower()
     return raw not in {"0", "false", "no", "off"}
+
+
+def studio_connect_hint(
+    *,
+    tunnel: bool = False,
+    public_api_url: str | None = None,
+) -> str:
+    if tunnel and public_api_url:
+        return (
+            "Tunnel mode: Studio → Configure connection → paste tunnel URL → "
+            "add to Allowed Origins → Connect"
+        )
+    return (
+        "Chrome/Edge: lock icon on smith.langchain.com → Local network access → Allow, "
+        "then reload Studio"
+    )
 
 
 def process_exists(pid: int) -> bool:
@@ -550,15 +567,23 @@ class LangGraphStudioController:
             ready = False
             if not self._last_error:
                 self._last_error = langsmith.get("error") or "LangSmith not connected"
+        public_url = self.endpoint.public_api_url
         return {
             "ok": ready,
             "state": "ready" if ready else "unavailable",
             "url": self.endpoint.url,
             "api_base_url": self.endpoint.api_base_url,
-            "graph_url": self.endpoint.graph_url,
+            "graph_url": self.endpoint.graph_url if ready else "",
             "port": self.endpoint.port,
             "tunnel": self._tunnel_enabled,
-            "public_api_url": self.endpoint.public_api_url,
+            "public_api_url": public_url,
+            "tunnel_url": public_url if self._tunnel_enabled else None,
+            "connect_hint": studio_connect_hint(
+                tunnel=self._tunnel_enabled,
+                public_api_url=public_url,
+            )
+            if ready
+            else None,
             "version": pkg_version,
             "orchestration": "langgraph",
             "langsmith": langsmith,
@@ -607,6 +632,9 @@ def studio_status_payload(status: dict[str, Any] | None) -> dict[str, Any]:
         "url": status.get("url") or "",
         "api_base_url": status.get("api_base_url") or status.get("url") or "",
         "graph_url": graph_url,
+        "tunnel": bool(status.get("tunnel")),
+        "tunnel_url": status.get("tunnel_url") or status.get("public_api_url"),
+        "connect_hint": status.get("connect_hint"),
         "version": status.get("version") or langgraph_package_version(),
         "orchestration": status.get("orchestration") or "langgraph",
         "started_by_us": bool(status.get("started_by_us")),

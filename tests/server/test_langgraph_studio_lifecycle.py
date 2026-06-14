@@ -18,6 +18,7 @@ from src.server.langgraph_studio_lifecycle import (
     parse_public_api_url_from_log,
     studio_langsmith_enabled,
     studio_status_payload,
+    studio_connect_hint,
     studio_ui_url,
     terminate_listeners_on_port,
     wait_for_studio,
@@ -90,9 +91,27 @@ def test_start_reuses_existing_listener_without_spawn(monkeypatch) -> None:
     assert controller.process is None
 
 
-def test_is_tunnel_enabled_defaults_true() -> None:
-    assert is_tunnel_enabled({}) is True
-    assert is_tunnel_enabled({"THESEUS_LANGGRAPH_STUDIO_TUNNEL": "false"}) is False
+def test_is_tunnel_enabled_defaults_false() -> None:
+    assert is_tunnel_enabled({}) is False
+    assert is_tunnel_enabled({"THESEUS_LANGGRAPH_STUDIO_TUNNEL": "true"}) is True
+
+
+def test_graph_url_uses_localhost_not_tunnel() -> None:
+    endpoint = LangGraphStudioEndpoint(
+        host="127.0.0.1",
+        port=2024,
+        public_api_url="https://economics-minority-secret-voluntary.trycloudflare.com",
+    )
+    assert "127.0.0.1" in endpoint.graph_url
+    assert "trycloudflare" not in endpoint.graph_url
+
+
+def test_studio_connect_hint_local_vs_tunnel() -> None:
+    assert "Local network access" in studio_connect_hint(tunnel=False)
+    assert "Configure connection" in studio_connect_hint(
+        tunnel=True,
+        public_api_url="https://x.trycloudflare.com",
+    )
 
 
 def test_parse_public_api_url_from_log_finds_tunnel() -> None:
@@ -241,7 +260,7 @@ def test_start_spawns_when_port_closed() -> None:
         assert "dev" in cmd
         assert "--no-browser" in cmd
         assert "--no-reload" in cmd
-        assert "--tunnel" in cmd
+        assert "--tunnel" not in cmd
         return proc
 
     assert controller.start(
@@ -249,7 +268,7 @@ def test_start_spawns_when_port_closed() -> None:
         wait=lambda _endpoint, **_kwargs: True,
         popen=_popen,
         command_builder=lambda: ["langgraph"],
-        tunnel_enabled=True,
+        tunnel_enabled=False,
     )
     assert controller.started_by_us is True
     assert controller.process is proc

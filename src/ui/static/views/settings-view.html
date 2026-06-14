@@ -1487,10 +1487,19 @@
                     ></dd>
                     <dt class="text-slate-500">studio</dt>
                     <dd
-                      class="col-span-2 truncate"
+                      class="col-span-2"
                       :class="stats.langgraph_studio?.ok ? 'text-neon-lime' : 'text-slate-500'"
-                      x-text="stats.langgraph_studio ? `${stats.langgraph_studio.state || 'unknown'} · ${stats.langgraph_studio.graph_url || stats.langgraph_studio.url || '—'}` : '—'"
-                    ></dd>
+                    >
+                      <span
+                        class="block truncate"
+                        x-text="stats.langgraph_studio ? `${stats.langgraph_studio.state || 'unknown'} · ${stats.langgraph_studio.url || '—'}` : '—'"
+                      ></span>
+                      <span
+                        class="block text-[10px] text-slate-500 mt-0.5 leading-snug"
+                        x-show="stats.langgraph_studio?.connect_hint"
+                        x-text="stats.langgraph_studio.connect_hint"
+                      ></span>
+                    </dd>
                     <dt class="text-slate-500">rerank</dt>
                     <dd
                       class="col-span-2 truncate"
