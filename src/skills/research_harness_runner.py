@@ -11,6 +11,7 @@ from src.skills.depth_gate import depth_gate_issues
 from src.skills.llm_chat import chat_with_tools
 from src.skills.research_harness import (
     ResearchHarnessConfig,
+    _is_handoff_json_only,
     build_frame_reflexion_messages,
     build_frame_synthesis_messages,
     build_reflexion_messages,
@@ -165,6 +166,7 @@ async def run_reflexion_pass(
     issues: list[str],
     transcript: list[dict[str, Any]],
     pass_index: int,
+    workspace_dir: Path | None = None,
     temperature: float = 0.25,
 ) -> tuple[str, dict[str, int], list[str]]:
     """Reflexion revise pass — expand deliverable to fix depth-audit issues."""
@@ -188,7 +190,44 @@ async def run_reflexion_pass(
         warnings.append(f"research_harness: reflexion pass {pass_index} returned empty content")
         return "", chat.usage or {}, warnings
 
-    write_synthesis_artifact(run_dir, config, content)
+    from src.skills.mission_readiness_merge import is_compiler_run_dir
+    from src.skills.research_harness import (
+        apply_section_patches_to_brief,
+        brief_structure_preserved,
+        parse_compiler_section_patches,
+    )
+
+    json_handoff = config.synthesis_artifact.endswith(".json")
+    if is_compiler_run_dir(run_dir) and not json_handoff:
+        original = (run_dir / "artifacts" / config.synthesis_artifact).read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
+        patches = parse_compiler_section_patches(content)
+        if not patches:
+            warnings.append(
+                f"research_harness: compiler reflexion pass {pass_index} returned no "
+                "section_patches — full rewrite rejected"
+            )
+            return "", chat.usage or {}, warnings
+        merged = apply_section_patches_to_brief(original, patches)
+        preserved, reason = brief_structure_preserved(original, merged)
+        if not preserved:
+            warnings.append(
+                f"research_harness: compiler reflexion pass {pass_index} rejected — {reason}"
+            )
+            return "", chat.usage or {}, warnings
+        write_synthesis_artifact(run_dir, config, merged)
+        content = merged
+    elif json_handoff:
+        written = write_frame_artifact(run_dir, config, content, workspace_dir=workspace_dir)
+        if written is None:
+            warnings.append(
+                f"research_harness: reflexion pass {pass_index} could not parse JSON handoff"
+            )
+            return "", chat.usage or {}, warnings
+    else:
+        write_synthesis_artifact(run_dir, config, content)
     state = load_harness_state(run_dir)
     if state:
         state["reflexion_passes"] = int(state.get("reflexion_passes") or 0) + 1
@@ -361,6 +400,20 @@ async def finalize_research_harness(
                     f"research_harness: persisted {config.frame_artifact} from tool-loop response"
                 )
 
+    if skill.name == "readiness-frame-eval" and workspace_dir is not None and not compiler_run:
+        try:
+            from src.skills.eval_handoff_expander import expand_eval_handoff
+
+            _, expand_warnings = await expand_eval_handoff(
+                run_dir=run_dir,
+                workspace_dir=workspace_dir,
+                loop_response=str(response or ""),
+            )
+            warnings.extend(expand_warnings)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Eval handoff expansion failed for %s: %s", skill.name, exc)
+            warnings.append(f"eval_handoff_expander_failed: {exc}")
+
     if frame_artifact_needs_work(run_dir, config) and not compiler_run:
         try:
             frame_written, usage, frame_synth_warnings = await run_frame_synthesis_pass(
@@ -402,9 +455,18 @@ async def finalize_research_harness(
             logger.warning("Research synthesis failed for %s: %s", skill.name, exc)
             warnings.append(f"research_harness synthesis failed: {exc}")
 
-    depth_issues = depth_gate_issues(run_dir, hooks=hooks, user_prompt=user_prompt)
-    frame_missing = any("mission_readiness_frame.json" in issue for issue in depth_issues)
+    from src.skills.research_harness import dedupe_depth_issues
+
+    depth_issues = dedupe_depth_issues(
+        depth_gate_issues(run_dir, hooks=hooks, user_prompt=user_prompt)
+    )
+    frame_missing = frame_artifact_needs_work(run_dir, config) or any(
+        f"missing artifacts/{config.frame_artifact}" in issue
+        for issue in depth_issues
+        if config.frame_artifact
+    )
     reflexion_pass = 0
+    handoff_json_only = _is_handoff_json_only(config.deliverables)
 
     if depth_issues and config.frame_artifact and frame_missing and not compiler_run:
         frame_pass = 0
@@ -450,9 +512,17 @@ async def finalize_research_harness(
             warnings=warnings,
             label="pre brief reflexion scaffold",
         )
-        depth_issues = depth_gate_issues(run_dir, hooks=hooks, user_prompt=user_prompt)
+        from src.skills.research_harness import dedupe_depth_issues
 
-    while depth_issues and reflexion_pass < config.max_reflexion_passes:
+    depth_issues = dedupe_depth_issues(
+        depth_gate_issues(run_dir, hooks=hooks, user_prompt=user_prompt)
+    )
+
+    while (
+        depth_issues
+        and reflexion_pass < config.max_reflexion_passes
+        and not handoff_json_only
+    ):
         reflexion_pass += 1
         try:
             revised, usage, rev_warnings = await run_reflexion_pass(
@@ -463,6 +533,7 @@ async def finalize_research_harness(
                 issues=depth_issues,
                 transcript=transcript,
                 pass_index=reflexion_pass,
+                workspace_dir=workspace_dir,
             )
             warnings.extend(rev_warnings)
             usage_total = _merge_usage(usage_total, usage)
@@ -472,7 +543,11 @@ async def finalize_research_harness(
             logger.warning("Research reflexion failed for %s pass %d: %s", skill.name, reflexion_pass, exc)
             warnings.append(f"research_harness reflexion failed: {exc}")
             break
-        depth_issues = depth_gate_issues(run_dir, hooks=hooks, user_prompt=user_prompt)
+        from src.skills.research_harness import dedupe_depth_issues
+
+    depth_issues = dedupe_depth_issues(
+        depth_gate_issues(run_dir, hooks=hooks, user_prompt=user_prompt)
+    )
 
     if depth_issues and config.frame_artifact and not compiler_run:
         frame_pass = 0
@@ -525,7 +600,11 @@ async def finalize_research_harness(
             label="final frame scaffold",
         )
 
-    depth_issues = depth_gate_issues(run_dir, hooks=hooks, user_prompt=user_prompt)
+    from src.skills.research_harness import dedupe_depth_issues
+
+    depth_issues = dedupe_depth_issues(
+        depth_gate_issues(run_dir, hooks=hooks, user_prompt=user_prompt)
+    )
     if compiler_run and depth_issues:
         acronym_issues = [
             issue
@@ -569,7 +648,7 @@ async def finalize_research_harness(
                 warnings.append(f"admin_llm_acronym_pass_failed: {exc}")
 
         polish_pass = 0
-        max_polish_passes = config.max_reflexion_passes + 2
+        max_polish_passes = config.max_reflexion_passes
         while depth_issues and polish_pass < max_polish_passes:
             polish_pass += 1
             try:
@@ -590,7 +669,11 @@ async def finalize_research_harness(
             except Exception as exc:  # noqa: BLE001
                 warnings.append(f"compiler acronym reflexion failed: {exc}")
                 break
-            depth_issues = depth_gate_issues(run_dir, hooks=hooks, user_prompt=user_prompt)
+            from src.skills.research_harness import dedupe_depth_issues
+
+    depth_issues = dedupe_depth_issues(
+        depth_gate_issues(run_dir, hooks=hooks, user_prompt=user_prompt)
+    )
 
     finish_reason = loop_result.finish_reason
     if depth_issues:
@@ -605,12 +688,20 @@ async def finalize_research_harness(
             "boilerplate",
             "undefined acronyms",
             "over-relies on one source chunk",
+            "narrative sections lack numbered citation",
+            "verbatim_extracts is empty",
+            "eval_crosswalk under-covers",
         )
+        markers = _BLOCKING_MARKERS
+        if handoff_json_only:
+            markers = tuple(
+                marker for marker in _BLOCKING_MARKERS if marker != "undefined acronyms"
+            )
         blocking = [
             issue
             for issue in depth_issues
             if issue.startswith("coverage:")
-            or any(marker in issue.lower() for marker in _BLOCKING_MARKERS)
+            or any(marker in issue.lower() for marker in markers)
         ]
         if not blocking:
             finish_reason = loop_result.finish_reason or "complete"

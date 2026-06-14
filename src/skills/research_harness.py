@@ -461,6 +461,12 @@ def resolve_harness_config(
     coverage_raw = overrides.get("coverage_contract")
     coverage_contract = dict(coverage_raw) if isinstance(coverage_raw, dict) else None
 
+    max_reflexion_passes = _opt_int("max_reflexion_passes", 2)
+    scratchpad_max_chars = int(overrides.get("scratchpad_max_chars") or 350_000)
+    if compiler_mode:
+        max_reflexion_passes = min(max(max_reflexion_passes, 3), 3)
+        scratchpad_max_chars = max(scratchpad_max_chars, 500_000)
+
     return ResearchHarnessConfig(
         deliverables=deliverable_tuple,
         frame_artifact=frame,
@@ -468,7 +474,7 @@ def resolve_harness_config(
         coverage_contract=coverage_contract,
         synthesis_max_tokens=_opt_int("synthesis_max_tokens", 24_000),
         reflexion_max_tokens=_opt_int("reflexion_max_tokens", 24_000),
-        max_reflexion_passes=_opt_int("max_reflexion_passes", 2),
+        max_reflexion_passes=max_reflexion_passes,
         always_resynthesize=_opt_bool("always_resynthesize", False),
         min_brief_chars=_opt_int("min_brief_chars", 0),
         min_brief_lines=_opt_int("min_brief_lines", 0),
@@ -478,7 +484,7 @@ def resolve_harness_config(
             if overrides.get("min_kg_chunks_passes") is not None
             else default_min_chunks
         ),
-        scratchpad_max_chars=int(overrides.get("scratchpad_max_chars") or 350_000),
+        scratchpad_max_chars=scratchpad_max_chars,
         plan_surfaces=surfaces,
     )
 
@@ -1092,15 +1098,30 @@ def frame_artifact_needs_work(run_dir: Path, config: ResearchHarnessConfig) -> b
     if not path.is_file():
         return True
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return True
-    if not isinstance(payload, dict):
+        from src.skills.readiness_handoff_models import load_handoff_dict
+
+        payload = load_handoff_dict(path)
+    except (OSError, json.JSONDecodeError, ValueError):
         return True
 
     contract = config.coverage_contract or {}
     rows_key = str(contract.get("rows_key") or "").strip()
     if rows_key:
+        workspace_dir = resolve_workspace_dir_from_run_dir(run_dir)
+        if rows_key == "eval_crosswalk" and workspace_dir is not None:
+            from src.skills.handoff_quality import required_crosswalk_rows
+
+            min_rows = required_crosswalk_rows(workspace_dir)
+            if not _material_rows_from_payload(payload, rows_key=rows_key, min_rows=min_rows):
+                return True
+            from src.skills.evidence_gates import check_coverage_contract
+
+            coverage_issues = check_coverage_contract(
+                workspace_dir=workspace_dir,
+                coverage_contract=contract,
+                artifact=payload,
+            )
+            return bool(coverage_issues)
         min_rows = 3 if rows_key == "eval_crosswalk" else 1
         return not _material_rows_from_payload(payload, rows_key=rows_key, min_rows=min_rows)
 
@@ -1164,33 +1185,40 @@ def build_synthesis_messages(
         "\n## Skill contract\n"
         f"{skill_body.strip()}\n"
         "\n## Synthesis rules (mandatory depth)\n"
-        f"- Output the full `{config.synthesis_artifact}` in markdown — depth audit floors "
-        f"are >={min_chars} characters and >={min_lines} lines when configured; exceed them "
-        "when evidence supports more.\n"
-        "- **Analytical prose required:** multi-paragraph reasoning per section — what the "
+        + (
+            f"- Output the full `{config.synthesis_artifact}` in markdown — substance over "
+            "volume: verbatim quotes, per-section analysis, numbered citations.\n"
+            if compiler_mode
+            else f"- Output the full `{config.synthesis_artifact}` in markdown — depth audit floors "
+            f"are >={min_chars} characters and >={min_lines} lines when configured; exceed them "
+            "when evidence supports more.\n"
+        )
+        + "- **Analytical prose required:** multi-paragraph reasoning per section — what the "
         "government signal means, why the program office cares, readiness consequence, capture "
         "implication. Bullets alone are insufficient except verbatim bank and eval table.\n"
-        "- Mine **every retrieval surface** in the scratchpad — do not compress rich evidence "
+        + "- Mine **every retrieval surface** in the scratchpad — do not compress rich evidence "
         "into generic one-liners.\n"
-        "- Major narrative sections: substantive multi-paragraph analysis before tables/lists.\n"
-        "- Eval cross-walk (when applicable): full markdown table, one row per material "
-        "Section M factor/subfactor; readiness_link = consequence analysis per row.\n"
-        "- Customer pains, verbatim extracts, win themes, importance signals, and implicit "
-        "criteria: cover every **material** item the package supports (audit floors apply; "
-        "do not pad with placeholders).\n"
-        "- Class B judgments use `Our read:`, `Likely`, `Signal:`, `In our capture experience,`.\n"
-        "- Every factual claim cites numbered references only — [1], [2], etc. — using "
-        "references[].ref from the merged JSON. Multiple sources: [1][3].\n"
-        "- Full source names, sections, and quotes belong ONLY in the References section "
-        "at document end — never inline long citations in narrative prose.\n"
-        "- Never cite handoff.json filenames or bare chunk IDs in brief.md; chunk IDs are trace "
-        "metadata only.\n"
-        "- **Uniform depth:** back-half sections (methods/innovation, win themes, clarifications) "
-        "must match front-half analytical depth — no compressed one-liner tails.\n"
-        "- Mirror every `claim_gaps[]` entry in a Clarifications / missing-coverage section.\n"
-        "- Do NOT add capability overlay unless the user explicitly names a vendor or URL.\n"
-        "- Close with a short executive synthesis tying readiness outcome to top win themes.\n"
-        "- Keep the References section as the final section of brief.md (after Executive Synthesis).\n"
+        + (
+            "- Major narrative sections: substantive multi-paragraph analysis before tables/lists.\n"
+            "- Eval cross-walk (when applicable): full markdown table, one row per material "
+            "Section M factor/subfactor; readiness_link = consequence analysis per row.\n"
+            "- Customer pains, verbatim extracts, win themes, importance signals, and implicit "
+            "criteria: cover every **material** item the package supports (audit floors apply; "
+            "do not pad with placeholders).\n"
+            "- Class B judgments use `Our read:`, `Likely`, `Signal:`, `In our capture experience,`.\n"
+            "- Every factual claim cites numbered references only — [1], [2], etc. — using "
+            "references[].ref from the merged JSON. Multiple sources: [1][3].\n"
+            "- Full source names, sections, and quotes belong ONLY in the References section "
+            "at document end — never inline long citations in narrative prose.\n"
+            "- Never cite handoff.json filenames or bare chunk IDs in brief.md; chunk IDs are trace "
+            "metadata only.\n"
+            "- **Uniform depth:** back-half sections (methods/innovation, win themes, clarifications) "
+            "must match front-half analytical depth — no compressed one-liner tails.\n"
+            "- Mirror every `claim_gaps[]` entry in a Clarifications / missing-coverage section.\n"
+            "- Do NOT add capability overlay unless the user explicitly names a vendor or URL.\n"
+            "- Close with a short executive synthesis tying readiness outcome to top win themes.\n"
+            "- Keep the References section as the final section of brief.md (after Executive Synthesis).\n"
+        )
     )
     user_parts = [
         "## User request\n",
@@ -1223,6 +1251,200 @@ def build_synthesis_messages(
     ]
 
 
+def dedupe_depth_issues(issues: list[str]) -> list[str]:
+    """Drop duplicate audit lines so reflexion focuses on distinct fixes."""
+    seen: set[str] = set()
+    unique: list[str] = []
+    for issue in issues:
+        key = str(issue or "").strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        unique.append(str(issue).strip())
+    return unique
+
+
+def normalize_brief_section_key(heading: str) -> str:
+    text = str(heading or "").strip()
+    if text.startswith("## "):
+        text = text[3:]
+    return text.strip().lower()
+
+
+def split_brief_sections(brief_text: str) -> tuple[str, list[tuple[str, str]]]:
+    """Split brief into preamble (before first ##) and ordered (heading, body) pairs."""
+    preamble_lines: list[str] = []
+    sections: list[tuple[str, str]] = []
+    current_heading = ""
+    current_body: list[str] = []
+    seen_section = False
+    for line in str(brief_text or "").splitlines():
+        if line.startswith("## "):
+            seen_section = True
+            if current_heading:
+                sections.append((current_heading, "\n".join(current_body).strip()))
+            current_heading = line[3:].strip()
+            current_body = []
+            continue
+        if not seen_section:
+            preamble_lines.append(line)
+        else:
+            current_body.append(line)
+    if current_heading:
+        sections.append((current_heading, "\n".join(current_body).strip()))
+    return "\n".join(preamble_lines).strip(), sections
+
+
+def reassemble_brief_sections(preamble: str, sections: list[tuple[str, str]]) -> str:
+    parts: list[str] = []
+    if preamble.strip():
+        parts.append(preamble.strip())
+        parts.append("")
+    for heading, body in sections:
+        parts.append(f"## {heading}")
+        parts.append("")
+        if body.strip():
+            parts.append(body.strip())
+        parts.append("")
+    return "\n".join(parts).strip() + "\n"
+
+
+def apply_section_patches_to_brief(
+    brief_text: str,
+    patches: list[dict[str, Any]],
+) -> str:
+    """Replace only named ## sections; leave all other brief content untouched."""
+    preamble, sections = split_brief_sections(brief_text)
+    patch_map: dict[str, str] = {}
+    for patch in patches:
+        if not isinstance(patch, dict):
+            continue
+        heading = str(patch.get("heading") or patch.get("section") or "").strip()
+        content = str(patch.get("content") or patch.get("body") or "").strip()
+        if not heading or not content:
+            continue
+        patch_map[normalize_brief_section_key(heading)] = content
+
+    merged_sections: list[tuple[str, str]] = []
+    for heading, body in sections:
+        key = normalize_brief_section_key(heading)
+        merged_sections.append((heading, patch_map.get(key, body)))
+    return reassemble_brief_sections(preamble, merged_sections)
+
+
+def brief_section_headings(brief_text: str) -> list[str]:
+    return [heading for heading, _ in split_brief_sections(brief_text)[1]]
+
+
+def _count_crosswalk_table_rows(brief_text: str) -> int:
+    in_table = False
+    rows = 0
+    for line in str(brief_text or "").splitlines():
+        if re.search(
+            r"^##\s*(?:\d+\.\s*)?eval(?:uation)?\s+cross[- ]?walk\b",
+            line,
+            re.IGNORECASE,
+        ):
+            in_table = True
+            continue
+        if in_table and line.startswith("## "):
+            break
+        if in_table and line.strip().startswith("|") and "---" not in line:
+            rows += 1
+    return rows
+
+
+def brief_structure_preserved(
+    original: str,
+    merged: str,
+    *,
+    min_length_ratio: float = 0.85,
+) -> tuple[bool, str]:
+    """Reject full-doc rewrites that drop headings, shrink the brief, or lose eval rows."""
+    orig_headings = brief_section_headings(original)
+    merged_headings = brief_section_headings(merged)
+    if orig_headings != merged_headings:
+        return False, "section headings changed — compiler reflexion must patch in place"
+
+    orig_len = len(str(original or "").strip())
+    merged_len = len(str(merged or "").strip())
+    if orig_len and merged_len < int(orig_len * min_length_ratio):
+        return (
+            False,
+            f"brief shrank {orig_len} → {merged_len} chars — likely full rewrite, not patch",
+        )
+
+    orig_rows = _count_crosswalk_table_rows(original)
+    merged_rows = _count_crosswalk_table_rows(merged)
+    if orig_rows and merged_rows < orig_rows:
+        return False, f"eval cross-walk table lost rows ({orig_rows} → {merged_rows})"
+
+    return True, ""
+
+
+def parse_compiler_section_patches(content: str) -> list[dict[str, Any]]:
+    """Extract section_patches[] from compiler reflexion JSON output."""
+    payload = _extract_json_object(content)
+    if not payload:
+        return []
+    patches = payload.get("section_patches") or payload.get("patches") or []
+    if not isinstance(patches, list):
+        return []
+    return [patch for patch in patches if isinstance(patch, dict)]
+
+
+def build_compiler_reflexion_messages(
+    *,
+    skill_name: str,
+    skill_body: str,
+    user_prompt: str,
+    run_dir: Path,
+    config: ResearchHarnessConfig,
+    issues: list[str],
+) -> list[dict[str, str]]:
+    """Compiler revise — expand named sections in place; no full-doc rewrite quota chase."""
+    scratchpad = _read_artifact(run_dir, "research_scratchpad.md", max_chars=config.scratchpad_max_chars)
+    current = _read_artifact(run_dir, config.synthesis_artifact)
+    frame = _read_artifact(run_dir, config.frame_artifact) if config.frame_artifact else ""
+    unique = dedupe_depth_issues(issues)
+    compiler_fixable = [
+        issue
+        for issue in unique
+        if not issue.lower().startswith("eval_crosswalk row")
+        and "evaluation_factor looks like invented" not in issue.lower()
+        and "over-relies on one source chunk" not in issue.lower()
+    ]
+    if not compiler_fixable:
+        compiler_fixable = unique[:8]
+    issue_text = "\n".join(f"- {issue}" for issue in compiler_fixable[:12])
+    system = (
+        f"You are the chain compiler revise phase for skill `{skill_name}`.\n"
+        "Fix ONLY the listed issues by expanding the matching brief.md sections IN PLACE.\n"
+        "- Preserve all existing headings, eval cross-walk table rows, and References.\n"
+        "- Do NOT rewrite the entire document from scratch.\n"
+        "- Do NOT chase character count — add substance: verbatim quotes, citations, "
+        "factor-specific reasoning from scratchpad.\n"
+        "- Skip eval_crosswalk row defects — upstream eval handoff owns those.\n"
+        f"\n## Skill contract\n{skill_body.strip()}\n"
+    )
+    user = (
+        f"## User request\n{user_prompt.strip()}\n\n"
+        f"## Issues to fix (compiler-owned only)\n{issue_text}\n\n"
+        f"## Current `{config.synthesis_artifact}` (expand in place)\n{current or '(missing)'}\n\n"
+        f"## Research scratchpad\n{scratchpad[:120_000] or '(empty)'}\n\n"
+    )
+    if frame:
+        user += f"## Merged JSON spine\n```json\n{frame[:40_000]}\n```\n\n"
+    user += (
+        "Return ONE JSON object only — no markdown wrapper:\n"
+        '{"section_patches":[{"heading":"## N. Section Title","content":"expanded body"}]}\n'
+        "- Include ONLY sections you expanded to fix the listed issues.\n"
+        "- Use exact `##` headings from the current brief.\n"
+        "- Do NOT return the full brief — patches merge server-side."
+    )
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+
 def build_reflexion_messages(
     *,
     skill_name: str,
@@ -1233,10 +1455,23 @@ def build_reflexion_messages(
     issues: list[str],
 ) -> list[dict[str, str]]:
     """Build a Reflexion-style revise prompt grounded in audit issues + scratchpad."""
+    from src.skills.mission_readiness_merge import is_compiler_run_dir
+
+    if is_compiler_run_dir(run_dir):
+        return build_compiler_reflexion_messages(
+            skill_name=skill_name,
+            skill_body=skill_body,
+            user_prompt=user_prompt,
+            run_dir=run_dir,
+            config=config,
+            issues=issues,
+        )
+
     scratchpad = _read_artifact(run_dir, "research_scratchpad.md", max_chars=200_000)
     current = _read_artifact(run_dir, config.synthesis_artifact)
     frame = _read_artifact(run_dir, config.frame_artifact) if config.frame_artifact else ""
-    issue_text = "\n".join(f"- {issue}" for issue in issues[:20])
+    unique = dedupe_depth_issues(issues)
+    issue_text = "\n".join(f"- {issue}" for issue in unique[:20])
     min_chars = config.min_brief_chars or 12_000
     system = (
         f"You are the reflexion revise phase for skill `{skill_name}`.\n"

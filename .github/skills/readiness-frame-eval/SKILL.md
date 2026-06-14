@@ -23,7 +23,8 @@ metadata:
       required_entity_types: [evaluation_factor, subfactor]
       rule: one_row_per_entity
       rows_key: eval_crosswalk
-  max_turns: 12
+      min_coverage_ratio: 0.8
+  max_turns: 36
 ---
 
 # Readiness Frame — Evaluation

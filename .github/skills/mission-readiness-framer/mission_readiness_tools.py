@@ -297,31 +297,41 @@ def _eval_crosswalk_quality_issues(crosswalk: list[Any]) -> list[str]:
 def _brief_narrative_depth_issues(brief_text: str, run_dir: Path | None) -> list[str]:
     if run_dir is None:
         return []
-    if _is_compiler_run(run_dir):
-        return []
+    compiler = _is_compiler_run(run_dir)
     try:
         from src.skills.research_harness import load_harness_state
     except ImportError:
         return []
     state = load_harness_state(run_dir)
-    if not state or int(state.get("scratchpad_chars") or 0) < _MIN_SCRATCHPAD_FOR_QUAL_DEPTH:
+    scratchpad_chars = int(state.get("scratchpad_chars") or 0) if state else 0
+    if not compiler and (
+        not state or scratchpad_chars < _MIN_SCRATCHPAD_FOR_QUAL_DEPTH
+    ):
         return []
     text = str(brief_text or "").strip()
     if not text:
         return ["brief.md is empty — synthesis must produce a research-depth narrative"]
     issues: list[str] = []
-    char_count = len(text)
-    line_count = len(text.splitlines())
-    if char_count < 12_000:
-        issues.append(
-            f"brief.md is only {char_count} chars — need >=12000 (~8+ pages) of analytical "
-            "capture narrative after full-package retrieval"
-        )
-    if line_count < 100:
-        issues.append(
-            f"brief.md is only {line_count} lines — expand each major section with "
-            "multi-paragraph reasoning over scratchpad evidence"
-        )
+    if compiler:
+        try:
+            from src.skills.readiness_content_gates import tail_compression_issues_for_brief
+
+            issues.extend(tail_compression_issues_for_brief(text))
+        except ImportError:
+            pass
+    else:
+        char_count = len(text)
+        line_count = len(text.splitlines())
+        if char_count < 12_000:
+            issues.append(
+                f"brief.md is only {char_count} chars — need >=12000 of analytical "
+                "capture narrative after full-package retrieval"
+            )
+        if line_count < 100:
+            issues.append(
+                f"brief.md is only {line_count} lines — expand each major section with "
+                "multi-paragraph reasoning over scratchpad evidence"
+            )
     bullet_like = 0
     prose_lines = 0
     for line in text.splitlines():
@@ -346,14 +356,16 @@ def _qualitative_depth_issues(
 ) -> list[str]:
     if run_dir is None:
         return []
-    if _is_compiler_run(run_dir):
-        return []
+    compiler = _is_compiler_run(run_dir)
     try:
         from src.skills.research_harness import load_harness_state
     except ImportError:
         return []
     state = load_harness_state(run_dir)
-    if not state or int(state.get("scratchpad_chars") or 0) < _MIN_SCRATCHPAD_FOR_QUAL_DEPTH:
+    scratchpad_chars = int(state.get("scratchpad_chars") or 0) if state else 0
+    if not compiler and (
+        not state or scratchpad_chars < _MIN_SCRATCHPAD_FOR_QUAL_DEPTH
+    ):
         return []
     issues: list[str] = []
     minimums = {
@@ -391,7 +403,29 @@ def _solicitation_coverage_issues(
                 "eval_crosswalk is empty after handoff merge — compiler must preserve "
                 "upstream eval rows or document gaps in claim_gaps[]"
             ]
-        return _eval_crosswalk_quality_issues(crosswalk)
+        issues = list(_eval_crosswalk_quality_issues(crosswalk))
+        try:
+            from src.skills.evidence_gates import check_coverage_contract
+            from src.skills.source_citations import resolve_workspace_dir_from_run_dir
+
+            workspace_dir = resolve_workspace_dir_from_run_dir(Path(run_dir))
+            if workspace_dir is not None:
+                issues.extend(
+                    check_coverage_contract(
+                        workspace_dir=workspace_dir,
+                        coverage_contract={
+                            "artifact_path": "mission_readiness_frame.json",
+                            "required_entity_types": ["evaluation_factor", "subfactor"],
+                            "rule": "one_row_per_entity",
+                            "rows_key": "eval_crosswalk",
+                            "min_coverage_ratio": 0.8,
+                        },
+                        artifact=payload,
+                    )
+                )
+        except ImportError:
+            pass
+        return issues
     if not payload or eval_entities_retrieved <= 0:
         return []
     crosswalk = payload.get("eval_crosswalk")

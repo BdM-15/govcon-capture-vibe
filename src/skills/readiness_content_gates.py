@@ -281,6 +281,94 @@ def tail_compression_issues_for_brief(brief_text: str) -> list[str]:
     return issues
 
 
+_NARRATIVE_CITE_RE = re.compile(r"\[\d+\]")
+_NARRATIVE_SECTION_HEADINGS = (
+    "mission readiness",
+    "customer pain",
+    "importance signal",
+    "implicit criteria",
+    "current method",
+    "innovation",
+    "win theme",
+    "win-theme",
+    "executive synthesis",
+)
+
+
+def _brief_narrative_sections(brief_text: str) -> dict[str, str]:
+    sections: dict[str, str] = {}
+    current_key = ""
+    buffer: list[str] = []
+    for line in str(brief_text or "").splitlines():
+        if line.startswith("## "):
+            if current_key:
+                sections[current_key] = "\n".join(buffer).strip()
+            current_key = line[3:].strip().lower()
+            buffer = []
+            continue
+        if current_key:
+            buffer.append(line)
+    if current_key:
+        sections[current_key] = "\n".join(buffer).strip()
+    return sections
+
+
+def narrative_citation_issues_for_brief(
+    brief_text: str,
+    *,
+    payload: dict[str, Any] | None = None,
+) -> list[str]:
+    """Require numbered [N] markers in major narrative sections when references exist."""
+    references = []
+    if payload is not None:
+        references = payload.get("references") or payload.get("source_citations") or []
+    if not isinstance(references, list) or len(references) < 2:
+        return []
+
+    sections = _brief_narrative_sections(brief_text)
+    if not sections:
+        return []
+
+    missing: list[str] = []
+    for heading, body in sections.items():
+        if "eval cross" in heading or "cross-walk" in heading or heading.startswith("references"):
+            continue
+        if "verbatim" in heading:
+            continue
+        if not any(token in heading for token in _NARRATIVE_SECTION_HEADINGS):
+            continue
+        prose = str(body or "").strip()
+        if len(prose) < 120:
+            continue
+        if not _NARRATIVE_CITE_RE.search(prose):
+            missing.append(heading)
+    if len(missing) >= 3:
+        sample = ", ".join(missing[:4])
+        suffix = "…" if len(missing) > 4 else ""
+        return [
+            "brief.md narrative sections lack numbered citation markers [N] — "
+            f"add refs in: {sample}{suffix}"
+        ]
+    return []
+
+
+def verbatim_extract_issues(
+    payload: dict[str, Any] | None,
+    *,
+    crosswalk_has_citations: bool,
+    cited_crosswalk_rows: int = 0,
+) -> list[str]:
+    if not payload or not crosswalk_has_citations or cited_crosswalk_rows < 3:
+        return []
+    extracts = payload.get("verbatim_extracts") or []
+    if isinstance(extracts, list) and extracts:
+        return []
+    return [
+        "verbatim_extracts is empty — pull 3–8 short government quotes from scratchpad "
+        "into mission_readiness_frame.json and brief.md verbatim bank"
+    ]
+
+
 def claim_gaps_brief_issues(
     payload: dict[str, Any] | None,
     brief_text: str,
@@ -431,6 +519,74 @@ def acronym_issues_for_text(text: str, *, label: str) -> list[str]:
     ]
 
 
+_EVAL_HANDOFF_ACRONYM_FIELDS = ("readiness_link", "proof_expected")
+
+
+def eval_handoff_text_for_acronym_gate(payload: dict[str, Any]) -> str:
+    """Prose fields for eval handoff acronym gate — excludes verbatim factor labels."""
+    parts: list[str] = []
+    crosswalk = payload.get("eval_crosswalk") or []
+    if isinstance(crosswalk, list):
+        for row in crosswalk:
+            if not isinstance(row, dict):
+                continue
+            for field in _EVAL_HANDOFF_ACRONYM_FIELDS:
+                parts.append(str(row.get(field) or ""))
+    gaps = payload.get("claim_gaps") or []
+    if isinstance(gaps, list):
+        parts.extend(str(gap) for gap in gaps if gap)
+    return "\n".join(parts)
+
+
+def acronym_issues_for_eval_handoff(payload: dict[str, Any]) -> list[str]:
+    return acronym_issues_for_text(
+        eval_handoff_text_for_acronym_gate(payload),
+        label="eval_handoff.json",
+    )
+
+
+def _token_set(text: str) -> set[str]:
+    return set(re.findall(r"[a-z]{4,}", str(text or "").lower()))
+
+
+def crosswalk_repetition_issues(
+    crosswalk: list[Any],
+    *,
+    overlap_ratio: float = 0.62,
+    max_similar_pairs: int = 2,
+) -> list[str]:
+    """Flag recycled readiness_link prose across factor rows (lazy duplicate research)."""
+    tokenized: list[tuple[int, set[str]]] = []
+    for index, row in enumerate(crosswalk, start=1):
+        if not isinstance(row, dict):
+            continue
+        text = str(row.get("readiness_link") or "").strip()
+        if len(text) < 80:
+            continue
+        tokens = _token_set(text)
+        if len(tokens) >= 8:
+            tokenized.append((index, tokens))
+
+    similar_pairs = 0
+    for left in range(len(tokenized)):
+        for right in range(left + 1, len(tokenized)):
+            left_tokens = tokenized[left][1]
+            right_tokens = tokenized[right][1]
+            if not left_tokens or not right_tokens:
+                continue
+            ratio = len(left_tokens & right_tokens) / min(len(left_tokens), len(right_tokens))
+            if ratio >= overlap_ratio:
+                similar_pairs += 1
+
+    if similar_pairs > max_similar_pairs:
+        return [
+            f"eval_crosswalk has {similar_pairs} near-duplicate readiness_link pairs — "
+            "each factor/subfactor row needs distinct consequence analysis grounded in "
+            "that row's evidence, not recycled capture filler"
+        ]
+    return []
+
+
 def substance_issues_for_crosswalk(crosswalk: list[Any]) -> list[str]:
     issues: list[str] = []
     for index, raw in enumerate(crosswalk, start=1):
@@ -438,6 +594,7 @@ def substance_issues_for_crosswalk(crosswalk: list[Any]) -> list[str]:
             continue
         issues.extend(substance_issues_for_crosswalk_row(raw, index=index))
     issues.extend(citation_diversity_issues_for_crosswalk(crosswalk))
+    issues.extend(crosswalk_repetition_issues(crosswalk))
     return issues
 
 
@@ -460,6 +617,71 @@ def substance_issues_for_brief(
     return issues
 
 
+def compiler_output_substance_issues(run_dir: Path) -> list[str]:
+    """Substance-only quality gate for chain compiler — not line/char counts."""
+    artifacts = run_dir / "artifacts"
+    frame_path = artifacts / "mission_readiness_frame.json"
+    brief_path = artifacts / "brief.md"
+    issues: list[str] = []
+
+    if not brief_path.is_file():
+        return ["compiler: missing artifacts/brief.md"]
+
+    try:
+        brief_text = brief_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ["compiler: brief.md unreadable"]
+
+    payload: dict[str, Any] | None = None
+    if frame_path.is_file():
+        try:
+            from src.skills.readiness_handoff_models import load_handoff_dict
+
+            loaded = load_handoff_dict(frame_path)
+            payload = loaded if isinstance(loaded, dict) else None
+        except (OSError, json.JSONDecodeError, ValueError):
+            issues.append("compiler: mission_readiness_frame.json unreadable")
+
+    crosswalk = (payload or {}).get("eval_crosswalk") or []
+    cited_rows = 0
+    if isinstance(crosswalk, list):
+        cited_rows = sum(
+            1
+            for row in crosswalk
+            if isinstance(row, dict)
+            and (row.get("source_chunk_ids") or row.get("source_citations"))
+        )
+    issues.extend(
+        substance_issues_for_brief(brief_text, skip_tail_compression=False)
+    )
+    issues.extend(narrative_citation_issues_for_brief(brief_text, payload=payload))
+    issues.extend(
+        verbatim_extract_issues(
+            payload,
+            crosswalk_has_citations=cited_rows > 0,
+            cited_crosswalk_rows=cited_rows,
+        )
+    )
+    issues.extend(claim_gaps_brief_issues(payload, brief_text))
+    issues.extend(acronym_issues_for_readiness_output(brief_text=brief_text, payload=payload))
+
+    pains = (payload or {}).get("customer_pain_points") or []
+    if isinstance(pains, list):
+        cited = [
+            row
+            for row in pains
+            if isinstance(row, dict)
+            and (row.get("source_chunk_ids") or row.get("source_citations"))
+        ]
+        if len(pains) >= 3 and len(cited) < max(2, len(pains) // 2):
+            issues.append(
+                "compiler: customer_pain_points lack cited rationale — each material pain "
+                "needs source_chunk_ids from package evidence"
+            )
+
+    return issues
+
+
 def substance_issues_for_frame_and_brief(
     payload: dict[str, Any] | None,
     brief_text: str,
@@ -473,6 +695,24 @@ def substance_issues_for_frame_and_brief(
         substance_issues_for_brief(brief_text, skip_tail_compression=skip_tail_compression)
     )
     issues.extend(claim_gaps_brief_issues(payload, brief_text))
+    issues.extend(narrative_citation_issues_for_brief(brief_text, payload=payload))
+    crosswalk = (payload or {}).get("eval_crosswalk") or []
+    cited_rows = 0
+    if isinstance(crosswalk, list):
+        cited_rows = sum(
+            1
+            for row in crosswalk
+            if isinstance(row, dict)
+            and (row.get("source_chunk_ids") or row.get("source_citations"))
+        )
+    crosswalk_has_citations = cited_rows > 0
+    issues.extend(
+        verbatim_extract_issues(
+            payload,
+            crosswalk_has_citations=crosswalk_has_citations,
+            cited_crosswalk_rows=cited_rows,
+        )
+    )
     return issues
 
 
@@ -519,7 +759,6 @@ def validate_eval_handoff_write(
     issues = citation_diversity_issues_for_crosswalk(crosswalk)
     if issues:
         return f"write_file blocked for eval_handoff.json: {issues[0]}"
-    combined = json.dumps(loaded, ensure_ascii=False)
-    for issue in acronym_issues_for_text(combined, label="eval_handoff.json"):
+    for issue in acronym_issues_for_eval_handoff(loaded):
         return f"write_file blocked for eval_handoff.json: {issue}"
     return None

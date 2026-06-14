@@ -211,8 +211,11 @@ async def run_tools_skill(
                 f"{user_prompt.rstrip()}\n\n"
                 "## Compiler merge complete\n"
                 "Upstream handoffs were merged into artifacts/mission_readiness_frame.json. "
-                "Use read_workspace_artifact on input_artifacts[] for any handoff detail; "
-                "expand brief.md from the merged frame — do not re-run full-package retrieval."
+                "artifacts/research_scratchpad.md now contains the full upstream slice retrieval "
+                "corpus — mine it exhaustively for analytical prose, verbatim quotes, and citations. "
+                "Expand brief.md with factor-specific analysis, verbatim government quotes, and "
+                "diversified citations — no recycled prose across sections. "
+                "Do not re-run full-package retrieval."
             ).strip()
         elif retrieve_fn is not None:
             bootstrap_top_k = int(limits.max_kg_chunks or 40)

@@ -259,6 +259,50 @@ def test_resolve_harness_config_compiler_mode_skips_surfaces() -> None:
     assert len(standalone.plan_surfaces) >= 12
     assert compiler.plan_surfaces == ()
     assert compiler.min_kg_chunks_passes == 0
+    assert compiler.max_reflexion_passes == 3
+    assert compiler.scratchpad_max_chars >= 500_000
+
+
+def test_merge_upstream_handoffs_includes_upstream_scratchpads(tmp_path: Path) -> None:
+    eval_run = tmp_path / "eval_run" / "artifacts"
+    eval_run.mkdir(parents=True)
+    (eval_run / "eval_handoff.json").write_text(
+        json.dumps(
+            {
+                "eval_crosswalk": [
+                    {
+                        "evaluation_factor": "Factor 1 Management Approach",
+                        "readiness_link": "x" * 60,
+                        "proof_expected": "y" * 30,
+                        "source_chunk_ids": ["chunk-abc"],
+                    }
+                ],
+                "claim_gaps": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (eval_run / "research_scratchpad.md").write_text(
+        "PWS task cluster alpha with chunk-abc evidence.\n" * 200,
+        encoding="utf-8",
+    )
+    compile_run = tmp_path / "compile_run"
+    attached = [
+        {
+            "filename": "eval_handoff.json",
+            "path": str(eval_run / "eval_handoff.json"),
+            "run_id": "eval-run-1",
+            "step_id": "eval",
+            "skill": "readiness-frame-eval",
+        }
+    ]
+    merge_upstream_handoffs(attached, compile_run)
+    scratchpad = (compile_run / "artifacts" / "research_scratchpad.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Upstream retrieval: eval" in scratchpad
+    assert "PWS task cluster alpha" in scratchpad
+    assert len(scratchpad) > 5_000
 
 
 def test_prepare_compiler_harness_state_marks_retrieval_complete(tmp_path: Path) -> None:

@@ -11,13 +11,11 @@ from typing import Any, Awaitable, Callable, Optional, TypedDict
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import RunnableConfig
-from pydantic import ValidationError
-
 from src.skills.chain_dag import all_steps_terminal, compute_execution_waves, ready_step_ids
 from src.skills.chain_executor import SkillChainExecutor
 from src.skills.chain_models import ChainRunState, ChainSpec, ChainStepRun, utc_now_iso
 from src.skills.graphs.chain_events import ChainEvent, emit_chain_event, read_chain_events
-from src.skills.readiness_handoff_models import validate_handoff_file
+from src.skills.chain_step_gates import apply_step_quality_gate
 
 InvokeSkillCallable = Callable[..., Awaitable[Any]]
 
@@ -29,45 +27,9 @@ class ChainGraphState(TypedDict):
     events: list[dict[str, Any]]
 
 
-_HANDOFF_FILENAMES = frozenset(
-    {
-        "eval_handoff.json",
-        "workload_handoff.json",
-        "pains_handoff.json",
-        "modernization_handoff.json",
-        "tea_leaves_handoff.json",
-        "win_themes_handoff.json",
-        "capability_overlay_handoff.json",
-    }
-)
-
-
 def use_langgraph_for_spec(spec: ChainSpec) -> bool:
     preset = str((spec.context or {}).get("preset") or "").strip().lower()
     return preset == "mission-readiness"
-
-
-def _validate_step_handoffs(step_run: Any, workspace_root: Path) -> list[str]:
-    warnings: list[str] = []
-    run_dir = str(step_run.run_dir or "").strip()
-    if not run_dir:
-        return warnings
-    artifacts_dir = Path(run_dir) / "artifacts"
-    if not artifacts_dir.is_dir():
-        return warnings
-    for artifact in step_run.artifacts or []:
-        name = str(artifact.get("name") or "").strip().lower()
-        if name not in _HANDOFF_FILENAMES:
-            continue
-        path = artifacts_dir / name
-        if not path.is_file():
-            warnings.append(f"{name} missing at {path}")
-            continue
-        try:
-            validate_handoff_file(path)
-        except (ValidationError, ValueError, OSError) as exc:
-            warnings.append(f"{name} contract: {exc}")
-    return warnings
 
 
 class LangGraphChainRunner:
@@ -325,13 +287,14 @@ async def _run_wave_node(state: ChainGraphState, *, config: RunnableConfig) -> d
             step_run.missing_outputs = SkillChainExecutor._extract_missing_outputs(  # noqa: SLF001
                 step_run.artifacts
             )
-            handoff_warnings = _validate_step_handoffs(
+            if apply_step_quality_gate(
                 step_run,
-                Path(cfg["workspace_root"]),
-            )
-            for warning in handoff_warnings:
-                step_run.warnings.append(f"handoff_contract: {warning}")
-            if step_run.missing_outputs:
+                finish_reason=str(outcome.result.finish_reason or ""),
+                warnings=list(outcome.result.warnings or []),
+                workspace_root=Path(cfg["workspace_root"]),
+            ):
+                wave_failed = True
+            elif step_run.missing_outputs:
                 step_run.status = "partial"
             elif step_run.missing_inputs:
                 step_run.status = "partial"

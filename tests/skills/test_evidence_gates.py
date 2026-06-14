@@ -13,8 +13,8 @@ from src.skills.evidence_gates import (
 )
 
 
-def test_saturation_strikes_required_is_one() -> None:
-    assert SATURATION_STRIKES_REQUIRED == 1
+def test_saturation_strikes_required_is_two() -> None:
+    assert SATURATION_STRIKES_REQUIRED == 2
 
 
 def test_is_placeholder_text() -> None:

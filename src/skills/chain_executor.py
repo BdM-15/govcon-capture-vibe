@@ -23,6 +23,7 @@ from src.skills.chain_models import (
     ChainStepSpec,
     utc_now_iso,
 )
+from src.skills.chain_step_gates import apply_step_quality_gate
 from src.skills.skill_models import SkillInvocationResult
 
 
@@ -298,7 +299,16 @@ class SkillChainExecutor:
                 step_run.missing_outputs = self._extract_missing_outputs(
                     step_run.artifacts
                 )
-                if step_run.missing_inputs or step_run.missing_outputs:
+                if apply_step_quality_gate(
+                    step_run,
+                    finish_reason=result.finish_reason,
+                    warnings=list(result.warnings or []),
+                    workspace_root=workspace_root,
+                ):
+                    wave_failed = True
+                    chain.status = "failed"
+                    chain.error = f"step {outcome.step_id} quality gate failed: {step_run.error}"
+                elif step_run.missing_inputs or step_run.missing_outputs:
                     step_run.status = "partial"
 
             chain.updated_at = utc_now_iso()

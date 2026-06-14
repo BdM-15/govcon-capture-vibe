@@ -42,6 +42,9 @@ _FRAME_ARRAY_KEYS = (
     "readiness_signals",
 )
 
+_COMPILER_SCRATCHPAD_MAX_CHARS = 500_000
+_UPSTREAM_SCRATCHPAD_SLICE_CAP = 120_000
+
 
 def is_compiler_chain_context(entity_payload: dict[str, Any] | None) -> bool:
     ctx = (entity_payload or {}).get("chain_step_context") or {}
@@ -330,6 +333,91 @@ def persist_normalized_compiler_frame(run_dir: Path) -> bool:
     return True
 
 
+def _upstream_scratchpad_for_artifact(artifact: dict[str, Any]) -> Path | None:
+    filename = str(artifact.get("filename") or "").strip().lower()
+    if filename not in _HANDOFF_FILENAMES:
+        return None
+    raw = str(artifact.get("path") or "").strip()
+    if not raw:
+        return None
+    scratchpad = Path(raw).parent / "research_scratchpad.md"
+    return scratchpad if scratchpad.is_file() else None
+
+
+def _build_compiler_scratchpad(
+    attached_artifacts: list[dict[str, Any]],
+    handoffs: dict[str, dict[str, Any]],
+    merged: dict[str, Any],
+    *,
+    max_chars: int = _COMPILER_SCRATCHPAD_MAX_CHARS,
+) -> str:
+    """Merge upstream slice scratchpads + handoff JSON for compiler synthesis."""
+    sections: list[str] = [
+        "# Chain compiler — upstream retrieval evidence corpus",
+        "",
+        "Synthesis MUST mine these scratchpads for multi-paragraph analytical prose, ",
+        "verbatim government quotes, and diversified citations. Merged JSON handoffs ",
+        "are the structural spine — not a substitute for scratchpad evidence.",
+        "",
+    ]
+    seen_runs: set[str] = set()
+    total_chars = len("\n".join(sections))
+
+    for artifact in attached_artifacts:
+        if not isinstance(artifact, dict):
+            continue
+        run_id = str(artifact.get("run_id") or "").strip()
+        if run_id and run_id in seen_runs:
+            continue
+        scratchpad_path = _upstream_scratchpad_for_artifact(artifact)
+        if scratchpad_path is None:
+            continue
+        if run_id:
+            seen_runs.add(run_id)
+        step_id = str(
+            artifact.get("step_id") or artifact.get("skill") or "upstream_slice"
+        ).strip()
+        body = scratchpad_path.read_text(encoding="utf-8", errors="replace").strip()
+        if len(body) > _UPSTREAM_SCRATCHPAD_SLICE_CAP:
+            body = (
+                body[:_UPSTREAM_SCRATCHPAD_SLICE_CAP]
+                + "\n\n…[upstream scratchpad truncated per slice]\n"
+            )
+        block = f"## Upstream retrieval: {step_id}\n\n{body}\n"
+        if total_chars + len(block) > max_chars:
+            sections.append(
+                f"\n…[scratchpad corpus capped at {max_chars} chars after "
+                f"{len(seen_runs)} upstream run(s)]\n"
+            )
+            break
+        sections.append(block)
+        total_chars += len(block)
+
+    sections.extend(
+        [
+            "## Merged handoff summary",
+            "",
+            f"Merged {len(handoffs)} handoff slice(s): {', '.join(sorted(handoffs.keys()))}.",
+            f"Material eval_crosswalk rows: {len(merged.get('eval_crosswalk') or [])}.",
+            "",
+        ]
+    )
+    for slice_id, payload in sorted(handoffs.items()):
+        serialized = json.dumps(payload, ensure_ascii=False, indent=2)
+        if len(serialized) > 32_000:
+            serialized = serialized[:32_000] + "\n…[handoff JSON truncated]\n"
+        sections.extend(
+            [
+                f"### Handoff JSON: {slice_id}",
+                "```json",
+                serialized,
+                "```",
+                "",
+            ]
+        )
+    return "\n".join(sections).strip() + "\n"
+
+
 def merge_upstream_handoffs(
     attached_artifacts: list[dict[str, Any]],
     run_dir: Path,
@@ -401,26 +489,9 @@ def merge_upstream_handoffs(
         encoding="utf-8",
     )
 
-    scratchpad_sections: list[str] = [
-        "# Chain compiler — upstream handoff merge",
-        "",
-        f"Merged {len(handoffs)} handoff slice(s): {', '.join(sorted(handoffs.keys()))}.",
-        f"Material eval_crosswalk rows: {len(merged.get('eval_crosswalk') or [])}.",
-        "",
-        "Use artifacts/mission_readiness_frame.json as the evidence spine. "
-        "Expand brief.md with consultant-depth prose — do not re-run full-package retrieval "
-        "when handoff rows already exist.",
-        "",
-    ]
-    for slice_id, payload in sorted(handoffs.items()):
-        scratchpad_sections.append(f"## Handoff: {slice_id}")
-        scratchpad_sections.append("```json")
-        scratchpad_sections.append(json.dumps(payload, ensure_ascii=False, indent=2)[:48_000])
-        scratchpad_sections.append("```")
-        scratchpad_sections.append("")
-
+    scratchpad_text = _build_compiler_scratchpad(attached_artifacts, handoffs, merged)
     scratchpad_path = artifacts_dir / "research_scratchpad.md"
-    scratchpad_path.write_text("\n".join(scratchpad_sections), encoding="utf-8")
+    scratchpad_path.write_text(scratchpad_text, encoding="utf-8")
     write_compiler_brief_scaffold(run_dir, merged=merged)
 
     merge_report = {
