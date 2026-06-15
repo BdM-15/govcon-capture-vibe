@@ -2,7 +2,12 @@
   "step_id": "pains",
   "skill": "readiness-frame-pains",
   "passed": true,
-  "run_id": "20260615_012337_build_the_mission_readiness_fram",
-  "chain_id": "20260615_012337_solo_pains",
-  "workspace": "mcpp_rfp"
+  "gate_passed": true,
+  "run_id": "20260615_143457_build_the_mission_readiness_fram",
+  "chain_id": "20260615_143457_solo_pains",
+  "workspace": "mcpp_rfp",
+  "customer_pain_points": 5,
+  "wall_seconds": 28.3,
+  "max_turns_cap": 10,
+  "note": "Skill-creator iteration-1 green — single shipley_pains surface, 10-turn cap"
 }

@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "skill_name": "readiness-frame-pains",
+  "evals": [
+    {
+      "id": 1,
+      "name": "mcpp-rfp-customer-pains",
+      "prompt": "Workspace mcpp_rfp. Build customer pains slice only: explicit, latent, and structural program-office pain points with visibility, rationale, readiness_link, and source_chunk_ids. Log missing pain evidence in claim_gaps[].",
+      "expected_output": "artifacts/pains_handoff.json with >=3 cited customer_pain_points covering mixed visibility types",
+      "files": [],
+      "expectations": [
+        "completes in under 120 seconds wall time",
+        "uses 10 or fewer assistant turns",
+        "calls kg_entities exactly once",
+        "runs at most one kg_chunks pass for shipley_pains surface",
+        "does not call kg_chunks after retrieval_plan.json plan_complete is true",
+        "customer_pain_points has >= 3 rows with source_chunk_ids",
+        "includes at least one explicit and one latent or structural pain when evidence supports",
+        "does not emit eval_crosswalk or innovation_opportunities (sibling slices)",
+        "solo platform gate passes on pains_handoff.json"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "honest-gaps-when-thin",
+      "prompt": "Workspace with sparse pain extraction. Emit best-effort customer_pain_points for grounded pains; log ungrounded pain themes in claim_gaps[] by name.",
+      "expected_output": "Partial pains handoff plus explicit claim_gaps — no invented audit findings",
+      "files": [],
+      "expectations": [
+        "claim_gaps[] names missing pain evidence when rows are thin",
+        "no scaffold pains with placeholder rationale text",
+        "undefined acronyms expanded as Full Term (ACR) or repaired by platform finalize"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "retrieval-discipline-regression",
+      "prompt": "Workspace mcpp_rfp. One kg_entities + one kg_chunks for shipley_pains, then draft pains_handoff.json without re-querying.",
+      "expected_output": "finish_reason stop; kg_chunks_calls <= 2 in retrieval_forensics",
+      "files": [],
+      "expectations": [
+        "finish_reason is stop not max_turns",
+        "kg_chunks_calls <= 2",
+        "tool_calls <= 8"
+      ]
+    }
+  ]
+}
