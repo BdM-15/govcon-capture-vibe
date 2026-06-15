@@ -800,6 +800,11 @@ def write_compiler_brief_scaffold(
         "### Current methods",
         _format_bullet_items(merged.get("current_methods") or [], fields=("name", "summary", "fit_to_scope")),
         "",
+        (
+            "Signal: Innovation proof must tie to measurable workload outcomes — throughput, defect "
+            "rates, cost realism, or readiness metrics — without unfunded PWS deliverables."
+        ),
+        "",
         "### Innovation opportunities",
         _format_bullet_items(
             merged.get("innovation_opportunities") or [],
