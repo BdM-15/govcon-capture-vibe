@@ -1,6 +1,12 @@
 ---
 name: readiness-frame-eval
-description: Retrieves and structures evaluation-factor / subfactor evidence from the active solicitation KG. Emits eval_handoff.json with eval_crosswalk rows — one per material Section M factor/subfactor. USE WHEN building eval cross-walk slices for mission readiness or proposal strategy. Chain upstream of mission-readiness-framer.
+description: >
+  Retrieves evaluation-factor evidence in deterministic batches and emits
+  eval_handoff.json with eval_crosswalk rows — one per material Section M
+  factor/subfactor. Use when building eval crosswalk slices, readiness-frame-eval
+  solo/chain node, or Mission Readiness Frame evaluation coverage. Always run
+  scripts/list_eval_batches.py before retrieval. Do not use for workload,
+  pains, modernization, tea-leaves, or win-themes — sibling slice skills.
 license: MIT
 metadata:
   personas_primary: capture_manager
@@ -11,45 +17,88 @@ metadata:
   skill_family_label: Mission Readiness Frame
   runtime: tools
   category: capture_intelligence
-  version: 1.1.0
+  version: 2.0.0
   status: active
   research_harness:
     plan_surfaces_path: references/plan_surfaces.json
     deliverables: [eval_handoff.json]
     frame_artifact: eval_handoff.json
-    min_kg_chunks_passes: 1
+    min_kg_chunks_passes: 4
     coverage_contract:
       artifact_path: eval_handoff.json
       required_entity_types: [evaluation_factor, subfactor]
       rule: one_row_per_entity
       rows_key: eval_crosswalk
       min_coverage_ratio: 0.8
-  max_turns: 36
+  max_turns: 14
 ---
 
 # Readiness Frame — Evaluation
 
-Micro-skill for **evaluation cross-walk** evidence only.
+Micro-skill for **evaluation cross-walk** only.
 
-## Workflow (batched entity-first)
+Read before writing:
+- `references/readiness_output_contract.md`
+- `references/eval_handoff_schema.md`
 
-1. **Inventory** — one `kg_entities` call with `evaluation_factor` + `subfactor`. Build the material factor list (exclude rating-scale / methodology meta labels).
-2. **Batch** — group factors into batches of **5–8**. For each batch:
-   - Run targeted `kg_chunks` queries anchored on that batch's factor names and related PWS/Section M language.
-   - Synthesize `eval_crosswalk[]` rows **only for factors in the current batch**.
-   - Every row must follow `references/readiness_output_contract.md` (customer terms, cited `source_chunk_ids`, no boilerplate).
-3. **Gaps** — factors you cannot ground after retrieval → `claim_gaps[]` only. Never emit scaffold/template rows.
-4. **Emit** — `artifacts/eval_handoff.json` with `eval_crosswalk[]` and `claim_gaps[]`.
+## Out of scope
 
-## Output contract
+Ignore chain prompts asking for workload, pains, modernization, tea-leaves, or win-themes — sibling skills own those fields.
 
-Read `references/readiness_output_contract.md` before writing. Return only valid JSON for `eval_handoff.json`. Do not draft `brief.md` — parent `mission-readiness-framer` compiles the narrative.
+## Workflow (scripted batch retrieve)
 
-### Required JSON shape
+### 0. Batch manifest (script — run first)
 
-```json
-{
-  "eval_crosswalk": [],
-  "claim_gaps": []
-}
 ```
+run_script scripts/list_eval_batches.py <workspace_name> --out {artifacts}/eval_batch_manifest.json
+```
+
+The manifest lists `batches[].factors` for coverage and row labels only — **not** kg_chunks queries. After inventory, read `artifacts/retrieval_plan.json` for every retrieve turn.
+
+### 1. Inventory (one call)
+
+`kg_entities` once with `evaluation_factor` + `subfactor`. Do not repeat.
+
+### 2. Retrieve (one kg_chunks per batch surface — one per turn)
+
+Follow `artifacts/retrieval_plan.json` **sequentially**. Surfaces: `eval_batch_1` … `eval_batch_4` (see `references/plan_surfaces.json`).
+
+For each turn while `plan_complete` is false:
+- Read `retrieval_plan.json` → `next_step.surface_id` and `next_step.suggested_query`
+- Run **exactly one** `kg_chunks` with that suggested query (short plan-surface query — **not** the long manifest `suggested_kg_chunks_query`)
+- Append evidence to scratchpad; advance to the next surface on the following turn
+
+**Never** fire multiple `kg_chunks` in one assistant turn. Manifest batch queries overlap and the plan guard will mark them duplicate — wasting turns.
+
+When every surface is `retrieved` or `saturated` (`plan_complete: true`), **stop calling kg_chunks and kg_entities**. The platform blocks redundant queries — do not fight the plan guard.
+
+### 3. Draft (write handoff once — only after plan complete)
+
+When `retrieval_plan.json` shows `plan_complete: true`, write `artifacts/eval_handoff.json` per `references/eval_handoff_schema.md`:
+- One row per material factor you grounded (use manifest `batches[].factors` for verbatim labels)
+- Missing factors → `claim_gaps[]` by **name** — never scaffold rows
+
+If `write_file` returns a retrieve-phase error, **do not retry write_file**. Run the `next_step` `kg_chunks` from `retrieval_plan.json` instead.
+
+### 4. Stop
+
+After handoff JSON is written, **stop**. Platform finalize (repair, optional expander, acronym pass, gate) runs outside this loop. Do not re-retrieve to chase gate errors.
+
+## Retrieval discipline (latency)
+
+Target: **≤14 turns, ≤300s** on `mcpp_rfp`-class packages.
+
+| Step | Budget |
+|------|--------|
+| list_eval_batches script | 1 turn |
+| kg_entities | 1 turn |
+| kg_chunks (4 batches) | 4 turns |
+| write / revise handoff | 2–3 turns |
+
+Never run 15 `kg_chunks` passes on one surface. One `kg_chunks` per assistant turn. If chunks overlap, advance to the next batch surface via `retrieval_plan.json`.
+
+## Quality bar
+
+Platform gate after retrieve checks coverage (≥80% material factors or named gaps), acronym form, verbatim factor labels, and chunk grounding.
+
+Eval cases: `evals/evals.json`.

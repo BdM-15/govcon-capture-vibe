@@ -1,0 +1,83 @@
+{
+  "status": "complete",
+  "plan_complete": true,
+  "next_step": {
+    "step": "draft",
+    "reason": "Retrieval plan complete — write configured deliverables from the scratchpad."
+  },
+  "surfaces": [
+    {
+      "id": "eval_batch_1",
+      "label": "Eval crosswalk retrieval batch 1",
+      "status": "retrieved",
+      "keywords": [
+        "technical",
+        "management",
+        "past",
+        "performance",
+        "evalbatch1"
+      ],
+      "suggested_query": "Section M evaluation factors batch 1 subfactors technical management past performance",
+      "kg_chunks_attempts": 1,
+      "last_new_chunks": 3,
+      "feeds": [
+        "eval_crosswalk[]"
+      ],
+      "zero_chunk_strikes": 0
+    },
+    {
+      "id": "eval_batch_2",
+      "label": "Eval crosswalk retrieval batch 2",
+      "status": "retrieved",
+      "keywords": [
+        "cost",
+        "price",
+        "small",
+        "business",
+        "evalbatch2"
+      ],
+      "suggested_query": "Section M evaluation factors batch 2 subfactors cost price small business",
+      "kg_chunks_attempts": 1,
+      "last_new_chunks": 1,
+      "feeds": [
+        "eval_crosswalk[]"
+      ],
+      "zero_chunk_strikes": 0
+    },
+    {
+      "id": "eval_batch_3",
+      "label": "Eval crosswalk retrieval batch 3",
+      "status": "retrieved",
+      "keywords": [
+        "readiness",
+        "proof",
+        "expected",
+        "evalbatch3"
+      ],
+      "suggested_query": "Section M evaluation factors batch 3 subfactors readiness proof expected PWS",
+      "kg_chunks_attempts": 1,
+      "last_new_chunks": 1,
+      "feeds": [
+        "eval_crosswalk[]"
+      ],
+      "zero_chunk_strikes": 0
+    },
+    {
+      "id": "eval_batch_4",
+      "label": "Eval crosswalk retrieval batch 4",
+      "status": "saturated",
+      "keywords": [
+        "remaining",
+        "material",
+        "evalbatch4"
+      ],
+      "suggested_query": "Section M evaluation factors batch 4 subfactors remaining material factors",
+      "kg_chunks_attempts": 1,
+      "last_new_chunks": 0,
+      "feeds": [
+        "eval_crosswalk[]"
+      ],
+      "zero_chunk_strikes": 1
+    }
+  ]
+}

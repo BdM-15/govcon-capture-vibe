@@ -1,9 +1,30 @@
 [
   {
-    "id": "evaluation",
-    "label": "Evaluation factors and subfactors",
-    "keywords": ["evaluation", "factor", "subfactor", "section m", "technical approach"],
-    "suggested_query": "evaluation factors subfactors Section M source selection technical management past performance best value",
+    "id": "eval_batch_1",
+    "label": "Eval crosswalk retrieval batch 1",
+    "keywords": ["technical", "management", "past", "performance", "evalbatch1"],
+    "suggested_query": "Section M evaluation factors batch 1 subfactors technical management past performance",
+    "feeds": ["eval_crosswalk[]"]
+  },
+  {
+    "id": "eval_batch_2",
+    "label": "Eval crosswalk retrieval batch 2",
+    "keywords": ["cost", "price", "small", "business", "evalbatch2"],
+    "suggested_query": "Section M evaluation factors batch 2 subfactors cost price small business",
+    "feeds": ["eval_crosswalk[]"]
+  },
+  {
+    "id": "eval_batch_3",
+    "label": "Eval crosswalk retrieval batch 3",
+    "keywords": ["readiness", "proof", "expected", "evalbatch3"],
+    "suggested_query": "Section M evaluation factors batch 3 subfactors readiness proof expected PWS",
+    "feeds": ["eval_crosswalk[]"]
+  },
+  {
+    "id": "eval_batch_4",
+    "label": "Eval crosswalk retrieval batch 4",
+    "keywords": ["remaining", "material", "evalbatch4"],
+    "suggested_query": "Section M evaluation factors batch 4 subfactors remaining material factors",
     "feeds": ["eval_crosswalk[]"]
   }
 ]

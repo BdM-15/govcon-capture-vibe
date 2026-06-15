@@ -1,0 +1,168 @@
+{
+  "phase": "draft",
+  "retrieval_passes": 5,
+  "scratchpad_chars": 134302,
+  "kg_chunks_calls": 4,
+  "kg_entities_calls": 1,
+  "kg_entities_satisfied": true,
+  "prior_queries": [
+    "Section M evaluation factors batch 1 subfactors technical management past performance",
+    "Section M evaluation factors batch 2 subfactors cost price small business",
+    "Section M evaluation factors batch 3 subfactors readiness proof expected PWS",
+    "Section M evaluation factors batch 4 subfactors remaining material factors"
+  ],
+  "scratchpad_chunk_ids": [
+    "doc-e08ff2a0a997a0737565bc310ac54611-chunk-003",
+    "doc-e08ff2a0a997a0737565bc310ac54611-chunk-002",
+    "doc-e08ff2a0a997a0737565bc310ac54611-chunk-001",
+    "doc-e08ff2a0a997a0737565bc310ac54611-chunk-000",
+    "doc-a25a9cbaf3afbbf52f88392c0fb5d019-chunk-000",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-004",
+    "chunk-e484ae712b2ff0357cac500548451618",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-000",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-026",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-000",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-003",
+    "doc-4a3310afcfc6ca577ec872987bd42f13-chunk-000",
+    "chunk-ae40e259c254606a214df8a4f73cf76d",
+    "chunk-b1105047265a29ea88b62a2358b71e02",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-030",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-023",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-010",
+    "doc-a25a9cbaf3afbbf52f88392c0fb5d019-mm-table-000",
+    "doc-992c6816618972fae1280e8563a7b706-mm-table-001",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-031",
+    "doc-4a3310afcfc6ca577ec872987bd42f13-chunk-002",
+    "doc-4a3310afcfc6ca577ec872987bd42f13-chunk-039",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-025",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-035",
+    "doc-4a3310afcfc6ca577ec872987bd42f13-chunk-004",
+    "chunk-6ed156f8d72ac3245d6f740d30da3e53",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-001",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-022",
+    "chunk-21b06bb37ceceadd4c738442e6719601",
+    "chunk-bebadd5a342f20511446f9b58d6d6b08",
+    "chunk-177511bb18cd293290f8483d05d131bb",
+    "chunk-d5950a9c5771475d542ea6e4fcf2c383",
+    "doc-992c6816618972fae1280e8563a7b706-mm-table-000",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-028",
+    "chunk-5299cdff54e8ebf39576010b6e6a2f61",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-016",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-027",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-017",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-029",
+    "chunk-01b27c7f2928bf1d0d462aa2e95b89d6",
+    "chunk-02536ee3d59a0cb89df79cbf824c9f42",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-013",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-023",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-034",
+    "chunk-e7d8ad315bd0dfcba35cfc4582de552c",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-024",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-009",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-007",
+    "doc-4a3310afcfc6ca577ec872987bd42f13-chunk-025",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-002",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-010",
+    "doc-4a3310afcfc6ca577ec872987bd42f13-chunk-027",
+    "doc-4a3310afcfc6ca577ec872987bd42f13-mm-drawing-000",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-004",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-006",
+    "doc-4a3310afcfc6ca577ec872987bd42f13-chunk-029",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-025",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-029",
+    "chunk-81f57ad65654371bde0fdcbb5d5d271d",
+    "doc-4a3310afcfc6ca577ec872987bd42f13-chunk-003",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-005",
+    "chunk-aeafc75555f95d948831f29b471628df",
+    "chunk-4f460a9c262e3d7f5e56173335bc94d1",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-003",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-006",
+    "chunk-8c4e680c4b5534cde52bd49010e2ffc3",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-008",
+    "chunk-359b19df66812c086f9ba0ee9744c063",
+    "chunk-e105b3b9d2b5f38c2ff89c3b189178c0",
+    "chunk-7b8a875d72ccb64d5dd9cb75a341b6ea",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-033",
+    "doc-18757251a21fe8fa5ce652e4731b298b-mm-table-032",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-026",
+    "doc-18757251a21fe8fa5ce652e4731b298b-chunk-024"
+  ],
+  "synthesis_ran": false,
+  "reflexion_passes": 0,
+  "plan_surfaces": [
+    {
+      "id": "eval_batch_1",
+      "label": "Eval crosswalk retrieval batch 1",
+      "status": "retrieved",
+      "keywords": [
+        "technical",
+        "management",
+        "past",
+        "performance",
+        "evalbatch1"
+      ],
+      "suggested_query": "Section M evaluation factors batch 1 subfactors technical management past performance",
+      "kg_chunks_attempts": 1,
+      "last_new_chunks": 3,
+      "feeds": [
+        "eval_crosswalk[]"
+      ],
+      "zero_chunk_strikes": 0
+    },
+    {
+      "id": "eval_batch_2",
+      "label": "Eval crosswalk retrieval batch 2",
+      "status": "retrieved",
+      "keywords": [
+        "cost",
+        "price",
+        "small",
+        "business",
+        "evalbatch2"
+      ],
+      "suggested_query": "Section M evaluation factors batch 2 subfactors cost price small business",
+      "kg_chunks_attempts": 1,
+      "last_new_chunks": 1,
+      "feeds": [
+        "eval_crosswalk[]"
+      ],
+      "zero_chunk_strikes": 0
+    },
+    {
+      "id": "eval_batch_3",
+      "label": "Eval crosswalk retrieval batch 3",
+      "status": "retrieved",
+      "keywords": [
+        "readiness",
+        "proof",
+        "expected",
+        "evalbatch3"
+      ],
+      "suggested_query": "Section M evaluation factors batch 3 subfactors readiness proof expected PWS",
+      "kg_chunks_attempts": 1,
+      "last_new_chunks": 1,
+      "feeds": [
+        "eval_crosswalk[]"
+      ],
+      "zero_chunk_strikes": 0
+    },
+    {
+      "id": "eval_batch_4",
+      "label": "Eval crosswalk retrieval batch 4",
+      "status": "saturated",
+      "keywords": [
+        "remaining",
+        "material",
+        "evalbatch4"
+      ],
+      "suggested_query": "Section M evaluation factors batch 4 subfactors remaining material factors",
+      "kg_chunks_attempts": 1,
+      "last_new_chunks": 0,
+      "feeds": [
+        "eval_crosswalk[]"
+      ],
+      "zero_chunk_strikes": 1
+    }
+  ],
+  "bootstrap_seeded": true
+}

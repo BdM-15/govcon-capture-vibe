@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "skill_name": "readiness-frame-eval",
+  "evals": [
+    {
+      "id": 1,
+      "name": "mcpp-rfp-eval-crosswalk",
+      "prompt": "Workspace mcpp_rfp. Build eval crosswalk slice only: one row per material Section M factor/subfactor with cited readiness_link, proof_expected, and source_chunk_ids. Log missing factors in claim_gaps[] — never scaffold rows.",
+      "expected_output": "artifacts/eval_handoff.json with >=24 eval_crosswalk rows or honest claim_gaps[] for each missing material factor",
+      "files": [],
+      "expectations": [
+        "completes in under 300 seconds wall time",
+        "uses 14 or fewer assistant turns",
+        "runs scripts/list_eval_batches.py before retrieval",
+        "calls kg_entities exactly once",
+        "runs at most one kg_chunks pass per eval_batch surface (max 4)",
+        "does not call kg_chunks after retrieval_plan.json status is complete",
+        "kg_chunks_calls <= 5 in retrieval_forensics",
+        "dedup_overlap_rate < 0.6 in retrieval_forensics",
+        "eval_crosswalk has >= 20 rows OR claim_gaps names every missing material factor",
+        "rows use verbatim factor labels from batch manifest or kg_entities inventory",
+        "solo platform gate passes on eval_handoff.json"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "retrieval-discipline-regression",
+      "prompt": "Workspace mcpp_rfp. Execute batched entity-first eval retrieval — script manifest, one kg_chunks per batch, then draft eval_handoff.json without re-querying.",
+      "expected_output": "finish_reason stop (not max_turns); no retrieval thrash after plan complete",
+      "files": [],
+      "expectations": [
+        "finish_reason is stop not max_turns",
+        "tool_calls <= 12",
+        "does not hit eval_retrieve_max_turns cap"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "coverage-with-gaps",
+      "prompt": "Workspace with partial Section M extraction. Emit best-effort eval_crosswalk for grounded factors; log all ungrounded material factors in claim_gaps[] by name.",
+      "expected_output": "Partial crosswalk plus explicit claim_gaps — no invented Factor N labels",
+      "files": [],
+      "expectations": [
+        "claim_gaps[] uses named factors when rows are missing",
+        "no scaffold rows with placeholder readiness_link text",
+        "undefined acronyms expanded as Full Term (ACR) or repaired by platform finalize"
+      ]
+    }
+  ]
+}
