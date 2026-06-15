@@ -206,6 +206,30 @@ def validate_handoff_artifact(
     return issues
 
 
+def _skill_dir_for_name(skill_name: str) -> Path:
+    return Path(__file__).resolve().parents[2] / ".github" / "skills" / skill_name
+
+
+def _validate_via_skill_run_hook(
+    skill_name: str,
+    run_dir: Path,
+) -> list[str] | None:
+    """Use skill-declared validate_skill_run when present (solo + chain share one gate)."""
+    from src.skills.skill_local_tools import resolve_skill_run_validator
+
+    skill_dir = _skill_dir_for_name(skill_name)
+    if not skill_dir.is_dir():
+        return None
+    validate_run = resolve_skill_run_validator(skill_dir)
+    if validate_run is None:
+        return None
+    try:
+        issues = list(validate_run(run_dir, user_prompt=""))
+    except TypeError:
+        issues = list(validate_run(run_dir))
+    return [f"handoff_quality: {issue}" for issue in issues if str(issue or "").strip()]
+
+
 def validate_step_handoffs(step_run: Any, workspace_root: Path) -> list[str]:
     """Return blocking errors for readiness-frame handoff artifacts from one chain step."""
     errors: list[str] = []
@@ -216,6 +240,11 @@ def validate_step_handoffs(step_run: Any, workspace_root: Path) -> list[str]:
     workspace_dir = resolve_workspace_dir_from_run_dir(Path(run_dir)) or Path(workspace_root)
     artifacts_dir = Path(run_dir) / "artifacts"
     skill_name = str(getattr(step_run, "skill", "") or "").strip().lower()
+    run_path = Path(run_dir)
+
+    hook_errors = _validate_via_skill_run_hook(skill_name, run_path)
+    if hook_errors is not None:
+        return hook_errors
 
     expected = _SKILL_EXPECTED_HANDOFF.get(skill_name)
     if expected:

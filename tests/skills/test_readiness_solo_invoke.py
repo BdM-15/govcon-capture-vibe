@@ -137,3 +137,52 @@ def test_build_solo_invoke_http_payload_uses_readiness_solo_preset() -> None:
 def test_build_readiness_solo_chain_spec_rejects_unknown_step() -> None:
     with pytest.raises(KeyError, match="unknown readiness step_id"):
         build_readiness_solo_chain_spec("not-a-step", "Build MRF.")
+
+
+def test_assess_readiness_solo_eval_matches_chain_gate_on_acronyms(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    records = [
+        {"entity_type": "evaluation_factor", "entity_name": f"Factor {index}"}
+        for index in range(1, 6)
+    ]
+    (workspace / "vdb_entities.json").write_text(
+        json.dumps({"data": records}),
+        encoding="utf-8",
+    )
+    (workspace / "vdb_chunks.json").write_text("{}", encoding="utf-8")
+    run_dir = tmp_path / "runs" / "readiness-frame-eval" / "run-acronym"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "eval_handoff.json").write_text(
+        json.dumps(
+            {
+                "eval_crosswalk": [
+                    {
+                        "evaluation_factor": "Factor 1 Past Performance",
+                        "readiness_link": (
+                            "Program cites TECV and SB set-aside rules for this acquisition "
+                            "with detailed sustainment proof expectations."
+                        ),
+                        "proof_expected": "y" * 30,
+                        "source_chunk_ids": ["chunk-abc"],
+                        "pws_clusters": ["PWS 1"],
+                    }
+                ],
+                "claim_gaps": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = assess_readiness_solo_step(
+        step_id="eval",
+        run_dir=run_dir,
+        workspace_root=workspace,
+        finish_reason="stop",
+        warnings=[],
+    )
+    assert result.passed is False
+    assert any("undefined acronyms" in err.lower() for err in result.errors)

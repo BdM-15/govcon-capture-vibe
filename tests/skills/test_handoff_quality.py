@@ -315,3 +315,42 @@ def test_validate_step_handoffs_returns_errors_not_warnings(tmp_path: Path) -> N
     errors = validate_step_handoffs(_StepRun(), workspace)
     assert errors
     assert errors[0].startswith("handoff_quality:")
+
+
+def test_validate_step_handoffs_eval_uses_skill_run_hook_for_acronyms(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    _write_eval_entities(workspace, [f"Factor {index}" for index in range(1, 6)])
+    (workspace / "vdb_chunks.json").write_text("{}", encoding="utf-8")
+    slice_run_dir = workspace / "eval-run"
+    artifacts = slice_run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "eval_handoff.json").write_text(
+        json.dumps(
+            {
+                "eval_crosswalk": [
+                    {
+                        "evaluation_factor": "Factor 1 Past Performance",
+                        "readiness_link": (
+                            "Program cites TECV and SB set-aside rules for this acquisition "
+                            "with detailed sustainment proof expectations."
+                        ),
+                        "proof_expected": "y" * 30,
+                        "source_chunk_ids": ["chunk-abc"],
+                        "pws_clusters": ["PWS 1"],
+                    }
+                ],
+                "claim_gaps": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class _StepRun:
+        run_dir = str(slice_run_dir)
+        skill = "readiness-frame-eval"
+
+    errors = validate_step_handoffs(_StepRun(), workspace)
+    assert any("undefined acronyms" in error.lower() for error in errors)
