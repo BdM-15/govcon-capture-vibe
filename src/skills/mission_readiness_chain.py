@@ -68,13 +68,8 @@ def build_mission_readiness_chain_spec(
     # External overlay is user-directed only — catalog prompts mention "technology" generically.
     external = detect_external_research_intent(user_addendum)
 
+    # Serial micro-skill waves — parallel kg_chunks/rerank crashed LightRAG ("Already borrowed").
     steps: list[ChainStepSpec] = [
-        ChainStepSpec(
-            id="eval",
-            skill="readiness-frame-eval",
-            prompt=full_prompt,
-            context=_pipeline_context(slice_name="evaluation"),
-        ),
         ChainStepSpec(
             id="workload",
             skill="readiness-frame-workload",
@@ -82,31 +77,38 @@ def build_mission_readiness_chain_spec(
             context=_pipeline_context(slice_name="package"),
         ),
         ChainStepSpec(
+            id="eval",
+            skill="readiness-frame-eval",
+            prompt=full_prompt,
+            depends_on=["workload"],
+            context=_pipeline_context(slice_name="evaluation"),
+        ),
+        ChainStepSpec(
             id="pains",
             skill="readiness-frame-pains",
             prompt=full_prompt,
-            depends_on=["workload"],
+            depends_on=["eval"],
             context=_pipeline_context(),
         ),
         ChainStepSpec(
             id="modernization",
             skill="readiness-frame-modernization",
             prompt=full_prompt,
-            depends_on=["workload"],
+            depends_on=["pains"],
             context=_pipeline_context(),
         ),
         ChainStepSpec(
             id="tea-leaves",
             skill="readiness-frame-tea-leaves",
             prompt=full_prompt,
-            depends_on=["eval", "workload"],
+            depends_on=["modernization"],
             context=_pipeline_context(),
         ),
         ChainStepSpec(
             id="win-themes",
             skill="readiness-frame-win-themes",
             prompt=full_prompt,
-            depends_on=["eval", "pains", "tea-leaves"],
+            depends_on=["tea-leaves"],
             context=_pipeline_context(),
         ),
     ]
@@ -118,7 +120,7 @@ def build_mission_readiness_chain_spec(
                 id="external",
                 skill="readiness-frame-external-research",
                 prompt=full_prompt,
-                depends_on=["pains", "modernization"],
+                depends_on=["tea-leaves"],
                 context=_pipeline_context(
                     extra={
                         "external_research": {

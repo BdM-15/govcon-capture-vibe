@@ -7,24 +7,27 @@ from src.skills.chain_models import ChainStepSpec
 from src.skills.mission_readiness_chain import build_mission_readiness_chain_spec
 
 
-def test_mission_readiness_chain_parallel_waves() -> None:
+def test_mission_readiness_chain_serial_micro_skill_waves() -> None:
     spec = build_mission_readiness_chain_spec(
         "Build the Mission Readiness Frame from the solicitation package."
     )
     waves = compute_execution_waves(spec)
-    assert waves[0] == ["eval", "workload"]
-    assert set(waves[1]) == {"pains", "modernization", "tea-leaves"}
-    assert waves[2] == ["win-themes"]
+    assert waves[0] == ["workload"]
+    assert waves[1] == ["eval"]
+    assert waves[2] == ["pains"]
+    assert waves[3] == ["modernization"]
+    assert waves[4] == ["tea-leaves"]
+    assert waves[5] == ["win-themes"]
     assert waves[-1] == ["compile"]
 
 
 def test_transitive_dependents_includes_compile() -> None:
     spec = build_mission_readiness_chain_spec("Build frame.")
-    dependents = transitive_dependent_ids(spec, "eval")
+    dependents = transitive_dependent_ids(spec, "workload")
+    assert "eval" in dependents
     assert "tea-leaves" in dependents
     assert "win-themes" in dependents
     assert "compile" in dependents
-    assert "workload" not in dependents
 
 
 def test_compute_execution_waves_raises_on_cycle() -> None:

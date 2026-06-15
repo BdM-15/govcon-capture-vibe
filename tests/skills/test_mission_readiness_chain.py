@@ -13,7 +13,7 @@ def test_build_mission_readiness_chain_spec_orders_micro_skills_before_compiler(
     )
     skills = [step.skill for step in spec.steps]
     assert skills[-1] == "mission-readiness-framer"
-    assert skills[0:2] == ["readiness-frame-eval", "readiness-frame-workload"]
+    assert skills[0:2] == ["readiness-frame-workload", "readiness-frame-eval"]
     assert "readiness-frame-win-themes" in skills
     assert "readiness-frame-external-research" not in skills
     assert spec.name == "mission-readiness-chain"
