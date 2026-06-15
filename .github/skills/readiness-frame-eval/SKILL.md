@@ -30,7 +30,8 @@ metadata:
       rule: one_row_per_entity
       rows_key: eval_crosswalk
       min_coverage_ratio: 0.8
-  max_turns: 14
+  max_turns: 16
+  depth_extension_turns: 0
 ---
 
 # Readiness Frame — Evaluation
@@ -82,11 +83,11 @@ If `write_file` returns a retrieve-phase error, **do not retry write_file**. Run
 
 ### 4. Stop
 
-After handoff JSON is written, **stop**. Platform finalize (repair, optional expander, acronym pass, gate) runs outside this loop. Do not re-retrieve to chase gate errors.
+Do not `read_file` the scratchpad — evidence is already in tool results. After handoff JSON is written, **stop**. Platform finalize runs outside this loop.
 
 ## Retrieval discipline (latency)
 
-Target: **≤14 turns, ≤300s** on `mcpp_rfp`-class packages.
+Target: **≤16 turns, ≤180s** on `mcpp_rfp`-class packages.
 
 | Step | Budget |
 |------|--------|

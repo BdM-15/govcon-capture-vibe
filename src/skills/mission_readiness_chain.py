@@ -41,7 +41,6 @@ def _pipeline_context(*, slice_name: str = "", extra: dict | None = None) -> dic
     ctx: dict = {
         "langgraph_step_pipeline": True,
         "eval_retrieve_only": True,
-        "eval_retrieve_max_turns": 24,
         "workflow": f"{_MICRO_SKILL_CONTEXT}\n{_STEP_RETRIEVE_CONTEXT}",
     }
     if slice_name:

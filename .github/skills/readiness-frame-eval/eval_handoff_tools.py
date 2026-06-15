@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 try:
@@ -14,6 +15,25 @@ except ImportError:
 _DELIVERABLE = "eval_handoff.json"
 
 
+def _known_factor_labels(run_dir: Path) -> set[str]:
+    labels: set[str] = set()
+    manifest_path = run_dir / "artifacts" / "eval_batch_manifest.json"
+    if manifest_path.is_file():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            manifest = {}
+        if isinstance(manifest, dict):
+            for batch in manifest.get("batches") or []:
+                if not isinstance(batch, dict):
+                    continue
+                for factor in batch.get("factors") or []:
+                    label = str(factor or "").strip()
+                    if label:
+                        labels.add(label.lower())
+    return labels
+
+
 def validate_write_file(
     run_dir: Path,
     *,
@@ -21,10 +41,14 @@ def validate_write_file(
     content: str,
     user_prompt: str = "",
 ) -> str | None:
-    del run_dir, user_prompt
+    del user_prompt
     if validate_eval_handoff_write is None:
         return None
-    return validate_eval_handoff_write(path=path, content=content)
+    return validate_eval_handoff_write(
+        path=path,
+        content=content,
+        known_factor_labels=_known_factor_labels(run_dir),
+    )
 
 
 def validate_skill_run(

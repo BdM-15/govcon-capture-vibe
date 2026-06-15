@@ -9,8 +9,8 @@
       "expected_output": "artifacts/eval_handoff.json with >=24 eval_crosswalk rows or honest claim_gaps[] for each missing material factor",
       "files": [],
       "expectations": [
-        "completes in under 300 seconds wall time",
-        "uses 14 or fewer assistant turns",
+        "completes in under 180 seconds wall time",
+        "uses 16 or fewer assistant turns",
         "runs scripts/list_eval_batches.py before retrieval",
         "calls kg_entities exactly once",
         "runs at most one kg_chunks pass per eval_batch surface (max 4)",

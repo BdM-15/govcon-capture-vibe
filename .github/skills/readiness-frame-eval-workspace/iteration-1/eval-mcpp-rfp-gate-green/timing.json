@@ -1,0 +1,10 @@
+{
+  "run_id": "20260615_143212_build_the_mission_readiness_fram",
+  "chain_id": "20260615_143212_solo_eval",
+  "wall_seconds": 120.7,
+  "kg_chunks_calls": 4,
+  "kg_entities_calls": 1,
+  "dedup_overlap_rate": 0.75,
+  "max_turns_cap": 16,
+  "gate_passed": true
+}

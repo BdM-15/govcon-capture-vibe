@@ -20,6 +20,7 @@ metadata:
     min_kg_chunks_passes: 0
     min_scratchpad_chars: 500
   max_turns: 10
+  depth_extension_turns: 0
 ---
 
 # Readiness Frame — External Research (conditional)

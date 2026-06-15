@@ -67,12 +67,13 @@ def test_resolve_skill_runtime_mode_precedence(monkeypatch) -> None:
     assert resolve_skill_runtime_mode("bogus") == "legacy"
 
 
-def test_skill_tools_max_turns_uses_larger_skill_budget(monkeypatch) -> None:
+def test_skill_tools_max_turns_honors_skill_budget(monkeypatch) -> None:
     monkeypatch.setenv("SKILL_TOOLS_MAX_TURNS", "20")
-    assert skill_tools_max_turns({"max_turns": 12}) == 20
+    assert skill_tools_max_turns({"max_turns": 12}) == 12
     assert skill_tools_max_turns({"max_turns": 30}) == 30
-    assert skill_tools_max_turns({"max_turns": 4}) == 20
+    assert skill_tools_max_turns({"max_turns": 4}) == 4
     assert skill_tools_max_turns({"max_turns": "12"}) == 20
+    assert skill_tools_max_turns({}) == 20
 
 
 def test_skill_tools_runtime_defaults_match_recommended_caps() -> None:

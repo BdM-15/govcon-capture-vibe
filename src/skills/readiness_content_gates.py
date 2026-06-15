@@ -961,6 +961,7 @@ def validate_eval_handoff_write(
     *,
     path: str,
     content: str,
+    known_factor_labels: set[str] | None = None,
 ) -> str | None:
     cleaned = str(path or "").replace("\\", "/").split("/")[-1].lower()
     if cleaned != "eval_handoff.json":
@@ -985,7 +986,11 @@ def validate_eval_handoff_write(
                 f"{index} uses legacy factor/subfactor shape — emit evaluation_factor, "
                 "readiness_link, proof_expected, and pws_clusters per readiness_output_contract.md"
             )
-        for issue in substance_issues_for_crosswalk_row(row, index=index):
+        for issue in substance_issues_for_crosswalk_row(
+            row,
+            index=index,
+            known_factor_labels=known_factor_labels,
+        ):
             return f"write_file blocked for eval_handoff.json: {issue}"
     issues = citation_diversity_issues_for_crosswalk(crosswalk)
     if issues:

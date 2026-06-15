@@ -2,9 +2,13 @@
   "step_id": "eval",
   "skill": "readiness-frame-eval",
   "passed": true,
-  "run_id": "20260615_001501_build_the_mission_readiness_fram",
-  "chain_id": "20260615_001501_solo_eval",
+  "gate_passed": true,
+  "run_id": "20260615_143212_build_the_mission_readiness_fram",
+  "chain_id": "20260615_143212_solo_eval",
   "workspace": "mcpp_rfp",
-  "eval_crosswalk_rows": 24,
-  "note": "Gate green after inventory-aware formulaic fix, citation diversify, deterministic acronym expansion"
+  "eval_crosswalk_rows": 10,
+  "wall_seconds": 120.7,
+  "kg_chunks_calls": 4,
+  "max_turns_cap": 16,
+  "note": "Skill-creator iteration-1 green after cap fix + batched retrieval + manifest-aware write gate"
 }

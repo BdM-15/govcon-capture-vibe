@@ -20,6 +20,7 @@ metadata:
     frame_artifact: pains_handoff.json
     min_kg_chunks_passes: 1
   max_turns: 10
+  depth_extension_turns: 0
 ---
 
 # Readiness Frame — Customer Pains

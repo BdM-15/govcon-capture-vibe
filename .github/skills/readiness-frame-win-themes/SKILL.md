@@ -20,6 +20,7 @@ metadata:
     frame_artifact: win_themes_handoff.json
     min_kg_chunks_passes: 2
   max_turns: 12
+  depth_extension_turns: 0
 ---
 
 # Readiness Frame — Win Themes

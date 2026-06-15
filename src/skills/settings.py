@@ -85,10 +85,14 @@ def resolve_skill_runtime_mode(
 
 
 def skill_tools_max_turns(metadata: Mapping[str, Any]) -> int:
-    """Return the effective tools-mode turn budget for one skill."""
+    """Return the effective tools-mode turn budget for one skill.
+
+    Skill frontmatter ``max_turns`` is authoritative when set (micro-skill caps).
+    Skills may declare a budget above ``SKILL_TOOLS_MAX_TURNS`` when they need more.
+    """
     env_max_turns = env_int("SKILL_TOOLS_MAX_TURNS", 25)
     raw = metadata.get("max_turns")
-    if isinstance(raw, int) and raw > env_max_turns:
+    if isinstance(raw, int) and raw > 0:
         return raw
     return env_max_turns
 

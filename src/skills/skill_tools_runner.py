@@ -125,8 +125,9 @@ async def run_tools_skill(
 
     max_turns = skill_tools_max_turns(skill.frontmatter.metadata)
     if eval_retrieve_only:
-        cap = int(chain_ctx.get("eval_retrieve_max_turns") or 24)
-        max_turns = min(max_turns, max(8, cap))
+        cap = int(chain_ctx.get("eval_retrieve_max_turns") or 0)
+        if cap > 0:
+            max_turns = min(max_turns, cap)
     limits = merge_tool_context_limits(
         skill_tools_runtime_limits(),
         (entity_payload or {}).get("retrieval_plan_limits"),
