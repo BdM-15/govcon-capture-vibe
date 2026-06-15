@@ -844,12 +844,14 @@ def substance_issues_for_brief(
 
 
 def compiler_output_substance_issues(run_dir: Path) -> list[str]:
-    """Substance-only quality gate for chain compiler — not line/char counts."""
+    """Compiler gate — merged frame JSON is source of truth; brief mirrors it."""
     artifacts = run_dir / "artifacts"
     frame_path = artifacts / "mission_readiness_frame.json"
     brief_path = artifacts / "brief.md"
     issues: list[str] = []
 
+    if not frame_path.is_file():
+        return ["compiler: missing artifacts/mission_readiness_frame.json"]
     if not brief_path.is_file():
         return ["compiler: missing artifacts/brief.md"]
 
@@ -858,17 +860,20 @@ def compiler_output_substance_issues(run_dir: Path) -> list[str]:
     except OSError:
         return ["compiler: brief.md unreadable"]
 
-    payload: dict[str, Any] | None = None
-    if frame_path.is_file():
-        try:
-            from src.skills.readiness_handoff_models import load_handoff_dict
+    try:
+        from src.skills.readiness_handoff_models import load_handoff_dict
 
-            loaded = load_handoff_dict(frame_path)
-            payload = loaded if isinstance(loaded, dict) else None
-        except (OSError, json.JSONDecodeError, ValueError):
-            issues.append("compiler: mission_readiness_frame.json unreadable")
+        loaded = load_handoff_dict(frame_path)
+        payload = loaded if isinstance(loaded, dict) else None
+    except (OSError, json.JSONDecodeError, ValueError):
+        return ["compiler: mission_readiness_frame.json unreadable"]
 
-    crosswalk = (payload or {}).get("eval_crosswalk") or []
+    if payload is None:
+        return ["compiler: mission_readiness_frame.json must be a JSON object"]
+
+    issues.extend(substance_issues_for_frame_payload(payload))
+
+    crosswalk = payload.get("eval_crosswalk") or []
     cited_rows = 0
     if isinstance(crosswalk, list):
         cited_rows = sum(
@@ -877,21 +882,8 @@ def compiler_output_substance_issues(run_dir: Path) -> list[str]:
             if isinstance(row, dict)
             and (row.get("source_chunk_ids") or row.get("source_citations"))
         )
-    issues.extend(
-        substance_issues_for_brief(brief_text, skip_tail_compression=False)
-    )
-    issues.extend(narrative_citation_issues_for_brief(brief_text, payload=payload))
-    issues.extend(
-        verbatim_extract_issues(
-            payload,
-            crosswalk_has_citations=cited_rows > 0,
-            cited_crosswalk_rows=cited_rows,
-        )
-    )
-    issues.extend(claim_gaps_brief_issues(payload, brief_text))
-    issues.extend(acronym_issues_for_readiness_output(brief_text=brief_text, payload=payload))
 
-    pains = (payload or {}).get("customer_pain_points") or []
+    pains = payload.get("customer_pain_points") or []
     if isinstance(pains, list):
         cited = [
             row
@@ -904,6 +896,19 @@ def compiler_output_substance_issues(run_dir: Path) -> list[str]:
                 "compiler: customer_pain_points lack cited rationale — each material pain "
                 "needs source_chunk_ids from package evidence"
             )
+
+    issues.extend(
+        substance_issues_for_brief(brief_text, skip_tail_compression=True)
+    )
+    issues.extend(
+        verbatim_extract_issues(
+            payload,
+            crosswalk_has_citations=cited_rows > 0,
+            cited_crosswalk_rows=cited_rows,
+        )
+    )
+    issues.extend(claim_gaps_brief_issues(payload, brief_text))
+    issues.extend(acronym_issues_for_readiness_output(brief_text=brief_text, payload=payload))
 
     return issues
 

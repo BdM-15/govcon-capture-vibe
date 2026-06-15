@@ -216,12 +216,9 @@ async def run_tools_skill(
             user_prompt = (
                 f"{user_prompt.rstrip()}\n\n"
                 "## Compiler merge complete\n"
-                "Upstream handoffs were merged into artifacts/mission_readiness_frame.json. "
-                "artifacts/research_scratchpad.md now contains the full upstream slice retrieval "
-                "corpus — mine it exhaustively for analytical prose, verbatim quotes, and citations. "
-                "Expand brief.md with factor-specific analysis, verbatim government quotes, and "
-                "diversified citations — no recycled prose across sections. "
-                "Do not re-run full-package retrieval."
+                "mission_readiness_frame.json is the deterministic merge of upstream handoffs — "
+                "do not mutate JSON. brief.md is generated from the merged frame. "
+                "Set COMPILER_BRIEF_LLM=1 only when optional voice polish on brief.md is required."
             ).strip()
         elif retrieve_fn is not None:
             bootstrap_top_k = int(limits.max_kg_chunks or 40)
@@ -273,7 +270,7 @@ async def run_tools_skill(
     try:
         if compiler_mode:
             warnings.append(
-                "compiler_mode: skipped tool loop — synthesis/reflexion runs from merged handoffs"
+                "compiler_mode: skipped tool loop — deterministic merge + brief from handoffs"
             )
             loop_result = ToolLoopResult(
                 response="",

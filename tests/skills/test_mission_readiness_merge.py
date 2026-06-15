@@ -17,6 +17,8 @@ from src.skills.mission_readiness_merge import (
     seed_verbatim_extracts_from_citations,
     write_compiler_brief_scaffold,
 )
+from src.skills.platform_step_finalize import repair_compiler_artifacts
+from src.skills.readiness_content_gates import compiler_output_substance_issues
 from src.skills.research_harness import load_harness_state, resolve_harness_config
 from src.skills.skill_models import Skill, parse_frontmatter
 
@@ -381,6 +383,139 @@ def test_refresh_compiler_verbatim_section_updates_brief_section_two(tmp_path: P
     brief = (artifacts / "brief.md").read_text(encoding="utf-8")
     assert "100 percent mission-capable" in brief
     assert "_None recorded" not in brief
+
+
+def _write_upstream_handoff(base: Path, filename: str, payload: dict) -> Path:
+    artifacts = base / "artifacts"
+    artifacts.mkdir(parents=True, exist_ok=True)
+    path = artifacts / filename
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return path
+
+
+def test_compiler_deterministic_merge_passes_gate_without_llm(tmp_path: Path) -> None:
+    """Pinned handoff fixtures → merge → brief → gate with no LLM."""
+    upstream_root = tmp_path / "upstream"
+    eval_path = _write_upstream_handoff(
+        upstream_root / "eval",
+        "eval_handoff.json",
+        {
+            "eval_crosswalk": [
+                {
+                    "evaluation_factor": "Factor 1 Management Approach",
+                    "readiness_link": (
+                        "Program office evaluates management integration because weak "
+                        "organizational structure degrades readiness sustainment outcomes."
+                    ),
+                    "proof_expected": (
+                        "Submit transition plan, staffing matrix, and Section L compliance "
+                        "artifacts aligned to PWS management tasks."
+                    ),
+                    "pws_clusters": ["PWS 2.1"],
+                    "source_chunk_ids": ["chunk-mgmt-001"],
+                },
+                {
+                    "evaluation_factor": "Factor 2 Technical Approach",
+                    "readiness_link": (
+                        "Technical methodology depth determines whether maintenance centers "
+                        "achieve mission-capable rates under surge conditions."
+                    ),
+                    "proof_expected": (
+                        "Provide maintenance workflows, tooling, and quality surveillance "
+                        "evidence mapped to PWS technical tasks."
+                    ),
+                    "pws_clusters": ["PWS 3.2"],
+                    "source_chunk_ids": ["chunk-tech-002"],
+                },
+            ],
+            "claim_gaps": [],
+        },
+    )
+    workload_path = _write_upstream_handoff(
+        upstream_root / "workload",
+        "workload_handoff.json",
+        {
+            "mission_readiness_frame": {
+                "readiness_outcome": (
+                    "Contract enables 100 percent mission-capable readiness across "
+                    "all assigned maintenance centers."
+                ),
+                "workload_enablers": [
+                    "Integrated supply chain support",
+                    "Predictive maintenance analytics",
+                ],
+            }
+        },
+    )
+    pains_path = _write_upstream_handoff(
+        upstream_root / "pains",
+        "pains_handoff.json",
+        {
+            "customer_pain_points": [
+                {
+                    "challenge_type": "Staffing surge",
+                    "rationale": "Program office fears transition staffing gaps during initial operating capability ramp.",
+                    "source_chunk_ids": ["chunk-pain-001"],
+                },
+                {
+                    "challenge_type": "Data latency",
+                    "rationale": "Maintenance status reporting lags reduce fleet readiness visibility.",
+                    "source_chunk_ids": ["chunk-pain-002"],
+                },
+            ],
+        },
+    )
+    win_path = _write_upstream_handoff(
+        upstream_root / "win",
+        "win_themes_handoff.json",
+        {
+            "win_theme_candidates": [
+                {
+                    "theme_name": "Zero-fail fully mission capable sustainment",
+                    "rationale_chain": "Links management proof to customer pain relief.",
+                }
+            ],
+        },
+    )
+
+    compile_run = tmp_path / "compile_run"
+    merge_upstream_handoffs(
+        [
+            {
+                "filename": "eval_handoff.json",
+                "path": str(eval_path),
+                "step_id": "eval",
+                "skill": "readiness-frame-eval",
+            },
+            {
+                "filename": "workload_handoff.json",
+                "path": str(workload_path),
+                "step_id": "workload",
+                "skill": "readiness-frame-workload",
+            },
+            {
+                "filename": "pains_handoff.json",
+                "path": str(pains_path),
+                "step_id": "pains",
+                "skill": "readiness-frame-pains",
+            },
+            {
+                "filename": "win_themes_handoff.json",
+                "path": str(win_path),
+                "step_id": "win-themes",
+                "skill": "readiness-frame-win-themes",
+            },
+        ],
+        compile_run,
+        chain_step_context={"role": "compiler"},
+    )
+    repair_compiler_artifacts(compile_run)
+    issues = compiler_output_substance_issues(compile_run)
+    assert issues == [], issues
+    brief = (compile_run / "artifacts" / "brief.md").read_text(encoding="utf-8")
+    assert "Executive Synthesis" in brief
+    assert "Zero-fail fully mission capable sustainment" in brief
+    assert "100 percent mission-capable" in brief
 
 
 def test_prepare_compiler_harness_state_marks_retrieval_complete(tmp_path: Path) -> None:

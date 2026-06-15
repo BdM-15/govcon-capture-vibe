@@ -136,6 +136,9 @@ def _validate_micro_skill_run(skill_name: str, run_dir: Path) -> list[str]:
 
 
 def _validate_compiler_run(run_dir: Path) -> list[str]:
+    from src.skills.mission_readiness_merge import write_compiler_brief_scaffold
+
+    write_compiler_brief_scaffold(run_dir)
     repair_compiler_artifacts(run_dir)
     issues = list(compiler_output_substance_issues(run_dir))
     from src.skills.skill_local_tools import load_skill_tool_module

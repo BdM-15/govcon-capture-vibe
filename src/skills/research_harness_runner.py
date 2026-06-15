@@ -464,7 +464,7 @@ async def finalize_research_harness(
             logger.warning("Frame synthesis failed for %s: %s", skill.name, exc)
             warnings.append(f"research_harness frame synthesis failed: {exc}")
 
-    if needs_synthesis(run_dir, config):
+    if needs_synthesis(run_dir, config) and not compiler_run:
         try:
             synthesized, usage, synth_warnings = await run_synthesis_pass(
                 skill=skill,
@@ -548,6 +548,7 @@ async def finalize_research_harness(
         depth_issues
         and reflexion_pass < config.max_reflexion_passes
         and not handoff_json_only
+        and not compiler_run
     ):
         reflexion_pass += 1
         try:
@@ -609,13 +610,16 @@ async def finalize_research_harness(
                 break
 
     if compiler_run:
+        from src.skills.compiler_mode import compiler_brief_llm_enabled
+        from src.skills.mission_readiness_merge import write_compiler_brief_scaffold
+        from src.skills.platform_step_finalize import repair_compiler_artifacts
+
         if persist_normalized_compiler_frame(run_dir):
             warnings.append("compiler_mode: re-normalized mission_readiness_frame.json from handoffs")
-            from src.skills.mission_readiness_merge import write_compiler_brief_scaffold
-
-            write_compiler_brief_scaffold(run_dir)
+        write_compiler_brief_scaffold(run_dir)
         refresh_compiler_claim_gaps_section(run_dir)
-        warnings.append("compiler_mode: refreshed claim_gaps section in brief.md")
+        repair_compiler_artifacts(run_dir)
+        warnings.append("compiler_mode: deterministic brief from merged handoffs")
 
     if workspace_dir is not None and not compiler_run:
         _ensure_minimum_frame_if_available(
@@ -631,7 +635,7 @@ async def finalize_research_harness(
     depth_issues = dedupe_depth_issues(
         depth_gate_issues(run_dir, hooks=hooks, user_prompt=user_prompt)
     )
-    if compiler_run and depth_issues:
+    if compiler_run and depth_issues and compiler_brief_llm_enabled():
         acronym_issues = [
             issue
             for issue in depth_issues

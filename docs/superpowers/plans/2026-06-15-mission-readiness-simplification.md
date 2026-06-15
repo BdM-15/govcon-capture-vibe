@@ -124,19 +124,21 @@ flowchart LR
 
 ---
 
-### Chunk 6 — Compile path: merge truth, voice optional
+### Chunk 6 — Compile path: merge truth, voice optional ✅ done
 
-**Problem:** Compile re-reasons frame; multiple synthesis/repair/reflexion layers.
+**Problem:** Compile re-reasoned frame; multiple synthesis/repair/reflexion layers.
 
 **Files:**
-- Modify: `src/skills/mission_readiness_merge.py`, `platform_step_finalize.py`
-- Test: `tests/skills/test_mission_readiness_merge.py`
+- Create: `src/skills/compiler_mode.py`
+- Modify: `mission_readiness_merge.py`, `readiness_content_gates.py`, `platform_step_finalize.py`, `research_harness_runner.py`, `skill_tools_runner.py`
+- Test: `tests/skills/test_mission_readiness_merge.py`, `tests/skills/test_compiler_mode.py`
 
-- [ ] Frame JSON = deterministic merge of handoffs
-- [ ] Optional short LLM pass on `brief.md` only
-- [ ] Gate merged frame, not re-extracted claims
+- [x] Frame JSON = deterministic merge of handoffs (unchanged merge path, gate frame-first)
+- [x] Deterministic `brief.md` from merged frame + executive synthesis
+- [x] Optional brief LLM polish via `COMPILER_BRIEF_LLM=1` only
+- [x] Compiler gate skips tail-compression / narrative-citation LLM prose requirements
 
-**Exit criteria:** Compile green with pinned handoff fixtures; no LLM required for frame JSON.
+**Exit criteria:** `test_compiler_deterministic_merge_passes_gate_without_llm` green (28 tests).
 
 ---
 

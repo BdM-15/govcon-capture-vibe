@@ -631,12 +631,47 @@ def _format_bullet_items(rows: list[Any], *, fields: tuple[str, ...]) -> str:
     return "\n".join(bullets) if bullets else "_None recorded in merged handoffs._"
 
 
+def _format_executive_synthesis(merged: dict[str, Any]) -> str:
+    """Deterministic executive synthesis from merged frame (no LLM)."""
+    outcome = str(merged.get("readiness_outcome") or "").strip()
+    themes = merged.get("win_theme_candidates") or []
+    theme_names: list[str] = []
+    if isinstance(themes, list):
+        for row in themes[:3]:
+            if not isinstance(row, dict):
+                continue
+            name = str(
+                row.get("theme_name") or row.get("theme") or row.get("title") or ""
+            ).strip()
+            if name:
+                theme_names.append(name)
+
+    paragraphs: list[str] = []
+    if outcome:
+        paragraphs.append(outcome)
+    scope = str(merged.get("scope_summary") or "").strip()
+    if scope and scope not in outcome:
+        paragraphs.append(scope)
+    if theme_names:
+        paragraphs.append(
+            "Win-theme spine prioritizes "
+            + "; ".join(theme_names)
+            + " — each tied to evaluation proof and customer pain relief in the sections above."
+        )
+    if not paragraphs:
+        return (
+            "Merged readiness frame consolidates upstream micro-skill handoffs. "
+            "Evaluation crosswalk rows, pains, and win themes above define capture proof."
+        )
+    return "\n\n".join(paragraphs)
+
+
 def write_compiler_brief_scaffold(
     run_dir: Path,
     *,
     merged: dict[str, Any] | None = None,
 ) -> Path:
-    """Seed brief.md with required sections + eval table before compiler synthesis."""
+    """Write brief.md deterministically from merged mission_readiness_frame.json."""
     artifacts_dir = Path(run_dir) / "artifacts"
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     if merged is None:
@@ -662,7 +697,7 @@ def write_compiler_brief_scaffold(
         "",
         "## 1. Mission Readiness Frame",
         "",
-        readiness or "_Expand readiness outcome from merged mission_readiness_frame.json._",
+        readiness or _format_executive_synthesis(merged),
         "",
         enabler_text,
         "",
@@ -719,7 +754,7 @@ def write_compiler_brief_scaffold(
         "",
         "## Executive Synthesis",
         "",
-        "_Tie readiness outcome to top win themes after expanding all sections above._",
+        _format_executive_synthesis(merged),
         "",
         format_references_section(merged.get("references") or []),
         "",
