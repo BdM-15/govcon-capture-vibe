@@ -705,6 +705,13 @@ def acronym_issues_for_readiness_output(
 
 
 def acronym_issues_for_text(text: str, *, label: str) -> list[str]:
+    """Acronyms are repaired from retrieval evidence — never a chain show-stopper."""
+    del text, label
+    return []
+
+
+def acronym_warnings_for_text(text: str, *, label: str) -> list[str]:
+    """Advisory only: undefined acronyms not yet expanded (does not block gates)."""
     undefined = undefined_acronyms(text)
     if not undefined:
         return []
@@ -741,24 +748,64 @@ def acronym_issues_for_eval_handoff(payload: dict[str, Any]) -> list[str]:
     )
 
 
-def apply_known_acronym_expansions(text: str, *, targets: list[str] | None = None) -> str:
-    """Deterministic first-use Full Term (ACR) expansion for common govcon tokens."""
+def _ingest_acronym_expansions_from_text(
+    expansions: dict[str, str],
+    text: str,
+) -> None:
+    """Harvest Full Term (ACR) pairs from retrieval scratchpad / chunk prose."""
+    for match in _DEFINED_ACRONYM_RE.finditer(str(text or "")):
+        template = match.group(0).strip()
+        acr_field = match.group(1).upper()
+        for token in acr_field.split():
+            expansions[token] = template
+            if token.endswith("S") and len(token) > 3:
+                expansions.setdefault(token[:-1], template)
+            if "-" in token:
+                expansions.setdefault(token.split("-")[-1], template)
+
+
+def build_acronym_expansion_map(*evidence_texts: str) -> dict[str, str]:
+    """Build expansion map from chunk evidence first, static fallback second."""
+    expansions: dict[str, str] = {}
+    for evidence in evidence_texts:
+        _ingest_acronym_expansions_from_text(expansions, evidence)
+    for key, template in _KNOWN_ACRONYM_EXPANSIONS.items():
+        expansions.setdefault(key, template)
+    return expansions
+
+
+def apply_acronym_expansions(
+    text: str,
+    expansion_map: dict[str, str],
+    *,
+    targets: list[str] | None = None,
+) -> str:
+    """First-use Full Term (ACR) substitution using evidence-derived or fallback map."""
     pending = targets or undefined_acronyms(text)
     revised = str(text or "")
     for token in pending:
         key = str(token or "").strip().upper()
-        template = _KNOWN_ACRONYM_EXPANSIONS.get(key)
+        template = expansion_map.get(key)
         if not template or key in defined_acronyms(revised):
             continue
         pattern = re.compile(rf"\b{re.escape(str(token))}\b")
-        revised, count = pattern.subn(template, revised, count=1)
-        if count:
-            continue
+        revised, _count = pattern.subn(template, revised, count=1)
     return revised
 
 
-def apply_known_acronym_expansions_to_frame_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    """Expand known acronyms in compiler frame narrative fields without an LLM."""
+def apply_known_acronym_expansions(text: str, *, targets: list[str] | None = None) -> str:
+    """Deterministic first-use expansion using static fallback map only."""
+    return apply_acronym_expansions(
+        text,
+        build_acronym_expansion_map(),
+        targets=targets,
+    )
+
+
+def _apply_expansion_map_to_frame_payload(
+    payload: dict[str, Any],
+    expansion_map: dict[str, str],
+) -> dict[str, Any]:
     if not isinstance(payload, dict):
         return payload
     targets = undefined_acronyms(frame_narrative_text_for_acronym_gate(payload))
@@ -768,7 +815,7 @@ def apply_known_acronym_expansions_to_frame_payload(payload: dict[str, Any]) -> 
     for key in ("readiness_outcome", "scope_summary"):
         value = str(payload.get(key) or "")
         if value:
-            payload[key] = apply_known_acronym_expansions(value, targets=targets)
+            payload[key] = apply_acronym_expansions(value, expansion_map, targets=targets)
 
     for array_key in (
         "customer_pain_points",
@@ -792,18 +839,41 @@ def apply_known_acronym_expansions_to_frame_payload(payload: dict[str, Any]) -> 
             for field in _FRAME_ACRONYM_NARRATIVE_FIELDS:
                 value = str(row.get(field) or "")
                 if value:
-                    row[field] = apply_known_acronym_expansions(value, targets=targets)
+                    row[field] = apply_acronym_expansions(
+                        value, expansion_map, targets=targets
+                    )
 
     gaps = payload.get("claim_gaps")
     if isinstance(gaps, list):
         payload["claim_gaps"] = [
-            apply_known_acronym_expansions(str(gap or ""), targets=targets) for gap in gaps
+            apply_acronym_expansions(str(gap or ""), expansion_map, targets=targets)
+            for gap in gaps
         ]
     return payload
 
 
-def apply_known_acronym_expansions_to_eval_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    """Expand known acronyms inside eval handoff narrative fields without an LLM."""
+def apply_acronym_expansions_to_frame_payload(
+    payload: dict[str, Any],
+    expansion_map: dict[str, str],
+) -> dict[str, Any]:
+    """Expand acronyms in compiler frame narrative fields using supplied map."""
+    return _apply_expansion_map_to_frame_payload(payload, expansion_map)
+
+
+def apply_known_acronym_expansions_to_frame_payload(
+    payload: dict[str, Any],
+    *,
+    evidence_text: str = "",
+) -> dict[str, Any]:
+    """Expand acronyms in compiler frame — evidence from scratchpad, then static fallback."""
+    expansion_map = build_acronym_expansion_map(evidence_text)
+    return _apply_expansion_map_to_frame_payload(payload, expansion_map)
+
+
+def _apply_expansion_map_to_eval_payload(
+    payload: dict[str, Any],
+    expansion_map: dict[str, str],
+) -> dict[str, Any]:
     if not isinstance(payload, dict):
         return payload
     targets = undefined_acronyms(eval_handoff_text_for_acronym_gate(payload))
@@ -818,14 +888,27 @@ def apply_known_acronym_expansions_to_eval_payload(payload: dict[str, Any]) -> d
             for field in ("readiness_link", "proof_expected"):
                 value = str(row.get(field) or "")
                 if value:
-                    row[field] = apply_known_acronym_expansions(value, targets=targets)
+                    row[field] = apply_acronym_expansions(
+                        value, expansion_map, targets=targets
+                    )
 
     gaps = payload.get("claim_gaps")
     if isinstance(gaps, list):
         payload["claim_gaps"] = [
-            apply_known_acronym_expansions(str(gap or ""), targets=targets) for gap in gaps
+            apply_acronym_expansions(str(gap or ""), expansion_map, targets=targets)
+            for gap in gaps
         ]
     return payload
+
+
+def apply_known_acronym_expansions_to_eval_payload(
+    payload: dict[str, Any],
+    *,
+    evidence_text: str = "",
+) -> dict[str, Any]:
+    """Expand acronyms in eval handoff — evidence from scratchpad, then static fallback."""
+    expansion_map = build_acronym_expansion_map(evidence_text)
+    return _apply_expansion_map_to_eval_payload(payload, expansion_map)
 
 
 def _token_set(text: str) -> set[str]:
@@ -1077,6 +1160,4 @@ def validate_eval_handoff_write(
     issues = citation_diversity_issues_for_crosswalk(crosswalk)
     if issues:
         return f"write_file blocked for eval_handoff.json: {issues[0]}"
-    for issue in acronym_issues_for_eval_handoff(loaded):
-        return f"write_file blocked for eval_handoff.json: {issue}"
     return None

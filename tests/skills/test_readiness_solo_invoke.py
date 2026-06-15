@@ -139,7 +139,7 @@ def test_build_readiness_solo_chain_spec_rejects_unknown_step() -> None:
         build_readiness_solo_chain_spec("not-a-step", "Build MRF.")
 
 
-def test_assess_readiness_solo_eval_matches_chain_gate_on_acronyms(
+def test_assess_readiness_solo_eval_does_not_fail_on_undefined_acronyms(
     tmp_path: Path,
 ) -> None:
     workspace = tmp_path / "ws"
@@ -184,5 +184,4 @@ def test_assess_readiness_solo_eval_matches_chain_gate_on_acronyms(
         finish_reason="stop",
         warnings=[],
     )
-    assert result.passed is False
-    assert any("undefined acronyms" in err.lower() for err in result.errors)
+    assert not any("undefined acronyms" in err.lower() for err in result.errors)

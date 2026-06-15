@@ -5,8 +5,11 @@ from __future__ import annotations
 from src.skills.readiness_content_gates import (
     acronym_issues_for_eval_handoff,
     acronym_issues_for_readiness_output,
+    acronym_warnings_for_text,
+    apply_acronym_expansions,
     apply_known_acronym_expansions_to_eval_payload,
     apply_known_acronym_expansions_to_frame_payload,
+    build_acronym_expansion_map,
     citation_issues_for_crosswalk_row,
     claim_gaps_brief_issues,
     is_boilerplate_text,
@@ -205,6 +208,24 @@ def test_verbatim_extract_issues_passes_when_seeded() -> None:
         crosswalk_has_citations=True,
         cited_crosswalk_rows=3,
     )
+
+
+def test_acronym_issues_never_block_even_when_undefined() -> None:
+    text = "Program cites TECV and SB set-aside rules for this acquisition."
+    assert acronym_issues_for_readiness_output(brief_text=text, payload=None) == []
+    assert acronym_warnings_for_text(text, label="eval") != []
+
+
+def test_build_acronym_expansion_map_prefers_scratchpad_evidence() -> None:
+    evidence = (
+        "Commanding Officer (CMDO) P5000.11 governs maintenance. "
+        "Data Item (DI) schedules drive inspection cycles."
+    )
+    text = "Compliance with CMDO P5000.11 and ISO/DI discipline is required."
+    expansion_map = build_acronym_expansion_map(evidence)
+    expanded = apply_acronym_expansions(text, expansion_map)
+    assert "Commanding Officer (CMDO)" in expanded
+    assert "Data Item (DI)" in expanded
 
 
 def test_undefined_acronyms_accepts_pre_mats_and_cpff_loe_definitions() -> None:

@@ -319,7 +319,7 @@ def test_validate_step_handoffs_returns_errors_not_warnings(tmp_path: Path) -> N
     assert errors[0].startswith("handoff_quality:")
 
 
-def test_validate_step_handoffs_eval_uses_skill_run_hook_for_acronyms(
+def test_validate_step_handoffs_eval_does_not_block_on_undefined_acronyms(
     tmp_path: Path,
 ) -> None:
     workspace = tmp_path / "ws"
@@ -355,4 +355,4 @@ def test_validate_step_handoffs_eval_uses_skill_run_hook_for_acronyms(
         skill = "readiness-frame-eval"
 
     errors = validate_step_handoffs(_StepRun(), workspace)
-    assert any("undefined acronyms" in error.lower() for error in errors)
+    assert not any("undefined acronyms" in error.lower() for error in errors)

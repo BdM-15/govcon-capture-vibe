@@ -9,10 +9,7 @@ from src.skills.evidence_gates import (
     DEFAULT_COVERAGE_MIN_RATIO,
     check_coverage_contract,
 )
-from src.skills.readiness_content_gates import (
-    acronym_issues_for_eval_handoff,
-    substance_issues_for_crosswalk,
-)
+from src.skills.readiness_content_gates import substance_issues_for_crosswalk
 from src.skills.readiness_handoff_models import (
     TeaLeavesHandoff,
     load_handoff_dict,
@@ -77,7 +74,6 @@ def _eval_substance_issues(
             "eval_crosswalk rows lack source_chunk_ids — "
             "ground each row in scratchpad chunk IDs before chain continues"
         )
-    issues.extend(acronym_issues_for_eval_handoff(payload))
     return issues
 
 

@@ -25,8 +25,19 @@ def repair_eval_handoff(run_dir: Path) -> bool:
     if not isinstance(payload, dict):
         return False
 
+    scratchpad = Path(run_dir) / "artifacts" / "research_scratchpad.md"
+    evidence_text = ""
+    if scratchpad.is_file():
+        try:
+            evidence_text = scratchpad.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            evidence_text = ""
+
     before = json.dumps(payload, sort_keys=True, ensure_ascii=False)
-    repaired = apply_known_acronym_expansions_to_eval_payload(dict(payload))
+    repaired = apply_known_acronym_expansions_to_eval_payload(
+        dict(payload),
+        evidence_text=evidence_text,
+    )
     after = json.dumps(repaired, sort_keys=True, ensure_ascii=False)
     if after == before:
         return False

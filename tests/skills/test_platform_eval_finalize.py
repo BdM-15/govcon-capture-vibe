@@ -20,9 +20,10 @@ def test_split_eval_gate_issues_retriable_coverage() -> None:
         "eval_handoff.json missing required field: claim_gaps",
     ]
     blocking, retriable = split_eval_gate_issues(issues)
-    assert len(blocking) == 1
-    assert "claim_gaps" in blocking[0]
-    assert len(retriable) == 2
+    assert len(blocking) == 2
+    assert any("claim_gaps" in item for item in blocking)
+    assert any("undefined acronyms" in item for item in blocking)
+    assert len(retriable) == 1
     assert any("coverage" in item for item in retriable)
 
 

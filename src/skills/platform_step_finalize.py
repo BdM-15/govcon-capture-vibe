@@ -10,8 +10,9 @@ from typing import Any
 from src.skills.handoff_quality import _SKILL_EXPECTED_HANDOFF
 from src.skills.platform_eval_finalize import finalize_eval_handoff, split_eval_gate_issues
 from src.skills.readiness_content_gates import (
-    apply_known_acronym_expansions,
+    apply_acronym_expansions,
     apply_known_acronym_expansions_to_frame_payload,
+    build_acronym_expansion_map,
     compiler_output_substance_issues,
     frame_narrative_text_for_acronym_gate,
     undefined_acronyms,
@@ -20,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 _RETRIABLE_MARKERS = (
     "coverage:",
-    "undefined acronyms",
     "eval_crosswalk row",
     "near-duplicate",
     "crosswalk rows lack",
@@ -65,8 +65,18 @@ def _gate_result(
     }
 
 
+def _run_evidence_text(run_dir: Path) -> str:
+    scratchpad = run_dir / "artifacts" / "research_scratchpad.md"
+    if not scratchpad.is_file():
+        return ""
+    try:
+        return scratchpad.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
 def repair_compiler_artifacts(run_dir: Path) -> bool:
-    """Pre-gate repair: seed verbatim bank from citations + expand known acronyms."""
+    """Pre-gate repair: seed verbatim bank from citations + expand acronyms from evidence."""
     from src.skills.mission_readiness_merge import (
         is_compiler_run_dir,
         refresh_compiler_verbatim_section,
@@ -81,6 +91,8 @@ def repair_compiler_artifacts(run_dir: Path) -> bool:
     brief_path = artifacts / "brief.md"
     changed = False
     payload: dict[str, Any] | None = None
+    evidence_text = _run_evidence_text(run_dir)
+    expansion_map = build_acronym_expansion_map(evidence_text)
 
     if frame_path.is_file():
         try:
@@ -90,7 +102,10 @@ def repair_compiler_artifacts(run_dir: Path) -> bool:
         if isinstance(loaded, dict):
             before = json.dumps(loaded, sort_keys=True, ensure_ascii=False)
             payload = seed_verbatim_extracts_from_citations(loaded)
-            payload = apply_known_acronym_expansions_to_frame_payload(payload)
+            payload = apply_known_acronym_expansions_to_frame_payload(
+                payload,
+                evidence_text=evidence_text,
+            )
             after = json.dumps(payload, sort_keys=True, ensure_ascii=False)
             if after != before:
                 frame_path.write_text(
@@ -114,7 +129,7 @@ def repair_compiler_artifacts(run_dir: Path) -> bool:
                 f"{frame_narrative_text_for_acronym_gate(payload)}"
             )
         targets = undefined_acronyms(combined)
-        revised = apply_known_acronym_expansions(brief, targets=targets)
+        revised = apply_acronym_expansions(brief, expansion_map, targets=targets)
         if revised.strip() and revised != brief:
             brief_path.write_text(revised, encoding="utf-8")
             changed = True

@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 _PLATFORM_GATE_MARKERS = (
     "coverage:",
-    "undefined acronyms",
     "eval_crosswalk row",
     "eval_crosswalk is empty",
     "near-duplicate",
