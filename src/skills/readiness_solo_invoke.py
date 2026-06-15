@@ -15,7 +15,7 @@ from src.skills.handoff_quality import (
 from src.skills.local_llm_admin import admin_llm_status, admin_model_configured
 from src.skills.mission_readiness_chain import build_mission_readiness_chain_spec
 
-READINESS_ADMIN_STEP_IDS = frozenset({"eval", "compile"})
+READINESS_ADMIN_STEP_IDS = frozenset({"compile"})
 
 READINESS_SOLO_STEP_IDS = frozenset(
     {
@@ -173,7 +173,7 @@ def preflight_readiness_solo(step_id: str) -> str | None:
 
 
 def chain_spec_requires_admin_llm(spec: ChainSpec) -> bool:
-    admin_skills = {"readiness-frame-eval", "mission-readiness-framer"}
+    admin_skills = {"mission-readiness-framer"}
     return any(step.skill in admin_skills for step in spec.steps)
 
 

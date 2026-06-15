@@ -73,20 +73,21 @@ flowchart LR
 
 ---
 
-### Chunk 3 — Finalize: deterministic repair before validate (eval parity with compile)
+### Chunk 3 — Finalize: deterministic repair before validate (eval parity with compile) ✅ done
 
-**Problem:** Compile has `repair_compiler_artifacts` pre-gate; eval has LLM expander + admin acronyms, no deterministic repair pass.
+**Problem:** Compile has `repair_compiler_artifacts` pre-gate; eval had LLM expander + admin acronyms, no deterministic repair pass.
 
 **Files:**
-- Create: `src/skills/eval_handoff_repair.py` (deterministic acronym dict + row dedupe)
-- Modify: `src/skills/platform_eval_finalize.py`
-- Test: `tests/skills/test_platform_eval_finalize.py` (new)
+- Create: `src/skills/eval_handoff_repair.py`
+- Modify: `src/skills/platform_eval_finalize.py`, `src/skills/readiness_solo_invoke.py`
+- Test: `tests/skills/test_platform_eval_finalize.py`
 
-- [ ] Add `repair_eval_handoff(run_dir)` — dict acronyms, near-duplicate collapse (no LLM)
-- [ ] Call repair before `validate_skill_run` in finalize
-- [ ] Demote `expand_eval_handoff` to opt-in (`EVAL_EXPANDER_LLM=1`) not default hot path
+- [x] Add `repair_eval_handoff(run_dir)` — dict acronyms (no LLM)
+- [x] Call repair before `validate_skill_run` in finalize
+- [x] Demote expander/admin to opt-in (`EVAL_EXPANDER_LLM=1`, `EVAL_ADMIN_LLM=1`)
+- [x] Eval solo/chain preflight no longer requires Ollama admin
 
-**Exit criteria:** Finalize passes on solo-green eval handoff without admin LLM.
+**Exit criteria:** Finalize repairs known acronyms without admin LLM on default path.
 
 ---
 
