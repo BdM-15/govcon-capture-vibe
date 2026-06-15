@@ -61,12 +61,12 @@ When every surface is `retrieved` or `saturated`, **stop calling kg_chunks and k
 ### 3. Draft (write handoff once)
 
 Write `artifacts/workload_handoff.json` per `references/workload_handoff_schema.md`:
-- `readiness_outcome` — program-office outcome in plain English
-- `workload_enablers[]` — ≥3 cited links from PWS/QASP/CDRL/transition to that outcome
-- `failure_modes_feared[]` — ≥3 concrete degradation paths
+- `readiness_outcome` — program-office outcome in plain English; weave in customer metrics (FMC, PO attainment, Post-MATS, etc.) when scratchpad evidence names them
+- `workload_enablers[]` — ≥3 **objects** with `enabler`, `readiness_link`, and `source_chunk_ids[]` — named PWS/CDRL/QASP/transition clusters only
+- `failure_modes_feared[]` — ≥3 **objects** with `failure_mode`, `customer_impact`, and `source_chunk_ids[]` — each ties to a metric or inspection the program office owns
 - `claim_gaps[]` — honest named gaps for thin surfaces
 
-Use real `source_chunk_ids` from the scratchpad. Never invent section numbers or CDRL IDs without grounding.
+Use real `source_chunk_ids` from the scratchpad on every enabler and failure row. Never invent section numbers or CDRL IDs without grounding. Do not emit plain strings for enabler/failure rows — object shape is required for production handoffs.
 
 ### 4. Stop
 
@@ -80,10 +80,13 @@ Target: **≤12 turns, ≤120s** on `mcpp_rfp`-class packages.
 - If a surface returns overlapping chunks, move on; do not rephrase the same query.
 - Draft from scratchpad evidence; do not poll KG again during draft.
 
-## Quality bar (platform gate)
+## Quality bar (production / platform gate)
 
-Gate checks substance after retrieve:
-- Non-empty `readiness_outcome` or `workload_enablers`
-- Cited chunk IDs on material claims
+Capture-grade handoff — not just non-empty JSON:
+- `readiness_outcome` ≥ 80 characters, program-office voice (not CO admin)
+- `workload_enablers` ≥ 3 object rows, each with `source_chunk_ids`
+- `failure_modes_feared` ≥ 3 object rows, each with `source_chunk_ids` and `customer_impact`
+- No sibling-slice fields (`eval_crosswalk`, pains, methods, themes)
+- `claim_gaps[]` names missing surfaces honestly when evidence is thin
 
 Eval cases: `evals/evals.json`.

@@ -28,6 +28,48 @@ def test_all_micro_skills_declare_validate_skill_run() -> None:
         assert resolve_skill_run_validator(skill_dir) is not None, skill_name
 
 
+def test_workload_gate_requires_object_rows_with_citations(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-prod"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "workload_handoff.json").write_text(
+        json.dumps(
+            {
+                "readiness_outcome": (
+                    "Program office owns Marine Corps prepositioned equipment readiness at "
+                    "MCSF-BI DFSP sites — contract workload instruments FMC and PO attainment."
+                ),
+                "workload_enablers": [
+                    "Plain string enabler one [chunk-abc123]",
+                    "Plain string enabler two [chunk-abc124]",
+                    "Plain string enabler three [chunk-abc125]",
+                ],
+                "failure_modes_feared": [
+                    {
+                        "failure_mode": "Missed PMCS",
+                        "customer_impact": "FMC drops below threshold",
+                        "source_chunk_ids": ["chunk-def456"],
+                    },
+                    {
+                        "failure_mode": "Late CDRL",
+                        "customer_impact": "Program office loses visibility",
+                        "source_chunk_ids": ["chunk-def457"],
+                    },
+                    {
+                        "failure_mode": "Transition gap",
+                        "customer_impact": "Coverage void at POP start",
+                        "source_chunk_ids": ["chunk-def458"],
+                    },
+                ],
+                "claim_gaps": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    issues = validate_handoff_run(run_dir, deliverable="workload_handoff.json")
+    assert any("workload_enablers must be objects" in issue for issue in issues)
+
+
 def test_workload_hook_matches_shared_gate(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     artifacts = run_dir / "artifacts"

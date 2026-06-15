@@ -6,7 +6,7 @@
       "id": 1,
       "name": "mcpp-rfp-package-mechanics",
       "prompt": "Workspace mcpp_rfp. Build workload/package-mechanics slice only: program-office readiness outcome, workload enablers from PWS/SOW/QASP/transition, and failure modes the customer fears. Program office = customer; contract = workload enabler for readiness.",
-      "expected_output": "artifacts/workload_handoff.json with cited readiness_outcome, >=3 workload_enablers, >=3 failure_modes_feared, honest claim_gaps[] for thin surfaces",
+      "expected_output": "artifacts/workload_handoff.json with cited object rows for enablers and failure modes, capture-grade readiness_outcome",
       "files": [],
       "expectations": [
         "completes in under 120 seconds wall time",
@@ -14,10 +14,11 @@
         "calls kg_entities once before package-mechanics kg_chunks passes",
         "runs at most one kg_chunks pass per plan surface (background, pws_sow, qasp, transition)",
         "does not call kg_chunks after retrieval_plan.json status is complete",
-        "writes artifacts/workload_handoff.json with readiness_outcome >= 80 characters",
-        "workload_enablers has >= 3 entries citing PWS/QASP/CDRL/transition language",
-        "failure_modes_feared has >= 3 entries tied to readiness outcome",
-        "every enabler or failure mode row cites source_chunk_ids or is grounded in scratchpad chunk IDs",
+        "writes artifacts/workload_handoff.json with readiness_outcome >= 80 characters in program-office voice",
+        "readiness_outcome anchors customer metrics (FMC, PO attainment, Post-MATS, DFSP, or equivalent) when chunk evidence supports them",
+        "workload_enablers has >= 3 object rows with enabler, readiness_link, and source_chunk_ids",
+        "failure_modes_feared has >= 3 object rows with failure_mode, customer_impact, and source_chunk_ids",
+        "every enabler and failure row cites scratchpad chunk IDs — no uncited material claims",
         "does not emit eval_crosswalk rows (eval slice owns crosswalk)",
         "solo platform gate passes on workload_handoff.json"
       ]
@@ -32,7 +33,8 @@
         "emits workload_handoff.json even when background is thin",
         "claim_gaps[] names missing surfaces explicitly",
         "does not invent CDRL titles or PWS section numbers without chunk grounding",
-        "readiness_outcome uses medium/low confidence phrasing when proxies dominate"
+        "readiness_outcome uses measured phrasing when proxies dominate",
+        "enabler and failure rows remain object-shaped with source_chunk_ids when any evidence exists"
       ]
     },
     {

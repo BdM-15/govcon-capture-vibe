@@ -6,18 +6,28 @@ Workload slice output only. Eval crosswalk, pains, win themes, and tea leaves be
 
 ```json
 {
-  "readiness_outcome": "2–4 sentences: program-office readiness the customer owns — not CO contract administration.",
+  "readiness_outcome": "2–4 sentences: program-office readiness the customer owns — lead with outcome, anchor with PWS/QASP metrics (e.g. FMC, PO attainment) when chunk evidence supports them.",
   "workload_enablers": [
-    "PWS/QASP/CDRL/transition cluster — how this contract work instruments the readiness outcome [chunk-…]"
+    {
+      "enabler": "Named PWS section, CDRL, QASP clause, or transition requirement — how contract work instruments the readiness outcome",
+      "readiness_link": "One sentence tying this workload cluster to the program-office outcome",
+      "source_chunk_ids": ["chunk-abc123"]
+    }
   ],
   "failure_modes_feared": [
-    "Concrete degradation path if contractor misses enabler — tied to customer metric or inspection"
+    {
+      "failure_mode": "Concrete degradation path if contractor misses the enabler",
+      "customer_impact": "Metric, inspection, or activation consequence the program office bears",
+      "source_chunk_ids": ["chunk-def456"]
+    }
   ],
   "claim_gaps": [
     "Named missing package surface or document the customer could supply"
   ]
 }
 ```
+
+Minimum counts: `workload_enablers` ≥ 3, `failure_modes_feared` ≥ 3. Every enabler and failure row must carry `source_chunk_ids[]` from scratchpad evidence.
 
 ## Optional (only when scratchpad evidence supports)
 
@@ -34,4 +44,4 @@ Workload slice output only. Eval crosswalk, pains, win themes, and tea leaves be
 
 ## Voice
 
-See `readiness_output_contract.md`. Expand acronyms on first use: Full Term (ACR).
+See `readiness_output_contract.md`. Expand acronyms on first use as Full Term (ACR) when defined in retrieved chunk prose.

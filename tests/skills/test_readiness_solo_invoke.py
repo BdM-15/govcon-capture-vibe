@@ -78,18 +78,46 @@ def test_assess_readiness_solo_step_passes_valid_workload_handoff(tmp_path: Path
     (artifacts / handoff_name).write_text(
         json.dumps(
             {
-                "mission_readiness_frame": {
-                    "readiness_outcome": (
-                        "Program office expects integrated logistics readiness across "
-                        "all maintenance centers with measurable sustainment outcomes."
-                    ),
-                },
+                "readiness_outcome": (
+                    "Program office expects integrated logistics readiness across "
+                    "all maintenance centers with measurable sustainment outcomes and "
+                    "FMC targets the contract workload must instrument."
+                ),
                 "workload_enablers": [
                     {
-                        "enabler": "Integrated supply support",
+                        "enabler": "PWS Section C.2 maintenance execution",
+                        "readiness_link": "Directly instruments equipment availability for crisis activation.",
                         "source_chunk_ids": ["chunk-abc123"],
-                    }
+                    },
+                    {
+                        "enabler": "CDRL 5037 maintenance management deliverables",
+                        "readiness_link": "Provides program office visibility into schedule compliance.",
+                        "source_chunk_ids": ["chunk-abc124"],
+                    },
+                    {
+                        "enabler": "QASP Section E inspection regime",
+                        "readiness_link": "Enforces quality surveillance tied to acceptance criteria.",
+                        "source_chunk_ids": ["chunk-abc125"],
+                    },
                 ],
+                "failure_modes_feared": [
+                    {
+                        "failure_mode": "Missed preventive maintenance",
+                        "customer_impact": "FMC drops below mission threshold",
+                        "source_chunk_ids": ["chunk-def456"],
+                    },
+                    {
+                        "failure_mode": "Incomplete CDRL reporting",
+                        "customer_impact": "Program office blind to schedule slips",
+                        "source_chunk_ids": ["chunk-def457"],
+                    },
+                    {
+                        "failure_mode": "Transition knowledge gaps",
+                        "customer_impact": "Coverage void during phase-in",
+                        "source_chunk_ids": ["chunk-def458"],
+                    },
+                ],
+                "claim_gaps": [],
             }
         ),
         encoding="utf-8",

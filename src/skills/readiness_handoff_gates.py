@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -77,6 +78,17 @@ def _eval_substance_issues(
     return issues
 
 
+def _workload_row_has_citation(row: Any) -> bool:
+    if isinstance(row, dict):
+        return _row_has_chunk_ids(row)
+    text = str(row or "").strip()
+    if not text:
+        return False
+    return bool(
+        re.search(r"(?:doc-|chunk-|tb-)[a-zA-Z0-9_-]+", text, re.IGNORECASE)
+    )
+
+
 def _workload_substance_issues(
     payload: dict[str, Any],
     *,
@@ -90,11 +102,65 @@ def _workload_substance_issues(
         frame.get("readiness_outcome") or payload.get("readiness_outcome") or ""
     ).strip()
     enablers = frame.get("workload_enablers") or payload.get("workload_enablers") or []
+    failures = (
+        frame.get("failure_modes_feared") or payload.get("failure_modes_feared") or []
+    )
+    issues: list[str] = []
     if not outcome and not (isinstance(enablers, list) and enablers):
-        return [
+        issues.append(
             "workload_handoff.json: readiness_outcome and workload_enablers both empty"
+        )
+        return issues
+    if len(outcome) < 80:
+        issues.append(
+            "workload_handoff.json: readiness_outcome too thin — "
+            "need 2–4 sentences of program-office readiness outcome"
+        )
+    if not isinstance(enablers, list) or len(enablers) < 3:
+        issues.append(
+            "workload_handoff.json: workload_enablers needs >= 3 cited PWS/QASP/CDRL/transition rows"
+        )
+    else:
+        uncited = [
+            index
+            for index, row in enumerate(enablers, start=1)
+            if not _workload_row_has_citation(row)
         ]
-    return []
+        if uncited:
+            issues.append(
+                "workload_handoff.json: workload_enablers rows "
+                f"{uncited[:4]} lack source_chunk_ids"
+            )
+        string_rows = [index for index, row in enumerate(enablers, start=1) if isinstance(row, str)]
+        if string_rows:
+            issues.append(
+                "workload_handoff.json: workload_enablers must be objects "
+                "(enabler, readiness_link, source_chunk_ids) — not plain strings"
+            )
+    if not isinstance(failures, list) or len(failures) < 3:
+        issues.append(
+            "workload_handoff.json: failure_modes_feared needs >= 3 cited degradation paths"
+        )
+    else:
+        uncited_failures = [
+            index
+            for index, row in enumerate(failures, start=1)
+            if not _workload_row_has_citation(row)
+        ]
+        if uncited_failures:
+            issues.append(
+                "workload_handoff.json: failure_modes_feared rows "
+                f"{uncited_failures[:4]} lack source_chunk_ids"
+            )
+        string_failures = [
+            index for index, row in enumerate(failures, start=1) if isinstance(row, str)
+        ]
+        if string_failures:
+            issues.append(
+                "workload_handoff.json: failure_modes_feared must be objects "
+                "(failure_mode, customer_impact, source_chunk_ids) — not plain strings"
+            )
+    return issues
 
 
 def _pains_substance_issues(
