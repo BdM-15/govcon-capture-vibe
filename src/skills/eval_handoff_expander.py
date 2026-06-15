@@ -24,6 +24,22 @@ _BATCH_SIZE = 8
 _MAX_BATCHES = 10
 
 
+def expansion_satisfied(
+    *,
+    workspace_dir: Path,
+    payload: dict[str, Any],
+) -> bool:
+    """True when crosswalk has material rows and coverage contract passes."""
+    if len(_existing_labels(payload)) <= 0:
+        return False
+    issues = check_coverage_contract(
+        workspace_dir=workspace_dir,
+        coverage_contract=_EVAL_COVERAGE_CONTRACT,
+        artifact=payload,
+    )
+    return not issues
+
+
 def _existing_labels(payload: dict[str, Any]) -> set[str]:
     crosswalk = payload.get("eval_crosswalk") or []
     if not isinstance(crosswalk, list):
@@ -297,12 +313,7 @@ async def expand_eval_handoff(
     batch_index = 0
 
     while batch_index < _MAX_BATCHES:
-        issues = check_coverage_contract(
-            workspace_dir=workspace_dir,
-            coverage_contract=_EVAL_COVERAGE_CONTRACT,
-            artifact=payload,
-        )
-        if not issues:
+        if expansion_satisfied(workspace_dir=workspace_dir, payload=payload):
             break
 
         missing = _missing_entities(workspace_dir, payload)

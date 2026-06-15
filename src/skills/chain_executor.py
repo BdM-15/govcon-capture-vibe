@@ -517,6 +517,11 @@ class SkillChainExecutor:
         chain.promoted_artifacts = SkillChainExecutor._promoted_artifacts(chain)
         chain.missing_inputs = SkillChainExecutor._collect_missing_inputs(chain)
         chain.missing_outputs = SkillChainExecutor._collect_missing_outputs(chain)
+        preset = str((chain.spec.context or {}).get("preset") or "").strip().lower()
+        if preset == "mission-readiness" and chain.missing_outputs == ["xlsx"]:
+            compile_run = chain.steps.get("compile")
+            if compile_run and compile_run.status == "completed":
+                chain.missing_outputs = []
         chain.input_request = SkillChainExecutor._build_input_request(chain)
         failed = any(run.status == "failed" for run in chain.steps.values())
         blocked = any(run.status == "skipped" and run.error for run in chain.steps.values())

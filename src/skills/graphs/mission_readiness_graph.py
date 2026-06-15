@@ -138,8 +138,18 @@ def _make_step_node(step: ChainStepSpec):
                 step_run.finished_at = utc_now_iso()
             return {"chain": chain.model_dump()}
 
-        if step_run.status in {"completed", "partial", "failed", "skipped"}:
+        if step_run.status in {"completed", "partial", "failed"}:
             return {"chain": chain.model_dump()}
+
+        if step_run.status == "skipped":
+            if not (
+                str(step_run.error or "").startswith("upstream ")
+                and _upstream_satisfied(chain, step)[0]
+            ):
+                return {"chain": chain.model_dump()}
+            step_run.status = "pending"
+            step_run.error = ""
+            step_run.finished_at = ""
 
         ok, reason = _upstream_satisfied(chain, step)
         if not ok:

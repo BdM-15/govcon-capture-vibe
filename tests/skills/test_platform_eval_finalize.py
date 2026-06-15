@@ -26,6 +26,37 @@ def test_split_eval_gate_issues_retriable_coverage() -> None:
     assert any("coverage" in item for item in retriable)
 
 
+def test_split_eval_gate_issues_empty_crosswalk_retriable() -> None:
+    blocking, retriable = split_eval_gate_issues(
+        ["eval_crosswalk is empty — add substantive rows or document gaps in claim_gaps[]"]
+    )
+    assert blocking == []
+    assert len(retriable) == 1
+
+
+def test_eval_needs_platform_expansion_empty_crosswalk(tmp_path: Path) -> None:
+    from src.skills.platform_eval_finalize import (
+        _eval_needs_platform_expansion,
+        _scratchpad_has_grounded_evidence,
+    )
+
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    run_dir = workspace / "run"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "eval_handoff.json").write_text(
+        json.dumps({"eval_crosswalk": [], "claim_gaps": ["Factor 1 — no evidence"]}),
+        encoding="utf-8",
+    )
+    (artifacts / "research_scratchpad.md").write_text(
+        "Evidence chunk-abc-123 from Section M.\n" * 40,
+        encoding="utf-8",
+    )
+    assert _eval_needs_platform_expansion(run_dir, workspace) is True
+    assert _scratchpad_has_grounded_evidence(run_dir) is True
+
+
 def test_repair_eval_handoff_expands_known_acronyms(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     artifacts = run_dir / "artifacts"

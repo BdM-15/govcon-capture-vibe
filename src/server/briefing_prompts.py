@@ -100,8 +100,9 @@ BRIEFING_PROMPT_LIBRARY: list[dict[str, Any]] = [
         "icon": "target",
         "label": "Mission Readiness Frame",
         "description": (
-            "Program-office priorities from the full solicitation package — readiness outcome, "
-            "pain points, and win-theme candidates."
+            "One click runs the full mission-readiness pipeline (six evidence slices + compile) "
+            "and saves frame JSON, brief, and docx. Program-office priorities from the full "
+            "solicitation package — readiness outcome, pain points, and win-theme candidates."
         ),
     },
     {

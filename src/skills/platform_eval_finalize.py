@@ -1,9 +1,10 @@
-"""Deterministic eval handoff finalize — repair, optional expander/admin, gate."""
+"""Deterministic eval handoff finalize — repair, platform expander, optional admin, gate."""
 
 from __future__ import annotations
 
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,7 @@ _PLATFORM_GATE_MARKERS = (
     "coverage:",
     "undefined acronyms",
     "eval_crosswalk row",
+    "eval_crosswalk is empty",
     "near-duplicate",
     "crosswalk rows lack",
     "invented factor",
@@ -20,10 +22,47 @@ _PLATFORM_GATE_MARKERS = (
 )
 
 _TRUTHY_ENV = frozenset({"1", "true", "yes", "on"})
+_MAX_PLATFORM_EXPAND_PASSES = 3
 
 
 def _env_enabled(name: str) -> bool:
     return str(os.environ.get(name, "") or "").strip().lower() in _TRUTHY_ENV
+
+
+def _scratchpad_has_grounded_evidence(run_dir: Path) -> bool:
+    """True when retrieve phase left scratchpad chunk IDs for platform synthesis."""
+    from src.skills.research_harness import _read_artifact
+
+    scratchpad = _read_artifact(Path(run_dir), "research_scratchpad.md", max_chars=20_000)
+    if len(scratchpad.strip()) < 500:
+        return False
+    return bool(
+        re.findall(r"(?:doc-|chunk-|tb-)[a-zA-Z0-9_-]+", scratchpad, re.IGNORECASE)
+    )
+
+
+def _eval_needs_platform_expansion(run_dir: Path, workspace_dir: Path) -> bool:
+    """True when handoff missing or crosswalk empty / below coverage contract."""
+    from src.skills.evidence_gates import check_coverage_contract
+    from src.skills.handoff_quality import _EVAL_COVERAGE_CONTRACT
+    from src.skills.readiness_handoff_models import load_handoff_dict
+
+    handoff_path = run_dir / "artifacts" / "eval_handoff.json"
+    if not handoff_path.is_file():
+        return True
+    try:
+        payload = load_handoff_dict(handoff_path)
+    except (OSError, ValueError):
+        return True
+    crosswalk = payload.get("eval_crosswalk") or []
+    if not isinstance(crosswalk, list) or not crosswalk:
+        return True
+    issues = check_coverage_contract(
+        workspace_dir=workspace_dir,
+        coverage_contract=_EVAL_COVERAGE_CONTRACT,
+        artifact=payload,
+    )
+    return bool(issues)
 
 
 def split_eval_gate_issues(issues: list[str]) -> tuple[list[str], list[str]]:
@@ -54,10 +93,11 @@ async def finalize_eval_handoff(
     loop_response: str = "",
 ) -> dict[str, Any]:
     """
-    Platform eval pipeline node: deterministic repair, optional LLM expand/admin, validate.
+    Platform eval pipeline node: repair, LLM crosswalk expansion when needed, validate.
 
-    Hot path (default): repair_eval_handoff → validate_skill_run.
-    Opt-in: EVAL_EXPANDER_LLM=1, EVAL_ADMIN_LLM=1.
+    Chain retrieve-only leaves an empty crosswalk; platform expander fills rows from scratchpad.
+    EVAL_EXPANDER_LLM=1 forces expansion even when coverage already passes.
+    EVAL_ADMIN_LLM=1 opt-in acronym admin pass.
 
     Returns dict with keys: issues, retriable_issues, blocking_issues, warnings, passed.
     """
@@ -68,19 +108,37 @@ async def finalize_eval_handoff(
     if repair_eval_handoff(run_dir):
         warnings.append("eval_finalize: repaired_known_acronyms")
 
-    if _env_enabled("EVAL_EXPANDER_LLM"):
-        from src.skills.eval_handoff_expander import expand_eval_handoff
+    force_expand = _env_enabled("EVAL_EXPANDER_LLM")
+    needs_expand = force_expand or (
+        _eval_needs_platform_expansion(run_dir, workspace_dir)
+        and _scratchpad_has_grounded_evidence(run_dir)
+    )
+    if needs_expand:
+        from src.skills.eval_handoff_expander import expand_eval_handoff, expansion_satisfied
 
-        try:
-            _, expand_warnings = await expand_eval_handoff(
-                run_dir=run_dir,
-                workspace_dir=workspace_dir,
-                loop_response=loop_response,
-            )
-            warnings.extend(expand_warnings)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("eval_finalize expand failed: %s", exc)
-            warnings.append(f"eval_finalize: expand_failed: {exc}")
+        for expand_pass in range(_MAX_PLATFORM_EXPAND_PASSES):
+            try:
+                payload, expand_warnings = await expand_eval_handoff(
+                    run_dir=run_dir,
+                    workspace_dir=workspace_dir,
+                    loop_response=loop_response if expand_pass == 0 else "",
+                )
+                warnings.extend(expand_warnings)
+                if not force_expand and expand_pass == 0:
+                    warnings.append("eval_finalize: platform_expander_auto")
+                if expansion_satisfied(workspace_dir=workspace_dir, payload=payload):
+                    break
+                if expand_pass + 1 < _MAX_PLATFORM_EXPAND_PASSES:
+                    warnings.append(
+                        f"eval_finalize: expand_pass_{expand_pass + 1}_below_coverage"
+                    )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("eval_finalize expand failed: %s", exc)
+                warnings.append(f"eval_finalize: expand_failed: {exc}")
+                break
+
+        if repair_eval_handoff(run_dir):
+            warnings.append("eval_finalize: repaired_known_acronyms_post_expand")
 
     handoff_path = run_dir / "artifacts" / "eval_handoff.json"
     if handoff_path.is_file() and _env_enabled("EVAL_ADMIN_LLM"):

@@ -20,6 +20,14 @@ def test_build_mission_readiness_chain_spec_orders_micro_skills_before_compiler(
     assert spec.context.get("external_research") is False
 
 
+def test_compile_step_depends_only_on_terminal_slices() -> None:
+    spec = build_mission_readiness_chain_spec(
+        "Build the Mission Readiness Frame from the solicitation package."
+    )
+    compile_step = spec.steps[-1]
+    assert compile_step.depends_on == ["win-themes"]
+
+
 def test_compile_step_requires_six_handoff_artifacts() -> None:
     spec = build_mission_readiness_chain_spec(
         "Build the Mission Readiness Frame from the solicitation package."
@@ -47,7 +55,7 @@ def test_build_mission_readiness_chain_includes_external_step_from_addendum() ->
     skills = [step.skill for step in spec.steps]
     assert "readiness-frame-external-research" in skills
     compile_step = spec.steps[-1]
-    assert "external" in compile_step.depends_on
+    assert set(compile_step.depends_on) == {"external", "win-themes"}
 
 
 def test_retry_gap_prompt_snippet_is_compact_json() -> None:

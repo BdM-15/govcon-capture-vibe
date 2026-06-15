@@ -121,7 +121,9 @@ async def run_tools_skill(
     )
 
     chain_ctx = (entity_payload or {}).get("chain_step_context") or {}
-    eval_retrieve_only = bool(chain_ctx.get("eval_retrieve_only"))
+    eval_retrieve_only = bool(
+        chain_ctx.get("chain_retrieve_only") or chain_ctx.get("eval_retrieve_only")
+    )
 
     max_turns = skill_tools_max_turns(skill.frontmatter.metadata)
     if eval_retrieve_only:

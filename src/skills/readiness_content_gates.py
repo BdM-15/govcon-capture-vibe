@@ -97,6 +97,7 @@ _ACRONYM_ALLOWLIST = frozenset(
         "POC",
         "PP",
         "PWS",
+        "QA",
         "QC",
         "QASP",
         "RFP",
@@ -151,6 +152,7 @@ _KNOWN_ACRONYM_EXPANSIONS: dict[str, str] = {
     "AFCAP": "Air Force Contract Augmentation Program (AFCAP)",
     "ALTS": "Automated Logistics Tool Set (ALTS)",
     "APSR": "Accountable Property System of Record (APSR)",
+    "ASQ": "American Society for Quality (ASQ)",
     "CAPSET": "Capability Set (CAPSET)",
     "CAPSETS": "Capability Sets (CAPSETS)",
     "COSIS": "Custody of Ships in Storage (COSIS)",
@@ -162,6 +164,7 @@ _KNOWN_ACRONYM_EXPANSIONS: dict[str, str] = {
     "CMMS": "Computerized Maintenance Management System (CMMS)",
     "CPFF": "Cost-Plus-Fixed-Fee (CPFF)",
     "DPAS": "Defense Property Accountability System (DPAS)",
+    "DFSP": "Defense Fuel Support Point (DFSP)",
     "EAC": "Estimate at Completion (EAC)",
     "FPRA": "Forward Pricing Rate Agreement (FPRA)",
     "FSB": "Forward Support Base (FSB)",
@@ -191,14 +194,19 @@ _KNOWN_ACRONYM_EXPANSIONS: dict[str, str] = {
     "RCP": "Risk and Performance (RCP)",
     "SCA": "Service Contract Act (SCA)",
     "SB": "Small Business (SB)",
+    "SDVOSB": "Service-Disabled Veteran-Owned Small Business (SDVOSB)",
     "SOUM": "Source of Urgent Materiel (SOUM)",
     "SDB": "Small Disadvantaged Business (SDB)",
+    "TEP": "Technical Evaluation Panel (TEP)",
+    "VOSB": "Veteran-Owned Small Business (VOSB)",
+    "WOSB": "Women-Owned Small Business (WOSB)",
     "TECV": "Total Evaluated Cost/Value (TECV)",
     "USMC": "United States Marine Corps (USMC)",
     "WBS": "Work Breakdown Structure (WBS)",
     "WHE": "Warehouse Handling Equipment (WHE)",
     "SSEB": "Source Evaluation Board (SSEB)",
     "FOPR": "Full Operating Period Requirement (FOPR)",
+    "FPRR": "Forward Pricing Rate Recommendation (FPRR)",
     "NSE": "Naval Support Element (NSE)",
     "SECREP": "Security Equipment Replenishment (SECREP)",
     "CPI": "Continuous Process Improvement (CPI)",
@@ -660,6 +668,16 @@ def frame_narrative_text_for_acronym_gate(payload: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
+def _brief_text_for_acronym_gate(brief_text: str) -> str:
+    """Narrative sections only — References holds raw citation OCR, not prose."""
+    text = str(brief_text or "")
+    marker = "\n## References"
+    idx = text.find(marker)
+    if idx >= 0:
+        text = text[:idx]
+    return text
+
+
 def acronym_issues_for_readiness_output(
     *,
     brief_text: str,
@@ -668,7 +686,7 @@ def acronym_issues_for_readiness_output(
 ) -> list[str]:
     """Acronym gate across brief plus frame narrative fields (not label keys)."""
     narrative = frame_narrative_text_for_acronym_gate(payload) if payload else ""
-    combined = f"{brief_text}\n{narrative}".strip()
+    combined = f"{_brief_text_for_acronym_gate(brief_text)}\n{narrative}".strip()
     return acronym_issues_for_text(combined, label=label)
 
 

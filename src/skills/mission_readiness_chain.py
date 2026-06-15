@@ -40,7 +40,9 @@ _STEP_RETRIEVE_CONTEXT = (
 def _pipeline_context(*, slice_name: str = "", extra: dict | None = None) -> dict:
     ctx: dict = {
         "langgraph_step_pipeline": True,
-        "eval_retrieve_only": True,
+        # Micro-skill: LLM retrieves evidence; platform finalize owns handoff synthesis.
+        "chain_retrieve_only": True,
+        "eval_retrieve_only": True,  # legacy alias — same flag
         "workflow": f"{_MICRO_SKILL_CONTEXT}\n{_STEP_RETRIEVE_CONTEXT}",
     }
     if slice_name:
@@ -113,7 +115,10 @@ def build_mission_readiness_chain_spec(
         ),
     ]
 
-    compile_depends = ["win-themes", "modernization", "tea-leaves", "eval", "workload"]
+    # LangGraph fires a node once per incoming edge — compile must depend only on
+    # terminal slice step(s), not every upstream handoff (artifact_requirements
+    # still bind all six handoffs at run time).
+    compile_depends = ["win-themes"]
     if external is not None:
         steps.append(
             ChainStepSpec(
@@ -131,7 +136,7 @@ def build_mission_readiness_chain_spec(
                 ),
             )
         )
-        compile_depends.insert(0, "external")
+        compile_depends = ["external", "win-themes"]
 
     compile_requirements: list[ChainArtifactRequirement] = [
         ChainArtifactRequirement(

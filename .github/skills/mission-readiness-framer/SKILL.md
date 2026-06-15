@@ -34,7 +34,9 @@ metadata:
 
 # Mission Readiness Framer (chain orchestrator / compiler)
 
-You are a senior capture strategist working multi-turn against the active Theseus workspace knowledge graph. Given a **solicitation package we received** (not the cover document alone), **compile** the **Mission Readiness Frame** and downstream customer-intent artifacts.
+## One-click briefing (user UX)
+
+Intel → **Mission Readiness Frame** → Run triggers preset `mission-readiness` automatically. The user does **one** action; the platform runs six retrieve-only micro-skills in order, then this compiler step. No manual step picks, no Studio wiring, no separate solo invokes.
 
 ## Chain compiler mode (`role: compiler`)
 

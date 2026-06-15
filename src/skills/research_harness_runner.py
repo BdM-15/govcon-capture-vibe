@@ -402,7 +402,9 @@ async def finalize_research_harness(
                 )
 
     chain_ctx = (entity_payload or {}).get("chain_step_context") or {}
-    eval_retrieve_only = bool(chain_ctx.get("eval_retrieve_only"))
+    eval_retrieve_only = bool(
+        chain_ctx.get("chain_retrieve_only") or chain_ctx.get("eval_retrieve_only")
+    )
     if (
         skill.name == "readiness-frame-eval"
         and workspace_dir is not None

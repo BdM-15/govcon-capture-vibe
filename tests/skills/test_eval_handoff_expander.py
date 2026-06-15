@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.skills.eval_handoff_expander import prune_ungrounded_crosswalk_rows
+from src.skills.eval_handoff_expander import expansion_satisfied, prune_ungrounded_crosswalk_rows
 
 
 def _write_eval_entities(workspace: Path, names: list[str]) -> None:
@@ -16,6 +16,23 @@ def _write_eval_entities(workspace: Path, names: list[str]) -> None:
         json.dumps({"data": records}),
         encoding="utf-8",
     )
+
+
+def test_expansion_not_satisfied_when_crosswalk_empty_despite_claim_gaps(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "ws"
+    workspace.mkdir()
+    _write_eval_entities(workspace, ["Factor 1 Management", "Factor 2 Technical"])
+
+    payload = {
+        "eval_crosswalk": [],
+        "claim_gaps": [
+            "Factor 1 Management — no grounded chunk evidence after batch retrieval",
+            "Factor 2 Technical — no grounded chunk evidence after batch retrieval",
+        ],
+    }
+    assert expansion_satisfied(workspace_dir=workspace, payload=payload) is False
 
 
 def test_prune_ungrounded_crosswalk_drops_invented_factors(tmp_path: Path) -> None:

@@ -105,9 +105,14 @@ def repair_compiler_artifacts(run_dir: Path) -> bool:
             brief = brief_path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             return changed
-        combined = brief
+        from src.skills.readiness_content_gates import _brief_text_for_acronym_gate
+
+        combined = _brief_text_for_acronym_gate(brief)
         if isinstance(payload, dict):
-            combined = f"{brief}\n{frame_narrative_text_for_acronym_gate(payload)}"
+            combined = (
+                f"{_brief_text_for_acronym_gate(brief)}\n"
+                f"{frame_narrative_text_for_acronym_gate(payload)}"
+            )
         targets = undefined_acronyms(combined)
         revised = apply_known_acronym_expansions(brief, targets=targets)
         if revised.strip() and revised != brief:
