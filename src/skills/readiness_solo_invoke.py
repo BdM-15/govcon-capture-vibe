@@ -56,6 +56,13 @@ def build_readiness_solo_chain_spec(
     """Build a one-step chain spec for solo readiness micro-skill validation."""
     full_spec = build_mission_readiness_chain_spec(prompt, user_addendum=user_addendum)
     step = get_readiness_step_spec(step_id, prompt, user_addendum=user_addendum)
+    solo_step = step.model_copy(
+        update={
+            "depends_on": [],
+            "input_artifacts": [],
+            "artifact_requirements": [],
+        }
+    )
     return ChainSpec(
         name=f"solo-{step.id}",
         prompt=full_spec.prompt,
@@ -63,7 +70,7 @@ def build_readiness_solo_chain_spec(
             "preset": "readiness-solo",
             "solo_step_id": step.id,
         },
-        steps=[step],
+        steps=[solo_step],
         stop_on_error=True,
     )
 

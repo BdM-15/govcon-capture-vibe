@@ -18,6 +18,15 @@ from src.skills.readiness_solo_invoke import (
 )
 
 
+def test_build_readiness_solo_chain_spec_clears_upstream_dependencies() -> None:
+    spec = build_readiness_solo_chain_spec("pains", "Build MRF.")
+    step = spec.steps[0]
+    assert step.id == "pains"
+    assert step.depends_on == []
+    assert step.input_artifacts == []
+    assert step.artifact_requirements == []
+
+
 def test_build_readiness_solo_chain_spec_workload_uses_pipeline_context() -> None:
     spec = build_readiness_solo_chain_spec(
         "workload",
