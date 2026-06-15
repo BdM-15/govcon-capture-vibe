@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "skill_name": "readiness-frame-tea-leaves",
+  "evals": [
+    {
+      "id": 1,
+      "name": "mcpp-rfp-tea-leaves",
+      "prompt": "Workspace mcpp_rfp. Build tea-leaves slice only: importance_signals[] and implicit_criteria[] with source_role, confidence, alternate_read when not high, and source_chunk_ids.",
+      "expected_output": "artifacts/tea_leaves_handoff.json with cited signals and implicit criteria",
+      "files": [],
+      "expectations": [
+        "completes in under 120 seconds wall time",
+        "uses 10 or fewer assistant turns",
+        "calls kg_entities exactly once",
+        "runs at most one kg_chunks pass for tea_leaves surface",
+        "importance_signals or implicit_criteria non-empty with source_chunk_ids",
+        "does not emit win_theme_candidates or customer_pain_points",
+        "solo platform gate passes on tea_leaves_handoff.json"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "honest-gaps",
+      "prompt": "Sparse package. Best-effort signals/criteria; claim_gaps[] for missing evidence.",
+      "expected_output": "Partial handoff + claim_gaps",
+      "files": [],
+      "expectations": [
+        "claim_gaps[] names missing evidence when thin",
+        "no scaffold placeholder signals"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "retrieval-discipline",
+      "prompt": "Workspace mcpp_rfp. One kg_entities + one kg_chunks, draft, no re-query.",
+      "expected_output": "finish_reason stop; kg_chunks_calls <= 2",
+      "files": [],
+      "expectations": [
+        "finish_reason is stop not max_turns",
+        "kg_chunks_calls <= 2",
+        "tool_calls <= 8"
+      ]
+    }
+  ]
+}

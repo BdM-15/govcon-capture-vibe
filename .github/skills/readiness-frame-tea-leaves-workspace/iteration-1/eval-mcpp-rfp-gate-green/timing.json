@@ -1,0 +1,8 @@
+{
+  "run_id": "20260615_144326_build_the_mission_readiness_fram",
+  "chain_id": "20260615_144325_solo_tea_leaves",
+  "wall_seconds": 41.0,
+  "max_turns_cap": 10,
+  "turns": 5,
+  "gate_passed": true
+}
