@@ -2,17 +2,17 @@
   {
     "id": "methods_modernization",
     "label": "Modernization inquiry — current methods, systems, tooling in scope",
-    "keywords": ["system", "tool", "software", "manual", "process", "digital", "automation", "legacy", "modernization"],
+    "keywords": ["system", "tool", "software", "manual", "process", "digital", "automation", "legacy", "methodsurf"],
     "suggested_query": "current methods systems tools software manual processes digital automation legacy modernization incumbent implied tooling named in PWS SOW attachments",
     "inquiry": "modernization",
-    "feeds": ["current_methods[]", "workload_enablers[]"]
+    "feeds": ["current_methods[]"]
   },
   {
     "id": "innovation_inquiry",
     "label": "Innovation inquiry — efficiency, lean delivery, quality/cost openings",
-    "keywords": ["innovation", "efficient", "efficiency", "improvement", "continuous", "lean", "analytics", "automation", "technology"],
+    "keywords": ["innovation", "efficient", "efficiency", "improvement", "continuous", "lean", "analytics", "innovsurf"],
     "suggested_query": "innovation innovative efficient efficiency continuous improvement lean delivery automation analytics technology quality cost reduce waste eval emphasis",
     "inquiry": "innovation",
-    "feeds": ["innovation_opportunities[]", "win_theme_candidates[]"]
+    "feeds": ["innovation_opportunities[]"]
   }
 ]

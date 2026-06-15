@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "skill_name": "readiness-frame-modernization",
+  "evals": [
+    {
+      "id": 1,
+      "name": "mcpp-rfp-methods-innovation",
+      "prompt": "Workspace mcpp_rfp. Build modernization slice only: current_methods[] from PWS-implied tooling/processes and innovation_opportunities[] with customer-grounded quality/cost value. Cite source_chunk_ids; log gaps in claim_gaps[].",
+      "expected_output": "artifacts/modernization_handoff.json with cited current_methods and innovation_opportunities",
+      "files": [],
+      "expectations": [
+        "completes in under 120 seconds wall time",
+        "uses 12 or fewer assistant turns",
+        "calls kg_entities exactly once",
+        "runs at most one kg_chunks per plan surface (methods_modernization, innovation_inquiry)",
+        "does not call kg_chunks after retrieval_plan.json plan_complete is true",
+        "current_methods has >= 2 rows OR innovation_opportunities has >= 2 rows with source_chunk_ids",
+        "does not emit customer_pain_points or win_theme_candidates (sibling slices)",
+        "solo platform gate passes on modernization_handoff.json"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "honest-gaps-when-thin",
+      "prompt": "Workspace with sparse tooling extraction. Emit best-effort methods/innovations for grounded evidence; log missing method context in claim_gaps[].",
+      "expected_output": "Partial modernization handoff plus explicit claim_gaps",
+      "files": [],
+      "expectations": [
+        "claim_gaps[] names missing method or innovation evidence when rows are thin",
+        "no scaffold rows with placeholder tooling names",
+        "fit_to_scope uses high/medium/low honestly"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "retrieval-discipline-regression",
+      "prompt": "Workspace mcpp_rfp. One kg_entities + two kg_chunks (methods then innovation), then draft without re-querying.",
+      "expected_output": "finish_reason stop; kg_chunks_calls <= 3",
+      "files": [],
+      "expectations": [
+        "finish_reason is stop not max_turns",
+        "kg_chunks_calls <= 3",
+        "tool_calls <= 10"
+      ]
+    }
+  ]
+}
