@@ -1,0 +1,7 @@
+{
+  "run_id": "20260615_145837_build_the_mission_readiness_fram",
+  "chain_id": "20260615_145837_solo_compile",
+  "wall_seconds": 62.4,
+  "finish_reason": "compiler_merge",
+  "gate_passed": true
+}

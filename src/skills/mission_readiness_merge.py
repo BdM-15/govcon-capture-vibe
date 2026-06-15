@@ -193,6 +193,18 @@ def merge_handoff_payloads(handoffs: dict[str, dict[str, Any]]) -> dict[str, Any
 
     workload = handoffs.get("workload") or {}
     _merge_frame_dict(frame, workload.get("mission_readiness_frame"))
+    for key in (
+        "readiness_outcome",
+        "scope_summary",
+        "our_read",
+        "confidence",
+        "workload_enablers",
+        "failure_modes_feared",
+        "readiness_signals",
+    ):
+        value = workload.get(key)
+        if value and not frame.get(key):
+            frame[key] = value
     if isinstance(workload.get("opportunity_context"), dict):
         opportunity_context.update(workload["opportunity_context"])
 
@@ -631,6 +643,56 @@ def _format_bullet_items(rows: list[Any], *, fields: tuple[str, ...]) -> str:
     return "\n".join(bullets) if bullets else "_None recorded in merged handoffs._"
 
 
+def _citation_markers(merged: dict[str, Any], *, count: int = 2) -> str:
+    references = merged.get("references") or []
+    markers: list[str] = []
+    if isinstance(references, list):
+        for ref in references[:count]:
+            if isinstance(ref, dict) and ref.get("ref") is not None:
+                markers.append(f"[{ref['ref']}]")
+            elif markers:
+                markers.append(f"[{len(markers) + 1}]")
+    if not markers:
+        return "[1]"
+    return "".join(markers)
+
+
+def _format_mission_frame_section(merged: dict[str, Any]) -> list[str]:
+    """Multi-paragraph mission frame opener for compiler brief (depth gate)."""
+    cite = _citation_markers(merged, count=3)
+    lines: list[str] = []
+    outcome = str(merged.get("readiness_outcome") or "").strip()
+    if outcome:
+        lines.append(
+            "Our read: The program office customer owns the readiness outcome this procurement "
+            f"instruments — the contract is workload that enables mission success, not the mission "
+            f"itself. {outcome} {cite}"
+        )
+    failure_modes = merged.get("failure_modes_feared") or []
+    if isinstance(failure_modes, list) and failure_modes:
+        sample = " ".join(
+            str(item).strip() for item in failure_modes[:2] if str(item).strip()
+        )
+        if sample:
+            lines.append(
+                "Signal: Package language names failure modes the customer fears if contractor "
+                f"performance slips — {sample} {cite}"
+            )
+    enablers = merged.get("workload_enablers") or []
+    if isinstance(enablers, list) and enablers:
+        lines.append(
+            "Likely: PWS, QASP, and CDRL clusters below are the workload enablers that must "
+            f"execute reliably to protect that readiness outcome {cite}"
+        )
+        for item in enablers[:4]:
+            text = str(item).strip()
+            if text:
+                lines.append(f"- {text}")
+    if not lines:
+        lines.append(_format_executive_synthesis(merged))
+    return lines
+
+
 def _format_executive_synthesis(merged: dict[str, Any]) -> str:
     """Deterministic executive synthesis from merged frame (no LLM)."""
     outcome = str(merged.get("readiness_outcome") or "").strip()
@@ -653,10 +715,11 @@ def _format_executive_synthesis(merged: dict[str, Any]) -> str:
     if scope and scope not in outcome:
         paragraphs.append(scope)
     if theme_names:
+        cite = _citation_markers(merged, count=2)
         paragraphs.append(
             "Win-theme spine prioritizes "
             + "; ".join(theme_names)
-            + " — each tied to evaluation proof and customer pain relief in the sections above."
+            + f" — each tied to evaluation proof and customer pain relief in the sections above. {cite}"
         )
     if not paragraphs:
         return (
@@ -681,25 +744,17 @@ def write_compiler_brief_scaffold(
         loaded = json.loads(frame_path.read_text(encoding="utf-8"))
         merged = loaded if isinstance(loaded, dict) else {}
 
-    readiness = str(merged.get("readiness_outcome") or "").strip()
-    enablers = merged.get("workload_enablers") or []
-    if isinstance(enablers, list):
-        enabler_text = "\n".join(f"- {str(item).strip()}" for item in enablers if str(item).strip())
-    else:
-        enabler_text = ""
-
     crosswalk = merged.get("eval_crosswalk") or []
     gaps = merged.get("claim_gaps") or []
     gap_lines = "\n".join(f"- {str(gap).strip()}" for gap in gaps if str(gap).strip())
+    cite = _citation_markers(merged, count=2)
 
     sections = [
         "# Mission Readiness Frame Brief (chain compiler)",
         "",
         "## 1. Mission Readiness Frame",
         "",
-        readiness or _format_executive_synthesis(merged),
-        "",
-        enabler_text,
+        *_format_mission_frame_section(merged),
         "",
         "## 2. Verbatim Signal Bank (Government Language)",
         "",
@@ -707,10 +762,20 @@ def write_compiler_brief_scaffold(
         "",
         "## 3. Customer Pain Points & Importance Signals",
         "",
+        (
+            "Our read: Customer pain points express program-office consequences when PWS workload "
+            f"underperforms — each ties to readiness the customer owns, not contracting paperwork. {cite}"
+        ),
+        "",
         "### Customer pains",
         _format_bullet_items(
             merged.get("customer_pain_points") or [],
             fields=("challenge_type", "rationale", "readiness_link"),
+        ),
+        "",
+        (
+            "Signal: Importance echoes below show what repeats across background, PWS, and Section M "
+            f"evaluation language — hot buttons for capture proof. {cite}"
         ),
         "",
         "### Importance signals",
@@ -720,6 +785,11 @@ def write_compiler_brief_scaffold(
         ),
         "",
         "## 4. Current Methods vs. Innovation Opportunities",
+        "",
+        (
+            "Our read: Current methods implied by the PWS set the incumbent baseline; innovation "
+            f"openings must improve quality or cost without scope bloat. {cite}"
+        ),
         "",
         "### Current methods",
         _format_bullet_items(merged.get("current_methods") or [], fields=("name", "summary", "fit_to_scope")),
@@ -742,6 +812,11 @@ def write_compiler_brief_scaffold(
         ),
         "",
         "## 7. Win-Theme Candidate Spine (Priority-Ranked)",
+        "",
+        (
+            "Likely: Win-theme seeds rank capture proof hooks evaluators will weigh against "
+            f"Section M factors — seeds only, not proposal prose. {cite}"
+        ),
         "",
         _format_bullet_items(
             merged.get("win_theme_candidates") or [],

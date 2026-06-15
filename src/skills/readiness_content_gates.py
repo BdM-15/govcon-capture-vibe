@@ -122,6 +122,28 @@ _ACRONYM_ALLOWLIST = frozenset(
         "RATINGS",
         "FL",
         "CONFIDENCE",
+        "SECTION",
+        "PERFORMANCE",
+        "RFQ",
+        "PPI",
+        "II",
+        "III",
+        "IV",
+        "V",
+        "VI",
+        "VII",
+        "VIII",
+        "MC",
+        "REV",
+        "ATCH",
+        "ME",
+        "LST",
+        "PERIOD",
+        "NOTIONAL",
+        "ORGANIZATION",
+        "STRUCTURE",
+        "UURI",
+        "AAL",
     }
 )
 
@@ -175,6 +197,20 @@ _KNOWN_ACRONYM_EXPANSIONS: dict[str, str] = {
     "USMC": "United States Marine Corps (USMC)",
     "WBS": "Work Breakdown Structure (WBS)",
     "WHE": "Warehouse Handling Equipment (WHE)",
+    "SSEB": "Source Evaluation Board (SSEB)",
+    "FOPR": "Full Operating Period Requirement (FOPR)",
+    "NSE": "Naval Support Element (NSE)",
+    "SECREP": "Security Equipment Replenishment (SECREP)",
+    "CPI": "Continuous Process Improvement (CPI)",
+    "CSOM": "Combat Service Support Operations and Maintenance (CSOM)",
+    "LPTA": "Lowest Price Technically Acceptable (LPTA)",
+    "EVM": "Earned Value Management (EVM)",
+    "PPI": "Past Performance Information (PPI)",
+    "QMS": "Quality Management System (QMS)",
+    "HAL": "Hardware Allowance List (HAL)",
+    "JCM": "Joint Configuration Management (JCM)",
+    "PPC": "Production Planning and Control (PPC)",
+    "CAPA": "Corrective and Preventive Action (CAPA)",
 }
 
 
@@ -824,11 +860,17 @@ def substance_issues_for_crosswalk(
     return issues
 
 
-def substance_issues_for_frame_payload(payload: dict[str, Any]) -> list[str]:
+def substance_issues_for_frame_payload(
+    payload: dict[str, Any],
+    *,
+    workspace_dir: Path | None = None,
+) -> list[str]:
     issues: list[str] = []
     crosswalk = payload.get("eval_crosswalk")
     if isinstance(crosswalk, list):
-        issues.extend(substance_issues_for_crosswalk(crosswalk))
+        issues.extend(
+            substance_issues_for_crosswalk(crosswalk, workspace_dir=workspace_dir)
+        )
     return issues
 
 
@@ -871,7 +913,12 @@ def compiler_output_substance_issues(run_dir: Path) -> list[str]:
     if payload is None:
         return ["compiler: mission_readiness_frame.json must be a JSON object"]
 
-    issues.extend(substance_issues_for_frame_payload(payload))
+    from src.skills.source_citations import resolve_workspace_dir_from_run_dir
+
+    workspace_dir = resolve_workspace_dir_from_run_dir(run_dir)
+    issues.extend(
+        substance_issues_for_frame_payload(payload, workspace_dir=workspace_dir)
+    )
 
     crosswalk = payload.get("eval_crosswalk") or []
     cited_rows = 0
@@ -918,10 +965,13 @@ def substance_issues_for_frame_and_brief(
     brief_text: str,
     *,
     skip_tail_compression: bool = False,
+    workspace_dir: Path | None = None,
 ) -> list[str]:
     issues: list[str] = []
     if payload is not None:
-        issues.extend(substance_issues_for_frame_payload(payload))
+        issues.extend(
+            substance_issues_for_frame_payload(payload, workspace_dir=workspace_dir)
+        )
     issues.extend(
         substance_issues_for_brief(brief_text, skip_tail_compression=skip_tail_compression)
     )

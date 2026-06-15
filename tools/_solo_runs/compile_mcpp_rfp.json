@@ -1,0 +1,13 @@
+{
+  "step_id": "compile",
+  "skill": "mission-readiness-framer",
+  "passed": true,
+  "gate_passed": true,
+  "run_id": "20260615_145837_build_the_mission_readiness_fram",
+  "chain_id": "20260615_145837_solo_compile",
+  "workspace": "mcpp_rfp",
+  "wall_seconds": 62.4,
+  "upstream_handoffs": 6,
+  "finish_reason": "compiler_merge",
+  "note": "Skill-creator compile solo green — deterministic merge + scaffold depth gate"
+}

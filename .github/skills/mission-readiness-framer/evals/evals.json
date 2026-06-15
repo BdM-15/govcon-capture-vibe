@@ -72,6 +72,24 @@
         "bloat proposals that expand scope beyond the solicitation",
         "fixed-count padding unrelated to solicitation size"
       ]
+    },
+    {
+      "id": "mrf-005",
+      "name": "solo-compile-mcpp-rfp",
+      "prompt": "Workspace mcpp_rfp. Solo compile step: merge six green readiness-frame handoffs from tools/_solo_runs into mission_readiness_frame.json and brief.md.",
+      "expected_signals": [
+        "finish_reason stop or depth gate pass — not depth_incomplete",
+        "mission_readiness_frame.json includes readiness_outcome from workload handoff",
+        "eval_crosswalk[] preserved from eval handoff with source_chunk_ids",
+        "brief.md has multi-paragraph sections with [N] citation markers",
+        "solo platform gate passes on compiler artifacts"
+      ],
+      "anti_signals": [
+        "kg_entities or kg_chunks calls in compiler mode",
+        "empty readiness_outcome after workload merge",
+        "invented eval factor shorthand rejected by depth gate",
+        "bullet-only brief without analytical prose"
+      ]
     }
   ]
 }

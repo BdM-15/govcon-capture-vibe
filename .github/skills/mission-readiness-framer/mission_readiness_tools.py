@@ -665,12 +665,24 @@ def _content_gate_helpers():
     )
 
 
-def _thin_crosswalk_rows(rows: list[Any]) -> list[str]:
+def _thin_crosswalk_rows(
+    rows: list[Any],
+    *,
+    run_dir: Path | None = None,
+) -> list[str]:
     issues: list[str] = []
     helpers = _content_gate_helpers()
     substance_fn = helpers[1] if helpers else None
+    workspace_dir = None
+    if run_dir is not None:
+        try:
+            from src.skills.source_citations import resolve_workspace_dir_from_run_dir
+
+            workspace_dir = resolve_workspace_dir_from_run_dir(run_dir)
+        except ImportError:
+            workspace_dir = None
     if substance_fn is not None:
-        issues.extend(substance_fn(rows))
+        issues.extend(substance_fn(rows, workspace_dir=workspace_dir))
     for index, raw in enumerate(rows, start=1):
         if not isinstance(raw, dict):
             issues.append(f"eval_crosswalk row {index} is not an object")
@@ -701,14 +713,23 @@ def _readiness_content_issues(
         return []
     acronym_fn, _, frame_fn, frame_brief_fn = helpers
     issues: list[str] = []
+    workspace_dir = None
+    if run_dir is not None:
+        try:
+            from src.skills.source_citations import resolve_workspace_dir_from_run_dir
+
+            workspace_dir = resolve_workspace_dir_from_run_dir(run_dir)
+        except ImportError:
+            workspace_dir = None
     if payload is not None:
-        issues.extend(frame_fn(payload))
+        issues.extend(frame_fn(payload, workspace_dir=workspace_dir))
     compiler_mode = run_dir is not None and _is_compiler_run(run_dir)
     issues.extend(
         frame_brief_fn(
             payload,
             brief_text,
             skip_tail_compression=compiler_mode,
+            workspace_dir=workspace_dir,
         )
     )
     issues.extend(
@@ -810,7 +831,7 @@ def validate_mission_readiness_run(
             if not crosswalk:
                 issues.append("eval_crosswalk is empty — cross-walk every material factor from the package or log claim_gaps[]")
             else:
-                issues.extend(_thin_crosswalk_rows(crosswalk))
+                issues.extend(_thin_crosswalk_rows(crosswalk, run_dir=Path(run_dir)))
                 factors = {
                     str(row.get("evaluation_factor") or "").strip().lower()
                     for row in crosswalk

@@ -12,7 +12,7 @@ metadata:
   skill_family_label: Mission Readiness Frame
   runtime: tools
   category: capture_intelligence
-  version: 1.6.2
+  version: 1.7.0
   status: active
   research_harness:
     plan_surfaces_path: references/plan_surfaces.json
@@ -36,7 +36,17 @@ metadata:
 
 You are a senior capture strategist working multi-turn against the active Theseus workspace knowledge graph. Given a **solicitation package we received** (not the cover document alone), **compile** the **Mission Readiness Frame** and downstream customer-intent artifacts.
 
-When invoked via **skill chain**, merge upstream JSON from `readiness-frame-*` micro-skills (`context_artifacts`) before drafting `mission_readiness_frame.json`. When run standalone, execute the full retrieval plan below. See `docs/SKILL_DECOMPOSITION.md` for the decomposition map.
+## Chain compiler mode (`role: compiler`)
+
+When `chain_step_context.role` is **compiler** (solo `compile` step or final chain node):
+
+1. **Do not retrieve** — platform merges upstream `*_handoff.json` artifacts deterministically.
+2. **Do not** call `kg_entities` / `kg_chunks` — `retrieval_plan.json` is empty; harness marks retrieve complete.
+3. Platform writes `mission_readiness_frame.json` + `brief.md` from merged handoffs — your tool loop should **stop immediately** after merge.
+4. `brief.md` must pass depth gate: multi-paragraph analytical prose per section, numbered `[N]` citation markers, verbatim Section M factor labels in `eval_crosswalk[]` (inherited from eval handoff), acronyms as Full Term (ACR).
+5. Upstream slice quality is proven at solo eval — compiler does not re-reason pains/eval/themes from scratch.
+
+When invoked **standalone** (no compiler role), execute the full retrieval plan below. See `docs/SKILL_DECOMPOSITION.md` for the decomposition map.
 
 ## Philosophy (read first)
 
