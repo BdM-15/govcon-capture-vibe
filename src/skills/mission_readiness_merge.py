@@ -791,6 +791,12 @@ def write_compiler_brief_scaffold(
             f"openings must improve quality or cost without scope bloat. {cite}"
         ),
         "",
+        (
+            "Likely: Evaluators treat incumbent methods as the technical floor — proposals that only "
+            "repeat these patterns without measurable quality or cost movement read as status-quo "
+            "execution. Innovation rows must tie to PWS outcomes the program office owns."
+        ),
+        "",
         "### Current methods",
         _format_bullet_items(merged.get("current_methods") or [], fields=("name", "summary", "fit_to_scope")),
         "",
