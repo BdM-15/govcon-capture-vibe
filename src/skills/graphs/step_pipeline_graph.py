@@ -213,7 +213,8 @@ async def _finalize_node(state: StepPipelineState, *, config: RunnableConfig) ->
         }
 
     retry = int(state.get("retry_count") or 0)
-    if retriable and retry < _MAX_RETRIEVE_RETRIES:
+    compiler_step = str(step.skill or "").strip().lower() == "mission-readiness-framer"
+    if retriable and retry < _MAX_RETRIEVE_RETRIES and not compiler_step:
         emit_chain_event(
             chain_dir,
             ChainEvent(

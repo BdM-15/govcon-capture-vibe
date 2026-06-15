@@ -141,19 +141,24 @@ def _validate_micro_skill_run(skill_name: str, run_dir: Path) -> list[str]:
 
 
 def _validate_compiler_run(run_dir: Path) -> list[str]:
+    """Deterministic compiler gate — repair loop only, never retrieve retry."""
     from src.skills.mission_readiness_merge import write_compiler_brief_scaffold
-
-    write_compiler_brief_scaffold(run_dir)
-    repair_compiler_artifacts(run_dir)
-    issues = list(compiler_output_substance_issues(run_dir))
     from src.skills.skill_local_tools import load_skill_tool_module
 
     skill_dir = Path(__file__).resolve().parents[2] / ".github" / "skills" / "mission-readiness-framer"
     module = load_skill_tool_module(skill_dir, "mission_readiness_tools")
-    try:
-        issues.extend(module.validate_skill_run(run_dir, user_prompt=""))
-    except TypeError:
-        issues.extend(module.validate_skill_run(run_dir))
+
+    issues: list[str] = []
+    for _ in range(4):
+        write_compiler_brief_scaffold(run_dir)
+        repair_compiler_artifacts(run_dir)
+        issues = list(compiler_output_substance_issues(run_dir))
+        try:
+            issues.extend(module.validate_skill_run(run_dir, user_prompt=""))
+        except TypeError:
+            issues.extend(module.validate_skill_run(run_dir))
+        if not issues:
+            return []
     return issues
 
 
