@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from src.skills.chain_models import ChainSpec, ChainStepRun, ChainStepSpec
+from src.skills.chain_models import ChainArtifactRef, ChainSpec, ChainStepRun, ChainStepSpec
 from src.skills.handoff_quality import (
     _SKILL_EXPECTED_HANDOFF,
     step_quality_errors,
@@ -28,6 +29,59 @@ READINESS_SOLO_STEP_IDS = frozenset(
         "compile",
     }
 )
+
+_SOLO_COMPILE_UPSTREAM_COUNT = 6
+
+
+def resolve_solo_compile_input_artifacts(
+    *,
+    repo_root: Path,
+    workspace_name: str,
+) -> list[ChainArtifactRef]:
+    """Wire verified solo handoffs from tools/_solo_runs into compile input_artifacts."""
+    manifest_dir = repo_root / "tools" / "_solo_runs"
+    workspace_root = repo_root / "rag_storage" / workspace_name
+    refs: list[ChainArtifactRef] = []
+    if not manifest_dir.is_dir():
+        return refs
+
+    for manifest_path in sorted(manifest_dir.glob("*.json")):
+        try:
+            data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        if not (data.get("passed") or data.get("gate_passed")):
+            continue
+        step_id = str(data.get("step_id") or "").strip().lower()
+        skill = str(data.get("skill") or "").strip()
+        run_id = str(data.get("run_id") or "").strip()
+        if not step_id or not skill or not run_id:
+            continue
+        handoff_name = _SKILL_EXPECTED_HANDOFF.get(skill)
+        if not handoff_name:
+            continue
+        handoff_path = (
+            workspace_root / "skill_runs" / skill / run_id / "artifacts" / handoff_name
+        )
+        if not handoff_path.is_file():
+            continue
+        product = handoff_name.replace(".json", "")
+        refs.append(
+            ChainArtifactRef(
+                step_id=step_id,
+                skill=skill,
+                run_id=run_id,
+                filename=handoff_name,
+                path=str(handoff_path),
+                display_name=handoff_name,
+                mime="application/json",
+                size=handoff_path.stat().st_size,
+                products=[product],
+            )
+        )
+    return refs
 
 
 def get_readiness_step_spec(
@@ -56,13 +110,20 @@ def build_readiness_solo_chain_spec(
     """Build a one-step chain spec for solo readiness micro-skill validation."""
     full_spec = build_mission_readiness_chain_spec(prompt, user_addendum=user_addendum)
     step = get_readiness_step_spec(step_id, prompt, user_addendum=user_addendum)
-    solo_step = step.model_copy(
-        update={
-            "depends_on": [],
-            "input_artifacts": [],
-            "artifact_requirements": [],
-        }
-    )
+    solo_updates: dict[str, Any] = {
+        "depends_on": [],
+        "input_artifacts": [],
+        "artifact_requirements": [],
+    }
+    if step.id == "compile":
+        from src.core import get_settings
+
+        repo_root = Path(__file__).resolve().parents[2]
+        solo_updates["input_artifacts"] = resolve_solo_compile_input_artifacts(
+            repo_root=repo_root,
+            workspace_name=get_settings().workspace,
+        )
+    solo_step = step.model_copy(update=solo_updates)
     return ChainSpec(
         name=f"solo-{step.id}",
         prompt=full_spec.prompt,
@@ -81,6 +142,20 @@ def readiness_step_requires_admin_llm(step_id: str) -> bool:
 
 def preflight_readiness_solo(step_id: str) -> str | None:
     """Return user-facing error when admin Ollama required but not ready; else None."""
+    normalized = str(step_id or "").strip().lower()
+    if normalized == "compile":
+        from src.core import get_settings
+
+        repo_root = Path(__file__).resolve().parents[2]
+        refs = resolve_solo_compile_input_artifacts(
+            repo_root=repo_root,
+            workspace_name=get_settings().workspace,
+        )
+        if len(refs) < _SOLO_COMPILE_UPSTREAM_COUNT:
+            return (
+                f"Compile solo needs {_SOLO_COMPILE_UPSTREAM_COUNT} green upstream handoffs "
+                f"in tools/_solo_runs/ (found {len(refs)}). Run workload/eval/pains/… solo first."
+            )
     if not readiness_step_requires_admin_llm(step_id):
         return None
     if admin_model_configured():
@@ -191,6 +266,7 @@ __all__ = [
     "assess_readiness_solo_step",
     "build_readiness_solo_chain_spec",
     "build_solo_invoke_http_payload",
+    "resolve_solo_compile_input_artifacts",
     "chain_spec_requires_admin_llm",
     "get_readiness_step_spec",
     "preflight_readiness_chain",

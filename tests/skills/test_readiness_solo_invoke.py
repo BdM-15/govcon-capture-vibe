@@ -15,7 +15,24 @@ from src.skills.readiness_solo_invoke import (
     assess_readiness_solo_step,
     build_readiness_solo_chain_spec,
     build_solo_invoke_http_payload,
+    resolve_solo_compile_input_artifacts,
 )
+
+
+def test_build_readiness_solo_chain_spec_compile_wires_solo_run_handoffs() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    refs = resolve_solo_compile_input_artifacts(
+        repo_root=repo_root,
+        workspace_name="mcpp_rfp",
+    )
+    assert len(refs) >= 6
+    spec = build_readiness_solo_chain_spec("compile", "Build MRF.")
+    step = spec.steps[0]
+    assert step.id == "compile"
+    assert len(step.input_artifacts) >= 6
+    filenames = {artifact.filename for artifact in step.input_artifacts}
+    assert "eval_handoff.json" in filenames
+    assert "workload_handoff.json" in filenames
 
 
 def test_build_readiness_solo_chain_spec_clears_upstream_dependencies() -> None:
