@@ -122,7 +122,9 @@ def validate_handoff_artifact(
                 )
             )
         if isinstance(crosswalk, list) and crosswalk:
-            issues.extend(substance_issues_for_crosswalk(crosswalk))
+            issues.extend(
+                substance_issues_for_crosswalk(crosswalk, workspace_dir=workspace_dir)
+            )
             material = [
                 row
                 for row in crosswalk

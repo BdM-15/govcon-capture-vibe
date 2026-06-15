@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 from typing import Any
 
 _BOILERPLATE_RE = re.compile(
@@ -147,14 +148,55 @@ def _is_valid_chunk_id(value: Any) -> bool:
     return bool(text and _VALID_CHUNK_ID_RE.match(text))
 
 
+def _normalize_factor_label(label: str) -> str:
+    text = str(label or "").strip().lower()
+    if not text:
+        return ""
+    return re.sub(
+        r"\s*\((?:evaluation_factor|subfactor)\)\s*$",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    ).strip()
+
+
+def _known_factor_labels(workspace_dir: Path | None) -> set[str]:
+    if workspace_dir is None:
+        return set()
+    from src.skills.evidence_gates import load_material_eval_entities
+
+    return {
+        str(entity.get("name") or "").strip().lower()
+        for entity in load_material_eval_entities(workspace_dir)
+        if str(entity.get("name") or "").strip()
+    }
+
+
+def _factor_matches_inventory(label: str, known: set[str]) -> bool:
+    normalized = _normalize_factor_label(label)
+    if not normalized or not known:
+        return False
+    if normalized in known:
+        return True
+    return any(
+        normalized in known_label or known_label in normalized for known_label in known
+    )
+
+
 def citation_issues_for_crosswalk_row(
     row: dict[str, Any],
     *,
     index: int,
+    known_factor_labels: set[str] | None = None,
 ) -> list[str]:
     issues: list[str] = []
     factor = str(row.get("evaluation_factor") or "").strip()
-    if factor and _FORMULAIC_FACTOR_RE.search(factor):
+    known = known_factor_labels or set()
+    if (
+        factor
+        and _FORMULAIC_FACTOR_RE.search(factor)
+        and not _factor_matches_inventory(factor, known)
+    ):
         issues.append(
             f"eval_crosswalk row {index} evaluation_factor looks like invented shorthand "
             f"({factor!r}) — use verbatim Section M factor/subfactor names from evidence"
@@ -404,6 +446,7 @@ def substance_issues_for_crosswalk_row(
     row: dict[str, Any],
     *,
     index: int,
+    known_factor_labels: set[str] | None = None,
 ) -> list[str]:
     issues: list[str] = []
     readiness = str(row.get("readiness_link") or "").strip()
@@ -411,7 +454,13 @@ def substance_issues_for_crosswalk_row(
     clusters = row.get("pws_clusters") or []
     cluster_text = " ".join(str(item) for item in clusters) if isinstance(clusters, list) else ""
 
-    issues.extend(citation_issues_for_crosswalk_row(row, index=index))
+    issues.extend(
+        citation_issues_for_crosswalk_row(
+            row,
+            index=index,
+            known_factor_labels=known_factor_labels,
+        )
+    )
 
     if len(readiness) < 60 and _ONE_LINER_FIELD_RE.match(readiness):
         issues.append(
@@ -587,12 +636,23 @@ def crosswalk_repetition_issues(
     return []
 
 
-def substance_issues_for_crosswalk(crosswalk: list[Any]) -> list[str]:
+def substance_issues_for_crosswalk(
+    crosswalk: list[Any],
+    *,
+    workspace_dir: Path | None = None,
+) -> list[str]:
     issues: list[str] = []
+    known = _known_factor_labels(workspace_dir)
     for index, raw in enumerate(crosswalk, start=1):
         if not isinstance(raw, dict):
             continue
-        issues.extend(substance_issues_for_crosswalk_row(raw, index=index))
+        issues.extend(
+            substance_issues_for_crosswalk_row(
+                raw,
+                index=index,
+                known_factor_labels=known,
+            )
+        )
     issues.extend(citation_diversity_issues_for_crosswalk(crosswalk))
     issues.extend(crosswalk_repetition_issues(crosswalk))
     return issues

@@ -86,6 +86,18 @@ def test_citation_issues_for_crosswalk_row_rejects_formulaic_factor_labels() -> 
     assert any("invented shorthand" in issue for issue in issues)
 
 
+def test_citation_issues_for_crosswalk_row_accepts_inventory_formulaic_labels() -> None:
+    issues = citation_issues_for_crosswalk_row(
+        {
+            "evaluation_factor": "Factor 5 Cost/Price (evaluation_factor)",
+            "source_chunk_ids": ["chunk-abc123"],
+        },
+        index=2,
+        known_factor_labels={"factor 5 cost/price", "m-5 cost realism evaluation"},
+    )
+    assert not any("invented shorthand" in issue for issue in issues)
+
+
 def test_tail_compression_issues_for_brief_flags_thin_back_sections() -> None:
     brief = "\n".join(
         [
