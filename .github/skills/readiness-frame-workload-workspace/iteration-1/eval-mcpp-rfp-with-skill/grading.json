@@ -1,0 +1,13 @@
+{
+  "run_id": "20260615_135455_build_the_mission_readiness_fram",
+  "skill_version": "2.0.0",
+  "expectations": [
+    {"text": "completes in under 120 seconds wall time", "passed": true, "evidence": "elapsed_ms=54861"},
+    {"text": "uses 12 or fewer assistant turns", "passed": true, "evidence": "turns=9"},
+    {"text": "runs at most one kg_chunks pass per plan surface", "passed": true, "evidence": "kg_chunks_calls=4, four surfaces"},
+    {"text": "does not emit eval_crosswalk rows", "passed": true, "evidence": "handoff keys: readiness_outcome, workload_enablers, failure_modes_feared, claim_gaps only"},
+    {"text": "solo platform gate passes", "passed": true, "evidence": "invoke_single_readiness_skill exit 0, passed=true"},
+    {"text": "dedup_overlap_rate < 0.5", "passed": false, "evidence": "retrieval_forensics dedup_overlap_rate=0.6667 — iteration-2 target"}
+  ],
+  "summary": {"passed": 5, "failed": 1, "total": 6, "pass_rate": 0.83}
+}

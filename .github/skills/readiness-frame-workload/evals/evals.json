@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "skill_name": "readiness-frame-workload",
+  "evals": [
+    {
+      "id": 1,
+      "name": "mcpp-rfp-package-mechanics",
+      "prompt": "Workspace mcpp_rfp. Build workload/package-mechanics slice only: program-office readiness outcome, workload enablers from PWS/SOW/QASP/transition, and failure modes the customer fears. Program office = customer; contract = workload enabler for readiness.",
+      "expected_output": "artifacts/workload_handoff.json with cited readiness_outcome, >=3 workload_enablers, >=3 failure_modes_feared, honest claim_gaps[] for thin surfaces",
+      "files": [],
+      "expectations": [
+        "completes in under 120 seconds wall time",
+        "uses 12 or fewer assistant turns",
+        "calls kg_entities once before package-mechanics kg_chunks passes",
+        "runs at most one kg_chunks pass per plan surface (background, pws_sow, qasp, transition)",
+        "does not call kg_chunks after retrieval_plan.json status is complete",
+        "writes artifacts/workload_handoff.json with readiness_outcome >= 80 characters",
+        "workload_enablers has >= 3 entries citing PWS/QASP/CDRL/transition language",
+        "failure_modes_feared has >= 3 entries tied to readiness outcome",
+        "every enabler or failure mode row cites source_chunk_ids or is grounded in scratchpad chunk IDs",
+        "does not emit eval_crosswalk rows (eval slice owns crosswalk)",
+        "solo platform gate passes on workload_handoff.json"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "sparse-package-proxy-readiness",
+      "prompt": "Workspace with sparse readiness wording. Infer readiness_outcome from QASP density, transition language, and performance thresholds; log gaps in claim_gaps[] instead of inventing scope.",
+      "expected_output": "Partial but honest workload_handoff.json — outcome from proxy signals, claim_gaps[] names missing background or performance context",
+      "files": [],
+      "expectations": [
+        "emits workload_handoff.json even when background is thin",
+        "claim_gaps[] names missing surfaces explicitly",
+        "does not invent CDRL titles or PWS section numbers without chunk grounding",
+        "readiness_outcome uses medium/low confidence phrasing when proxies dominate"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "retrieval-discipline-regression",
+      "prompt": "Workspace mcpp_rfp. Execute retrieval plan methodically — one purposeful pass per package-mechanics surface, then draft workload_handoff.json without re-querying saturated surfaces.",
+      "expected_output": "retrieval_forensics.json shows kg_chunks dedup_overlap_rate below 0.5 and kg_chunks_calls <= 6",
+      "files": [],
+      "expectations": [
+        "kg_chunks_calls in retrieval_forensics <= 6",
+        "dedup_overlap_rate in retrieval_forensics < 0.5",
+        "finish_reason is stop not max_turns",
+        "tool_calls <= 10"
+      ]
+    }
+  ]
+}

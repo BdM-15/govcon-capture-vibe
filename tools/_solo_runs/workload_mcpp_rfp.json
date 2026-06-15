@@ -1,10 +1,12 @@
 {
   "step_id": "workload",
   "skill": "readiness-frame-workload",
+  "passed": true,
+  "run_id": "20260615_135455_build_the_mission_readiness_fram",
+  "chain_id": "20260615_135455_solo_workload",
   "workspace": "mcpp_rfp",
-  "run_id": "20260614_235655_build_the_mission_readiness_fram",
-  "run_dir": "rag_storage/mcpp_rfp/skill_runs/readiness-frame-workload/20260614_235655_build_the_mission_readiness_fram",
-  "gate_passed": true,
-  "elapsed_note": "~60s solo invoke 2026-06-14",
-  "handoff": "artifacts/workload_handoff.json"
+  "skill_version": "2.0.0",
+  "elapsed_ms": 54861,
+  "turns": 9,
+  "note": "skill-creator rebuild iteration-1 — gate green, 4 kg_chunks, no eval_crosswalk bleed"
 }
