@@ -75,6 +75,22 @@ def _eval_substance_issues(
             "eval_crosswalk rows lack source_chunk_ids — "
             "ground each row in scratchpad chunk IDs before chain continues"
         )
+    if workspace_dir is not None:
+        from src.skills.evidence_gates import undocumented_material_factor_labels
+
+        gaps = payload.get("claim_gaps") or []
+        undocumented = undocumented_material_factor_labels(
+            workspace_dir=workspace_dir,
+            crosswalk=crosswalk if isinstance(crosswalk, list) else [],
+            claim_gaps=gaps if isinstance(gaps, list) else [],
+        )
+        if undocumented:
+            sample = ", ".join(undocumented[:5])
+            suffix = "…" if len(undocumented) > 5 else ""
+            issues.append(
+                "eval_handoff.json: claim_gaps[] missing verbatim material factor names "
+                f"({sample}{suffix}) — use inventory labels from eval_batch_manifest"
+            )
     return issues
 
 

@@ -58,6 +58,46 @@ def test_eval_needs_platform_expansion_empty_crosswalk(tmp_path: Path) -> None:
     assert _scratchpad_has_grounded_evidence(run_dir) is True
 
 
+def test_repair_eval_handoff_syncs_manifest_claim_gaps(tmp_path: Path) -> None:
+    run_dir = tmp_path / "eval-run"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "eval_batch_manifest.json").write_text(
+        json.dumps(
+            {
+                "batches": [
+                    {
+                        "batch_id": "eval_batch_1",
+                        "factors": ["Factor 1 Management", "CESE Maintenance Subfactor"],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (artifacts / "eval_handoff.json").write_text(
+        json.dumps(
+            {
+                "eval_crosswalk": [
+                    {
+                        "evaluation_factor": "Factor 1 Management",
+                        "readiness_link": "x" * 95,
+                        "proof_expected": "y" * 75,
+                        "source_chunk_ids": ["chunk-abc123"],
+                        "pws_clusters": ["PWS 1"],
+                    }
+                ],
+                "claim_gaps": ["Human Resource Management Subfactor — no grounded chunk evidence"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert repair_eval_handoff(run_dir) is True
+    payload = json.loads((artifacts / "eval_handoff.json").read_text(encoding="utf-8"))
+    gap_text = " ".join(payload.get("claim_gaps") or [])
+    assert "CESE Maintenance Subfactor" in gap_text or "Material factor CESE Maintenance Subfactor" in gap_text
+
+
 def test_repair_eval_handoff_expands_known_acronyms(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     artifacts = run_dir / "artifacts"

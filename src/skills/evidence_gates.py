@@ -139,6 +139,34 @@ def _claim_gaps_document_missing_factors(
     return documented
 
 
+def undocumented_material_factor_labels(
+    *,
+    workspace_dir: Path,
+    crosswalk: list[Any],
+    claim_gaps: list[Any],
+) -> list[str]:
+    """Material entities neither in crosswalk nor named verbatim in claim_gaps[]."""
+    material_entities = load_material_eval_entities(workspace_dir)
+    if not material_entities:
+        return []
+    factor_labels = crosswalk_material_row_labels(crosswalk)
+    entity_names = [
+        str(item.get("name") or "").strip()
+        for item in material_entities
+        if str(item.get("name") or "").strip()
+    ]
+    missing_labels = [
+        name for name in entity_names if name.strip().lower() not in factor_labels
+    ]
+    gap_texts = [str(gap or "").lower() for gap in claim_gaps if str(gap or "").strip()]
+    undocumented: list[str] = []
+    for label in missing_labels:
+        needle = label.lower()
+        if not any(needle in gap_text for gap_text in gap_texts):
+            undocumented.append(label)
+    return undocumented
+
+
 def count_workspace_entities_by_type(
     workspace_dir: Path,
     entity_types: list[str],

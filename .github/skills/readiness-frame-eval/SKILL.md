@@ -98,8 +98,16 @@ Target: **≤16 turns, ≤180s** on `mcpp_rfp`-class packages.
 
 Never run 15 `kg_chunks` passes on one surface. One `kg_chunks` per assistant turn. If chunks overlap, advance to the next batch surface via `retrieval_plan.json`.
 
-## Quality bar
+## Quality bar (production)
 
-Platform gate after retrieve checks coverage (≥80% material factors or named gaps), acronym form, verbatim factor labels, and chunk grounding.
+Capture-grade eval handoff — not just row count:
+- `evaluation_factor` labels **verbatim** from `eval_batch_manifest.json` / `kg_entities` inventory — no invented "Factor N" shorthand when inventory has the full name
+- `readiness_link` — 2–4 sentences (~90+ chars): program-office readiness consequence, not generic "weak evidence undermines confidence"
+- `proof_expected` — concrete proposal artifacts (~70+ chars): volumes, matrices, plans evaluators expect per Section L
+- `source_chunk_ids[]` on every row — diversify across batch surfaces (no one chunk in >45% of rows)
+- **Accounting:** every material inventory entity → crosswalk row **or** `claim_gaps[]` entry containing the **verbatim** entity name
+- Missing factors: `claim_gaps[]` line like `Material factor <verbatim name> — no grounded chunk evidence after batch retrieval`
+
+Platform finalize may expand thin crosswalks — do not burn retrieve turns fighting gates. Draft best effort from scratchpad, log honest verbatim gaps, stop.
 
 Eval cases: `evals/evals.json`.

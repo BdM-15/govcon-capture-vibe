@@ -17,8 +17,10 @@
         "does not call kg_chunks after retrieval_plan.json status is complete",
         "kg_chunks_calls <= 5 in retrieval_forensics",
         "dedup_overlap_rate < 0.6 in retrieval_forensics",
-        "eval_crosswalk has >= 20 rows OR claim_gaps names every missing material factor",
+        "eval_crosswalk has >= 20 rows OR claim_gaps names every missing material factor verbatim",
         "rows use verbatim factor labels from batch manifest or kg_entities inventory",
+        "readiness_link >= 90 characters on material rows; proof_expected >= 70 characters",
+        "claim_gaps[] contains verbatim inventory names for all ungrounded material factors",
         "solo platform gate passes on eval_handoff.json"
       ]
     },

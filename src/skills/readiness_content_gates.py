@@ -599,6 +599,16 @@ def substance_issues_for_crosswalk_row(
         )
     )
 
+    if len(readiness) < 90:
+        issues.append(
+            f"eval_crosswalk row {index} readiness_link too thin — "
+            "write 2–4 sentences of program-office consequence analysis"
+        )
+    if len(proof) < 70:
+        issues.append(
+            f"eval_crosswalk row {index} proof_expected too thin — "
+            "name concrete proof artifacts evaluators expect"
+        )
     if len(readiness) < 60 and _ONE_LINER_FIELD_RE.match(readiness):
         issues.append(
             f"eval_crosswalk row {index} readiness_link is formulaic shorthand — "
@@ -892,12 +902,6 @@ def _apply_expansion_map_to_eval_payload(
                         value, expansion_map, targets=targets
                     )
 
-    gaps = payload.get("claim_gaps")
-    if isinstance(gaps, list):
-        payload["claim_gaps"] = [
-            apply_acronym_expansions(str(gap or ""), expansion_map, targets=targets)
-            for gap in gaps
-        ]
     return payload
 
 

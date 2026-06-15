@@ -16,10 +16,12 @@ Eval slice only. Workload, pains, modernization, tea-leaves, and win-themes belo
     }
   ],
   "claim_gaps": [
-    "Material factor <name> — no grounded chunk evidence after batch retrieval"
+    "Material factor <verbatim inventory name> — no grounded chunk evidence after batch retrieval"
   ]
 }
 ```
+
+Every material `evaluation_factor` / `subfactor` from workspace inventory must appear either as an `evaluation_factor` row label or verbatim inside `claim_gaps[]`. Shorthand gap names that do not match inventory labels fail the production gate.
 
 ## Batched retrieve contract
 
