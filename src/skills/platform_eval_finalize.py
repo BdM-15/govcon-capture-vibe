@@ -19,6 +19,7 @@ _PLATFORM_GATE_MARKERS = (
     "crosswalk rows lack",
     "invented factor",
     "ungrounded row",
+    "over-relies on one source chunk",
 )
 
 _TRUTHY_ENV = frozenset({"1", "true", "yes", "on"})

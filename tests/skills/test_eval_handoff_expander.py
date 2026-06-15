@@ -5,7 +5,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.skills.eval_handoff_expander import expansion_satisfied, prune_ungrounded_crosswalk_rows
+from src.skills.eval_handoff_expander import (
+    balance_crosswalk_citation_diversity,
+    expansion_satisfied,
+    prune_ungrounded_crosswalk_rows,
+)
+from src.skills.readiness_content_gates import citation_diversity_issues_for_crosswalk
 
 
 def _write_eval_entities(workspace: Path, names: list[str]) -> None:
@@ -33,6 +38,26 @@ def test_expansion_not_satisfied_when_crosswalk_empty_despite_claim_gaps(
         ],
     }
     assert expansion_satisfied(workspace_dir=workspace, payload=payload) is False
+
+
+def test_balance_crosswalk_citation_diversity_spreads_dominant_chunk() -> None:
+    dominant = "tb-18757251a21fe8fa5ce652e4731b298b-0031"
+    alt_a = "chunk-7b8a875d72ccb64d5dd9cb75a341b6ea"
+    alt_b = "doc-18757251a21fe8fa5ce652e4731b298b-chunk-027"
+    crosswalk = []
+    for index in range(12):
+        crosswalk.append(
+            {
+                "evaluation_factor": f"Factor {index + 1}",
+                "readiness_link": "x" * 60,
+                "proof_expected": "y" * 30,
+                "source_chunk_ids": [dominant, alt_a],
+            }
+        )
+    payload = {"eval_crosswalk": crosswalk, "claim_gaps": []}
+    scratchpad = f"Evidence {dominant} and {alt_a} and {alt_b} in Section M."
+    balanced = balance_crosswalk_citation_diversity(payload, scratchpad=scratchpad)
+    assert not citation_diversity_issues_for_crosswalk(balanced.get("eval_crosswalk") or [])
 
 
 def test_prune_ungrounded_crosswalk_drops_invented_factors(tmp_path: Path) -> None:

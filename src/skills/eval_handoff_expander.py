@@ -174,6 +174,67 @@ def _normalize_payload_crosswalk(payload: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def balance_crosswalk_citation_diversity(
+    payload: dict[str, Any],
+    *,
+    scratchpad: str,
+) -> dict[str, Any]:
+    """Rotate dominant primary chunk IDs using scratchpad-grounded alternates."""
+    from src.skills.readiness_content_gates import citation_diversity_issues_for_crosswalk
+
+    grounded = sorted(_scratchpad_grounded_chunk_ids(scratchpad))
+    if len(grounded) < 2:
+        return payload
+
+    crosswalk = payload.get("eval_crosswalk") or []
+    if not isinstance(crosswalk, list):
+        return payload
+
+    for _ in range(8):
+        payload = _diversify_crosswalk_primary_chunks(payload)
+        crosswalk = payload.get("eval_crosswalk") or []
+        if not isinstance(crosswalk, list) or not citation_diversity_issues_for_crosswalk(crosswalk):
+            return payload
+
+        primaries: list[str] = []
+        for row in crosswalk:
+            if not isinstance(row, dict):
+                continue
+            chunk_ids = row.get("source_chunk_ids") or []
+            if isinstance(chunk_ids, list) and chunk_ids:
+                primary = str(chunk_ids[0] or "").strip()
+                if primary:
+                    primaries.append(primary)
+        if len(primaries) < 8:
+            return payload
+
+        counts: dict[str, int] = {}
+        for chunk_id in primaries:
+            counts[chunk_id] = counts.get(chunk_id, 0) + 1
+        top_chunk, _ = max(counts.items(), key=lambda item: item[1])
+        pool = [chunk_id for chunk_id in grounded if chunk_id != top_chunk] or list(grounded)
+        rotate = 0
+        for row in crosswalk:
+            if not isinstance(row, dict):
+                continue
+            chunk_ids = row.get("source_chunk_ids") or []
+            if not isinstance(chunk_ids, list) or not chunk_ids:
+                continue
+            primary = str(chunk_ids[0] or "").strip()
+            if primary != top_chunk:
+                continue
+            replacement = pool[rotate % len(pool)]
+            rotate += 1
+            row["source_chunk_ids"] = [replacement] + [
+                str(item).strip()
+                for item in chunk_ids
+                if str(item).strip() and str(item).strip() != replacement
+            ]
+        payload["eval_crosswalk"] = crosswalk
+
+    return payload
+
+
 def _diversify_crosswalk_primary_chunks(payload: dict[str, Any]) -> dict[str, Any]:
     """Rotate over-used primary source_chunk_ids when rows carry alternates."""
     crosswalk = payload.get("eval_crosswalk") or []
@@ -403,7 +464,7 @@ async def expand_eval_handoff(
         scratchpad=scratchpad,
         workspace_dir=workspace_dir,
     )
-    payload = _diversify_crosswalk_primary_chunks(payload)
+    payload = balance_crosswalk_citation_diversity(payload, scratchpad=scratchpad)
     artifacts.mkdir(parents=True, exist_ok=True)
     handoff_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
