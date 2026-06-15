@@ -56,7 +56,7 @@ flowchart LR
 
 ---
 
-### Chunk 2 — Retrieve stop signal matches gate
+### Chunk 2 — Retrieve stop signal matches gate ✅ done
 
 **Problem:** `filter_retrieve_only_depth_issues` strips coverage/acronym issues during retrieve; prompt says "platform expander handles coverage." Model stops early (7 tools, 8 rows).
 
@@ -65,9 +65,9 @@ flowchart LR
 - Modify: `src/skills/chain_executor.py` (gap-injection prompt text)
 - Test: `tests/skills/test_depth_gate.py`
 
-- [ ] Remove `filter_retrieve_only_depth_issues` for eval (or gate retrieve continuation on full `validate_skill_run`)
-- [ ] Update retrieve prompt: model must reach gate pass or honest `claim_gaps[]` — no "platform will fix"
-- [ ] Test: depth gate returns coverage issues during retrieve when crosswalk thin
+- [x] Remove `filter_retrieve_only_depth_issues` — retrieve uses full `validate_skill_run` / `depth_continue_message`
+- [x] Update retry prompt: gate parity with solo assess (no "platform expander handles coverage")
+- [x] Test: `test_depth_continue_eval_reports_thin_coverage` (27 passed)
 
 **Exit criteria:** Retrieve loop does not clear with 8 rows when gate needs 24.
 

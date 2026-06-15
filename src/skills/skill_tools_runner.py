@@ -324,15 +324,11 @@ async def run_tools_skill(
     depth_issues: list[str] = []
     if skill_hooks.validate_run is not None:
         try:
-            from src.skills.depth_gate import filter_retrieve_only_depth_issues
-
             depth_issues = depth_gate_issues(
                 Path(run_dir),
                 hooks=skill_hooks,
                 user_prompt=user_prompt,
             )
-            if eval_retrieve_only:
-                depth_issues = filter_retrieve_only_depth_issues(depth_issues)
             if skill_hooks.write_depth_audit is not None:
                 skill_hooks.write_depth_audit(Path(run_dir), depth_issues)
             for issue in depth_issues:

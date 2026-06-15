@@ -834,7 +834,7 @@ class SkillChainExecutor:
             + (
                 "\n\n## Platform gate gaps (retrieve retry)\n"
                 + "\n".join(f"- {gap}" for gap in step.context.get("platform_gate_gaps")[:12])
-                + "\nAddress these with additional retrieval or honest claim_gaps[] — platform expander handles coverage ratio."
+                + "\nAddress with more retrieval or named claim_gaps[] until the handoff passes the same gate as solo assess."
                 if isinstance(step.context.get("platform_gate_gaps"), list)
                 and step.context.get("platform_gate_gaps")
                 else ""

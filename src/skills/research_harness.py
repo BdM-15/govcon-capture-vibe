@@ -940,7 +940,6 @@ def make_research_continue_fn(
     chain_step_context: dict[str, Any] | None = None,
 ) -> Callable[[Path], Optional[str]]:
     """Compose retrieve → draft → depth-gate continuation (LangGraph conditional edge)."""
-    eval_retrieve_only = bool((chain_step_context or {}).get("eval_retrieve_only"))
 
     def _continue(run_dir: Path) -> str | None:
         run_path = Path(run_dir)
@@ -978,24 +977,6 @@ def make_research_continue_fn(
                 "Retrieval gate passed — scratchpad is ready at "
                 "artifacts/research_scratchpad.md."
             )
-
-        if eval_retrieve_only and hooks.validate_run is not None:
-            try:
-                issues = hooks.validate_run(run_path, user_prompt=user_prompt)
-            except TypeError:
-                issues = hooks.validate_run(run_path)
-            from src.skills.depth_gate import filter_retrieve_only_depth_issues
-
-            blocking = filter_retrieve_only_depth_issues(list(issues or []))
-            if blocking:
-                from src.skills.depth_gate import _issues_to_continuation
-
-                if phase == _PHASE_DRAFT:
-                    set_phase(run_path, _PHASE_REVISE)
-                return _issues_to_continuation(blocking)
-            if phase in {_PHASE_DRAFT, _PHASE_REVISE}:
-                set_phase(run_path, _PHASE_COMPLETE)
-            return None
 
         depth_msg = depth_continue_message(run_path, hooks=hooks, user_prompt=user_prompt)
         if depth_msg:
