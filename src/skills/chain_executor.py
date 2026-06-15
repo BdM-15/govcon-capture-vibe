@@ -794,6 +794,23 @@ class SkillChainExecutor:
         return merged
 
     @staticmethod
+    def _retry_gap_prompt_snippet(step: ChainStepSpec) -> str:
+        """Compact JSON retry context — avoids prose soup on platform gate gaps."""
+        gaps = step.context.get("platform_gate_gaps")
+        if not isinstance(gaps, list) or not gaps:
+            return ""
+        payload = {
+            "retrieve_retry": int(step.context.get("retrieve_retry") or 0),
+            "gate_gaps": [str(gap).strip() for gap in gaps[:12] if str(gap).strip()],
+            "action": "Fix via retrieval or claim_gaps[]; same gate as solo assess.",
+        }
+        return (
+            "\n\n## Platform gate gaps\n```json\n"
+            + json.dumps(payload, ensure_ascii=False)
+            + "\n```"
+        )
+
+    @staticmethod
     def _compose_step_prompt(chain: ChainRunState, step: ChainStepSpec) -> str:
         upstream = {
             step_id: run.model_dump()
@@ -831,14 +848,7 @@ class SkillChainExecutor:
                 else ""
             )
             + "\nIf critical evidence is missing, emit an explicit missing-input list the user can supply and still produce the best partial artifact."
-            + (
-                "\n\n## Platform gate gaps (retrieve retry)\n"
-                + "\n".join(f"- {gap}" for gap in step.context.get("platform_gate_gaps")[:12])
-                + "\nAddress with more retrieval or named claim_gaps[] until the handoff passes the same gate as solo assess."
-                if isinstance(step.context.get("platform_gate_gaps"), list)
-                and step.context.get("platform_gate_gaps")
-                else ""
-            )
+            + SkillChainExecutor._retry_gap_prompt_snippet(step)
             + "\n\n## Theseus Chain Handoff\n"
             + "```json\n"
             + json.dumps(handoff, ensure_ascii=False, indent=2, default=str)

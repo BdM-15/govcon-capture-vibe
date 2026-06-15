@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from src.skills.chain_executor import SkillChainExecutor
+from src.skills.chain_models import ChainRunState, ChainSpec, ChainStepRun, ChainStepSpec
 from src.skills.mission_readiness_chain import build_mission_readiness_chain_spec
 
 
@@ -46,3 +48,33 @@ def test_build_mission_readiness_chain_includes_external_step_from_addendum() ->
     assert "readiness-frame-external-research" in skills
     compile_step = spec.steps[-1]
     assert "external" in compile_step.depends_on
+
+
+def test_retry_gap_prompt_snippet_is_compact_json() -> None:
+    step = ChainStepSpec(
+        id="eval",
+        skill="readiness-frame-eval",
+        prompt="Build eval crosswalk.",
+        context={
+            "platform_gate_gaps": [
+                "coverage: eval_crosswalk 8/24 required",
+                "undefined acronyms: TECV, SB",
+            ],
+            "retrieve_retry": 1,
+        },
+    )
+    chain = ChainRunState(
+        chain_id="chain-1",
+        workspace="ws",
+        status="running",
+        spec=ChainSpec(name="mission-readiness", prompt="Build MRF.", steps=[step]),
+        steps={"eval": ChainStepRun(id="eval", skill="readiness-frame-eval", status="running")},
+    )
+    prompt = SkillChainExecutor._compose_step_prompt(chain, step)
+    gap_section = prompt.split("## Platform gate gaps", maxsplit=1)[1].split(
+        "## Theseus Chain Handoff", maxsplit=1
+    )[0]
+    assert len(gap_section) < 500
+    assert '"gate_gaps"' in gap_section
+    assert "coverage:" in gap_section
+    assert "undefined acronyms" in gap_section

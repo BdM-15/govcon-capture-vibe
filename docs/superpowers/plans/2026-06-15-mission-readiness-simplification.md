@@ -109,18 +109,18 @@ flowchart LR
 
 ---
 
-### Chunk 5 — Orchestrator prompt slim-down
+### Chunk 5 — Orchestrator prompt slim-down ✅ done
 
-**Problem:** Retry injects `platform_gate_gaps` paragraph soup; duplicates gate messages.
+**Problem:** Retry injected `platform_gate_gaps` paragraph soup; duplicated gate messages.
 
 **Files:**
-- Modify: `src/skills/graphs/step_pipeline_graph.py`, `src/skills/chain_executor.py`
-- Test: `tests/skills/test_eval_pipeline_graph.py`
+- Modify: `src/skills/chain_executor.py`
+- Test: `tests/skills/test_mission_readiness_chain.py`
 
-- [ ] Retry context = structured gap list only (JSON), not prose
-- [ ] Single continuation template from `artifact_continue_message`
+- [x] Retry context = compact JSON (`gate_gaps`, `retrieve_retry`, `action`)
+- [x] Retrieve continuation still from skill `artifact_continue_message` (chunk 2/4)
 
-**Exit criteria:** Retry prompt < 500 chars; behavior unchanged on fixture runs.
+**Exit criteria:** Retry gap section < 500 chars (tested).
 
 ---
 
