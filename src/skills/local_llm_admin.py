@@ -149,6 +149,7 @@ async def expand_acronyms_in_eval_handoff_json(
 
     from src.skills.readiness_content_gates import (
         acronym_issues_for_eval_handoff,
+        apply_known_acronym_expansions_to_eval_payload,
         eval_handoff_text_for_acronym_gate,
         undefined_acronyms as gate_undefined_acronyms,
     )
@@ -159,14 +160,14 @@ async def expand_acronyms_in_eval_handoff_json(
         payload = json.loads(content)
     except json.JSONDecodeError:
         return content
-    if not isinstance(payload, dict) or not acronym_issues_for_eval_handoff(payload):
+    if not isinstance(payload, dict):
         return content
+    payload = apply_known_acronym_expansions_to_eval_payload(payload)
+    if not acronym_issues_for_eval_handoff(payload):
+        return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
     targets = gate_undefined_acronyms(eval_handoff_text_for_acronym_gate(payload))
     if not targets:
         return content
-    if chat_fn is None:
-        chat_fn = await build_admin_chat_fn()
-
     prompt = (
         "Expand ONLY undefined acronyms on first use as Full Term (ACR) in readiness_link, "
         "proof_expected, and claim_gaps[] strings inside this eval_handoff JSON. "
@@ -175,14 +176,36 @@ async def expand_acronyms_in_eval_handoff_json(
         f"Acronyms: {', '.join(targets[:16])}\n\n"
         f"JSON:\n{content[:14_000]}"
     )
+    settings = get_settings()
+    timeout = max(
+        float(getattr(settings, "ollama_compose_timeout", 120.0) or 120.0),
+        300.0,
+    )
+
     try:
-        revised_raw = await chat_fn(prompt)
+        if chat_fn is not None:
+            revised_raw = await chat_fn(prompt)
+        else:
+            revised_raw = await ollama_chat(
+                [{"role": "user", "content": prompt}],
+                settings=settings,
+                temperature=0.1,
+                max_tokens=8192,
+                timeout=timeout,
+            )
         parsed = _extract_json_object(str(revised_raw or ""))
         if not parsed:
+            logger.warning(
+                "admin_llm eval_handoff expand_acronyms: unparsable JSON response"
+            )
             return content
         return json.dumps(parsed, ensure_ascii=False, indent=2) + "\n"
     except Exception as exc:  # noqa: BLE001
-        logger.warning("admin_llm eval_handoff expand_acronyms failed: %s", exc)
+        logger.warning(
+            "admin_llm eval_handoff expand_acronyms failed: %s: %s",
+            type(exc).__name__,
+            exc or "(no message)",
+        )
         return content
 
 

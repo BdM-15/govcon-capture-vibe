@@ -158,6 +158,61 @@ def _normalize_payload_crosswalk(payload: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def _diversify_crosswalk_primary_chunks(payload: dict[str, Any]) -> dict[str, Any]:
+    """Rotate over-used primary source_chunk_ids when rows carry alternates."""
+    crosswalk = payload.get("eval_crosswalk") or []
+    if not isinstance(crosswalk, list) or len(crosswalk) < 8:
+        return payload
+
+    primaries: list[str] = []
+    for row in crosswalk:
+        if not isinstance(row, dict):
+            continue
+        chunk_ids = row.get("source_chunk_ids") or []
+        if isinstance(chunk_ids, list) and chunk_ids:
+            primary = str(chunk_ids[0] or "").strip()
+            if primary:
+                primaries.append(primary)
+    if len(primaries) < 8:
+        return payload
+
+    counts: dict[str, int] = {}
+    for chunk_id in primaries:
+        counts[chunk_id] = counts.get(chunk_id, 0) + 1
+    top_chunk, top_count = max(counts.items(), key=lambda item: item[1])
+    if top_count / len(primaries) <= 0.45:
+        return payload
+
+    usage = dict(counts)
+    for row in crosswalk:
+        if not isinstance(row, dict):
+            continue
+        chunk_ids = row.get("source_chunk_ids") or []
+        if not isinstance(chunk_ids, list) or len(chunk_ids) < 2:
+            continue
+        primary = str(chunk_ids[0] or "").strip()
+        if primary != top_chunk:
+            continue
+        replacement = next(
+            (
+                str(item).strip()
+                for item in chunk_ids[1:]
+                if str(item).strip() and usage.get(str(item).strip(), 0) < top_count // 2
+            ),
+            "",
+        )
+        if not replacement:
+            continue
+        row["source_chunk_ids"] = [replacement] + [
+            cid for cid in chunk_ids if str(cid).strip() != replacement
+        ]
+        usage[primary] = max(0, usage.get(primary, 0) - 1)
+        usage[replacement] = usage.get(replacement, 0) + 1
+
+    payload["eval_crosswalk"] = crosswalk
+    return payload
+
+
 def _merge_rows(payload: dict[str, Any], rows: list[dict[str, Any]]) -> dict[str, Any]:
     crosswalk = payload.get("eval_crosswalk")
     if not isinstance(crosswalk, list):
@@ -337,6 +392,7 @@ async def expand_eval_handoff(
         scratchpad=scratchpad,
         workspace_dir=workspace_dir,
     )
+    payload = _diversify_crosswalk_primary_chunks(payload)
     artifacts.mkdir(parents=True, exist_ok=True)
     handoff_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",

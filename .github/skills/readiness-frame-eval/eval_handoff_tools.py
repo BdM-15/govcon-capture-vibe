@@ -61,6 +61,11 @@ def validate_skill_run(
         return [f"artifacts/{_DELIVERABLE} must be a JSON object"]
 
     issues: list[str] = []
+    workspace_dir = (
+        resolve_workspace_dir_from_run_dir(Path(run_dir))
+        if resolve_workspace_dir_from_run_dir is not None
+        else None
+    )
     crosswalk = payload.get("eval_crosswalk")
     if not isinstance(crosswalk, list):
         issues.append("eval_crosswalk must be an array")
@@ -69,13 +74,13 @@ def validate_skill_run(
             "eval_crosswalk is empty — add substantive rows or document gaps in claim_gaps[]"
         )
     else:
-        issues.extend(substance_issues_for_crosswalk(crosswalk))
-        if eval_handoff_coverage_issues is not None and resolve_workspace_dir_from_run_dir is not None:
-            workspace_dir = resolve_workspace_dir_from_run_dir(Path(run_dir))
-            if workspace_dir is not None:
-                issues.extend(
-                    eval_handoff_coverage_issues(payload, workspace_dir=workspace_dir)
-                )
+        issues.extend(
+            substance_issues_for_crosswalk(crosswalk, workspace_dir=workspace_dir)
+        )
+        if eval_handoff_coverage_issues is not None and workspace_dir is not None:
+            issues.extend(
+                eval_handoff_coverage_issues(payload, workspace_dir=workspace_dir)
+            )
 
     if acronym_issues_for_eval_handoff is not None:
         issues.extend(acronym_issues_for_eval_handoff(payload))

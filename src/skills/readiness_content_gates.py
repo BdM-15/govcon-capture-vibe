@@ -95,8 +95,30 @@ _ACRONYM_ALLOWLIST = frozenset(
         "USAF",
         "USMC",
         "USN",
+        "NOT",
+        "OUTSTANDING",
+        "RELEVANT",
+        "UNACCEPTABLE",
+        "VERY",
     }
 )
+
+_KNOWN_ACRONYM_EXPANSIONS: dict[str, str] = {
+    "CBA": "Collective Bargaining Agreement (CBA)",
+    "CESE": "Commercial Electrical Support Equipment (CESE)",
+    "CM": "Configuration Management (CM)",
+    "CPARS": "Contractor Performance Assessment Reporting System (CPARS)",
+    "CPFF": "Cost-Plus-Fixed-Fee (CPFF)",
+    "FPRA": "Forward Pricing Rate Agreement (FPRA)",
+    "IAW": "In Accordance With (IAW)",
+    "NSC": "National Security Council (NSC)",
+    "OGP": "Office of Government Procurement (OGP)",
+    "PMCS": "Preventive Maintenance Checks and Services (PMCS)",
+    "SB": "Small Business (SB)",
+    "SDB": "Small Disadvantaged Business (SDB)",
+    "TECV": "Total Evaluated Cost/Value (TECV)",
+    "WBS": "Work Breakdown Structure (WBS)",
+}
 
 
 def is_boilerplate_text(value: str) -> bool:
@@ -592,6 +614,48 @@ def acronym_issues_for_eval_handoff(payload: dict[str, Any]) -> list[str]:
         eval_handoff_text_for_acronym_gate(payload),
         label="eval_handoff.json",
     )
+
+
+def apply_known_acronym_expansions(text: str, *, targets: list[str] | None = None) -> str:
+    """Deterministic first-use Full Term (ACR) expansion for common govcon tokens."""
+    pending = targets or undefined_acronyms(text)
+    revised = str(text or "")
+    for token in pending:
+        key = str(token or "").strip().upper()
+        template = _KNOWN_ACRONYM_EXPANSIONS.get(key)
+        if not template or key in defined_acronyms(revised):
+            continue
+        pattern = re.compile(rf"\b{re.escape(str(token))}\b")
+        revised, count = pattern.subn(template, revised, count=1)
+        if count:
+            continue
+    return revised
+
+
+def apply_known_acronym_expansions_to_eval_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Expand known acronyms inside eval handoff narrative fields without an LLM."""
+    if not isinstance(payload, dict):
+        return payload
+    targets = undefined_acronyms(eval_handoff_text_for_acronym_gate(payload))
+    if not targets:
+        return payload
+
+    crosswalk = payload.get("eval_crosswalk")
+    if isinstance(crosswalk, list):
+        for row in crosswalk:
+            if not isinstance(row, dict):
+                continue
+            for field in ("readiness_link", "proof_expected"):
+                value = str(row.get(field) or "")
+                if value:
+                    row[field] = apply_known_acronym_expansions(value, targets=targets)
+
+    gaps = payload.get("claim_gaps")
+    if isinstance(gaps, list):
+        payload["claim_gaps"] = [
+            apply_known_acronym_expansions(str(gap or ""), targets=targets) for gap in gaps
+        ]
+    return payload
 
 
 def _token_set(text: str) -> set[str]:

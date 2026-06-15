@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from src.skills.readiness_content_gates import (
+    acronym_issues_for_eval_handoff,
     acronym_issues_for_readiness_output,
+    apply_known_acronym_expansions_to_eval_payload,
     citation_issues_for_crosswalk_row,
     claim_gaps_brief_issues,
     is_boilerplate_text,
@@ -84,6 +86,25 @@ def test_citation_issues_for_crosswalk_row_rejects_formulaic_factor_labels() -> 
         index=2,
     )
     assert any("invented shorthand" in issue for issue in issues)
+
+
+def test_apply_known_acronym_expansions_to_eval_payload() -> None:
+    payload = {
+        "eval_crosswalk": [
+            {
+                "evaluation_factor": "Factor 4 Past Performance",
+                "readiness_link": "Uses CPARS and CPFF with CBA mapping for labor rates.",
+                "proof_expected": "Submit CPARS references.",
+                "source_chunk_ids": ["chunk-1"],
+            }
+        ],
+        "claim_gaps": [],
+    }
+    expanded = apply_known_acronym_expansions_to_eval_payload(payload)
+    assert "Contractor Performance Assessment Reporting System (CPARS)" in str(
+        expanded["eval_crosswalk"][0]["readiness_link"]
+    )
+    assert not acronym_issues_for_eval_handoff(expanded)
 
 
 def test_citation_issues_for_crosswalk_row_accepts_inventory_formulaic_labels() -> None:
