@@ -172,6 +172,7 @@ _KNOWN_ACRONYM_EXPANSIONS: dict[str, str] = {
     "EAC": "Estimate at Completion (EAC)",
     "FPRA": "Forward Pricing Rate Agreement (FPRA)",
     "FSB": "Forward Support Base (FSB)",
+    "GAO": "Government Accountability Office (GAO)",
     "FTE": "Full-Time Equivalent (FTE)",
     "GCSS-MC": "Global Combat Support System-Marine Corps (GCSS-MC)",
     "IAW": "In Accordance With (IAW)",
