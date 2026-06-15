@@ -279,6 +279,70 @@ def merge_handoff_payloads(handoffs: dict[str, dict[str, Any]]) -> dict[str, Any
     return merged
 
 
+_SEED_VERBATIM_ARRAY_KEYS = (
+    "eval_crosswalk",
+    "customer_pain_points",
+    "importance_signals",
+    "implicit_criteria",
+    "current_methods",
+    "innovation_opportunities",
+    "win_theme_candidates",
+)
+
+_MIN_VERBATIM_QUOTE_CHARS = 18
+_MAX_VERBATIM_EXTRACTS = 8
+
+
+def seed_verbatim_extracts_from_citations(payload: dict[str, Any]) -> dict[str, Any]:
+    """Populate verbatim_extracts[] from source_citations quotes when merge left it empty."""
+    if not isinstance(payload, dict):
+        return payload
+    existing = payload.get("verbatim_extracts") or []
+    if isinstance(existing, list) and existing:
+        return payload
+
+    seen_quotes: set[str] = set()
+    extracts: list[dict[str, Any]] = []
+
+    for array_key in _SEED_VERBATIM_ARRAY_KEYS:
+        rows = payload.get(array_key) or []
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            citations = row.get("source_citations") or []
+            if not isinstance(citations, list):
+                continue
+            for citation in citations:
+                if not isinstance(citation, dict):
+                    continue
+                quote = str(citation.get("quote") or "").strip()
+                if len(quote) < _MIN_VERBATIM_QUOTE_CHARS:
+                    continue
+                dedupe_key = quote.lower()
+                if dedupe_key in seen_quotes:
+                    continue
+                seen_quotes.add(dedupe_key)
+                chunk_id = str(citation.get("chunk_id") or "").strip()
+                section = str(citation.get("section") or "").strip()
+                entry: dict[str, Any] = {
+                    "id": f"VE-{len(extracts) + 1:03d}",
+                    "quote": quote,
+                    "source_chunk_ids": [chunk_id] if chunk_id else [],
+                }
+                if section:
+                    entry["section"] = section
+                extracts.append(entry)
+                if len(extracts) >= _MAX_VERBATIM_EXTRACTS:
+                    payload["verbatim_extracts"] = extracts
+                    return payload
+
+    if extracts:
+        payload["verbatim_extracts"] = extracts
+    return payload
+
+
 _COMPILER_FRAME_ARRAY_KEYS = (
     "customer_pain_points",
     "current_methods",
@@ -474,6 +538,10 @@ def merge_upstream_handoffs(
     workspace_dir = resolve_workspace_dir_from_run_dir(run_dir)
     if workspace_dir is not None:
         merged = enrich_payload_citations(merged, workspace_dir)
+    merged = seed_verbatim_extracts_from_citations(merged)
+    from src.skills.readiness_content_gates import apply_known_acronym_expansions_to_frame_payload
+
+    merged = apply_known_acronym_expansions_to_frame_payload(merged)
     frame_path = artifacts_dir / "mission_readiness_frame.json"
     frame_path.write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -661,6 +729,54 @@ def write_compiler_brief_scaffold(
     return brief_path
 
 
+def refresh_compiler_verbatim_section(
+    run_dir: Path,
+    *,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    """Sync brief.md §2 verbatim bank from frame verbatim_extracts[]."""
+    artifacts_dir = Path(run_dir) / "artifacts"
+    frame_path = artifacts_dir / "mission_readiness_frame.json"
+    brief_path = artifacts_dir / "brief.md"
+    if not brief_path.is_file():
+        return
+    if payload is None:
+        if not frame_path.is_file():
+            return
+        try:
+            loaded = json.loads(frame_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+        payload = loaded if isinstance(loaded, dict) else None
+    if not isinstance(payload, dict):
+        return
+    extracts = payload.get("verbatim_extracts") or []
+    if not isinstance(extracts, list) or not extracts:
+        return
+
+    verbatim_block = _format_bullet_items(extracts, fields=("quote", "signal", "text"))
+    section = (
+        "## 2. Verbatim Signal Bank (Government Language)\n\n"
+        f"{verbatim_block}\n"
+    )
+    try:
+        brief = brief_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return
+    marker = "## 2. Verbatim Signal Bank (Government Language)"
+    if marker not in brief:
+        return
+    start = brief.index(marker)
+    end = len(brief)
+    for heading in ("## 3.", "## 4.", "## 5."):
+        idx = brief.find(heading, start + len(marker))
+        if idx > start:
+            end = idx
+            break
+    brief = brief[:start] + section + brief[end:]
+    brief_path.write_text(brief.strip() + "\n", encoding="utf-8")
+
+
 def refresh_compiler_claim_gaps_section(run_dir: Path) -> None:
     """Ensure brief.md section 8 lists every claim_gaps[] entry from merged frame."""
     artifacts_dir = Path(run_dir) / "artifacts"
@@ -749,6 +865,8 @@ __all__ = [
     "normalize_eval_crosswalk_row",
     "persist_normalized_compiler_frame",
     "prepare_compiler_harness_state",
+    "seed_verbatim_extracts_from_citations",
     "write_compiler_brief_scaffold",
     "refresh_compiler_claim_gaps_section",
+    "refresh_compiler_verbatim_section",
 ]

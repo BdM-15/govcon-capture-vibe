@@ -13,6 +13,8 @@ from src.skills.mission_readiness_merge import (
     persist_normalized_compiler_frame,
     prepare_compiler_harness_state,
     refresh_compiler_claim_gaps_section,
+    refresh_compiler_verbatim_section,
+    seed_verbatim_extracts_from_citations,
     write_compiler_brief_scaffold,
 )
 from src.skills.research_harness import load_harness_state, resolve_harness_config
@@ -303,6 +305,82 @@ def test_merge_upstream_handoffs_includes_upstream_scratchpads(tmp_path: Path) -
     assert "Upstream retrieval: eval" in scratchpad
     assert "PWS task cluster alpha" in scratchpad
     assert len(scratchpad) > 5_000
+
+
+def test_seed_verbatim_extracts_from_citations_pulls_crosswalk_quotes() -> None:
+    payload = {
+        "verbatim_extracts": [],
+        "eval_crosswalk": [
+            {
+                "evaluation_factor": "Factor 1 Management",
+                "source_citations": [
+                    {
+                        "chunk_id": "chunk-abc",
+                        "section": "Section M Factor 1",
+                        "quote": "The Government will evaluate the offeror's management approach for continuity.",
+                    }
+                ],
+            },
+            {
+                "evaluation_factor": "Factor 2 Technical",
+                "source_citations": [
+                    {
+                        "chunk_id": "chunk-def",
+                        "quote": "Offerors shall demonstrate a technical methodology aligned to PWS maintenance tasks.",
+                    }
+                ],
+            },
+        ],
+    }
+    seeded = seed_verbatim_extracts_from_citations(payload)
+    assert len(seeded["verbatim_extracts"]) == 2
+    assert seeded["verbatim_extracts"][0]["id"] == "VE-001"
+    assert "management approach" in seeded["verbatim_extracts"][0]["quote"]
+
+
+def test_seed_verbatim_extracts_from_citations_skips_when_populated() -> None:
+    payload = {
+        "verbatim_extracts": [{"id": "VE-001", "quote": "Existing government phrase retained."}],
+        "eval_crosswalk": [
+            {
+                "source_citations": [
+                    {"quote": "This quote should not replace the existing verbatim bank."}
+                ]
+            }
+        ],
+    }
+    seeded = seed_verbatim_extracts_from_citations(payload)
+    assert len(seeded["verbatim_extracts"]) == 1
+    assert seeded["verbatim_extracts"][0]["quote"].startswith("Existing")
+
+
+def test_refresh_compiler_verbatim_section_updates_brief_section_two(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "brief.md").write_text(
+        "\n".join(
+            [
+                "# Brief",
+                "## 2. Verbatim Signal Bank (Government Language)",
+                "_None recorded in merged handoffs._",
+                "## 3. Customer Pain Points & Importance Signals",
+                "body",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    refresh_compiler_verbatim_section(
+        run_dir,
+        payload={
+            "verbatim_extracts": [
+                {"quote": "Government shall maintain 100 percent mission-capable readiness."}
+            ]
+        },
+    )
+    brief = (artifacts / "brief.md").read_text(encoding="utf-8")
+    assert "100 percent mission-capable" in brief
+    assert "_None recorded" not in brief
 
 
 def test_prepare_compiler_harness_state_marks_retrieval_complete(tmp_path: Path) -> None:

@@ -63,31 +63,45 @@ _NARRATIVE_SECTION_MIN_CHARS = {
 _ACRONYM_ALLOWLIST = frozenset(
     {
         "ACR",
+        "ALTS",
+        "ANSI",
+        "CAPSET",
+        "CAPSETS",
         "CDRL",
         "CLIN",
         "CONUS",
         "COR",
         "DFAR",
+        "DFARS",
         "DLA",
         "DoD",
         "FAR",
         "FFP",
         "FPDS",
+        "FSB",
         "GSA",
+        "HR",
         "IDIQ",
         "IMCOM",
+        "IP",
         "IT",
         "JSON",
         "J&A",
+        "KBR",
         "KG",
         "NAICS",
+        "NAVFAC",
         "OCONUS",
         "PCO",
+        "PM",
         "POC",
+        "PP",
         "PWS",
+        "QC",
         "QASP",
         "RFP",
         "SOW",
+        "SOUM",
         "TO",
         "UCF",
         "US",
@@ -100,24 +114,67 @@ _ACRONYM_ALLOWLIST = frozenset(
         "RELEVANT",
         "UNACCEPTABLE",
         "VERY",
+        "ACCEPTABLE",
+        "GOOD",
+        "MARGINAL",
+        "PAST",
+        "RELEVANCY",
+        "RATINGS",
+        "FL",
+        "CONFIDENCE",
     }
 )
 
 _KNOWN_ACRONYM_EXPANSIONS: dict[str, str] = {
+    "AFCAP": "Air Force Contract Augmentation Program (AFCAP)",
+    "ALTS": "Automated Logistics Tool Set (ALTS)",
+    "APSR": "Accountable Property System of Record (APSR)",
+    "CAPSET": "Capability Set (CAPSET)",
+    "CAPSETS": "Capability Sets (CAPSETS)",
+    "COSIS": "Custody of Ships in Storage (COSIS)",
     "CBA": "Collective Bargaining Agreement (CBA)",
     "CESE": "Commercial Electrical Support Equipment (CESE)",
     "CM": "Configuration Management (CM)",
     "CPARS": "Contractor Performance Assessment Reporting System (CPARS)",
+    "CCSR": "Contract Cost Status Report (CCSR)",
+    "CMMS": "Computerized Maintenance Management System (CMMS)",
     "CPFF": "Cost-Plus-Fixed-Fee (CPFF)",
+    "DPAS": "Defense Property Accountability System (DPAS)",
+    "EAC": "Estimate at Completion (EAC)",
     "FPRA": "Forward Pricing Rate Agreement (FPRA)",
+    "FSB": "Forward Support Base (FSB)",
+    "FTE": "Full-Time Equivalent (FTE)",
+    "GCSS-MC": "Global Combat Support System-Marine Corps (GCSS-MC)",
     "IAW": "In Accordance With (IAW)",
+    "IDIQ": "Indefinite Delivery Indefinite Quantity (IDIQ)",
+    "ISO": "International Organization for Standardization (ISO)",
+    "LOE": "Level of Effort (LOE)",
+    "LOGCAP": "Logistics Civil Augmentation Program (LOGCAP)",
+    "MCMC": "Marine Corps Maintenance Command (MCMC)",
+    "MCPP": "Marine Corps Prepositioning Program (MCPP)",
+    "MCPP-N": "Marine Corps Prepositioning Program — Norway (MCPP-N)",
+    "MCPP-PHIL": "Marine Corps Prepositioning Program — Philippines (MCPP-PHIL)",
+    "MCPIC": "Marine Corps Prepositioning Inventory Control (MCPIC)",
+    "MHE": "Material Handling Equipment (MHE)",
+    "MCSF-BI": "Marine Corps Storage Facility — Blount Island (MCSF-BI)",
+    "NAV-P": "Navy Prepositioning (NAV-P)",
+    "NAVFAC": "Naval Facilities Engineering Systems Command (NAVFAC)",
+    "MEF": "Marine Expeditionary Force (MEF)",
+    "MPS": "Maritime Prepositioning Ships (MPS)",
+    "MRO": "Maintenance, Repair, and Overhaul (MRO)",
     "NSC": "National Security Council (NSC)",
     "OGP": "Office of Government Procurement (OGP)",
     "PMCS": "Preventive Maintenance Checks and Services (PMCS)",
+    "PO": "Prepositioning Objective (PO)",
+    "RCP": "Risk and Performance (RCP)",
+    "SCA": "Service Contract Act (SCA)",
     "SB": "Small Business (SB)",
+    "SOUM": "Source of Urgent Materiel (SOUM)",
     "SDB": "Small Disadvantaged Business (SDB)",
     "TECV": "Total Evaluated Cost/Value (TECV)",
+    "USMC": "United States Marine Corps (USMC)",
     "WBS": "Work Breakdown Structure (WBS)",
+    "WHE": "Warehouse Handling Equipment (WHE)",
 }
 
 
@@ -630,6 +687,51 @@ def apply_known_acronym_expansions(text: str, *, targets: list[str] | None = Non
         if count:
             continue
     return revised
+
+
+def apply_known_acronym_expansions_to_frame_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Expand known acronyms in compiler frame narrative fields without an LLM."""
+    if not isinstance(payload, dict):
+        return payload
+    targets = undefined_acronyms(frame_narrative_text_for_acronym_gate(payload))
+    if not targets:
+        return payload
+
+    for key in ("readiness_outcome", "scope_summary"):
+        value = str(payload.get(key) or "")
+        if value:
+            payload[key] = apply_known_acronym_expansions(value, targets=targets)
+
+    for array_key in (
+        "customer_pain_points",
+        "current_methods",
+        "innovation_opportunities",
+        "importance_signals",
+        "implicit_criteria",
+        "win_theme_candidates",
+        "verbatim_extracts",
+        "clarification_questions",
+        "eval_crosswalk",
+    ):
+        rows = payload.get(array_key) or []
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if isinstance(row, str):
+                continue
+            if not isinstance(row, dict):
+                continue
+            for field in _FRAME_ACRONYM_NARRATIVE_FIELDS:
+                value = str(row.get(field) or "")
+                if value:
+                    row[field] = apply_known_acronym_expansions(value, targets=targets)
+
+    gaps = payload.get("claim_gaps")
+    if isinstance(gaps, list):
+        payload["claim_gaps"] = [
+            apply_known_acronym_expansions(str(gap or ""), targets=targets) for gap in gaps
+        ]
+    return payload
 
 
 def apply_known_acronym_expansions_to_eval_payload(payload: dict[str, Any]) -> dict[str, Any]:

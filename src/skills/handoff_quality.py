@@ -71,7 +71,11 @@ def _compiler_substance_errors(step_run: Any) -> list[str]:
     run_dir = str(getattr(step_run, "run_dir", "") or "").strip()
     if not run_dir:
         return []
-    return compiler_output_substance_issues(Path(run_dir))
+    path = Path(run_dir)
+    from src.skills.platform_step_finalize import repair_compiler_artifacts
+
+    repair_compiler_artifacts(path)
+    return compiler_output_substance_issues(path)
 
 
 def _load_json(path: Path) -> dict[str, Any] | None:

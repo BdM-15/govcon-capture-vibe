@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,13 @@ from src.skills.handoff_quality import (
     validate_handoff_artifact,
 )
 from src.skills.platform_eval_finalize import finalize_eval_handoff, split_eval_gate_issues
-from src.skills.readiness_content_gates import compiler_output_substance_issues
+from src.skills.readiness_content_gates import (
+    apply_known_acronym_expansions,
+    apply_known_acronym_expansions_to_frame_payload,
+    compiler_output_substance_issues,
+    frame_narrative_text_for_acronym_gate,
+    undefined_acronyms,
+)
 from src.skills.source_citations import resolve_workspace_dir_from_run_dir
 
 logger = logging.getLogger(__name__)
@@ -63,7 +70,60 @@ def _gate_result(
     }
 
 
+def repair_compiler_artifacts(run_dir: Path) -> bool:
+    """Pre-gate repair: seed verbatim bank from citations + expand known acronyms."""
+    from src.skills.mission_readiness_merge import (
+        is_compiler_run_dir,
+        refresh_compiler_verbatim_section,
+        seed_verbatim_extracts_from_citations,
+    )
+
+    if not is_compiler_run_dir(run_dir):
+        return False
+
+    artifacts = run_dir / "artifacts"
+    frame_path = artifacts / "mission_readiness_frame.json"
+    brief_path = artifacts / "brief.md"
+    changed = False
+    payload: dict[str, Any] | None = None
+
+    if frame_path.is_file():
+        try:
+            loaded = json.loads(frame_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            loaded = None
+        if isinstance(loaded, dict):
+            before = json.dumps(loaded, sort_keys=True, ensure_ascii=False)
+            payload = seed_verbatim_extracts_from_citations(loaded)
+            payload = apply_known_acronym_expansions_to_frame_payload(payload)
+            after = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+            if after != before:
+                frame_path.write_text(
+                    json.dumps(payload, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                changed = True
+                refresh_compiler_verbatim_section(run_dir, payload=payload)
+
+    if brief_path.is_file():
+        try:
+            brief = brief_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return changed
+        combined = brief
+        if isinstance(payload, dict):
+            combined = f"{brief}\n{frame_narrative_text_for_acronym_gate(payload)}"
+        targets = undefined_acronyms(combined)
+        revised = apply_known_acronym_expansions(brief, targets=targets)
+        if revised.strip() and revised != brief:
+            brief_path.write_text(revised, encoding="utf-8")
+            changed = True
+
+    return changed
+
+
 def _validate_compiler_run(run_dir: Path) -> list[str]:
+    repair_compiler_artifacts(run_dir)
     issues = list(compiler_output_substance_issues(run_dir))
     from src.skills.skill_local_tools import load_skill_tool_module
 

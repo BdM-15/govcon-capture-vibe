@@ -6,6 +6,7 @@ from src.skills.readiness_content_gates import (
     acronym_issues_for_eval_handoff,
     acronym_issues_for_readiness_output,
     apply_known_acronym_expansions_to_eval_payload,
+    apply_known_acronym_expansions_to_frame_payload,
     citation_issues_for_crosswalk_row,
     claim_gaps_brief_issues,
     is_boilerplate_text,
@@ -13,6 +14,7 @@ from src.skills.readiness_content_gates import (
     tail_compression_issues_for_brief,
     undefined_acronyms,
     validate_eval_handoff_write,
+    verbatim_extract_issues,
 )
 
 
@@ -178,6 +180,31 @@ def test_acronym_gate_ignores_structural_name_labels() -> None:
         },
     )
     assert issues == []
+
+
+def test_apply_known_acronym_expansions_to_frame_payload() -> None:
+    payload = {
+        "readiness_outcome": "MCPP sustainment uses RCP and ISO controls at MCSF-BI.",
+        "eval_crosswalk": [],
+        "verbatim_extracts": [],
+    }
+    expanded = apply_known_acronym_expansions_to_frame_payload(payload)
+    text = expanded["readiness_outcome"]
+    assert "Marine Corps Prepositioning Program (MCPP)" in text
+    assert "Risk and Performance (RCP)" in text
+    assert not acronym_issues_for_readiness_output(brief_text="", payload=expanded)
+
+
+def test_verbatim_extract_issues_passes_when_seeded() -> None:
+    payload = {
+        "verbatim_extracts": [{"quote": "Government language from Section M evaluation criteria."}],
+        "eval_crosswalk": [{"source_chunk_ids": ["chunk-1"]}] * 3,
+    }
+    assert not verbatim_extract_issues(
+        payload,
+        crosswalk_has_citations=True,
+        cited_crosswalk_rows=3,
+    )
 
 
 def test_undefined_acronyms_accepts_pre_mats_and_cpff_loe_definitions() -> None:
