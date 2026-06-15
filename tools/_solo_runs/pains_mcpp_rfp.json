@@ -1,0 +1,8 @@
+{
+  "step_id": "pains",
+  "skill": "readiness-frame-pains",
+  "passed": true,
+  "run_id": "20260615_012337_build_the_mission_readiness_fram",
+  "chain_id": "20260615_012337_solo_pains",
+  "workspace": "mcpp_rfp"
+}
