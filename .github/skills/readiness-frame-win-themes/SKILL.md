@@ -1,6 +1,9 @@
 ---
 name: readiness-frame-win-themes
-description: Shipley win-theme seed micro-skill — needs/wants, priorities, and win-theme candidates with rationale chains. Emits win_themes_handoff.json. Chain upstream of mission-readiness-framer.
+description: >
+  Retrieves customer needs/wants and Shipley win-theme seeds; emits win_themes_handoff.json
+  with priority-ranked win_theme_candidates[]. Use for readiness-frame-win-themes solo/chain
+  node. Not for pains, eval, workload, modernization, or tea-leaves.
 license: MIT
 metadata:
   personas_primary: capture_manager
@@ -12,7 +15,7 @@ metadata:
   skill_family_label: Mission Readiness Frame
   runtime: tools
   category: capture_intelligence
-  version: 1.0.0
+  version: 2.0.0
   status: active
   research_harness:
     plan_surfaces_path: references/plan_surfaces.json
@@ -25,10 +28,57 @@ metadata:
 
 # Readiness Frame — Win Themes
 
-Micro-skill for **customer needs/wants** and **win-theme candidate seeds**.
+Micro-skill for **customer needs/wants** retrieval and **win-theme candidate seeds** only.
+
+Read before writing:
+- `references/readiness_output_contract.md`
+- `references/win_themes_handoff_schema.md`
+
+## Out of scope
+
+Ignore chain prompts asking for pains, eval crosswalk rows, workload enablers, modernization, or tea-leaves. Do not emit `customer_pain_points[]`, `eval_crosswalk[]`, or `importance_signals[]` in this handoff.
 
 ## Workflow
 
-1. Run surfaces `shipley_needs_wants` then `shipley_win_themes`.
-2. Emit `artifacts/win_themes_handoff.json` with priority-ranked `win_theme_candidates[]` (full `rationale_chain`, `proof_required[]`, `evaluation_factor_links[]`).
-3. Seeds only — no proposal prose.
+### 1. Inventory (one call)
+
+`kg_entities` once with `customer_priority`, `evaluation_factor`, `requirement`, `pain_point`. Do not repeat.
+
+### 2. Retrieve (one kg_chunks per surface — one per turn)
+
+Follow `artifacts/retrieval_plan.json` sequentially. Surfaces: `shipley_needs_wants`, then `shipley_win_themes`.
+
+For each turn while `plan_complete` is false:
+- Read `next_step.suggested_query`
+- Run **exactly one** `kg_chunks`
+- Advance on the following turn
+
+Never fire multiple `kg_chunks` in one assistant turn.
+
+When every surface is `retrieved` or `saturated`, **stop calling kg_chunks and kg_entities**.
+
+### 3. Draft (write handoff once)
+
+When `plan_complete: true`, write `artifacts/win_themes_handoff.json` per `references/win_themes_handoff_schema.md`:
+- `win_theme_candidates[]` — priority-ranked seeds with `rationale_chain`, `proof_required[]`, `evaluation_factor_links[]`
+- `claim_gaps[]` — honest named gaps
+
+Use real `source_chunk_ids` from the scratchpad. If `write_file` is blocked in retrieve phase, run the next planned `kg_chunks` instead of retrying write.
+
+Do not `read_file` the scratchpad — evidence is in tool results.
+
+### 4. Stop
+
+After handoff JSON is written, **stop**. Platform finalize runs outside this loop.
+
+## Retrieval discipline (latency)
+
+Target: **≤12 turns, ≤120s** on `mcpp_rfp`-class packages.
+
+| Step | Budget |
+|------|--------|
+| kg_entities | 1 turn |
+| kg_chunks (2 surfaces) | 2 turns |
+| write handoff | 1–2 turns |
+
+Eval cases: `evals/evals.json`.

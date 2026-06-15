@@ -1,0 +1,8 @@
+{
+  "run_id": "20260615_144454_build_the_mission_readiness_fram",
+  "chain_id": "20260615_144454_solo_win_themes",
+  "wall_seconds": 33.1,
+  "max_turns_cap": 12,
+  "turns": 5,
+  "gate_passed": true
+}

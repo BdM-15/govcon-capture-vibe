@@ -2,6 +2,14 @@
   "step_id": "win-themes",
   "skill": "readiness-frame-win-themes",
   "passed": true,
-  "run_id": "20260615_012638_build_the_mission_readiness_fram",
-  "workspace": "mcpp_rfp"
+  "gate_passed": true,
+  "run_id": "20260615_144454_build_the_mission_readiness_fram",
+  "chain_id": "20260615_144454_solo_win_themes",
+  "workspace": "mcpp_rfp",
+  "wall_seconds": 33.1,
+  "max_turns_cap": 12,
+  "turns": 5,
+  "kg_entities_calls": 1,
+  "kg_chunks_calls": 2,
+  "note": "Skill-creator iteration-1 green — two-surface retrieve, 12-turn cap"
 }

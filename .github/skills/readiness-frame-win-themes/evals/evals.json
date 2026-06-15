@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "skill_name": "readiness-frame-win-themes",
+  "evals": [
+    {
+      "id": 1,
+      "name": "mcpp-rfp-win-themes",
+      "prompt": "Workspace mcpp_rfp. Build win-themes slice only: priority-ranked win_theme_candidates[] with rationale_chain, proof_required[], evaluation_factor_links[], and source_chunk_ids. Log missing theme evidence in claim_gaps[].",
+      "expected_output": "artifacts/win_themes_handoff.json with >=3 cited win_theme_candidates",
+      "files": [],
+      "expectations": [
+        "completes in under 120 seconds wall time",
+        "uses 12 or fewer assistant turns",
+        "calls kg_entities exactly once",
+        "runs at most one kg_chunks pass per surface (shipley_needs_wants, shipley_win_themes)",
+        "does not call kg_chunks after retrieval_plan.json plan_complete is true",
+        "win_theme_candidates has >= 3 rows with source_chunk_ids",
+        "does not emit eval_crosswalk or customer_pain_points (sibling slices)",
+        "solo platform gate passes on win_themes_handoff.json"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "honest-gaps-when-thin",
+      "prompt": "Sparse package. Emit best-effort win_theme_candidates for grounded themes; log ungrounded themes in claim_gaps[] by name.",
+      "expected_output": "Partial handoff plus explicit claim_gaps — no invented themes",
+      "files": [],
+      "expectations": [
+        "claim_gaps[] names missing theme evidence when rows are thin",
+        "no scaffold themes with placeholder rationale_chain text"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "retrieval-discipline-regression",
+      "prompt": "Workspace mcpp_rfp. One kg_entities + two kg_chunks (needs/wants then win themes), then draft without re-querying.",
+      "expected_output": "finish_reason stop; kg_chunks_calls <= 3",
+      "files": [],
+      "expectations": [
+        "finish_reason is stop not max_turns",
+        "kg_chunks_calls <= 3",
+        "tool_calls <= 10"
+      ]
+    }
+  ]
+}
