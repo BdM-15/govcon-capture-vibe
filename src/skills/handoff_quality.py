@@ -2,24 +2,14 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
-from src.skills.evidence_gates import (
-    DEFAULT_COVERAGE_MIN_RATIO,
-    check_coverage_contract,
-    crosswalk_material_row_labels,
-    minimum_required_crosswalk_rows,
-)
-from src.skills.readiness_content_gates import (
-    compiler_output_substance_issues,
-    substance_issues_for_crosswalk,
-)
-from src.skills.readiness_handoff_models import (
-    TeaLeavesHandoff,
-    load_handoff_dict,
-    validate_handoff_file,
+from src.skills.readiness_content_gates import compiler_output_substance_issues
+from src.skills.readiness_handoff_gates import (
+    EVAL_COVERAGE_CONTRACT,
+    eval_handoff_coverage_issues,
+    validate_handoff_artifact_substance,
 )
 from src.skills.source_citations import resolve_workspace_dir_from_run_dir
 
@@ -33,27 +23,12 @@ _SKILL_EXPECTED_HANDOFF: dict[str, str] = {
     "readiness-frame-external-research": "capability_overlay_handoff.json",
 }
 
-_HANDOFF_FILENAMES = frozenset(
-    {
-        "eval_handoff.json",
-        "workload_handoff.json",
-        "pains_handoff.json",
-        "modernization_handoff.json",
-        "tea_leaves_handoff.json",
-        "win_themes_handoff.json",
-        "capability_overlay_handoff.json",
-    }
-)
+_HANDOFF_FILENAMES = frozenset(_SKILL_EXPECTED_HANDOFF.values())
 
-_EVAL_COVERAGE_CONTRACT = {
-    "artifact_path": "eval_handoff.json",
-    "required_entity_types": ["evaluation_factor", "subfactor"],
-    "rule": "one_row_per_entity",
-    "rows_key": "eval_crosswalk",
-    "min_coverage_ratio": DEFAULT_COVERAGE_MIN_RATIO,
-}
+_EVAL_COVERAGE_CONTRACT = EVAL_COVERAGE_CONTRACT
 
 _BLOCKING_FINISH_REASONS = frozenset({"depth_incomplete", "error"})
+
 
 def _is_compiler_step(step_run: Any) -> bool:
     skill = str(getattr(step_run, "skill", "") or "").strip().lower()
@@ -78,18 +53,6 @@ def _compiler_substance_errors(step_run: Any) -> list[str]:
     return compiler_output_substance_issues(path)
 
 
-def _load_json(path: Path) -> dict[str, Any] | None:
-    try:
-        return load_handoff_dict(path)
-    except (OSError, json.JSONDecodeError, ValueError):
-        return None
-
-
-def _row_has_chunk_ids(row: dict[str, Any]) -> bool:
-    chunk_ids = row.get("source_chunk_ids") or []
-    return isinstance(chunk_ids, list) and any(str(item).strip() for item in chunk_ids)
-
-
 def validate_handoff_artifact(
     handoff_name: str,
     path: Path,
@@ -97,113 +60,11 @@ def validate_handoff_artifact(
     workspace_dir: Path | None,
 ) -> list[str]:
     """Deterministic substance checks for one handoff JSON artifact."""
-    issues: list[str] = []
-    if not path.is_file():
-        return [f"{handoff_name} missing at {path}"]
-
-    try:
-        validate_handoff_file(path)
-    except Exception as exc:  # noqa: BLE001
-        issues.append(f"{handoff_name} contract: {exc}")
-        return issues
-
-    payload = _load_json(path)
-    if payload is None:
-        return [f"{handoff_name} is unreadable or not a JSON object"]
-
-    if handoff_name == "eval_handoff.json":
-        crosswalk = payload.get("eval_crosswalk")
-        if not isinstance(crosswalk, list) or not crosswalk:
-            issues.append(
-                "eval_handoff.json: eval_crosswalk is empty — add substantive rows or claim_gaps[]"
-            )
-        elif workspace_dir is not None:
-            issues.extend(
-                check_coverage_contract(
-                    workspace_dir=workspace_dir,
-                    coverage_contract=_EVAL_COVERAGE_CONTRACT,
-                    artifact=payload,
-                )
-            )
-        if isinstance(crosswalk, list) and crosswalk:
-            issues.extend(
-                substance_issues_for_crosswalk(crosswalk, workspace_dir=workspace_dir)
-            )
-            material = [
-                row
-                for row in crosswalk
-                if isinstance(row, dict) and str(row.get("evaluation_factor") or "").strip()
-            ]
-            cited = [row for row in material if _row_has_chunk_ids(row)]
-            if len(material) >= 3 and len(cited) < max(2, int(len(material) * 0.75)):
-                issues.append(
-                    "eval_handoff.json: crosswalk rows lack source_chunk_ids — "
-                    "ground each row in scratchpad chunk IDs before chain continues"
-                )
-        return issues
-
-    if handoff_name == "workload_handoff.json":
-        frame = payload.get("mission_readiness_frame")
-        if not isinstance(frame, dict):
-            frame = {}
-        outcome = str(
-            frame.get("readiness_outcome") or payload.get("readiness_outcome") or ""
-        ).strip()
-        enablers = frame.get("workload_enablers") or payload.get("workload_enablers") or []
-        if not outcome and not (isinstance(enablers, list) and enablers):
-            issues.append(
-                "workload_handoff.json: readiness_outcome and workload_enablers both empty"
-            )
-        return issues
-
-    if handoff_name == "pains_handoff.json":
-        pains = payload.get("customer_pain_points") or []
-        if not isinstance(pains, list) or not pains:
-            issues.append(
-                "pains_handoff.json: customer_pain_points empty — retrieve program-office pains or claim_gaps[]"
-            )
-        else:
-            cited = [
-                row
-                for row in pains
-                if isinstance(row, dict) and _row_has_chunk_ids(row)
-            ]
-            if not cited:
-                issues.append(
-                    "pains_handoff.json: no customer_pain_points carry source_chunk_ids"
-                )
-        return issues
-
-    if handoff_name == "modernization_handoff.json":
-        methods = payload.get("current_methods") or []
-        innovations = payload.get("innovation_opportunities") or []
-        if not (isinstance(methods, list) and methods) and not (
-            isinstance(innovations, list) and innovations
-        ):
-            issues.append(
-                "modernization_handoff.json: current_methods and innovation_opportunities both empty"
-            )
-        return issues
-
-    if handoff_name == "tea_leaves_handoff.json":
-        normalized = TeaLeavesHandoff.from_payload(payload).model_dump()
-        signals = normalized.get("importance_signals") or []
-        implicit = normalized.get("implicit_criteria") or []
-        if not (isinstance(signals, list) and signals) and not (
-            isinstance(implicit, list) and implicit
-        ):
-            issues.append(
-                "tea_leaves_handoff.json: importance_signals and implicit_criteria both empty"
-            )
-        return issues
-
-    if handoff_name == "win_themes_handoff.json":
-        themes = payload.get("win_theme_candidates") or []
-        if not isinstance(themes, list) or not themes:
-            issues.append("win_themes_handoff.json: win_theme_candidates empty")
-        return issues
-
-    return issues
+    return validate_handoff_artifact_substance(
+        handoff_name,
+        path,
+        workspace_dir=workspace_dir,
+    )
 
 
 def _skill_dir_for_name(skill_name: str) -> Path:
@@ -304,22 +165,13 @@ def step_quality_errors(
     return errors
 
 
-def eval_handoff_coverage_issues(
-    payload: dict[str, Any],
-    *,
-    workspace_dir: Path | None,
-) -> list[str]:
-    """Coverage contract check for eval handoff payloads."""
-    return check_coverage_contract(
-        workspace_dir=workspace_dir or Path("."),
-        coverage_contract=_EVAL_COVERAGE_CONTRACT,
-        artifact=payload,
-    )
-
-
 def material_crosswalk_row_count(crosswalk: list[Any]) -> int:
+    from src.skills.evidence_gates import crosswalk_material_row_labels
+
     return len(crosswalk_material_row_labels(crosswalk))
 
 
 def required_crosswalk_rows(workspace_dir: Path | None) -> int:
+    from src.skills.evidence_gates import minimum_required_crosswalk_rows
+
     return minimum_required_crosswalk_rows(workspace_dir)

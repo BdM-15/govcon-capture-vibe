@@ -7,10 +7,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from src.skills.handoff_quality import (
-    _SKILL_EXPECTED_HANDOFF,
-    validate_handoff_artifact,
-)
+from src.skills.handoff_quality import _SKILL_EXPECTED_HANDOFF
 from src.skills.platform_eval_finalize import finalize_eval_handoff, split_eval_gate_issues
 from src.skills.readiness_content_gates import (
     apply_known_acronym_expansions,
@@ -19,8 +16,6 @@ from src.skills.readiness_content_gates import (
     frame_narrative_text_for_acronym_gate,
     undefined_acronyms,
 )
-from src.skills.source_citations import resolve_workspace_dir_from_run_dir
-
 logger = logging.getLogger(__name__)
 
 _RETRIABLE_MARKERS = (
@@ -122,6 +117,24 @@ def repair_compiler_artifacts(run_dir: Path) -> bool:
     return changed
 
 
+def _skill_dir_for_name(skill_name: str) -> Path:
+    return Path(__file__).resolve().parents[2] / ".github" / "skills" / skill_name
+
+
+def _validate_micro_skill_run(skill_name: str, run_dir: Path) -> list[str]:
+    """Gate micro-skill handoff via skill-declared validate_skill_run hook."""
+    from src.skills.skill_local_tools import resolve_skill_run_validator
+
+    skill_dir = _skill_dir_for_name(skill_name)
+    validate_run = resolve_skill_run_validator(skill_dir)
+    if validate_run is None:
+        return [f"handoff_quality: {skill_name} missing validate_skill_run hook"]
+    try:
+        return list(validate_run(run_dir, user_prompt=""))
+    except TypeError:
+        return list(validate_run(run_dir))
+
+
 def _validate_compiler_run(run_dir: Path) -> list[str]:
     repair_compiler_artifacts(run_dir)
     issues = list(compiler_output_substance_issues(run_dir))
@@ -156,16 +169,12 @@ async def finalize_step_handoff(
     if skill_name == "mission-readiness-framer":
         return _gate_result(issues=_validate_compiler_run(run_dir), warnings=[])
 
-    handoff_name = _SKILL_EXPECTED_HANDOFF.get(skill_name)
-    if not handoff_name:
+    if skill_name not in _SKILL_EXPECTED_HANDOFF:
         return _gate_result(issues=[], warnings=[])
 
-    resolved_workspace = resolve_workspace_dir_from_run_dir(run_dir) or workspace_dir
-    path = run_dir / "artifacts" / handoff_name
-    issues = validate_handoff_artifact(
-        handoff_name,
-        path,
-        workspace_dir=resolved_workspace,
-    )
-    prefixed = [f"handoff_quality: {issue}" for issue in issues]
+    issues = _validate_micro_skill_run(skill_name, run_dir)
+    prefixed = [
+        issue if str(issue).startswith("handoff_quality:") else f"handoff_quality: {issue}"
+        for issue in issues
+    ]
     return _gate_result(issues=prefixed, warnings=[])

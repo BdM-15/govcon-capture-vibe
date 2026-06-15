@@ -91,17 +91,19 @@ flowchart LR
 
 ---
 
-### Chunk 4 — Unify gate routing for all micro-skills
+### Chunk 4 — Unify gate routing for all micro-skills ✅ done
 
-**Problem:** Non-eval micro-skills still use inline rules in `validate_handoff_artifact`; only eval/compile have `validate_skill_run`.
+**Problem:** Non-eval micro-skills still used inline rules in `validate_handoff_artifact`; only eval/compile had `validate_skill_run`.
 
 **Files:**
-- Modify: `.github/skills/readiness-frame-*/**_tools.py` (add thin `validate_skill_run` delegating to shared checks)
-- Modify: `src/skills/handoff_quality.py` (shrink `validate_handoff_artifact` to schema-only or delete per-skill branches)
-- Test: per-skill gate tests
+- Create: `src/skills/readiness_handoff_gates.py`
+- Create: `.github/skills/readiness-frame-*/**_tools.py` (7 thin hooks)
+- Modify: `src/skills/handoff_quality.py`, `src/skills/platform_step_finalize.py`, `mission_readiness_chain.py`
+- Test: `tests/skills/test_readiness_handoff_gates.py`
 
-- [ ] One skill hook per micro-skill; shared helpers in `src/skills/readiness_content_gates.py`
-- [ ] `platform_step_finalize` calls same helper as solo assess
+- [x] One skill hook per micro-skill; shared gates in `readiness_handoff_gates.py`
+- [x] `platform_step_finalize` + solo assess both route through `validate_skill_run`
+- [x] Chain retrieve prompt aligned with gate parity (no "partial OK")
 
 **Exit criteria:** 7 micro-skills + compile all gate through `validate_skill_run` only.
 

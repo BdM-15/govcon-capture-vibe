@@ -164,6 +164,7 @@ def test_apply_step_quality_gate_fails_chain_step(tmp_path: Path) -> None:
 
     class _StepRun:
         run_dir = str(eval_run_dir)
+        skill = "readiness-frame-eval"
         artifacts = [{"name": "eval_handoff.json"}]
         status = "completed"
         error = ""
@@ -310,6 +311,7 @@ def test_validate_step_handoffs_returns_errors_not_warnings(tmp_path: Path) -> N
 
     class _StepRun:
         run_dir = str(slice_run_dir)
+        skill = "readiness-frame-eval"
         artifacts = [{"name": "eval_handoff.json"}]
 
     errors = validate_step_handoffs(_StepRun(), workspace)

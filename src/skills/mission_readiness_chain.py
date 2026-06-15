@@ -31,9 +31,9 @@ _MICRO_SKILL_CONTEXT = (
 )
 
 _STEP_RETRIEVE_CONTEXT = (
-    "Platform finalize runs after retrieve — expands coverage, validates handoff, fixes acronyms "
-    "where configured. Write best-effort handoff JSON from scratchpad evidence; log gaps in "
-    "claim_gaps[] only. Do not burn turns fighting platform gates — partial handoff is OK."
+    "Retrieve must produce a handoff that passes the same gate as solo assess — coverage, "
+    "citations, acronyms, substance. Log honest claim_gaps[] for missing factors; never "
+    "emit scaffold rows. Platform finalize repairs known acronyms then re-validates."
 )
 
 
