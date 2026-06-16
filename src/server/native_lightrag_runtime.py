@@ -35,6 +35,8 @@ class NativeParserHealth:
     mineru_endpoint: str
     mineru_backend: str
     mineru_parse_method: str
+    mineru_effort: str
+    mineru_effort_via_shim: bool
     concurrency: dict[str, int]
 
 
@@ -134,6 +136,21 @@ def configure_native_parser_environment(
     environ["MAX_PARALLEL_PARSE_DOCLING"] = str(concurrency["docling"])
     environ["MAX_PARALLEL_ANALYZE"] = str(concurrency["analyze"])
 
+    # MINERU_LOCAL_EFFORT + in-tree shim bridge (single public repo, removable).
+    # The shim patches the *installed* lightrag.parser.external.mineru symbols at runtime
+    # so that effort flows to POST /tasks and participates in *.mineru_raw/ cache signatures.
+    # This is temporary glue until a future stock lightrag-hku release adds native support.
+    mineru_effort = str(getattr(settings, "mineru_local_effort", "high") or "high").strip().lower() or "high"
+    if mineru_effort not in {"high", "medium", "low"}:
+        mineru_effort = "high"
+    environ["MINERU_LOCAL_EFFORT"] = mineru_effort
+
+    # Activate the shim as early as possible (before LightRAG parser workers are created).
+    # The shim is a tiny, Theseus-owned module that lives inside this repo only.
+    from . import mineru_effort_shim as _effort_shim
+    shim_status = _effort_shim.activate_mineru_effort_shim()
+    effort_via_shim = bool(shim_status.get("active"))
+
     validate_parser_routing_fn(routing)
     return NativeParserHealth(
         routing=routing,
@@ -141,6 +158,8 @@ def configure_native_parser_environment(
         mineru_endpoint=mineru_endpoint,
         mineru_backend=mineru_backend,
         mineru_parse_method=mineru_parse_method,
+        mineru_effort=mineru_effort,
+        mineru_effort_via_shim=effort_via_shim,
         concurrency=concurrency,
     )
 

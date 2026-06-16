@@ -8,7 +8,11 @@ dependencies = [
     # LightRAG knowledge graph engine (explicit pin for native multimodal and Neo4j workspace features)
     "lightrag-hku>=1.5.2",
     # MinerU 3.x multimodal document parsing for LightRAG parser routing
-    "mineru[core]>=3.0.9",
+    # 3.3+ brings hybrid-auto-engine + effort=high|medium|low (quality-first for govcon tables/figures).
+    # lmdeploy extra is the Windows path (no Ray/vLLM). The lightrag-hku pin below is left
+    # unchanged; a narrow in-tree shim (see src/server/mineru_effort_shim.py) bridges the
+    # missing effort forwarding + cache signature until a future stock lightrag-hku release adds it.
+    "mineru[core,lmdeploy]>=3.3",
     # Cloud LLM access (xAI Grok via OpenAI-compatible API)
     # v2.x required by instructor >=1.15 and LightRAG >=1.4.13
     "openai>=2.0.0,<3.0.0",

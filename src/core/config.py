@@ -339,6 +339,12 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("MINERU_LOCAL_BACKEND", "MINERU_BACKEND"),
         description="MinerU local backend passed to LightRAG's native MinerU client"
     )
+    mineru_local_effort: str = Field(
+        default="high",
+        validation_alias="MINERU_LOCAL_EFFORT",
+        description="Effort level for MinerU 3.3+ hybrid-auto-engine (high|medium|low). "
+                    "Bridged at runtime via in-tree shim until stock lightrag-hku forwards it natively."
+    )
     mineru_local_parse_method: str = Field(
         default="auto",
         validation_alias=AliasChoices("MINERU_LOCAL_PARSE_METHOD", "PARSE_METHOD"),

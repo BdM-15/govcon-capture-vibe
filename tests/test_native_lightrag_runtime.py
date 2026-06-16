@@ -79,12 +79,15 @@ def test_configure_native_parser_environment_sets_lightrag_parser_and_mineru_env
         "MAX_PARALLEL_PARSE_MINERU": "2",
         "MAX_PARALLEL_PARSE_DOCLING": "1",
         "MAX_PARALLEL_ANALYZE": "4",
+        "MINERU_LOCAL_EFFORT": "high",
     }
     assert parser.routing == "pdf:mineru-ite,docx:native-ite"
     assert parser.mineru_api_mode == "local"
     assert parser.mineru_endpoint == "http://localhost:8888"
     assert parser.mineru_backend == "pipeline"
     assert parser.mineru_parse_method == "auto"
+    assert parser.mineru_effort == "high"
+    assert parser.mineru_effort_via_shim is True
     assert parser.concurrency == {
         "native": 5,
         "mineru": 2,
@@ -183,6 +186,8 @@ def test_build_native_lightrag_runtime_applies_parser_routing_to_lightrag_kwargs
         mineru_endpoint="http://localhost:8888",
         mineru_backend="pipeline",
         mineru_parse_method="auto",
+        mineru_effort="high",
+        mineru_effort_via_shim=True,
         concurrency={"native": 5, "mineru": 2, "docling": 1, "analyze": 4},
     )
 
@@ -303,7 +308,9 @@ def test_pyproject_pins_lightrag_to_native_multimodal_commit() -> None:
     sources = pyproject["tool"]["uv"]["sources"]
 
     assert "lightrag-hku>=1.5.2" in dependencies
-    assert "mineru[core]>=3.0.9" in dependencies
+    # MinerU 3.3+ with lmdeploy (Windows hybrid path). The lightrag-hku pin is left as-is;
+    # effort forwarding is provided by the removable in-tree shim (src/server/mineru_effort_shim.py).
+    assert any(d.startswith("mineru[core,lmdeploy]") for d in dependencies)
     assert not any(dependency.startswith("raganything") for dependency in dependencies)
     assert sources["lightrag-hku"] == {
         "git": "https://github.com/HKUDS/LightRAG.git",

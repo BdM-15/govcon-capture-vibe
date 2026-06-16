@@ -80,3 +80,16 @@ def test_settings_exposes_native_lightrag_parser_env_names() -> None:
     assert settings.max_parallel_parse_docling == 2
     assert settings.max_parallel_analyze == 8
     assert settings.vlm_process_enable is True
+
+
+def test_settings_exposes_mineru_local_effort_default_and_alias() -> None:
+    settings = Settings(
+        MINERU_LOCAL_EFFORT="high",
+        CHUNK_SIZE=4096,
+        CHUNK_OVERLAP_SIZE=600,
+    )
+    assert settings.mineru_local_effort == "high"
+
+    # Default is high when not provided
+    settings2 = Settings(CHUNK_SIZE=4096, CHUNK_OVERLAP_SIZE=600)
+    assert settings2.mineru_local_effort == "high"
