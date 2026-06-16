@@ -45,25 +45,21 @@ def start_server_background(*, repo_root: Path | None = None) -> None:
     app = root / "app.py"
     log_dir = root / "run-dir"
     log_dir.mkdir(parents=True, exist_ok=True)
-    stdout_log = log_dir / "server_stdout.log"
-    stderr_log = log_dir / "server_stderr.log"
+    stamp = time.strftime("%Y%m%d_%H%M%S")
+    stdout_log = log_dir / f"server_stdout_{stamp}.log"
+    stderr_log = log_dir / f"server_stderr_{stamp}.log"
     if sys.platform == "win32":
-        subprocess.run(
-            [
-                "powershell",
-                "-NoProfile",
-                "-Command",
-                (
-                    f"Start-Process -FilePath '{python}' "
-                    f"-ArgumentList '{app}' "
-                    f"-WorkingDirectory '{root}' "
-                    "-WindowStyle Hidden "
-                    f"-RedirectStandardOutput '{stdout_log}' "
-                    f"-RedirectStandardError '{stderr_log}'"
-                ),
-            ],
-            check=False,
-            capture_output=True,
+        creationflags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(
+            subprocess, "CREATE_NO_WINDOW", 0
+        )
+        subprocess.Popen(
+            [str(python), str(app)],
+            cwd=str(root),
+            stdin=subprocess.DEVNULL,
+            stdout=open(stdout_log, "ab"),  # noqa: SIM115
+            stderr=open(stderr_log, "ab"),  # noqa: SIM115
+            creationflags=creationflags,
+            close_fds=True,
         )
         return
     subprocess.Popen(
@@ -106,7 +102,8 @@ def wait_for_fresh_server(
 ) -> bool:
     deadline = time.time() + timeout_s
     while time.time() < deadline:
-        if fetch_server_fingerprint(base_url) == expected_fingerprint:
+        live = fetch_server_fingerprint(base_url)
+        if live == expected_fingerprint:
             return True
         time.sleep(poll_s)
     return False
@@ -135,11 +132,13 @@ def ensure_theseus_server_fresh(
             f"server stale (live={live}, expected={expected}) — restart app.py or rerun without --skip-server-ensure",
         )
 
+    print(f"restarting server (expected fingerprint={expected})...", flush=True)
     kill_server_on_port(9621)
     if not _PYTHON.is_file() or not _APP.is_file():
         return False, f"missing runtime ({_PYTHON} or {_APP})"
 
     start_server_background(repo_root=root)
+    print("waiting for server startup...", flush=True)
     if wait_for_fresh_server(expected, base_url=base_url, timeout_s=startup_timeout_s):
         time.sleep(2.0)
         if fetch_server_fingerprint(base_url) == expected:
