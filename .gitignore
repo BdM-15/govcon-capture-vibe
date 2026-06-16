@@ -258,3 +258,16 @@ tools/_skill_snapshots/
 # E2E harness run logs (developer-machine only)
 tools/_e2e_runs/
 tools/_e2e_run_*.log
+
+# Local harness scratch (logs, e2e output, agent session dumps)
+run-dir/
+!run-dir/.gitkeep
+
+# Debug chain repro fixtures (mini chain JSON from dev sessions)
+_dbg_chain*/
+
+# Cursor / IDE terminal captures copied into repo
+terminals/
+
+# Local Grok config mirror (canonical: .github/copilot-instructions.md, .github/skills/)
+.grok/
