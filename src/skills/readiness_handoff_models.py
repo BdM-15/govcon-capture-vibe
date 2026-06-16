@@ -309,18 +309,53 @@ class TeaLeavesHandoff(BaseModel):
         return cls.model_validate(normalize_tea_leaves_payload(payload))
 
 
+def normalize_win_theme_row(row: dict[str, Any]) -> dict[str, Any]:
+    data = dict(row)
+    theme = str(data.get("theme") or "").strip()
+    if not theme:
+        for alias in ("theme_seed", "title", "theme_name", "name"):
+            if str(data.get(alias) or "").strip():
+                theme = str(data.pop(alias) or "").strip()
+                break
+    if theme:
+        data["theme"] = theme
+    if data.get("priority") is None and data.get("rank") is not None:
+        data["priority"] = data.pop("rank")
+    proof = data.get("proof_required")
+    if isinstance(proof, str) and proof.strip():
+        data["proof_required"] = [proof.strip()]
+    links = data.get("evaluation_factor_links")
+    if isinstance(links, str) and links.strip():
+        data["evaluation_factor_links"] = [links.strip()]
+    chunk_ids = data.get("source_chunk_ids") or []
+    if not (isinstance(chunk_ids, list) and any(str(item).strip() for item in chunk_ids)):
+        extracted = extract_chunk_ids_from_text(
+            data.get("theme"),
+            data.get("rationale_chain"),
+            data.get("proof_required"),
+            data.get("evaluation_factor_links"),
+        )
+        if extracted:
+            data["source_chunk_ids"] = extracted
+    return data
+
+
+def normalize_win_themes_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    data = dict(payload)
+    rows = _coerce_row_list(data.get("win_theme_candidates"), text_field="theme")
+    data["win_theme_candidates"] = [
+        normalize_win_theme_row(row) if isinstance(row, dict) else row for row in rows
+    ]
+    return data
+
+
 class WinThemesHandoff(BaseModel):
     win_theme_candidates: list[dict[str, Any]] = Field(default_factory=list)
     claim_gaps: list[str] = Field(default_factory=list)
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> WinThemesHandoff:
-        data = dict(payload)
-        data["win_theme_candidates"] = _coerce_row_list(
-            data.get("win_theme_candidates"),
-            text_field="theme",
-        )
-        return cls.model_validate(data)
+        return cls.model_validate(normalize_win_themes_payload(payload))
 
 
 _HANDOFF_MODELS: dict[str, type[BaseModel]] = {

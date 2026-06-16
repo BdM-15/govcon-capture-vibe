@@ -29,6 +29,70 @@ def test_all_micro_skills_declare_validate_skill_run() -> None:
         assert resolve_skill_run_validator(skill_dir) is not None, skill_name
 
 
+def test_normalize_win_theme_row_repairs_theme_seed_alias() -> None:
+    from src.skills.readiness_handoff_models import normalize_win_theme_row
+
+    row = normalize_win_theme_row(
+        {
+            "rank": 1,
+            "theme_seed": "Proven low-risk transition sustaining readiness from Day 1",
+            "rationale_chain": (
+                "Program office owns readiness outcome. 90-day FAR 52.237-3 phase-in is "
+                "mandatory. Past Performance emphasis rewards demonstrated continuity."
+            ),
+            "proof_required": ["Named 90-day transition milestones"],
+            "evaluation_factor_links": ["Factor 2 Technical Approach"],
+            "source_chunk_ids": ["chunk-abc123"],
+        }
+    )
+    assert row["theme"].startswith("Proven low-risk")
+    assert row["priority"] == 1
+
+
+def test_win_themes_gate_requires_cited_object_rows(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-win-themes"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "win_themes_handoff.json").write_text(
+        json.dumps(
+            {
+                "win_theme_candidates": [
+                    "Plain string theme [chunk-abc123]",
+                    {
+                        "theme": "Short",
+                        "rationale_chain": "Too thin.",
+                        "proof_required": [],
+                        "evaluation_factor_links": [],
+                        "source_chunk_ids": ["chunk-abc124"],
+                    },
+                ],
+                "claim_gaps": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    issues = validate_handoff_run(run_dir, deliverable="win_themes_handoff.json")
+    assert any("must be objects" in issue for issue in issues)
+    assert any("needs >= 3" in issue for issue in issues)
+
+
+def test_win_themes_hook_matches_shared_gate(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-win-themes-hook"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "win_themes_handoff.json").write_text(json.dumps({}), encoding="utf-8")
+
+    repo = Path(__file__).resolve().parents[2]
+    skill_dir = repo / ".github" / "skills" / "readiness-frame-win-themes"
+    validate_run = resolve_skill_run_validator(skill_dir)
+    assert validate_run is not None
+
+    hook_issues = validate_run(run_dir)
+    shared_issues = validate_handoff_run(run_dir, deliverable="win_themes_handoff.json")
+    assert hook_issues == shared_issues
+    assert hook_issues
+
+
 def test_normalize_tea_leaves_row_extracts_embedded_chunk_ids() -> None:
     from src.skills.readiness_handoff_models import normalize_tea_leaves_signal_row
 

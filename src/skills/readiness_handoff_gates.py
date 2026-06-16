@@ -473,16 +473,75 @@ def _tea_leaves_substance_issues(
     return issues
 
 
+def _win_theme_has_substance(row: dict[str, Any]) -> bool:
+    theme = str(row.get("theme") or "").strip()
+    rationale = str(row.get("rationale_chain") or "").strip()
+    proof = row.get("proof_required") or []
+    links = row.get("evaluation_factor_links") or []
+    proof_ok = isinstance(proof, list) and any(str(item).strip() for item in proof)
+    links_ok = isinstance(links, list) and any(str(item).strip() for item in links)
+    return (
+        len(theme) >= 12
+        and len(rationale) >= 70
+        and proof_ok
+        and links_ok
+        and _row_has_chunk_ids(row)
+    )
+
+
 def _win_themes_substance_issues(
     payload: dict[str, Any],
     *,
     workspace_dir: Path | None = None,
 ) -> list[str]:
     del workspace_dir
+    from src.skills.readiness_handoff_models import normalize_win_themes_payload
+
+    raw_themes = payload.get("win_theme_candidates") or []
+    payload = normalize_win_themes_payload(payload)
     themes = payload.get("win_theme_candidates") or []
+    issues: list[str] = []
     if not isinstance(themes, list) or not themes:
-        return ["win_themes_handoff.json: win_theme_candidates empty"]
-    return []
+        return [
+            "win_themes_handoff.json: win_theme_candidates empty — "
+            "retrieve needs/wants evidence or claim_gaps[]"
+        ]
+    if len(themes) < 3:
+        issues.append(
+            "win_themes_handoff.json: win_theme_candidates needs >= 3 cited "
+            "priority-ranked theme rows"
+        )
+    string_rows = [
+        index for index, row in enumerate(raw_themes, start=1) if isinstance(row, str)
+    ]
+    if string_rows:
+        issues.append(
+            "win_themes_handoff.json: win_theme_candidates must be objects "
+            "(theme, priority, rationale_chain, proof_required, evaluation_factor_links, "
+            "source_chunk_ids) — not plain strings"
+        )
+    uncited = [
+        index
+        for index, row in enumerate(themes, start=1)
+        if isinstance(row, dict) and not _row_has_chunk_ids(row)
+    ]
+    if uncited:
+        issues.append(
+            "win_themes_handoff.json: win_theme_candidates rows "
+            f"{uncited[:4]} lack source_chunk_ids"
+        )
+    thin = [
+        index
+        for index, row in enumerate(themes, start=1)
+        if isinstance(row, dict) and not _win_theme_has_substance(row)
+    ]
+    if thin and len(themes) >= 3:
+        issues.append(
+            "win_themes_handoff.json: win_theme_candidates rows "
+            f"{thin[:4]} too thin — need theme, rationale_chain (>=70 chars), "
+            "proof_required[], evaluation_factor_links[], and source_chunk_ids"
+        )
+    return issues
 
 
 def _capability_overlay_substance_issues(

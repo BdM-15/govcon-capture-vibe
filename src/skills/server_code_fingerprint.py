@@ -17,6 +17,7 @@ _WATCH_REL_PATHS = (
     "src/skills/pains_handoff_repair.py",
     "src/skills/modernization_handoff_repair.py",
     "src/skills/tea_leaves_handoff_repair.py",
+    "src/skills/win_themes_handoff_repair.py",
     "src/skills/eval_handoff_repair.py",
 )
 

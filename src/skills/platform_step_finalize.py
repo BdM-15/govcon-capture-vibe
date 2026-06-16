@@ -209,6 +209,11 @@ async def finalize_step_handoff(
 
         repair_tea_leaves_handoff(run_dir)
 
+    if skill_name == "readiness-frame-win-themes":
+        from src.skills.win_themes_handoff_repair import repair_win_themes_handoff
+
+        repair_win_themes_handoff(run_dir)
+
     if skill_name == "mission-readiness-framer":
         return _gate_result(issues=_validate_compiler_run(run_dir), warnings=[])
 

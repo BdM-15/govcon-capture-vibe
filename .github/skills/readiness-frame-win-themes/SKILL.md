@@ -60,10 +60,10 @@ When every surface is `retrieved` or `saturated`, **stop calling kg_chunks and k
 ### 3. Draft (write handoff once)
 
 When `plan_complete: true`, write `artifacts/win_themes_handoff.json` per `references/win_themes_handoff_schema.md`:
-- `win_theme_candidates[]` — priority-ranked seeds with `rationale_chain`, `proof_required[]`, `evaluation_factor_links[]`
+- `win_theme_candidates[]` — ≥3 **objects** with `theme`, `priority`, `rationale_chain`, `proof_required[]`, `evaluation_factor_links[]`, `source_chunk_ids[]`
 - `claim_gaps[]` — honest named gaps
 
-Use real `source_chunk_ids` from the scratchpad. If `write_file` is blocked in retrieve phase, run the next planned `kg_chunks` instead of retrying write.
+Use real `source_chunk_ids` from the scratchpad. Do not emit plain-string theme rows. Field `theme` = short label — not `theme_seed`. If `write_file` is blocked in retrieve phase, run the next planned `kg_chunks` instead of retrying write.
 
 Do not `read_file` the scratchpad — evidence is in tool results.
 
@@ -80,5 +80,13 @@ Target: **≤12 turns, ≤120s** on `mcpp_rfp`-class packages.
 | kg_entities | 1 turn |
 | kg_chunks (2 surfaces) | 2 turns |
 | write handoff | 1–2 turns |
+
+## Quality bar (production / platform gate)
+
+Capture-grade handoff — not just non-empty JSON:
+- `win_theme_candidates` ≥ 3 cited object rows; `theme` ≥ 12 chars; `rationale_chain` ≥ 70 chars
+- Each row: non-empty `proof_required[]` and `evaluation_factor_links[]` plus `source_chunk_ids`
+- No sibling-slice fields (pains, eval, tea-leaves)
+- `claim_gaps[]` names missing needs/wants evidence honestly when thin
 
 Eval cases: `evals/evals.json`.
