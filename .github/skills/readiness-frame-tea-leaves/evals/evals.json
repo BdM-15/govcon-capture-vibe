@@ -13,7 +13,8 @@
         "uses 10 or fewer assistant turns",
         "calls kg_entities exactly once",
         "runs at most one kg_chunks pass for tea_leaves surface",
-        "importance_signals or implicit_criteria non-empty with source_chunk_ids",
+        "importance_signals has >= 3 cited object rows with signal and source_chunk_ids",
+        "implicit_criteria has >= 2 cited object rows with criterion, source_role, and source_chunk_ids",
         "does not emit win_theme_candidates or customer_pain_points",
         "solo platform gate passes on tea_leaves_handoff.json"
       ]

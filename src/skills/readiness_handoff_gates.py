@@ -368,22 +368,109 @@ def _modernization_substance_issues(
     return issues
 
 
+def _tea_leaves_signal_has_substance(row: dict[str, Any]) -> bool:
+    signal = str(row.get("signal") or "").strip()
+    return len(signal) >= 30 and _row_has_chunk_ids(row)
+
+
+def _tea_leaves_criterion_has_substance(row: dict[str, Any]) -> bool:
+    criterion = str(row.get("criterion") or "").strip()
+    role = str(row.get("source_role") or "").strip().lower()
+    return (
+        len(criterion) >= 40
+        and role in {"program_office", "contracting_officer"}
+        and _row_has_chunk_ids(row)
+    )
+
+
 def _tea_leaves_substance_issues(
     payload: dict[str, Any],
     *,
     workspace_dir: Path | None = None,
 ) -> list[str]:
     del workspace_dir
-    normalized = TeaLeavesHandoff.from_payload(payload).model_dump()
-    signals = normalized.get("importance_signals") or []
-    implicit = normalized.get("implicit_criteria") or []
+    from src.skills.readiness_handoff_models import normalize_tea_leaves_payload
+
+    raw_signals = payload.get("importance_signals") or []
+    raw_implicit = payload.get("implicit_criteria") or []
+    payload = normalize_tea_leaves_payload(payload)
+    signals = payload.get("importance_signals") or []
+    implicit = payload.get("implicit_criteria") or []
+    issues: list[str] = []
     if not (isinstance(signals, list) and signals) and not (
         isinstance(implicit, list) and implicit
     ):
         return [
-            "tea_leaves_handoff.json: importance_signals and implicit_criteria both empty"
+            "tea_leaves_handoff.json: importance_signals and implicit_criteria both empty "
+            "— retrieve tea-leaves evidence or claim_gaps[]"
         ]
-    return []
+    if not isinstance(signals, list) or len(signals) < 3:
+        issues.append(
+            "tea_leaves_handoff.json: importance_signals needs >= 3 cited signal rows"
+        )
+    if not isinstance(implicit, list) or len(implicit) < 2:
+        issues.append(
+            "tea_leaves_handoff.json: implicit_criteria needs >= 2 cited rows with "
+            "source_role program_office or contracting_officer"
+        )
+    signal_strings = [
+        index for index, row in enumerate(raw_signals, start=1) if isinstance(row, str)
+    ]
+    if signal_strings:
+        issues.append(
+            "tea_leaves_handoff.json: importance_signals must be objects "
+            "(signal, source_role, confidence, source_chunk_ids) — not plain strings"
+        )
+    implicit_strings = [
+        index for index, row in enumerate(raw_implicit, start=1) if isinstance(row, str)
+    ]
+    if implicit_strings:
+        issues.append(
+            "tea_leaves_handoff.json: implicit_criteria must be objects "
+            "(criterion, source_role, alternate_read, source_chunk_ids) — not plain strings"
+        )
+    uncited_signals = [
+        index
+        for index, row in enumerate(signals, start=1)
+        if isinstance(row, dict) and not _row_has_chunk_ids(row)
+    ]
+    if uncited_signals:
+        issues.append(
+            "tea_leaves_handoff.json: importance_signals rows "
+            f"{uncited_signals[:4]} lack source_chunk_ids"
+        )
+    uncited_implicit = [
+        index
+        for index, row in enumerate(implicit, start=1)
+        if isinstance(row, dict) and not _row_has_chunk_ids(row)
+    ]
+    if uncited_implicit:
+        issues.append(
+            "tea_leaves_handoff.json: implicit_criteria rows "
+            f"{uncited_implicit[:4]} lack source_chunk_ids"
+        )
+    thin_signals = [
+        index
+        for index, row in enumerate(signals, start=1)
+        if isinstance(row, dict) and not _tea_leaves_signal_has_substance(row)
+    ]
+    if thin_signals and len(signals) >= 3:
+        issues.append(
+            "tea_leaves_handoff.json: importance_signals rows "
+            f"{thin_signals[:4]} too thin — need signal (>=30 chars) and source_chunk_ids"
+        )
+    thin_implicit = [
+        index
+        for index, row in enumerate(implicit, start=1)
+        if isinstance(row, dict) and not _tea_leaves_criterion_has_substance(row)
+    ]
+    if thin_implicit and len(implicit) >= 2:
+        issues.append(
+            "tea_leaves_handoff.json: implicit_criteria rows "
+            f"{thin_implicit[:4]} too thin — need criterion (>=40 chars), source_role, "
+            "and source_chunk_ids"
+        )
+    return issues
 
 
 def _win_themes_substance_issues(

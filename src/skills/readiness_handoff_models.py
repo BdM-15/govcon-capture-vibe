@@ -12,6 +12,21 @@ from pydantic import BaseModel, Field, field_validator
 from src.skills.mission_readiness_merge import normalize_eval_crosswalk_row
 
 _CHUNK_ID_RE = re.compile(r"^(?:doc-|chunk-|tb-)[a-zA-Z0-9_-]+$", re.IGNORECASE)
+_CHUNK_REF_RE = re.compile(r"(?:doc-|chunk-|tb-)[a-zA-Z0-9_-]+", re.IGNORECASE)
+_SOURCE_ROLE_VALUES = frozenset({"program_office", "contracting_officer"})
+_CONFIDENCE_VALUES = frozenset({"high", "medium", "low"})
+
+
+def extract_chunk_ids_from_text(*texts: Any) -> list[str]:
+    found: list[str] = []
+    seen: set[str] = set()
+    for text in texts:
+        for match in _CHUNK_REF_RE.findall(str(text or "")):
+            normalized = match.strip()
+            if normalized and normalized not in seen and _CHUNK_ID_RE.match(normalized):
+                seen.add(normalized)
+                found.append(normalized)
+    return found
 
 
 class EvalCrosswalkRow(BaseModel):
@@ -190,6 +205,100 @@ class ModernizationHandoff(BaseModel):
         return cls.model_validate(normalize_modernization_payload(payload))
 
 
+def normalize_tea_leaves_signal_row(row: dict[str, Any]) -> dict[str, Any]:
+    data = dict(row)
+    signal = str(data.get("signal") or "").strip()
+    if not signal:
+        for alias in ("hot_button", "title", "name", "theme"):
+            if str(data.get(alias) or "").strip():
+                signal = str(data.pop(alias) or "").strip()
+                break
+    if signal:
+        data["signal"] = signal
+    rationale_parts = [
+        str(data.get(field) or "").strip()
+        for field in ("rationale", "repetition", "hot_button", "eval_echo")
+        if str(data.get(field) or "").strip()
+    ]
+    if rationale_parts and not str(data.get("rationale") or "").strip():
+        data["rationale"] = " ".join(dict.fromkeys(rationale_parts))
+    role = str(data.get("source_role") or "").strip().lower()
+    if role in _SOURCE_ROLE_VALUES:
+        data["source_role"] = role
+    confidence = str(data.get("confidence") or "").strip().lower()
+    if confidence in _CONFIDENCE_VALUES:
+        data["confidence"] = confidence
+    chunk_ids = data.get("source_chunk_ids") or []
+    if not (isinstance(chunk_ids, list) and any(str(item).strip() for item in chunk_ids)):
+        extracted = extract_chunk_ids_from_text(
+            data.get("signal"),
+            data.get("rationale"),
+            data.get("repetition"),
+            data.get("hot_button"),
+            data.get("eval_echo"),
+        )
+        if extracted:
+            data["source_chunk_ids"] = extracted
+    return data
+
+
+def normalize_tea_leaves_criterion_row(row: dict[str, Any]) -> dict[str, Any]:
+    data = dict(row)
+    criterion = str(data.get("criterion") or "").strip()
+    if not criterion:
+        for alias in ("signal", "title", "name"):
+            if str(data.get(alias) or "").strip():
+                criterion = str(data.pop(alias) or "").strip()
+                break
+    if criterion:
+        data["criterion"] = criterion
+    if not str(data.get("alternate_read") or "").strip():
+        for alias in ("unstated_acquisition_read", "rationale", "acquisition_read"):
+            if str(data.get(alias) or "").strip():
+                data["alternate_read"] = str(data.pop(alias) or "").strip()
+                break
+    if not str(data.get("rationale") or "").strip() and str(data.get("alternate_read") or "").strip():
+        data["rationale"] = str(data.get("alternate_read") or "").strip()
+    role = str(data.get("source_role") or "").strip().lower()
+    if role in _SOURCE_ROLE_VALUES:
+        data["source_role"] = role
+    confidence = str(data.get("confidence") or "").strip().lower()
+    if confidence in _CONFIDENCE_VALUES:
+        data["confidence"] = confidence
+    chunk_ids = data.get("source_chunk_ids") or []
+    if not (isinstance(chunk_ids, list) and any(str(item).strip() for item in chunk_ids)):
+        extracted = extract_chunk_ids_from_text(
+            data.get("criterion"),
+            data.get("rationale"),
+            data.get("alternate_read"),
+            data.get("unstated_acquisition_read"),
+        )
+        if extracted:
+            data["source_chunk_ids"] = extracted
+    return data
+
+
+def normalize_tea_leaves_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    data = dict(payload)
+    for key in ("tea_leaves", "tea_leaves_handoff"):
+        block = data.get(key)
+        if isinstance(block, dict):
+            data = {**data, **block}
+    signals = _coerce_row_list(data.get("importance_signals"), text_field="signal")
+    criteria = _coerce_row_list(data.get("implicit_criteria"), text_field="criterion")
+    data["importance_signals"] = [
+        normalize_tea_leaves_signal_row(row) if isinstance(row, dict) else row
+        for row in signals
+    ]
+    data["implicit_criteria"] = [
+        normalize_tea_leaves_criterion_row(row) if isinstance(row, dict) else row
+        for row in criteria
+    ]
+    for stale in ("tea_leaves", "tea_leaves_handoff"):
+        data.pop(stale, None)
+    return data
+
+
 class TeaLeavesHandoff(BaseModel):
     importance_signals: list[dict[str, Any]] = Field(default_factory=list)
     implicit_criteria: list[dict[str, Any]] = Field(default_factory=list)
@@ -197,11 +306,7 @@ class TeaLeavesHandoff(BaseModel):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> TeaLeavesHandoff:
-        for key in ("tea_leaves", "tea_leaves_handoff"):
-            block = payload.get(key)
-            if isinstance(block, dict):
-                return cls.model_validate(block)
-        return cls.model_validate(payload)
+        return cls.model_validate(normalize_tea_leaves_payload(payload))
 
 
 class WinThemesHandoff(BaseModel):

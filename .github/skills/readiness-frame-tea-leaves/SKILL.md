@@ -51,11 +51,11 @@ Follow `artifacts/retrieval_plan.json` → surface `tea_leaves` → **one** `kg_
 ### 3. Draft (once)
 
 Write `artifacts/tea_leaves_handoff.json`:
-- `importance_signals[]` — repetition, hot buttons, eval echoes
-- `implicit_criteria[]` — unstated acquisition reads
-- `source_role`: program_office vs contracting_officer
-- `alternate_read` when `confidence` not high
+- `importance_signals[]` — ≥3 **objects** with `signal`, `source_role`, `confidence`, `alternate_read` (when not high), `source_chunk_ids[]`
+- `implicit_criteria[]` — ≥2 **objects** with `criterion`, `source_role` (program_office | contracting_officer), `alternate_read`, `source_chunk_ids[]`
 - `claim_gaps[]` for thin evidence
+
+Use `rationale` (or repetition/hot_button/eval_echo) for supporting prose — every row still needs real `source_chunk_ids` from scratchpad. No plain-string rows.
 
 No `read_file` scratchpad. Retrieve-phase write block → run planned kg_chunks, don't retry write.
 
@@ -66,5 +66,13 @@ After handoff written, stop. Platform finalize outside loop.
 ## Latency target
 
 **≤10 turns, ≤120s** on `mcpp_rfp`.
+
+## Quality bar (production / platform gate)
+
+Capture-grade handoff — not just non-empty JSON:
+- `importance_signals` ≥ 3 cited object rows; `signal` ≥ 30 chars
+- `implicit_criteria` ≥ 2 cited object rows; `criterion` ≥ 40 chars + `source_role`
+- No sibling-slice fields (pains, eval, win-themes)
+- `claim_gaps[]` names missing signal/criteria evidence honestly when thin
 
 Eval cases: `evals/evals.json`.

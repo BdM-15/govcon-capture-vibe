@@ -204,6 +204,11 @@ async def finalize_step_handoff(
 
         repair_modernization_handoff(run_dir)
 
+    if skill_name == "readiness-frame-tea-leaves":
+        from src.skills.tea_leaves_handoff_repair import repair_tea_leaves_handoff
+
+        repair_tea_leaves_handoff(run_dir)
+
     if skill_name == "mission-readiness-framer":
         return _gate_result(issues=_validate_compiler_run(run_dir), warnings=[])
 
