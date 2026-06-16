@@ -42,11 +42,15 @@ def start_server_background(*, repo_root: Path | None = None) -> subprocess.Pope
     root = repo_root or _REPO_ROOT
     python = root / ".venv" / "Scripts" / "python.exe"
     app = root / "app.py"
+    log_dir = root / "run-dir"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    stdout_log = open(log_dir / "server_stdout.log", "ab")  # noqa: SIM115
+    stderr_log = open(log_dir / "server_stderr.log", "ab")  # noqa: SIM115
     return subprocess.Popen(
         [str(python), str(app)],
         cwd=str(root),
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=stdout_log,
+        stderr=stderr_log,
     )
 
 
@@ -113,10 +117,15 @@ def ensure_theseus_server_fresh(
     if not _PYTHON.is_file() or not _APP.is_file():
         return False, f"missing runtime ({_PYTHON} or {_APP})"
 
-    start_server_background(repo_root=root)
+    proc = start_server_background(repo_root=root)
     if wait_for_fresh_server(expected, base_url=base_url, timeout_s=startup_timeout_s):
-        return True, f"server restarted fresh (fingerprint={expected})"
+        time.sleep(1.0)
+        if fetch_server_fingerprint(base_url) == expected and proc.poll() is None:
+            return True, f"server restarted fresh (fingerprint={expected})"
+        return False, "server matched fingerprint then exited — see run-dir/server_stderr.log"
 
+    if proc.poll() is not None:
+        return False, f"server exited during startup (code={proc.returncode}) — see run-dir/server_stderr.log"
     return False, f"server restart timeout — expected fingerprint {expected}"
 
 
