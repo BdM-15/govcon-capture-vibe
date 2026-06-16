@@ -334,11 +334,27 @@ def register_mcp_ui_routes(
                 logger.debug("MCP %s test shutdown raised", name, exc_info=True)
 
 
+def register_server_info_routes(app: FastAPI) -> None:
+    """Expose server code fingerprint for pre-skill freshness checks."""
+
+    @app.get("/api/ui/server-info", tags=["theseus-ui"])
+    async def server_info_route() -> JSONResponse:
+        from src.server.runtime_state import get_server_code_fingerprint
+
+        return JSONResponse(
+            {
+                "code_fingerprint": get_server_code_fingerprint(),
+                "release_version": release_version(),
+            }
+        )
+
+
 __all__ = [
     "McpKeyUpdate",
     "gather_stats",
     "register_dashboard_stats_routes",
     "register_mcp_ui_routes",
+    "register_server_info_routes",
     "release_version",
     "stack_versions",
     "ui_chat_history_pairs",

@@ -9,6 +9,7 @@ _active_rag_instance: Any | None = None
 _ollama_status: dict[str, Any] | None = None
 _langgraph_studio_status: dict[str, Any] | None = None
 _langsmith_status: dict[str, Any] | None = None
+_server_code_fingerprint: str | None = None
 
 
 def set_active_rag_instance(rag_instance: Any | None) -> None:
@@ -67,3 +68,13 @@ def get_langsmith_status() -> dict[str, Any] | None:
 
 def clear_langsmith_status() -> None:
     set_langsmith_status(None)
+
+
+def set_server_code_fingerprint(fingerprint: str | None) -> None:
+    global _server_code_fingerprint
+    value = str(fingerprint or "").strip()
+    _server_code_fingerprint = value or None
+
+
+def get_server_code_fingerprint() -> str | None:
+    return _server_code_fingerprint

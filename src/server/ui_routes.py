@@ -74,6 +74,7 @@ from src.server.chat_routes import (
 from src.server.admin_routes import (
     register_dashboard_stats_routes,
     register_mcp_ui_routes,
+    register_server_info_routes,
     ui_chat_history_pairs,
 )
 from src.server.document_routes import register_processing_log_routes
@@ -199,6 +200,8 @@ def _register_feature_routes(
     llm_func: "LlmFunc" | None,
 ) -> None:
     """Register all feature-owner route modules behind the UI shell."""
+    register_server_info_routes(app)
+
     register_dashboard_stats_routes(
         app,
         workspace_dir=context.workspace_dir,

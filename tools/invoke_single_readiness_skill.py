@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 
 from src.server.briefing_prompts import BRIEFING_PROMPT_LIBRARY
 from src.skills.local_llm_admin import admin_llm_status
+from src.skills.ensure_theseus_server import ensure_theseus_server_fresh
 from src.skills.readiness_solo_invoke import (
     READINESS_SOLO_STEP_IDS,
     assess_readiness_solo_step,
@@ -53,6 +54,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--user-addendum", default="", help="Optional Intel context")
     parser.add_argument("--assess-only", metavar="RUN_DIR", help="Assess existing run dir")
     parser.add_argument("--base-url", default=BASE, help="Theseus API base URL")
+    parser.add_argument(
+        "--skip-server-ensure",
+        action="store_true",
+        help="Do not restart server when code fingerprint is stale (not recommended)",
+    )
     args = parser.parse_args(argv)
 
     if args.assess_only:
@@ -64,6 +70,15 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(json.dumps(result.__dict__, indent=2), flush=True)
         return 0 if result.passed else 1
+
+    if not args.skip_server_ensure:
+        ok, message = ensure_theseus_server_fresh(
+            base_url=args.base_url,
+            restart=not args.skip_server_ensure,
+        )
+        print(message, flush=True)
+        if not ok:
+            return 2
 
     preflight_error = preflight_readiness_solo(args.step_id)
     if preflight_error:

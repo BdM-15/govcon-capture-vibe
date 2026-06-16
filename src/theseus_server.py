@@ -648,6 +648,11 @@ def build_server_runtime(
         llm_func=ui_bridges.llm,
     )
 
+    from src.server.runtime_state import set_server_code_fingerprint
+    from src.skills.server_code_fingerprint import compute_server_code_fingerprint
+
+    set_server_code_fingerprint(compute_server_code_fingerprint())
+
     graph_storage = (
         global_args_obj.graph_storage
         if hasattr(global_args_obj, "graph_storage")
