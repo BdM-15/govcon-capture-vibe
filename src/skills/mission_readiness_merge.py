@@ -798,7 +798,10 @@ def write_compiler_brief_scaffold(
         ),
         "",
         "### Current methods",
-        _format_bullet_items(merged.get("current_methods") or [], fields=("name", "summary", "fit_to_scope")),
+        _format_bullet_items(
+            merged.get("current_methods") or [],
+            fields=("method", "implied_by", "tooling", "fit_to_scope"),
+        ),
         "",
         (
             "Signal: Innovation proof must tie to measurable workload outcomes — throughput, defect "
@@ -808,7 +811,7 @@ def write_compiler_brief_scaffold(
         "### Innovation opportunities",
         _format_bullet_items(
             merged.get("innovation_opportunities") or [],
-            fields=("theme", "fit_to_scope", "rationale"),
+            fields=("opportunity", "value", "fit_to_scope"),
         ),
         "",
         "## 5. Evaluation Cross-Walk Table (One Row per Material Factor/Subfactor)",
