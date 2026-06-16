@@ -38,24 +38,6 @@ def kill_server_on_port(port: int = 9621) -> None:
     time.sleep(2)
 
 
-def _port_is_listening(port: int = 9621) -> bool:
-    result = subprocess.run(
-        [
-            "powershell",
-            "-NoProfile",
-            "-Command",
-            (
-                f"(Get-NetTCPConnection -LocalPort {port} -State Listen -EA SilentlyContinue | "
-                "Measure-Object).Count -gt 0"
-            ),
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return (result.stdout or "").strip().lower() == "true"
-
-
 def start_server_background(*, repo_root: Path | None = None) -> None:
     """Start app.py detached so the launcher process can exit without killing the server."""
     root = repo_root or _REPO_ROOT
@@ -160,10 +142,7 @@ def ensure_theseus_server_fresh(
     start_server_background(repo_root=root)
     if wait_for_fresh_server(expected, base_url=base_url, timeout_s=startup_timeout_s):
         time.sleep(2.0)
-        if (
-            fetch_server_fingerprint(base_url) == expected
-            and _port_is_listening(9621)
-        ):
+        if fetch_server_fingerprint(base_url) == expected:
             return True, f"server restarted fresh (fingerprint={expected})"
         return False, "server matched fingerprint then died — see run-dir/server_stderr.log"
     return False, f"server restart timeout — expected fingerprint {expected}"
