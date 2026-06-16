@@ -2,11 +2,11 @@
   "step_id": "workload",
   "skill": "readiness-frame-workload",
   "passed": true,
-  "run_id": "20260615_135455_build_the_mission_readiness_fram",
-  "chain_id": "20260615_135455_solo_workload",
+  "gate_passed": true,
+  "run_id": "20260615_225652_build_the_mission_readiness_fram",
+  "chain_id": "20260615_225652_solo_workload",
   "workspace": "mcpp_rfp",
   "skill_version": "2.0.0",
-  "elapsed_ms": 54861,
-  "turns": 9,
-  "note": "skill-creator rebuild iteration-1 — gate green, 4 kg_chunks, no eval_crosswalk bleed"
+  "elapsed_ms": 56230,
+  "note": "skill-creator quality pass — object enablers/failures with source_chunk_ids, FMC/PO/Post-MATS anchored outcome"
 }

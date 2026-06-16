@@ -3,11 +3,12 @@
   "skill": "mission-readiness-framer",
   "passed": true,
   "gate_passed": true,
-  "run_id": "20260616_123647_build_the_mission_readiness_fram",
-  "chain_id": "20260616_123647_solo_compile",
+  "run_id": "20260616_123909_build_the_mission_readiness_fram",
+  "chain_id": "20260616_123909_solo_compile",
   "workspace": "mcpp_rfp",
-  "wall_seconds": 96.5,
+  "wall_seconds": 96.7,
   "upstream_handoffs": 6,
   "finish_reason": "compiler_merge",
-  "note": "solo compile PASS — 6 upstream handoffs wired, §4 method/opportunity field map fixed"
+  "capture_ready": false,
+  "note": "plumbing pass — 6 upstream handoffs wired; capture-grade brief partial (see GitHub issue)"
 }

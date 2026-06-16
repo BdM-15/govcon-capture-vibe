@@ -343,6 +343,23 @@
             </div>
           </template>
         </nav>
+        <div class="relative z-10 shrink-0 px-3 py-3 mt-auto border-t border-white/5">
+          <button
+            type="button"
+            class="nav-item nav-item-amber w-full"
+            :class="restarting && 'opacity-60 pointer-events-none'"
+            @click="restartServerNow()"
+            title="Restart server — picks up graph and config changes"
+          >
+            <span class="nav-icon-tile tile-amber">
+              <i data-lucide="power" class="w-3.5 h-3.5"></i>
+            </span>
+            <span
+              class="flex-1 text-left"
+              x-text="restarting ? 'Restarting…' : 'Restart server'"
+            ></span>
+          </button>
+        </div>
       </aside>
 
       <!-- ===== Main pane ===== -->

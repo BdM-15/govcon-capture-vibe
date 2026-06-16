@@ -185,9 +185,10 @@ Tuple baseline: 4,994 entities / 8,603 rels. JSON without schema: 2,614 / 4,245.
 
 ### Problems
 
+- LightRAG persists extraction edges as Neo4j `-[r:DIRECTED]-`; canonical type lives in **`r.keywords` first token**, not the rel label — bulk label promotion reverts on re-ingest
 - `keywords` dual role: canonical rel type + embedding text — rogue first tokens (`PWS HIERARCHY`, `UNKNOWN`) hurt global retrieval
 - Examples teach `CHILD_OF` to parent sections not always in the same chunk
-- L↔M solved twice: extraction examples + `infer_lm_links`
+- L↔M solved twice: extraction examples teach `GUIDES` + `infer_lm_links` also emits `GUIDES` (split: co-chunk vs cross-doc)
 - Undirected edges — direction matters for `GOVERNED_BY`, `SUBMITTED_TO`
 
 ---
@@ -346,9 +347,11 @@ Total target: **~4–5K tokens** domain guidance vs **~26K today** (duplicate Pa
 
 Dedup Part D + compressed index. Same single pass. **No routing risk.**
 
-### Pattern B — Doc-type focus paragraphs (Phase 1b)
+### Pattern B — Doc-type focus in chunk banner (Phase 1b)
 
-Same 32 types always **allowed** in schema; focus text **prioritizes** types common in that family without **forbidding** others. A PWS chunk that mentions a clause still extracts `clause`.
+`addon_params` is set **once** at `LightRAG()` init — not per chunk. Doc-type focus must be **chunk banner text** (`[EXTRACT_FOCUS: …]` in [govcon_chunking.py](../src/extraction/govcon_chunking.py)), not `addon_params` mutation.
+
+Same 32 types always **allowed** in schema; focus text **prioritizes** types common in that family without **forbidding** others.
 
 ### Pattern C — Multi-pass per file (Phase 2)
 
@@ -535,6 +538,159 @@ Target end state: **no LLM post-processing** unless a quality gate fails (orphan
 
 ---
 
+## Why the KG shows `DIRECTED` / inferred edges, not our 35 canonical types
+
+**Short answer: you did not build it wrong. This is LightRAG's by-design storage model, not a bug and not lost data.** Your canonical relationship types are all present in the graph — they live in an edge **property**, not in the Neo4j relationship **label**. Three distinct edge populations coexist because there are three different write paths.
+
+### The three edge populations (verified in code)
+
+| Population | Neo4j edge label you see | Where the canonical type lives | Written by |
+|---|---|---|---|
+| **Extraction edges** (the bulk) | `:DIRECTED` | First comma-token of the `keywords` **property** (e.g. `keywords = "SATISFIED_BY, ..."`) | LightRAG `Neo4JStorage` |
+| **Inferred edges** | `:INFERRED_RELATIONSHIP` | `type` **property** on the edge | Theseus `Neo4jGraphIO.create_relationships()` |
+| **Post-processor-retyped edges** (minority) | Real typed label (`:GUIDES`, `:SATISFIED_BY`, …) | The Neo4j label itself | Theseus `retype_relationships()` via `apoc.refactor.setType` |
+
+**Proof in the library** — LightRAG's `Neo4JStorage` writes *every* extraction edge with a single hard-coded label:
+
+```cypher
+-- .venv/.../lightrag/kg/neo4j_impl.py  (upsert_edge / upsert_edges_batch)
+MERGE (source)-[r:DIRECTED]-(target)
+SET r += $properties          -- keywords, description, weight, source_id …
+```
+
+There is no branch in LightRAG that ever emits `:SATISFIED_BY`, `:MEASURED_BY`, etc. as a label. LightRAG's retrieval ranks by **node degree** and reads the edge `keywords` / `description` **properties** — it never does `MATCH ()-[r:SOME_TYPE]->()` by semantic label, so it has no reason to create typed labels. The `normalize_relationship_type()` enforcement and the whole 35-type vocabulary therefore govern the **value of a property**, not the graph's label space. That is the intended LightRAG contract.
+
+**Proof in our own write path** — Theseus's inference layer is the *only* thing that creates non-`DIRECTED` labels:
+
+```cypher
+-- src/inference/neo4j_graph_io.py  create_relationships()
+MERGE (source)-[r:INFERRED_RELATIONSHIP { type: rel.relationship_type, ... }]->(target)
+```
+
+```cypher
+-- src/inference/neo4j_graph_io.py  retype_relationships()
+MATCH (a)-[r:`{old_type}`]->(b)
+CALL apoc.refactor.setType(r, $new_type)   -- promotes property → real label
+```
+
+So the Neo4j Browser picture — mostly `DIRECTED`, some `INFERRED_RELATIONSHIP`, a handful of true typed labels — is **faithful**. Nothing was dropped; the extraction types are sitting in `keywords` on the `DIRECTED` edges exactly as designed.
+
+### How to *see* the canonical types (display-only — no rebuild)
+
+1. **Verify they exist** with one query:
+
+   ```cypher
+   MATCH (:`mcpp_rfp`)-[r:DIRECTED]->(:`mcpp_rfp`)
+   RETURN split(r.keywords, ',')[0] AS canonical_type, count(*) AS n
+   ORDER BY n DESC;
+   ```
+
+   This returns your real `SATISFIED_BY` / `MEASURED_BY` / `GOVERNED_BY` distribution — the data the dashboard headline never shows.
+
+2. **Caption Browser edges by the property** in GraSS (`relationship { caption: "{keywords}"; }`) so the canvas labels read the semantic type instead of `DIRECTED`. Pure display change.
+
+3. **Project labels only if a consumer needs them.** `apoc.refactor.setType` can promote `DIRECTED` → typed labels across the board, but that is a **Theseus enhancement layered on top of LightRAG**, not a fix to LightRAG, and it fights the library's own merge/upsert (next reprocess re-creates `DIRECTED`). Only do this if a downstream Cypher consumer genuinely needs `MATCH ()-[:GUIDES]->()` ergonomics — and weigh it against the "are we adding complexity for theory?" test below. The post-processor already does this **selectively** for inferred/normalized edges; bulk promotion of all extraction edges is not currently justified by any query need.
+
+**Recommendation:** treat the `keywords` first-token as the source of truth for relationship type (it already is, everywhere in the pipeline), surface it via query #1 in snapshots/audits, and do **not** add a bulk-retype step unless a concrete consumer demands typed labels. This keeps us aligned with LightRAG rather than forking its storage semantics.
+
+---
+
+## Are we using LightRAG as intended, or going rogue? (monkeypatch / complexity audit)
+
+**Confirmed by reading the runtime and the installed library: domain intelligence is injected through LightRAG's documented, intended extension surfaces. No runtime monkeypatching of LightRAG exists.** Every `monkeypatch` hit in the repo is a pytest fixture, never a production patch of LightRAG internals.
+
+### Extension points we use — all sanctioned by LightRAG
+
+| Theseus integration | Mechanism | Sanctioned by LightRAG? |
+|---|---|---|
+| GovCon extraction + query prompts | `PROMPTS.update(GOVCON_PROMPTS)` (module-level mutable prompt dict) | **Yes** — this is the documented override surface |
+| Native multimodal prompts | `MULTIMODAL_PROMPTS.update(...)` | **Yes** — same pattern for the multimodal dict |
+| 33-type entity guidance | `addon_params["entity_types_guidance"]` | **Yes** — the intended domain entity-type hook |
+| Role-specific LLMs (EXTRACT / KEYWORD / QUERY / VLM) | LightRAG role config | **Yes** — first-class feature |
+| GovCon chunk banner | Text prepended into chunk **content** | **Yes** — we feed the model text it already reads; we do not touch LightRAG internals |
+| Semantic post-processor | Separate layer over Neo4j (`Neo4jGraphIO`, APOC) | **N/A to LightRAG** — runs *outside* LightRAG; reads/writes the same DB, patches nothing |
+
+**Nothing here forks, wraps, or patches LightRAG's extract/merge/storage code.** The post-processor is a sidecar that talks to Neo4j directly after LightRAG finishes — the cleanest possible separation.
+
+### Where the "rogue / over-complex" risk actually lives — and the epic avoids it
+
+The assessment flags exactly one "not stock" aspiration: **mutating `addon_params` per chunk** (so a PWS chunk gets different guidance than an L/M chunk). LightRAG sets `addon_params` **once at `LightRAG()` init**; making it per-chunk would require wrapping or threading state through the extract call — the first step toward the monkeypatch/over-engineering zone you're worried about.
+
+**The epic deliberately sidesteps this.** Phase 1b delivers doc-type focus by writing an `[EXTRACT_FOCUS: …]` line into the **chunk banner** (chunk text the LLM already sees) — *not* by mutating `addon_params` per chunk. That is the non-rogue way to get the same behavioral effect with zero LightRAG-internals risk. Good call; keep it.
+
+### Guardrails to stay aligned (recommended decision rules)
+
+1. **Prefer prompt/banner/`addon_params` content changes over wrapping LightRAG functions.** Phases 1–3 of the epic stay entirely inside content surfaces — green-light.
+2. **Do not mutate `addon_params` per chunk** to get doc-type focus; use the chunk banner (already the plan).
+3. **Treat multi-pass (skeleton → detail → cross-doc) as Theseus orchestration *around* LightRAG** — orchestrate by calling LightRAG/`rebuild_knowledge_from_chunks()` with different prompt content, not by editing its extract loop. Defer until a quality gate proves single-pass insufficient (epic already defers this).
+4. **Do not bulk-promote `DIRECTED` → typed labels** as a "theoretical" graph-cleanliness improvement. It fights LightRAG's upsert and earns nothing unless a consumer needs typed-label Cypher. The `keywords` first-token already *is* the type.
+5. **Keep the post-processor a sidecar.** It may read/write Neo4j and use APOC freely; it must never import-and-patch LightRAG extraction internals.
+
+**Bottom line on both questions:** the relationship-label appearance is correct LightRAG behavior (type-in-property, not type-in-label), and our domain layer rides LightRAG's intended hooks rather than monkeypatching it. The one genuine over-engineering temptation (per-chunk `addon_params`, multi-pass extract) is already deferred behind quality gates — keep it there.
+
+---
+
+## GraphML vs Neo4j visualization (early NetworkX experience)
+
+Early in the project, the **LightRAG NetworkX / GraphML** view (~1000 nodes) often looked **more legible** than Capture Workbench (Neo4j → Cytoscape): section-like clusters, large `evaluation_factor` hubs (e.g. Technical Factor) with subfactor spokes, and requirement edges fanning out. That experience is worth preserving in the **KG organization plan** — but the cause is mostly **how the graph is rendered and how noisy extraction is**, not a different underlying KG.
+
+### Same graph, different lenses
+
+| Lens | Storage | What you see |
+|---|---|---|
+| **GraphML** | `graph_chunk_entity_relation.graphml` (NetworkX file beside workspace VDB) | Full merged LightRAG graph — no UI truncation |
+| **Capture Workbench** | Neo4j workspace label via `load_graph_neo4j` | Top-**degree** subgraph (default 2000 nodes, hard cap 5000) |
+| **LightRAG visualizer** | Reads GraphML | Bundled 3D viewer: Louvain **communities** for color, **global degree** for node size, spring/shell layouts |
+
+GraphML is a **serialization format**, not a separate ontology. Neo4j receives the same entities/edges via VDB sync; structure should match. When GraphML “looked better,” it was usually because (1) the viewer saw the **whole** graph, (2) **hub sizing** and **community coloring** emphasized factor/section structure, and (3) the graph was **sparser** (see below).
+
+### Why the early graph looked hierarchical
+
+1. **Smaller active ontology (~11–12 types)** — fewer `concept` / mis-typed nodes → Louvain communities often align with co-mentioned section/factor neighborhoods (“nodes by location”).
+2. **Merge-driven hubs** — LightRAG increments node **degree** and edge **weight** when the same entity is re-mentioned across chunks. A factor named in many chunks becomes a large hub with many spokes (subfactors, requirements) — exactly the Technical Factor pattern recalled.
+3. **Implicit ~1000-node viewport** — smaller graphs read cleaner; Workbench’s degree-ranked 2000-node slice can drop leaf `document_section` / requirement nodes and leave a hub-and-spoke that is **harder** to read in fcose layout.
+4. **Prompt bloat hypothesis (plausible, testable)** — duplicating Part D in system + user and expanding to 32 types may have increased generic entities and weak edges, **flattening** community structure without changing Neo4j sync. Phase 1 prompt compression is the right first fix; re-compare visualization after re-ingest.
+
+### What Capture Workbench does differently today
+
+Verified in `theseus-graph-helpers.js` + `graph_routes.py`:
+
+| Behavior | LightRAG visualizer / GraphML | Capture Workbench |
+|---|---|---|
+| Node size | Global graph **degree** | **Subgraph** degree (recomputed after truncation) |
+| Edge label | `keywords` on edge data | **`edge.type` first** → usually `DIRECTED`, hiding semantic type in `keywords` |
+| Layout | Community-aware shell / spring | User-selected fcose / cose / concentric (concentric uses subgraph degree) |
+| Truncation | None (full file) | `ORDER BY degree DESC LIMIT $max_nodes` |
+
+Neo4j already returns global `_degree` on each node; the UI **does not use it** for sizing — a quick win unrelated to extraction quality.
+
+### Visualization layer (fourth concern alongside structure)
+
+Treat **legibility** as a sibling to the three-layer architecture (structural ingest → typed KG → reasoning):
+
+```
+Layer 2b — Graph presentation (read-only)
+  Neo4j subgraph API  +  optional GraphML export for Gephi / LightRAG visualizer
+  Hub-centric views: seed on evaluation_factor / document_section, expand 1–2 hops
+  Edge label = first token of r.keywords (canonical rel type)
+  Node size = global degree; color = entity_type (skills) or community (exploratory)
+```
+
+This does **not** require switching `GRAPH_STORAGE` back to NetworkX for production. Neo4j remains source of truth; GraphML is a **debug/export** path (export from Neo4j or copy workspace GraphML when running NetworkX locally).
+
+### Epic alignment
+
+| When | Action |
+|---|---|
+| **Phase 0 baseline** | Note whether `rag_storage/<ws>/graph_chunk_entity_relation.graphml` exists; if present, record node/edge counts beside Neo4j totals |
+| **Phase 2 post-reprocess** | Qualitative **visual structure check** on `mcpp_rfp`: can you identify ≥3 factor hubs with subfactor/requirement spokes? (Same rubric spirit as tree audit — human-readable, not a count gate) |
+| **Phase 4 / follow-on PR** | UI: `keywords` first-token edge labels, global `_degree` sizing, optional “hub expand” preset (`evaluation_factor` + 2-hop neighborhood) |
+| **If structure still flat after Phase 1–3** | Export GraphML + open in LightRAG visualizer to see whether **data** is flat or **Workbench truncation** is the problem — informs multi-pass deferral vs presentation-only work |
+
+**Decision:** GraphML nostalgia is a signal to **borrow LightRAG’s presentation tricks** and **reduce extract noise**, not to abandon Neo4j or treat GraphML as a second KG.
+
+---
+
 ## References
 
 - Entity catalog: `prompts/extraction/govcon_entity_types.yaml`
@@ -542,5 +698,10 @@ Target end state: **no LLM post-processing** unless a quality gate fails (orphan
 - JSON examples: `prompts/entity_type/govcon.yaml`
 - Runtime: `src/server/native_lightrag_runtime.py`
 - Post-processor: `src/inference/semantic_post_processor.py`
+- LightRAG edge storage (verified): `.venv/Lib/site-packages/lightrag/kg/neo4j_impl.py` (`upsert_edge` / `upsert_edges_batch` → `MERGE (source)-[r:DIRECTED]-(target)`)
+- Theseus typed-edge writes (verified): `src/inference/neo4j_graph_io.py` (`create_relationships` → `:INFERRED_RELATIONSHIP`; `retype_relationships` → `apoc.refactor.setType`)
+- Graph snapshot route: `src/server/graph_routes.py` (`load_graph_neo4j` reads `type(r)` + `properties(r)`; exposes `_degree` unused by UI)
+- Capture Workbench graph UI: `src/ui/static/app/theseus-graph-helpers.js` (subgraph degree sizing; edge label prefers Neo4j `type` over `keywords`)
+- LightRAG GraphML + visualizer: `.venv/Lib/site-packages/lightrag/kg/networkx_impl.py`, `lightrag/tools/lightrag_visualizer/graph_visualizer.py` (Louvain communities, degree-based size)
 - Bakeoff: `docs/NATIVE_QUALITY_BAKEOFF_AFCAP5_ISR.md`
 - Context: `CONTEXT.md`

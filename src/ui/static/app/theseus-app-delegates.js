@@ -936,6 +936,10 @@ window.createTheseusAppDelegates = function createTheseusAppDelegates() {
       return window.theseusRestartServer(this);
     },
 
+    async restartServerNow() {
+      return window.theseusRestartServerNow(this);
+    },
+
     async loadWorkspaceInventory() {
       return window.theseusLoadWorkspaceInventory(this);
     },

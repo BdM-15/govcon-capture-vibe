@@ -94,6 +94,11 @@ window.theseusRestartServer = async function theseusRestartServer(app) {
   ) {
     return;
   }
+  await window.theseusRestartServerNow(app);
+};
+
+window.theseusRestartServerNow = async function theseusRestartServerNow(app) {
+  if (app.restarting) return;
   try {
     await app.api("/api/ui/restart", { method: "POST" });
     theseusBeginRestart(app, app.stats.workspace || "server");
