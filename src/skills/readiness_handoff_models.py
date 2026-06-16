@@ -123,6 +123,63 @@ class PainsHandoff(BaseModel):
         return cls.model_validate(normalize_pains_payload(payload))
 
 
+_FIT_TO_SCOPE_VALUES = frozenset({"high", "medium", "low"})
+
+
+def normalize_modernization_method_row(row: dict[str, Any]) -> dict[str, Any]:
+    data = dict(row)
+    if not str(data.get("method") or "").strip():
+        for alias in ("name", "title", "approach"):
+            if str(data.get(alias) or "").strip():
+                data["method"] = str(data.pop(alias) or "").strip()
+                break
+    if not str(data.get("implied_by") or "").strip():
+        for alias in ("summary", "rationale", "description", "pws_anchor"):
+            if str(data.get(alias) or "").strip():
+                data["implied_by"] = str(data.pop(alias) or "").strip()
+                break
+    fit = str(data.get("fit_to_scope") or "").strip().lower()
+    if fit in _FIT_TO_SCOPE_VALUES:
+        data["fit_to_scope"] = fit
+    return data
+
+
+def normalize_modernization_innovation_row(row: dict[str, Any]) -> dict[str, Any]:
+    data = dict(row)
+    if not str(data.get("opportunity") or "").strip():
+        for alias in ("theme", "name", "title", "innovation"):
+            if str(data.get(alias) or "").strip():
+                data["opportunity"] = str(data.pop(alias) or "").strip()
+                break
+    if not str(data.get("value") or "").strip():
+        for alias in ("rationale", "summary", "description", "benefit"):
+            if str(data.get(alias) or "").strip():
+                data["value"] = str(data.pop(alias) or "").strip()
+                break
+    fit = str(data.get("fit_to_scope") or "").strip().lower()
+    if fit in _FIT_TO_SCOPE_VALUES:
+        data["fit_to_scope"] = fit
+    return data
+
+
+def normalize_modernization_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    data = dict(payload)
+    methods = _coerce_row_list(data.get("current_methods"))
+    innovations = _coerce_row_list(
+        data.get("innovation_opportunities"),
+        text_field="opportunity",
+    )
+    data["current_methods"] = [
+        normalize_modernization_method_row(row) if isinstance(row, dict) else row
+        for row in methods
+    ]
+    data["innovation_opportunities"] = [
+        normalize_modernization_innovation_row(row) if isinstance(row, dict) else row
+        for row in innovations
+    ]
+    return data
+
+
 class ModernizationHandoff(BaseModel):
     current_methods: list[dict[str, Any]] = Field(default_factory=list)
     innovation_opportunities: list[dict[str, Any]] = Field(default_factory=list)
@@ -130,13 +187,7 @@ class ModernizationHandoff(BaseModel):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> ModernizationHandoff:
-        data = dict(payload)
-        data["current_methods"] = _coerce_row_list(data.get("current_methods"))
-        data["innovation_opportunities"] = _coerce_row_list(
-            data.get("innovation_opportunities"),
-            text_field="theme",
-        )
-        return cls.model_validate(data)
+        return cls.model_validate(normalize_modernization_payload(payload))
 
 
 class TeaLeavesHandoff(BaseModel):

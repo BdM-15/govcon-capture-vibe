@@ -14,7 +14,8 @@
         "calls kg_entities exactly once",
         "runs at most one kg_chunks per plan surface (methods_modernization, innovation_inquiry)",
         "does not call kg_chunks after retrieval_plan.json plan_complete is true",
-        "current_methods has >= 2 rows OR innovation_opportunities has >= 2 rows with source_chunk_ids",
+        "current_methods has >= 3 cited object rows with method and implied_by",
+        "innovation_opportunities has >= 2 cited object rows with opportunity and value",
         "does not emit customer_pain_points or win_theme_candidates (sibling slices)",
         "solo platform gate passes on modernization_handoff.json"
       ]

@@ -25,6 +25,12 @@ def validate_skill_run(
     del user_prompt
     if validate_handoff_run is None:
         return []
+    try:
+        from src.skills.modernization_handoff_repair import repair_modernization_handoff
+
+        repair_modernization_handoff(run_dir)
+    except ImportError:
+        pass
     return validate_handoff_run(run_dir, deliverable=_DELIVERABLE)
 
 

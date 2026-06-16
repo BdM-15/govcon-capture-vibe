@@ -61,11 +61,11 @@ When every surface is `retrieved` or `saturated`, **stop calling kg_chunks and k
 ### 3. Draft (write handoff once)
 
 When `plan_complete: true`, write `artifacts/modernization_handoff.json` per `references/modernization_handoff_schema.md`:
-- `current_methods[]` — incumbent/PWS-implied processes and tooling
-- `innovation_opportunities[]` — quality up, cost down, or both; methods not only technology
+- `current_methods[]` — ≥3 **objects** with `method`, `implied_by`, `tooling`, `fit_to_scope`, `source_chunk_ids[]` — PWS/QASP/CDRL-implied incumbent processes only
+- `innovation_opportunities[]` — ≥2 **objects** with `opportunity`, `value` (quality up / cost down / both), `customer_grounded`, `fit_to_scope`, `source_chunk_ids[]`
 - `claim_gaps[]` — honest named gaps
 
-Use real `source_chunk_ids` from the scratchpad. If `write_file` is blocked in retrieve phase, run the next planned `kg_chunks` instead of retrying write.
+Use real `source_chunk_ids` from the scratchpad. Do not emit plain strings for method/innovation rows. If `write_file` is blocked in retrieve phase, run the next planned `kg_chunks` instead of retrying write.
 
 Do not `read_file` the scratchpad — evidence is in tool results.
 
@@ -82,5 +82,13 @@ Target: **≤12 turns, ≤120s** on `mcpp_rfp`-class packages.
 | kg_entities | 1 turn |
 | kg_chunks (2 surfaces) | 2 turns |
 | write handoff | 1–2 turns |
+
+## Quality bar (production / platform gate)
+
+Capture-grade handoff — not just non-empty JSON:
+- `current_methods` ≥ 3 object rows, each with `method`, `implied_by` (≥50 chars), `source_chunk_ids`
+- `innovation_opportunities` ≥ 2 object rows, each with `opportunity`, `value` (≥50 chars), `source_chunk_ids`
+- `fit_to_scope` = high | medium | low when set; no sibling-slice fields (pains, eval, win-themes)
+- `claim_gaps[]` names missing tooling/method evidence honestly when thin
 
 Eval cases: `evals/evals.json`.

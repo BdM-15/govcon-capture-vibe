@@ -3,10 +3,13 @@
   "skill": "readiness-frame-modernization",
   "passed": true,
   "gate_passed": true,
-  "run_id": "20260615_143610_build_the_mission_readiness_fram",
-  "chain_id": "20260615_143610_solo_modernization",
+  "run_id": "20260616_112028_build_the_mission_readiness_fram",
+  "chain_id": "20260616_112028_solo_modernization",
   "workspace": "mcpp_rfp",
-  "wall_seconds": 33.9,
+  "skill_version": "2.0.0",
+  "current_methods": 4,
+  "innovation_opportunities": 3,
+  "wall_seconds": 67.1,
   "max_turns_cap": 12,
-  "note": "Skill-creator iteration-1 green — two-surface retrieve, 12-turn cap"
+  "note": "skill-creator production bar — >=3 cited methods, >=2 innovations, field-alias repair"
 }

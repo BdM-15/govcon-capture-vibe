@@ -199,6 +199,11 @@ async def finalize_step_handoff(
 
         repair_pains_handoff(run_dir)
 
+    if skill_name == "readiness-frame-modernization":
+        from src.skills.modernization_handoff_repair import repair_modernization_handoff
+
+        repair_modernization_handoff(run_dir)
+
     if skill_name == "mission-readiness-framer":
         return _gate_result(issues=_validate_compiler_run(run_dir), warnings=[])
 

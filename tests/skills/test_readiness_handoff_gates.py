@@ -29,6 +29,112 @@ def test_all_micro_skills_declare_validate_skill_run() -> None:
         assert resolve_skill_run_validator(skill_dir) is not None, skill_name
 
 
+def test_modernization_gate_requires_object_rows_with_substance(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-modernization"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "modernization_handoff.json").write_text(
+        json.dumps(
+            {
+                "current_methods": [
+                    "Plain string method [chunk-abc123]",
+                    {
+                        "method": "Short",
+                        "implied_by": "Too thin.",
+                        "source_chunk_ids": ["chunk-abc124"],
+                    },
+                ],
+                "innovation_opportunities": [
+                    {
+                        "opportunity": "Thin only",
+                        "value": "Too short.",
+                        "source_chunk_ids": ["chunk-abc127"],
+                    }
+                ],
+                "claim_gaps": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    issues = validate_handoff_run(run_dir, deliverable="modernization_handoff.json")
+    assert any("current_methods must be objects" in issue for issue in issues)
+    assert any("current_methods needs >= 3" in issue for issue in issues)
+    assert any("innovation_opportunities needs >= 2" in issue for issue in issues)
+
+
+def test_modernization_gate_flags_thin_substance_rows(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-modernization-thin"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    good_method = {
+        "method": "QMSS performance tracking",
+        "implied_by": (
+            "QASP E-1 inspection and CDRL 2036 maintenance management deliverables "
+            "require real-time performance visibility."
+        ),
+        "tooling": "QMSS software",
+        "fit_to_scope": "high",
+        "source_chunk_ids": ["chunk-abc125"],
+    }
+    good_innovation = {
+        "opportunity": "Predictive maintenance analytics",
+        "value": (
+            "Quality up through higher equipment availability; cost down through "
+            "fewer emergency repairs."
+        ),
+        "customer_grounded": True,
+        "fit_to_scope": "high",
+        "source_chunk_ids": ["chunk-abc126"],
+    }
+    (artifacts / "modernization_handoff.json").write_text(
+        json.dumps(
+            {
+                "current_methods": [
+                    good_method,
+                    good_method,
+                    {
+                        "method": "Short",
+                        "implied_by": "Too thin.",
+                        "source_chunk_ids": ["chunk-abc124"],
+                    },
+                ],
+                "innovation_opportunities": [
+                    good_innovation,
+                    {
+                        "opportunity": "Thin",
+                        "value": "Too short.",
+                        "source_chunk_ids": ["chunk-abc127"],
+                    },
+                ],
+                "claim_gaps": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    issues = validate_handoff_run(run_dir, deliverable="modernization_handoff.json")
+    assert any("current_methods rows" in issue and "too thin" in issue for issue in issues)
+    assert any(
+        "innovation_opportunities rows" in issue and "too thin" in issue for issue in issues
+    )
+
+
+def test_modernization_hook_matches_shared_gate(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-modernization-hook"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "modernization_handoff.json").write_text(json.dumps({}), encoding="utf-8")
+
+    repo = Path(__file__).resolve().parents[2]
+    skill_dir = repo / ".github" / "skills" / "readiness-frame-modernization"
+    validate_run = resolve_skill_run_validator(skill_dir)
+    assert validate_run is not None
+
+    hook_issues = validate_run(run_dir)
+    shared_issues = validate_handoff_run(run_dir, deliverable="modernization_handoff.json")
+    assert hook_issues == shared_issues
+    assert hook_issues
+
+
 def test_workload_gate_requires_object_rows_with_citations(tmp_path: Path) -> None:
     run_dir = tmp_path / "run-prod"
     artifacts = run_dir / "artifacts"

@@ -261,22 +261,111 @@ def _pains_substance_issues(
     return issues
 
 
+def _modernization_method_has_substance(row: dict[str, Any]) -> bool:
+    method = str(row.get("method") or "").strip()
+    implied_by = str(row.get("implied_by") or "").strip()
+    return len(method) >= 12 and len(implied_by) >= 50 and _row_has_chunk_ids(row)
+
+
+def _modernization_innovation_has_substance(row: dict[str, Any]) -> bool:
+    opportunity = str(row.get("opportunity") or "").strip()
+    value = str(row.get("value") or "").strip()
+    return len(opportunity) >= 12 and len(value) >= 50 and _row_has_chunk_ids(row)
+
+
 def _modernization_substance_issues(
     payload: dict[str, Any],
     *,
     workspace_dir: Path | None = None,
 ) -> list[str]:
     del workspace_dir
+    from src.skills.readiness_handoff_models import normalize_modernization_payload
+
+    raw_methods = payload.get("current_methods") or []
+    raw_innovations = payload.get("innovation_opportunities") or []
+    payload = normalize_modernization_payload(payload)
     methods = payload.get("current_methods") or []
     innovations = payload.get("innovation_opportunities") or []
+    issues: list[str] = []
     if not (isinstance(methods, list) and methods) and not (
         isinstance(innovations, list) and innovations
     ):
         return [
             "modernization_handoff.json: current_methods and "
-            "innovation_opportunities both empty"
+            "innovation_opportunities both empty — retrieve PWS methods or claim_gaps[]"
         ]
-    return []
+    if not isinstance(methods, list) or len(methods) < 3:
+        issues.append(
+            "modernization_handoff.json: current_methods needs >= 3 cited "
+            "PWS/QASP-implied incumbent rows"
+        )
+    if not isinstance(innovations, list) or len(innovations) < 2:
+        issues.append(
+            "modernization_handoff.json: innovation_opportunities needs >= 2 cited "
+            "customer-grounded improvement rows"
+        )
+    method_strings = [
+        index for index, row in enumerate(raw_methods, start=1) if isinstance(row, str)
+    ]
+    if method_strings:
+        issues.append(
+            "modernization_handoff.json: current_methods must be objects "
+            "(method, implied_by, tooling, fit_to_scope, source_chunk_ids) — not plain strings"
+        )
+    innovation_strings = [
+        index
+        for index, row in enumerate(raw_innovations, start=1)
+        if isinstance(row, str)
+    ]
+    if innovation_strings:
+        issues.append(
+            "modernization_handoff.json: innovation_opportunities must be objects "
+            "(opportunity, value, customer_grounded, fit_to_scope, source_chunk_ids) "
+            "— not plain strings"
+        )
+    uncited_methods = [
+        index
+        for index, row in enumerate(methods, start=1)
+        if isinstance(row, dict) and not _row_has_chunk_ids(row)
+    ]
+    if uncited_methods:
+        issues.append(
+            "modernization_handoff.json: current_methods rows "
+            f"{uncited_methods[:4]} lack source_chunk_ids"
+        )
+    uncited_innovations = [
+        index
+        for index, row in enumerate(innovations, start=1)
+        if isinstance(row, dict) and not _row_has_chunk_ids(row)
+    ]
+    if uncited_innovations:
+        issues.append(
+            "modernization_handoff.json: innovation_opportunities rows "
+            f"{uncited_innovations[:4]} lack source_chunk_ids"
+        )
+    thin_methods = [
+        index
+        for index, row in enumerate(methods, start=1)
+        if isinstance(row, dict) and not _modernization_method_has_substance(row)
+    ]
+    if thin_methods and len(methods) >= 3:
+        issues.append(
+            "modernization_handoff.json: current_methods rows "
+            f"{thin_methods[:4]} too thin — need method, implied_by (>=50 chars), "
+            "and source_chunk_ids"
+        )
+    thin_innovations = [
+        index
+        for index, row in enumerate(innovations, start=1)
+        if isinstance(row, dict) and not _modernization_innovation_has_substance(row)
+    ]
+    if thin_innovations and len(innovations) >= 2:
+        issues.append(
+            "modernization_handoff.json: innovation_opportunities rows "
+            f"{thin_innovations[:4]} too thin — need opportunity, value (>=50 chars), "
+            "and source_chunk_ids"
+        )
+    return issues
 
 
 def _tea_leaves_substance_issues(
