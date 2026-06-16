@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from src.skills.readiness_handoff_gates import validate_handoff_run
+from src.skills.readiness_handoff_models import normalize_pains_row
 from src.skills.skill_local_tools import resolve_skill_run_validator
 
 
@@ -68,6 +69,81 @@ def test_workload_gate_requires_object_rows_with_citations(tmp_path: Path) -> No
     )
     issues = validate_handoff_run(run_dir, deliverable="workload_handoff.json")
     assert any("workload_enablers must be objects" in issue for issue in issues)
+
+
+def test_normalize_pains_row_repairs_visibility_swap() -> None:
+    row = normalize_pains_row(
+        {
+            "challenge_type": "latent",
+            "rationale": (
+                "CPFF LOE contract structure creates incentive misalignment where "
+                "contractors may prioritize billing over readiness outcomes."
+            ),
+            "readiness_link": "Erodes cost discipline and true readiness gains for the program office.",
+            "source_chunk_ids": ["chunk-abc123"],
+        }
+    )
+    assert row["visibility"] == "latent"
+    assert row["challenge_type"].startswith("CPFF LOE")
+    assert len(row["challenge_type"]) >= 12
+
+
+def test_pains_gate_requires_object_rows_with_substance(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-pains"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "pains_handoff.json").write_text(
+        json.dumps(
+            {
+                "customer_pain_points": [
+                    "Plain string pain one [chunk-abc123]",
+                    {
+                        "visibility": "explicit",
+                        "challenge_type": "Short",
+                        "rationale": "Too thin.",
+                        "readiness_link": "Thin link.",
+                        "source_chunk_ids": ["chunk-abc124"],
+                    },
+                    {
+                        "visibility": "explicit",
+                        "challenge_type": "Deferred maintenance spikes",
+                        "rationale": (
+                            "PWS and audit findings cite repeated corrective maintenance spikes "
+                            "that erode equipment availability; program office bears readiness "
+                            "degradation when prepositioned stocks fail during crisis activation."
+                        ),
+                        "readiness_link": (
+                            "Directly threatens prepositioned equipment readiness outcome the "
+                            "customer owns for crisis response activation."
+                        ),
+                        "source_chunk_ids": ["chunk-abc125"],
+                    },
+                ],
+                "claim_gaps": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    issues = validate_handoff_run(run_dir, deliverable="pains_handoff.json")
+    assert any("must be objects" in issue for issue in issues)
+    assert any("too thin" in issue for issue in issues)
+
+
+def test_pains_hook_matches_shared_gate(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run-pains-hook"
+    artifacts = run_dir / "artifacts"
+    artifacts.mkdir(parents=True)
+    (artifacts / "pains_handoff.json").write_text(json.dumps({}), encoding="utf-8")
+
+    repo = Path(__file__).resolve().parents[2]
+    skill_dir = repo / ".github" / "skills" / "readiness-frame-pains"
+    validate_run = resolve_skill_run_validator(skill_dir)
+    assert validate_run is not None
+
+    hook_issues = validate_run(run_dir)
+    shared_issues = validate_handoff_run(run_dir, deliverable="pains_handoff.json")
+    assert hook_issues == shared_issues
+    assert hook_issues
 
 
 def test_workload_hook_matches_shared_gate(tmp_path: Path) -> None:

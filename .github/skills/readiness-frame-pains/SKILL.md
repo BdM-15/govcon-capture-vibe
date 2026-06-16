@@ -60,7 +60,7 @@ When the surface is `retrieved` or `saturated` (`plan_complete: true`), **stop c
 
 Write `artifacts/pains_handoff.json` per `references/pains_handoff_schema.md`:
 - `customer_pain_points[]` — ≥3 material pains when evidence supports; mix explicit / latent / structural visibility
-- Each row: `challenge_type`, `rationale`, `readiness_link`, `source_chunk_ids[]`
+- Each row: **`visibility`** (explicit | latent | structural) + **`challenge_type`** (short pain label in customer language — not the visibility enum), `rationale`, `readiness_link`, `source_chunk_ids[]`
 - `claim_gaps[]` — honest named gaps for thin pain evidence
 
 If `write_file` returns a retrieve-phase error, run the planned `kg_chunks` instead of retrying write.
@@ -83,6 +83,12 @@ Target: **≤10 turns, ≤120s** on `mcpp_rfp`-class packages.
 
 One `kg_chunks` per assistant turn. Do not re-query after plan complete.
 
-## Quality bar
+## Quality bar (production / platform gate)
 
-Gate checks cited `customer_pain_points[]` with substance. Eval cases: `evals/evals.json`.
+Capture-grade handoff — not just non-empty JSON:
+- `customer_pain_points` ≥ 3 object rows when evidence supports; mix explicit + latent or structural
+- Each row: `visibility`, `challenge_type`, `rationale` (≥70 chars, cited anchors), `readiness_link` (≥50 chars, program-office consequence), `source_chunk_ids[]`
+- No plain-string pain rows; no sibling-slice fields (`eval_crosswalk`, workload, modernization)
+- `claim_gaps[]` names missing pain evidence honestly when thin
+
+Eval cases: `evals/evals.json`.

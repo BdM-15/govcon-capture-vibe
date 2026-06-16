@@ -194,6 +194,11 @@ async def finalize_step_handoff(
             loop_response=loop_response,
         )
 
+    if skill_name == "readiness-frame-pains":
+        from src.skills.pains_handoff_repair import repair_pains_handoff
+
+        repair_pains_handoff(run_dir)
+
     if skill_name == "mission-readiness-framer":
         return _gate_result(issues=_validate_compiler_run(run_dir), warnings=[])
 

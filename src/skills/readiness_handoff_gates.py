@@ -14,6 +14,7 @@ from src.skills.readiness_content_gates import substance_issues_for_crosswalk
 from src.skills.readiness_handoff_models import (
     TeaLeavesHandoff,
     load_handoff_dict,
+    normalize_pains_payload,
     validate_handoff_file,
 )
 from src.skills.source_citations import resolve_workspace_dir_from_run_dir
@@ -179,22 +180,85 @@ def _workload_substance_issues(
     return issues
 
 
+def _pains_row_has_citation(row: Any) -> bool:
+    return isinstance(row, dict) and _row_has_chunk_ids(row)
+
+
+def _pains_row_has_substance(row: dict[str, Any]) -> bool:
+    challenge = str(row.get("challenge_type") or "").strip()
+    rationale = str(row.get("rationale") or "").strip()
+    readiness = str(row.get("readiness_link") or "").strip()
+    return (
+        len(challenge) >= 12
+        and len(rationale) >= 70
+        and len(readiness) >= 50
+        and _pains_row_has_citation(row)
+    )
+
+
 def _pains_substance_issues(
     payload: dict[str, Any],
     *,
     workspace_dir: Path | None = None,
 ) -> list[str]:
     del workspace_dir
+    raw_pains = payload.get("customer_pain_points") or []
+    payload = normalize_pains_payload(payload)
     pains = payload.get("customer_pain_points") or []
+    issues: list[str] = []
     if not isinstance(pains, list) or not pains:
         return [
             "pains_handoff.json: customer_pain_points empty — "
             "retrieve program-office pains or claim_gaps[]"
         ]
-    cited = [row for row in pains if isinstance(row, dict) and _row_has_chunk_ids(row)]
-    if not cited:
-        return ["pains_handoff.json: no customer_pain_points carry source_chunk_ids"]
-    return []
+    if len(pains) < 3:
+        issues.append(
+            "pains_handoff.json: customer_pain_points needs >= 3 cited "
+            "program-office pain rows when evidence supports"
+        )
+    string_rows = [
+        index for index, row in enumerate(raw_pains, start=1) if isinstance(row, str)
+    ]
+    if string_rows:
+        issues.append(
+            "pains_handoff.json: customer_pain_points must be objects "
+            "(visibility, challenge_type, rationale, readiness_link, source_chunk_ids) "
+            "— not plain strings"
+        )
+    uncited = [
+        index
+        for index, row in enumerate(pains, start=1)
+        if isinstance(row, dict) and not _pains_row_has_citation(row)
+    ]
+    if uncited:
+        issues.append(
+            "pains_handoff.json: customer_pain_points rows "
+            f"{uncited[:4]} lack source_chunk_ids"
+        )
+    thin = [
+        index
+        for index, row in enumerate(pains, start=1)
+        if isinstance(row, dict) and not _pains_row_has_substance(row)
+    ]
+    if thin and len(pains) >= 3:
+        issues.append(
+            "pains_handoff.json: customer_pain_points rows "
+            f"{thin[:4]} too thin — need challenge_type, rationale (>=70 chars), "
+            "readiness_link (>=50 chars), and source_chunk_ids"
+        )
+    visibilities = {
+        str(row.get("visibility") or "").strip().lower()
+        for row in pains
+        if isinstance(row, dict)
+    }
+    if len(pains) >= 3 and not (
+        "explicit" in visibilities and ({"latent", "structural"} & visibilities)
+    ):
+        issues.append(
+            "pains_handoff.json: mix explicit with latent or structural pains "
+            "when scratchpad evidence supports Shipley visibility types"
+        )
+    return issues
 
 
 def _modernization_substance_issues(

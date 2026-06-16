@@ -74,18 +74,53 @@ def _coerce_row_list(rows: Any, *, text_field: str = "summary") -> list[dict[str
     return normalized
 
 
+_PAIN_VISIBILITY_VALUES = frozenset({"explicit", "latent", "structural"})
+
+
+def normalize_pains_row(row: dict[str, Any]) -> dict[str, Any]:
+    """Repair common LLM field swap: visibility enum written as challenge_type."""
+    data = dict(row)
+    challenge = str(data.get("challenge_type") or "").strip()
+    visibility = str(data.get("visibility") or "").strip().lower()
+    challenge_lower = challenge.lower()
+
+    if challenge_lower in _PAIN_VISIBILITY_VALUES and visibility not in _PAIN_VISIBILITY_VALUES:
+        data["visibility"] = challenge_lower
+        rationale = str(data.get("rationale") or "").strip()
+        if rationale:
+            label = rationale.split(".", maxsplit=1)[0].strip()
+            if len(label) > 120:
+                label = f"{label[:117]}..."
+            data["challenge_type"] = label or challenge.title()
+        else:
+            data["challenge_type"] = f"{challenge_lower.title()} program-office pain"
+    elif visibility in _PAIN_VISIBILITY_VALUES and len(challenge) < 12:
+        rationale = str(data.get("rationale") or "").strip()
+        if rationale:
+            label = rationale.split(".", maxsplit=1)[0].strip()
+            if len(label) > 120:
+                label = f"{label[:117]}..."
+            if len(label) >= 12:
+                data["challenge_type"] = label
+    return data
+
+
+def normalize_pains_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    data = dict(payload)
+    rows = _coerce_row_list(data.get("customer_pain_points"), text_field="rationale")
+    data["customer_pain_points"] = [
+        normalize_pains_row(row) if isinstance(row, dict) else row for row in rows
+    ]
+    return data
+
+
 class PainsHandoff(BaseModel):
     customer_pain_points: list[dict[str, Any]] = Field(default_factory=list)
     claim_gaps: list[str] = Field(default_factory=list)
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> PainsHandoff:
-        data = dict(payload)
-        data["customer_pain_points"] = _coerce_row_list(
-            data.get("customer_pain_points"),
-            text_field="rationale",
-        )
-        return cls.model_validate(data)
+        return cls.model_validate(normalize_pains_payload(payload))
 
 
 class ModernizationHandoff(BaseModel):
