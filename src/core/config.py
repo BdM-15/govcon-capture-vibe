@@ -309,10 +309,17 @@ class Settings(BaseSettings):
     # ═══════════════════════════════════════════════════════════════════════════
     # NATIVE LIGHTRAG PARSER ROUTING + MINERU CONFIGURATION
     # ═══════════════════════════════════════════════════════════════════════════
+    mineru_stack_version: str = Field(
+        default="3.3",
+        validation_alias="MINERU_STACK_VERSION",
+        description="Declared MinerU major.minor target (must match pyproject.toml pin). "
+                    "Startup logs and /api stats compare installed mineru package against this.",
+    )
     lightrag_parser: str = Field(
-        default="pdf:mineru-ite,doc:mineru-ite,docx:native-ite,ppt*:mineru-ite,xlsx:legacy",
+        default="pdf:mineru-iteP,doc:mineru-iteP,docx:mineru-iteP,ppt*:mineru-iteP,xlsx:mineru-iteP,*:legacy-R",
         validation_alias="LIGHTRAG_PARSER",
-        description="LightRAG-native parser routing rules, e.g. pdf:mineru-ite,docx:native-ite,xlsx:legacy; unmatched files use legacy fallback"
+        description="LightRAG-native parser routing rules. Office formats are pre-converted to PDF "
+                    "before MinerU hybrid parsing when office_pdf_convert_enable=true."
     )
     mineru_api_mode: str = Field(
         default="local",
@@ -335,7 +342,7 @@ class Settings(BaseSettings):
         description="MinerU official API token; required only when MINERU_API_MODE=official"
     )
     mineru_local_backend: str = Field(
-        default="pipeline",
+        default="hybrid-auto-engine",
         validation_alias=AliasChoices("MINERU_LOCAL_BACKEND", "MINERU_BACKEND"),
         description="MinerU local backend passed to LightRAG's native MinerU client"
     )
@@ -345,6 +352,7 @@ class Settings(BaseSettings):
         description="Effort level for MinerU 3.3+ hybrid-auto-engine (high|medium|low). "
                     "Bridged at runtime via in-tree shim until stock lightrag-hku forwards it natively."
     )
+
     mineru_local_parse_method: str = Field(
         default="auto",
         validation_alias=AliasChoices("MINERU_LOCAL_PARSE_METHOD", "PARSE_METHOD"),
@@ -381,23 +389,25 @@ class Settings(BaseSettings):
         description="Enable LightRAG native VLM multimodal analysis for routed i/t/e content"
     )
 
-    # Legacy env aliases still parsed so older local .env files continue to boot.
-    parser: str = Field(
-        default="mineru",
-        description="Document parser: mineru or docling"
-    )
-    parse_method: str = Field(
-        default="auto",
-        description="Parse method: auto, ocr, or txt"
-    )
     mineru_device_mode: str = Field(
-        default="auto",
+        default="cuda",
+        validation_alias="MINERU_DEVICE_MODE",
         description="MinerU device: cuda, cpu, or auto"
     )
-    mineru_backend: str = Field(
-        default="pipeline",
-        description="MinerU 3.0 backend: pipeline | hybrid-auto-engine | vlm-auto-engine | hybrid-http-client | vlm-http-client. "
-                    "MUST be explicit — 3.0 default changed from pipeline to hybrid-auto-engine."
+    office_pdf_convert_enable: bool = Field(
+        default=True,
+        validation_alias="OFFICE_PDF_CONVERT_ENABLE",
+        description="Pre-convert Office documents to PDF before MinerU hybrid parsing"
+    )
+    libreoffice_path: str = Field(
+        default="",
+        validation_alias="LIBREOFFICE_PATH",
+        description="Optional path to LibreOffice soffice executable for Office→PDF conversion"
+    )
+    office_pdf_convert_timeout_seconds: int = Field(
+        default=600,
+        validation_alias="OFFICE_PDF_CONVERT_TIMEOUT_SECONDS",
+        description="Timeout for LibreOffice headless Office→PDF conversion"
     )
     enable_image_processing: bool = Field(
         default=True,

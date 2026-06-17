@@ -185,10 +185,15 @@ def configure_lightrag_args():
                 f"llm_max_async={effective_llm_async}, embedding_max_async={effective_embedding_async}")
     logger.info(f"  Post-processing will use: max_async={settings.get_effective_post_processing_max_async()}")
     logger.info(
-        "  Native parser routing: %s; MinerU mode=%s backend=%s method=%s",
+        "  Native parser routing: %s; MinerU target=%s installed=v%s aligned=%s; "
+        "mode=%s backend=%s effort=%s method=%s",
         parser_health.routing or "legacy",
+        parser_health.mineru_stack_version_expected,
+        parser_health.mineru_stack_version_installed,
+        parser_health.mineru_stack_version_aligned,
         parser_health.mineru_api_mode,
         parser_health.mineru_backend,
+        parser_health.mineru_effort,
         parser_health.mineru_parse_method,
     )
     logger.info(

@@ -5,24 +5,23 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
-from lightrag.constants import (
-    FULL_DOCS_FORMAT_PENDING_PARSE,
-    PARSER_ENGINE_LEGACY,
-)
+from lightrag.constants import FULL_DOCS_FORMAT_PENDING_PARSE
 from lightrag.parser.routing import resolve_file_parser_directives
 from lightrag.utils import compute_mdhash_id
 
 from src.core import get_settings
 from src.server.document_processing import record_failed_doc
+from src.server.office_to_pdf import (
+    convert_office_to_pdf,
+    is_office_source,
+    office_pdf_cache_root,
+    stage_office_pdf_for_mineru,
+)
 
 logger = logging.getLogger(__name__)
-
-
-PipelineEnqueueFile = Callable[..., Awaitable[tuple[bool, str]]]
 
 
 TEXT_BEARING_TABLE_SUFFIXES = {
@@ -36,9 +35,6 @@ TEXT_BEARING_TABLE_SUFFIXES = {
     ".xlsx",
     ".tsv",
 }
-
-LIGHTRAG_FILE_PIPELINE_SUFFIXES = {".xlsx"}
-
 
 def _new_track_id(file_name: str) -> str:
     stem = Path(file_name).stem or "document"
@@ -54,8 +50,6 @@ def _suppress_text_bearing_table_analysis(file_name: str, process_options: str) 
 
 
 def resolve_govcon_parser_directives(file_name: str) -> tuple[str, str]:
-    if Path(file_name).suffix.lower() in LIGHTRAG_FILE_PIPELINE_SUFFIXES:
-        return PARSER_ENGINE_LEGACY, ""
     parser_rules = get_settings().lightrag_parser
     parser_engine, process_options = resolve_file_parser_directives(
         file_name,
@@ -67,45 +61,36 @@ def resolve_govcon_parser_directives(file_name: str) -> tuple[str, str]:
     )
 
 
-def _uses_lightrag_file_pipeline(file_name: str) -> bool:
-    return Path(file_name).suffix.lower() in LIGHTRAG_FILE_PIPELINE_SUFFIXES
-
-
-def _load_lightrag_pipeline_enqueue_file() -> PipelineEnqueueFile:
-    try:
-        from lightrag.api.routers.document_routes import pipeline_enqueue_file
-    except SystemExit as exc:
-        raise RuntimeError(
-            "LightRAG's file upload pipeline could not be imported after API "
-            "configuration. Initialize the LightRAG API app before processing XLSX."
-        ) from exc
-    except Exception as exc:  # pragma: no cover - import failure depends on LightRAG packaging
-        raise RuntimeError("Unable to import LightRAG's file upload pipeline") from exc
-
-    return pipeline_enqueue_file
-
-
-async def _enqueue_with_lightrag_file_pipeline(
-    lightrag: Any,
+def _prepare_mineru_ingest_path(
     file_path: str,
-    track_id: str,
-    *,
-    from_scan: bool,
-    pipeline_enqueue_file_fn: PipelineEnqueueFile | None = None,
-) -> str:
-    enqueue_file = pipeline_enqueue_file_fn or _load_lightrag_pipeline_enqueue_file()
-    success, returned_track_id = await enqueue_file(
-        lightrag,
-        Path(file_path),
-        track_id,
-        from_scan=from_scan,
+    file_name: str,
+) -> tuple[str, str, bool]:
+    """Return ``(enqueue_path, routing_name, office_converted)`` for LightRAG."""
+    settings = get_settings()
+    if not settings.office_pdf_convert_enable:
+        return file_path, file_name, False
+
+    source_name = Path(file_name or file_path).name
+    if not is_office_source(source_name):
+        return file_path, file_name, False
+
+    parser_engine, _ = resolve_govcon_parser_directives(source_name)
+    if parser_engine != "mineru":
+        return file_path, file_name, False
+
+    conversion = convert_office_to_pdf(
+        file_path,
+        cache_root=office_pdf_cache_root(settings.working_dir, settings.workspace),
+        libreoffice_path=settings.libreoffice_path or None,
+        timeout_seconds=float(settings.office_pdf_convert_timeout_seconds),
     )
-    if not success:
-        raise RuntimeError(
-            f"LightRAG file enqueue failed for {Path(file_path).name}; "
-            "see document status and server logs for extractor details."
-        )
-    return returned_track_id or track_id
+    staged_pdf = stage_office_pdf_for_mineru(
+        conversion.enqueue_path,
+        workspace=settings.workspace,
+    )
+    enqueue_path = str(staged_pdf)
+    routing_name = staged_pdf.name
+    return enqueue_path, routing_name, conversion.converted
 
 
 def _status_value(status: Any) -> str:
@@ -209,47 +194,40 @@ async def process_document_with_native_ingestion(
     track_id: str | None = None,
     from_scan: bool = False,
     callback: Any | None = None,
-    pipeline_enqueue_file_fn: PipelineEnqueueFile | None = None,
 ) -> dict[str, Any]:
     """Queue one source document through LightRAG's native parser pipeline."""
 
     del llm_func
     lightrag = rag_instance.lightrag
     resolved_track_id = track_id or _new_track_id(file_name)
-    parser_engine, process_options = resolve_govcon_parser_directives(
-        file_name or file_path
+    source_name = Path(file_name or file_path).name
+    enqueue_path, routing_name, office_converted = _prepare_mineru_ingest_path(
+        file_path,
+        source_name,
     )
-    doc_id = compute_mdhash_id(Path(file_name or file_path).name, prefix="doc-")
+    parser_engine, process_options = resolve_govcon_parser_directives(routing_name)
+    doc_id = compute_mdhash_id(source_name, prefix="doc-")
     start_time = time.perf_counter()
 
     try:
         logger.info(
-            "📄 Native LightRAG ingest %s (engine=%s options=%s track=%s)",
-            file_name,
+            "📄 Native LightRAG ingest %s (engine=%s options=%s track=%s%s)",
+            source_name,
             parser_engine,
             process_options or "default",
             resolved_track_id,
+            "; office→PDF" if office_converted else "",
         )
-        source_name = Path(file_name or file_path).name
         await _clear_retryable_failed_statuses(lightrag, source_name)
-        if _uses_lightrag_file_pipeline(source_name):
-            resolved_track_id = await _enqueue_with_lightrag_file_pipeline(
-                lightrag,
-                file_path,
-                resolved_track_id,
-                from_scan=from_scan,
-                pipeline_enqueue_file_fn=pipeline_enqueue_file_fn,
-            )
-        else:
-            await lightrag.apipeline_enqueue_documents(
-                "",
-                file_paths=file_path,
-                track_id=resolved_track_id,
-                docs_format=FULL_DOCS_FORMAT_PENDING_PARSE,
-                parse_engine=parser_engine,
-                process_options=process_options,
-                from_scan=from_scan,
-            )
+        await lightrag.apipeline_enqueue_documents(
+            "",
+            file_paths=enqueue_path,
+            track_id=resolved_track_id,
+            docs_format=FULL_DOCS_FORMAT_PENDING_PARSE,
+            parse_engine=parser_engine,
+            process_options=process_options,
+            from_scan=from_scan,
+        )
         await lightrag.apipeline_process_enqueue_documents()
         failures = await _native_track_failures(lightrag, resolved_track_id)
         if failures:

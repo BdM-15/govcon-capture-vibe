@@ -137,7 +137,17 @@ def build_startup_banner_items(
     langgraph_studio_status: dict[str, Any] | None = None,
 ) -> list[tuple[str, str]]:
     """Build the startup banner rows for log_banner()."""
-    mineru_version = version_resolver("mineru")
+    from src.server.engine_stack import format_mineru_banner_version, resolve_mineru_stack_version
+    from src.server.langgraph_studio_lifecycle import format_langgraph_banner_line
+    from src.server.ollama_llm import format_ollama_banner_line
+
+    mineru_stack = resolve_mineru_stack_version(
+        str(getattr(settings, "mineru_stack_version", "3.3") or "3.3")
+    )
+    mineru_version_line = format_mineru_banner_version(mineru_stack, colors)
+    parse_method = str(
+        getattr(settings, "mineru_local_parse_method", "auto") or "auto"
+    ).upper()
     lightrag_version = (
         pipeline_health.lightrag_version
         if pipeline_health is not None
@@ -145,9 +155,6 @@ def build_startup_banner_items(
     )
     device = settings.mineru_device_mode.upper()
     device_color = colors.GREEN if device == "CUDA" else colors.YELLOW
-
-    from src.server.langgraph_studio_lifecycle import format_langgraph_banner_line
-    from src.server.ollama_llm import format_ollama_banner_line
 
     startup_items = [
         ("Workspace", f"{colors.BOLD}{colors.WHITE}{settings.workspace}{colors.RESET}"),
@@ -176,7 +183,7 @@ def build_startup_banner_items(
         ("LightRAG", f"{colors.DIM}{lightrag_version}{colors.RESET}"),
         (
             "MinerU",
-            f"{colors.DIM}{mineru_version}{colors.RESET}  ·  Device: {colors.BOLD}{device_color}{device}{colors.RESET}  ·  Method: {colors.YELLOW}{settings.parse_method.upper()}{colors.RESET}",
+            f"{mineru_version_line}  ·  Device: {colors.BOLD}{device_color}{device}{colors.RESET}  ·  Method: {colors.YELLOW}{parse_method}{colors.RESET}",
         ),
         ("Multimodal", f"Images · Tables · Equations · Formulas  {colors.GREEN}▸ ENABLED{colors.RESET}"),
         ("", ""),
@@ -207,7 +214,10 @@ def build_startup_banner_items(
             if label == "MinerU":
                 startup_items[index] = (
                     "MinerU",
-                    f"{colors.DIM}{mineru_version}{colors.RESET}  ·  Mode: {colors.YELLOW}{parser.mineru_api_mode.upper()}{colors.RESET}  ·  Backend: {colors.CYAN}{parser.mineru_backend}{colors.RESET}  ·  Method: {colors.YELLOW}{parser.mineru_parse_method}{colors.RESET}",
+                    f"{mineru_version_line}  ·  Mode: {colors.YELLOW}{parser.mineru_api_mode.upper()}{colors.RESET}  ·  "
+                    f"Backend: {colors.CYAN}{parser.mineru_backend}{colors.RESET}  ·  "
+                    f"Effort: {colors.YELLOW}{parser.mineru_effort}{colors.RESET}  ·  "
+                    f"Method: {colors.YELLOW}{parser.mineru_parse_method}{colors.RESET}",
                 )
             if label == "MinerU" and parser.mineru_endpoint:
                 startup_items[index] = (
@@ -245,7 +255,11 @@ def build_startup_banner_items(
             lightrag_index + 5,
             (
                 "MinerU Mode",
-                f"{colors.YELLOW}{parser.mineru_api_mode}{colors.RESET} · backend={parser.mineru_backend} · method={parser.mineru_parse_method}",
+                f"target {colors.CYAN}{parser.mineru_stack_version_expected}{colors.RESET} · "
+                f"installed v{parser.mineru_stack_version_installed} · "
+                f"{colors.YELLOW}{parser.mineru_api_mode}{colors.RESET} · "
+                f"backend={parser.mineru_backend} · effort={parser.mineru_effort} · "
+                f"method={parser.mineru_parse_method}",
             ),
         )
         startup_items.insert(
@@ -750,7 +764,14 @@ async def main():
     )
 
     # Step 5: Start server
-    config = uvicorn.Config(app=runtime.app, host=runtime.host, port=runtime.port, log_level="info")
+    # uvicorn.access uses its own handler (bypasses ConsoleFilter) — disable to cut UI poll noise.
+    config = uvicorn.Config(
+        app=runtime.app,
+        host=runtime.host,
+        port=runtime.port,
+        log_level="info",
+        access_log=False,
+    )
     server_instance = uvicorn.Server(config)
     await serve_with_runtime_shutdown(server_instance, rag_instance, logger=logger)
 

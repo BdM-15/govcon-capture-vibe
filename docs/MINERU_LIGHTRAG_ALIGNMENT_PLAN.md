@@ -84,7 +84,7 @@ This keeps the public repo clean: the only "invasive" code is a small, documente
 
 | Setting | Today ([`.env.example`](../.env.example)) | Target |
 |---|---|---|
-| `LIGHTRAG_PARSER` | Split: `docx:native-ite`, `xlsx:legacy`, `pdf:mineru-ite` | Unified: `pdf:mineru-iteP,doc:mineru-iteP,docx:mineru-iteP,ppt*:mineru-iteP,xlsx:mineru-iteP,*:legacy-R` |
+| `LIGHTRAG_PARSER` | Split: `docx:native-ite`, `xlsx:legacy`, `pdf:mineru-ite` | Current achievable (single-repo, no pre-conversion layer): `pdf:mineru-iteP,doc:mineru-iteP,docx:native-ite,ppt*:mineru-iteP,xlsx:legacy-R,*:legacy-R`. Full unified `...docx:mineru-iteP...` requires LightRAG or Theseus to pre-convert Office docs to PDF before the raw MinerU hybrid engine (out of scope for the effort shim). |
 | `MINERU_LOCAL_BACKEND` | `pipeline` (~85.8 OmniDocBench) | `hybrid-auto-engine` (~95.3 at `effort=high`) |
 | `MINERU_LOCAL_EFFORT` | *(missing)* | `high` |
 | `mineru` pin | `mineru[core]>=3.0.9` | `mineru[core,lmdeploy]>=3.3` |
@@ -117,7 +117,7 @@ This keeps the public repo clean: the only "invasive" code is a small, documente
 ### Phase 1 — In-tree shim + env alignment (single public repo)
 
 - Wire the shim activation in [`src/server/native_lightrag_runtime.py`](../src/server/native_lightrag_runtime.py) (import the shim module and call its activation function as early as possible, before any parser objects are constructed). Confirm via health or logs that the shim is active.
-- Update `.env` / [`.env.example`](../.env.example): target `LIGHTRAG_PARSER`, `MINERU_LOCAL_BACKEND=hybrid-auto-engine`, `MINERU_LOCAL_EFFORT=high`, remove legacy MinerU/RAG-Anything vars (`MINERU_BACKEND`, `PARSE_METHOD`, old `CONTEXT_*`).
+- Update `.env` / [`.env.example`](../.env.example): target `LIGHTRAG_PARSER` (PDFs + .doc on `mineru-iteP`; .docx on `native-ite`; .xlsx on `legacy-R`), `MINERU_LOCAL_BACKEND=hybrid-auto-engine`, `MINERU_LOCAL_EFFORT=high`, remove legacy MinerU/RAG-Anything vars (`MINERU_BACKEND`, `PARSE_METHOD`, old `CONTEXT_*`).
 - Add `mineru_local_effort` field to [`src/core/config.py`](../src/core/config.py) (default `"high"`, reads `MINERU_LOCAL_EFFORT`). Keep legacy alias handling for boot compatibility during transition; document deprecation.
 - Extend `NativeParserHealth` (and the health endpoint surface) in [`src/server/native_lightrag_runtime.py`](../src/server/native_lightrag_runtime.py) to include `mineru_effort` (and ideally `mineru_effort_active_via_shim: bool`) for operator visibility.
 - Add or update a narrow unit test that the shim reads the env var, augments form data, and changes the signature. No new Theseus-side full MinerU HTTP client code.
@@ -185,7 +185,7 @@ Per assessment doc, compare **pre/post** snapshots:
 ## Success criteria
 
 1. **No Ray/Python downgrade** — hybrid runs on existing Python 3.13 Windows venv.
-2. **LightRAG-aligned routing** — all office formats through `mineru-iteP`; legacy-R fallback only.
+2. **LightRAG-aligned routing** — PDFs and .doc through `mineru-iteP` (hybrid-auto-engine + effort=high via shim); .docx/.xlsx stay on `native-ite` / `legacy-R` because the current LightRAG MinerU local client path expects PDF/image for direct hybrid processing (no built-in Office pre-conversion in the raw engine path).
 3. **`effort=high` verified** — MinerU task payloads include `effort=high` (log/manifest/options_signature).
 4. **`mcpp_rfp` regression gate passes** with multimodal + known-answer checks.
 5. **Single public repo only, no invasive entanglement** — effort support is delivered by a small, removable, Theseus-owned in-tree shim. No second repository (no private fork, no vendor clone, no submodule). No public PR or contribution to HKUDS/LightRAG. The public `govcon-capture-vibe` repo remains the sole source of truth; no external collaborators or write access grants are required or created by this work.

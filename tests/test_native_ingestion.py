@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from src.core.config import reset_settings
 from src.server.native_ingestion import (
     process_document_with_native_ingestion,
     resolve_govcon_parser_directives,
@@ -100,7 +101,7 @@ def test_process_document_with_native_ingestion_enqueues_pending_parse_document(
     assert enqueue["kwargs"]["file_paths"] == str(source)
     assert enqueue["kwargs"]["docs_format"] == "pending_parse"
     assert enqueue["kwargs"]["parse_engine"] == "mineru"
-    assert enqueue["kwargs"]["process_options"] == "ite"
+    assert enqueue["kwargs"]["process_options"] in {"ite", "iteP"}
     assert enqueue["kwargs"]["track_id"] == "upload-demo"
     assert lightrag.process_calls == 1
     assert result == {
@@ -138,31 +139,92 @@ def test_native_ingestion_success_notifies_batch_callback(tmp_path: Path) -> Non
 
 
 def test_resolve_govcon_parser_directives_keeps_text_bearing_tables_in_text_chunks(monkeypatch) -> None:
-    monkeypatch.setenv("LIGHTRAG_PARSER", "pdf:mineru-ite,docx:native-ite,xlsx:mineru-t")
+    monkeypatch.setenv(
+        "LIGHTRAG_PARSER",
+        "pdf:mineru-iteP,docx:mineru-iteP,xlsx:mineru-iteP",
+    )
+    reset_settings()
 
-    assert resolve_govcon_parser_directives("attachment.docx") == ("native", "ie")
-    assert resolve_govcon_parser_directives("pricing.xlsx") == ("legacy", "")
-    assert resolve_govcon_parser_directives("diagram.pdf") == ("mineru", "ite")
+    assert resolve_govcon_parser_directives("attachment.docx") == ("mineru", "ieP")
+    assert resolve_govcon_parser_directives("pricing.xlsx") == ("mineru", "ieP")
+    assert resolve_govcon_parser_directives("diagram.pdf") == ("mineru", "iteP")
 
 
-def test_native_ingestion_delegates_xlsx_to_lightrag_file_pipeline(tmp_path: Path) -> None:
-    source = tmp_path / "cost.xlsx"
-    source.write_bytes(b"fake workbook bytes")
-    lightrag = _NativeLightRAG(workspace="alpha")
-    calls = []
+def test_native_ingestion_converts_office_to_pdf_before_mineru_enqueue(
+    tmp_path: Path, monkeypatch
+) -> None:
+    source = tmp_path / "sow.docx"
+    source.write_bytes(b"fake-docx")
+    pdf_path = tmp_path / "cache" / "deadbeef" / "sow.pdf"
+    pdf_path.parent.mkdir(parents=True)
+    pdf_path.write_bytes(b"%PDF")
 
-    async def fake_pipeline_enqueue_file(rag, file_path, track_id=None, from_scan=False):
-        calls.append((rag, file_path, track_id, from_scan))
-        await rag.apipeline_enqueue_documents(
-            "LightRAG extracted workbook text",
-            file_paths=file_path.name,
-            track_id=track_id,
-            parse_engine="legacy",
-            process_options="",
-            from_scan=from_scan,
+    monkeypatch.setenv("WORKSPACE", "alpha")
+    monkeypatch.setenv("WORKING_DIR", str(tmp_path / "rag_storage"))
+    monkeypatch.setenv(
+        "LIGHTRAG_PARSER",
+        "pdf:mineru-iteP,docx:mineru-iteP,xlsx:mineru-iteP",
+    )
+    reset_settings()
+    monkeypatch.chdir(tmp_path)
+
+    def fake_convert(path, *, cache_root, libreoffice_path, timeout_seconds):
+        from src.server.office_to_pdf import OfficePdfConversion
+
+        return OfficePdfConversion(
+            enqueue_path=pdf_path,
+            original_name="sow.docx",
+            converted=True,
+            cache_dir=pdf_path.parent,
         )
-        return True, track_id
 
+    monkeypatch.setattr(
+        "src.server.native_ingestion.convert_office_to_pdf",
+        fake_convert,
+    )
+
+    lightrag = _NativeLightRAG(workspace="alpha")
+    asyncio.run(
+        process_document_with_native_ingestion(
+            str(source),
+            source.name,
+            _Rag(lightrag),
+            llm_func=object(),
+            track_id="upload-docx",
+        )
+    )
+
+    staged_pdf = tmp_path / "inputs" / "alpha" / "sow.pdf"
+    enqueue = lightrag.enqueues[0]
+    assert enqueue["kwargs"]["file_paths"] == str(staged_pdf.resolve())
+    assert staged_pdf.is_file()
+    assert enqueue["kwargs"]["parse_engine"] == "mineru"
+    assert enqueue["kwargs"]["process_options"] == "iteP"
+
+
+def test_native_ingestion_sends_xlsx_direct_to_mineru_without_pdf_convert(
+    tmp_path: Path, monkeypatch
+) -> None:
+    source = tmp_path / "pricing.xlsx"
+    source.write_bytes(b"fake-xlsx")
+
+    monkeypatch.setenv("WORKSPACE", "alpha")
+    monkeypatch.setenv("WORKING_DIR", str(tmp_path / "rag_storage"))
+    monkeypatch.setenv(
+        "LIGHTRAG_PARSER",
+        "pdf:mineru-iteP,docx:mineru-iteP,xlsx:mineru-iteP",
+    )
+    reset_settings()
+
+    def fail_if_called(*_args, **_kwargs):
+        raise AssertionError("xlsx must not use LibreOffice PDF conversion")
+
+    monkeypatch.setattr(
+        "src.server.native_ingestion.convert_office_to_pdf",
+        fail_if_called,
+    )
+
+    lightrag = _NativeLightRAG(workspace="alpha")
     asyncio.run(
         process_document_with_native_ingestion(
             str(source),
@@ -170,43 +232,13 @@ def test_native_ingestion_delegates_xlsx_to_lightrag_file_pipeline(tmp_path: Pat
             _Rag(lightrag),
             llm_func=object(),
             track_id="upload-xlsx",
-            from_scan=True,
-            pipeline_enqueue_file_fn=fake_pipeline_enqueue_file,
         )
     )
 
-    assert calls == [(lightrag, source, "upload-xlsx", True)]
     enqueue = lightrag.enqueues[0]
-    assert enqueue["args"] == ("LightRAG extracted workbook text",)
-    assert enqueue["kwargs"]["file_paths"] == "cost.xlsx"
-    assert enqueue["kwargs"]["parse_engine"] == "legacy"
-    assert enqueue["kwargs"]["process_options"] == ""
-    assert enqueue["kwargs"]["from_scan"] is True
-    assert lightrag.process_calls == 1
-
-
-def test_native_ingestion_surfaces_lightrag_file_pipeline_enqueue_failure(tmp_path: Path) -> None:
-    source = tmp_path / "cost.xlsx"
-    source.write_bytes(b"fake workbook bytes")
-    lightrag = _NativeLightRAG(workspace="alpha")
-
-    async def fake_pipeline_enqueue_file(rag, file_path, track_id=None, from_scan=False):
-        return False, track_id
-
-    with pytest.raises(RuntimeError, match="LightRAG file enqueue failed"):
-        asyncio.run(
-            process_document_with_native_ingestion(
-                str(source),
-                source.name,
-                _Rag(lightrag),
-                llm_func=object(),
-                track_id="upload-xlsx",
-                pipeline_enqueue_file_fn=fake_pipeline_enqueue_file,
-            )
-        )
-
-    assert lightrag.enqueues == []
-    assert lightrag.process_calls == 0
+    assert enqueue["kwargs"]["file_paths"] == str(source)
+    assert enqueue["kwargs"]["parse_engine"] == "mineru"
+    assert enqueue["kwargs"]["process_options"] == "ieP"
 
 
 def test_native_ingestion_failure_records_recoverable_failed_status(tmp_path: Path) -> None:

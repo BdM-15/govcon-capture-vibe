@@ -32,7 +32,8 @@ def _settings(**overrides):
         "rerank_model": "bge-reranker",
         "min_rerank_score": 0.33,
         "mineru_device_mode": "cuda",
-        "parse_method": "auto",
+        "mineru_local_parse_method": "auto",
+        "mineru_stack_version": "3.3",
     }
     values.update(overrides)
     return SimpleNamespace(**values)
@@ -138,6 +139,11 @@ def test_build_startup_banner_items_reports_native_pipeline_health() -> None:
                 mineru_endpoint="http://localhost:8888",
                 mineru_backend="pipeline",
                 mineru_parse_method="auto",
+                mineru_effort="high",
+                mineru_effort_via_shim=True,
+                mineru_stack_version_expected="3.3",
+                mineru_stack_version_installed="3.3.1",
+                mineru_stack_version_aligned=True,
                 concurrency={"native": 5, "mineru": 2, "docling": 1, "analyze": 4},
             ),
         ),

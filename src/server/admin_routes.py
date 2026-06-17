@@ -46,28 +46,16 @@ class McpKeyUpdate(BaseModel):
 
 
 def stack_versions() -> dict[str, Optional[str]]:
-    """Read installed package versions for the engine stack."""
+    """Read engine stack versions; MinerU target comes from MINERU_STACK_VERSION (.env)."""
     global _STACK_CACHE  # noqa: PLW0603
     if _STACK_CACHE is not None:
         return _STACK_CACHE
-    from importlib.metadata import PackageNotFoundError, version
+    from src.server.engine_stack import build_engine_stack_payload
 
-    versions: dict[str, Optional[str]] = {}
-    for key, distribution in (
-        ("lightrag", "lightrag-hku"),
-        ("mineru", "mineru"),
-        ("transformers", "transformers"),
-        ("langgraph", "langgraph"),
-    ):
-        try:
-            versions[key] = version(distribution)
-        except PackageNotFoundError:
-            try:
-                versions[key] = version(key)
-            except PackageNotFoundError:
-                versions[key] = None
-    _STACK_CACHE = versions
-    return versions
+    settings = get_settings()
+    payload = build_engine_stack_payload(mineru_expected=settings.mineru_stack_version)
+    _STACK_CACHE = payload
+    return payload
 
 
 def release_version() -> str:

@@ -38,6 +38,7 @@ def _settings(**overrides):
         "mineru_api_token": None,
         "mineru_local_backend": "pipeline",
         "mineru_local_parse_method": "auto",
+        "mineru_stack_version": "3.3",
         "mineru_language": "en",
         "enable_image_processing": True,
         "enable_table_processing": True,
@@ -52,7 +53,9 @@ def _settings(**overrides):
     return SimpleNamespace(**values)
 
 
-def test_configure_native_parser_environment_sets_lightrag_parser_and_mineru_env() -> None:
+def test_configure_native_parser_environment_sets_lightrag_parser_and_mineru_env(monkeypatch) -> None:
+    monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
+    monkeypatch.delenv("MINERU_HYBRID_BATCH_RATIO", raising=False)
     env = {}
     validated = []
 
@@ -63,13 +66,16 @@ def test_configure_native_parser_environment_sets_lightrag_parser_and_mineru_env
     )
 
     assert validated == ["pdf:mineru-ite,docx:native-ite"]
-    assert env == {
+    expected = {
         "LIGHTRAG_PARSER": "pdf:mineru-ite,docx:native-ite",
+        "MINERU_STACK_VERSION": "3.3",
         "MINERU_API_MODE": "local",
+        "MINERU_API_DISABLE_ACCESS_LOG": "1",
         "MINERU_LOCAL_ENDPOINT": "http://localhost:8888",
         "MINERU_OFFICIAL_ENDPOINT": "https://mineru.net",
         "MINERU_LOCAL_BACKEND": "pipeline",
         "MINERU_LOCAL_PARSE_METHOD": "auto",
+        "MINERU_DEVICE_MODE": "cuda",
         "MINERU_LANGUAGE": "en",
         "MINERU_ENABLE_TABLE": "true",
         "MINERU_ENABLE_FORMULA": "false",
@@ -81,6 +87,7 @@ def test_configure_native_parser_environment_sets_lightrag_parser_and_mineru_env
         "MAX_PARALLEL_ANALYZE": "4",
         "MINERU_LOCAL_EFFORT": "high",
     }
+    assert env == expected
     assert parser.routing == "pdf:mineru-ite,docx:native-ite"
     assert parser.mineru_api_mode == "local"
     assert parser.mineru_endpoint == "http://localhost:8888"

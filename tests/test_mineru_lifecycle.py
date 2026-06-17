@@ -9,8 +9,10 @@ Cover the four behaviors that motivated issue #174:
 
 from __future__ import annotations
 
+import io
 import socket
 import subprocess
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -22,6 +24,7 @@ from src.server.mineru_lifecycle import (
     build_controller_from_env,
     is_mineru_required,
     is_port_listening,
+    mineru_fastapi_log_path,
     parse_mineru_endpoint,
     wait_for_mineru,
 )
@@ -107,11 +110,12 @@ def test_wait_for_mineru_times_out_when_never_ready() -> None:
 
 
 class _FakeProc:
-    def __init__(self) -> None:
+    def __init__(self, *, stdout: io.BytesIO | None = None) -> None:
         self.pid = 4242
         self.terminated = False
         self.killed = False
         self._poll = None
+        self.stdout = stdout if stdout is not None else io.BytesIO(b"")
 
     def poll(self) -> Any:
         return self._poll
@@ -148,14 +152,23 @@ def test_controller_skips_spawn_when_port_already_bound() -> None:
     assert proc.terminated is False
 
 
-def test_controller_spawns_and_waits_then_stops() -> None:
-    controller = MineruController(endpoint=MineruEndpoint("127.0.0.1", 8888))
+def test_mineru_fastapi_log_path_uses_logs_directory(tmp_path: Path) -> None:
+    assert mineru_fastapi_log_path(tmp_path) == tmp_path / "mineru_fastapi.log"
+
+
+def test_controller_spawns_and_waits_then_stops(tmp_path: Path) -> None:
+    controller = MineruController(
+        endpoint=MineruEndpoint("127.0.0.1", 8888),
+        log_dir=tmp_path,
+    )
     proc = _FakeProc()
 
     captured: dict[str, Any] = {}
 
-    def popen(cmd):
+    def popen(cmd, env=None, **kwargs):
         captured["cmd"] = cmd
+        captured["env"] = env
+        captured["kwargs"] = kwargs
         return proc
 
     started = controller.start(
@@ -167,19 +180,30 @@ def test_controller_spawns_and_waits_then_stops() -> None:
     assert controller.started_by_us is True
     assert controller.process is proc
     assert "mineru.cli.fast_api" in " ".join(captured["cmd"])
+    assert captured["env"]["MINERU_DEVICE_MODE"]
+    assert captured["env"]["MINERU_API_DISABLE_ACCESS_LOG"] == "1"
+    assert captured["env"]["PYTHONUNBUFFERED"] == "1"
+    assert captured["kwargs"]["stdout"] == subprocess.DEVNULL
+    assert captured["kwargs"]["stderr"] is controller._output_log
     assert "--port" in captured["cmd"] and "8888" in captured["cmd"]
+    log_path = tmp_path / "mineru_fastapi.log"
+    assert log_path.is_file()
+    assert "MinerU FastAPI spawn" in log_path.read_text(encoding="utf-8")
 
     controller.stop()
     assert proc.terminated is True
     assert controller.process is None
 
 
-def test_controller_stops_subprocess_when_wait_times_out() -> None:
-    controller = MineruController(endpoint=MineruEndpoint("127.0.0.1", 8888))
+def test_controller_stops_subprocess_when_wait_times_out(tmp_path: Path) -> None:
+    controller = MineruController(
+        endpoint=MineruEndpoint("127.0.0.1", 8888),
+        log_dir=tmp_path,
+    )
     proc = _FakeProc()
 
     started = controller.start(
-        popen=lambda _cmd: proc,  # type: ignore[arg-type]
+        popen=lambda _cmd, env=None, **_kwargs: proc,  # type: ignore[arg-type]
         port_check=lambda _h, _p: False,
         wait=lambda _ep: False,
     )

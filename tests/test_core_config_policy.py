@@ -82,14 +82,31 @@ def test_settings_exposes_native_lightrag_parser_env_names() -> None:
     assert settings.vlm_process_enable is True
 
 
-def test_settings_exposes_mineru_local_effort_default_and_alias() -> None:
+def test_settings_exposes_mineru_stack_version_from_env() -> None:
     settings = Settings(
+        MINERU_STACK_VERSION="3.3",
+        CHUNK_SIZE=4096,
+        CHUNK_OVERLAP_SIZE=600,
+    )
+    assert settings.mineru_stack_version == "3.3"
+
+
+def test_settings_exposes_mineru_local_effort_default_and_alias(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("MINERU_LOCAL_EFFORT", raising=False)
+    settings = Settings(
+        _env_file=None,
         MINERU_LOCAL_EFFORT="high",
         CHUNK_SIZE=4096,
         CHUNK_OVERLAP_SIZE=600,
     )
     assert settings.mineru_local_effort == "high"
 
-    # Default is high when not provided
-    settings2 = Settings(CHUNK_SIZE=4096, CHUNK_OVERLAP_SIZE=600)
+    # Field default is high when env/.env do not set MINERU_LOCAL_EFFORT
+    settings2 = Settings(
+        _env_file=None,
+        CHUNK_SIZE=4096,
+        CHUNK_OVERLAP_SIZE=600,
+    )
     assert settings2.mineru_local_effort == "high"

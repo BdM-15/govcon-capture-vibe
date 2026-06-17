@@ -37,6 +37,9 @@ class NativeParserHealth:
     mineru_parse_method: str
     mineru_effort: str
     mineru_effort_via_shim: bool
+    mineru_stack_version_expected: str
+    mineru_stack_version_installed: str
+    mineru_stack_version_aligned: bool
     concurrency: dict[str, int]
 
 
@@ -117,8 +120,12 @@ def configure_native_parser_environment(
         )
     )
 
+    mineru_stack_expected = str(getattr(settings, "mineru_stack_version", "3.3") or "3.3").strip()
+
     environ["LIGHTRAG_PARSER"] = routing
+    environ["MINERU_STACK_VERSION"] = mineru_stack_expected
     environ["MINERU_API_MODE"] = mineru_api_mode
+    environ.setdefault("MINERU_API_DISABLE_ACCESS_LOG", "1")
     environ["MINERU_LOCAL_ENDPOINT"] = mineru_local_endpoint
     environ["MINERU_OFFICIAL_ENDPOINT"] = mineru_official_endpoint
     mineru_api_token = getattr(settings, "mineru_api_token", None)
@@ -126,6 +133,11 @@ def configure_native_parser_environment(
         environ["MINERU_API_TOKEN"] = str(mineru_api_token)
     environ["MINERU_LOCAL_BACKEND"] = mineru_backend
     environ["MINERU_LOCAL_PARSE_METHOD"] = mineru_parse_method
+    mineru_device_mode = str(getattr(settings, "mineru_device_mode", "cuda") or "cuda").strip()
+    environ["MINERU_DEVICE_MODE"] = mineru_device_mode
+    cuda_visible = str(os.environ.get("CUDA_VISIBLE_DEVICES", "") or "").strip()
+    if cuda_visible:
+        environ["CUDA_VISIBLE_DEVICES"] = cuda_visible
     environ["MINERU_LANGUAGE"] = str(getattr(settings, "mineru_language", "en") or "en").strip()
     environ["MINERU_ENABLE_TABLE"] = _env_bool(table_processing)
     environ["MINERU_ENABLE_FORMULA"] = _env_bool(equation_processing)
@@ -144,6 +156,9 @@ def configure_native_parser_environment(
     if mineru_effort not in {"high", "medium", "low"}:
         mineru_effort = "high"
     environ["MINERU_LOCAL_EFFORT"] = mineru_effort
+    hybrid_batch_ratio = str(os.environ.get("MINERU_HYBRID_BATCH_RATIO", "") or "").strip()
+    if hybrid_batch_ratio:
+        environ["MINERU_HYBRID_BATCH_RATIO"] = hybrid_batch_ratio
 
     # Activate the shim as early as possible (before LightRAG parser workers are created).
     # The shim is a tiny, Theseus-owned module that lives inside this repo only.
@@ -152,6 +167,12 @@ def configure_native_parser_environment(
     effort_via_shim = bool(shim_status.get("active"))
 
     validate_parser_routing_fn(routing)
+
+    from .engine_stack import log_mineru_stack_version, resolve_mineru_stack_version
+
+    mineru_stack = resolve_mineru_stack_version(mineru_stack_expected)
+    log_mineru_stack_version(expected=mineru_stack_expected, prefix="Native parser env")
+
     return NativeParserHealth(
         routing=routing,
         mineru_api_mode=mineru_api_mode,
@@ -160,6 +181,9 @@ def configure_native_parser_environment(
         mineru_parse_method=mineru_parse_method,
         mineru_effort=mineru_effort,
         mineru_effort_via_shim=effort_via_shim,
+        mineru_stack_version_expected=mineru_stack.expected,
+        mineru_stack_version_installed=mineru_stack.installed,
+        mineru_stack_version_aligned=mineru_stack.aligned,
         concurrency=concurrency,
     )
 
