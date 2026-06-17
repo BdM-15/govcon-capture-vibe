@@ -1,0 +1,34 @@
+{
+  "checks": [
+    {
+      "id": "lm_traceability",
+      "query": "How do Section L instructions map to Section M evaluation factors?",
+      "expected_terms": ["section l", "section m", "evaluation factor"]
+    },
+    {
+      "id": "pws_requirements",
+      "query": "What performance requirements are stated in the PWS or SOW?",
+      "expected_terms": ["requirement", "performance", "pws"]
+    },
+    {
+      "id": "deliverable_catalog",
+      "query": "Which deliverables or CDRLs are required?",
+      "expected_terms": ["cdrl", "deliverable"]
+    },
+    {
+      "id": "evaluation_factors",
+      "query": "List the evaluation factors and subfactors for source selection.",
+      "expected_terms": ["evaluation factor", "factor"]
+    },
+    {
+      "id": "workload_tables",
+      "query": "What workload or staffing evidence appears in tables?",
+      "expected_terms": ["workload", "table"]
+    },
+    {
+      "id": "regulatory_clauses",
+      "query": "What FAR, DFARS, or agency clauses apply?",
+      "expected_terms": ["far", "clause"]
+    }
+  ]
+}
