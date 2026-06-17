@@ -24,11 +24,16 @@ entity_extraction_json_examples:
     Output:
     {{
       "entities": [
+        {{"name": "Section L.3.1 Technical Volume", "type": "document_section", "description": "Section L.3.1 Technical Volume — instructions governing the Technical Volume submission."}},
+        {{"name": "Section M Evaluation Factors", "type": "document_section", "description": "Section M Evaluation Factors — Government scoring criteria for proposal evaluation."}},
         {{"name": "Technical Volume", "type": "proposal_instruction", "description": "The Technical Volume shall address Evaluation Factors 1 and 2 (Technical Approach and Maintenance Approach) and shall not exceed 25 pages, 12-point font, Times New Roman. Include system architecture diagrams and integration plans. Page limit: 25 pages. Format: 12pt Times New Roman."}},
-        {{"name": "Factor 1 Technical Approach", "type": "evaluation_factor", "description": "Factor 1: Technical Approach (Most Important, 40%). The Government will evaluate the offeror's understanding of technical requirements, including system architecture and integration methodology. Weight: 40%. Importance: Most Important."}},
-        {{"name": "Factor 2 Maintenance Approach", "type": "evaluation_factor", "description": "Factor 2: Maintenance Approach (Significantly More Important, 30%). The Government will evaluate the offeror's maintenance strategy and sustainment plans. Weight: 30%. Importance: Significantly More Important."}}
+        {{"name": "Factor 1 Technical Approach", "type": "evaluation_factor", "description": "Factor 1: Technical Approach (Most Important, 40%). The Government will evaluate the offeror's understanding of technical requirements, including system architecture and integration methodology. Weight: 40%. Importance: Most Important. hierarchy_level: factor."}},
+        {{"name": "Factor 2 Maintenance Approach", "type": "evaluation_factor", "description": "Factor 2: Maintenance Approach (Significantly More Important, 30%). The Government will evaluate the offeror's maintenance strategy and sustainment plans. Weight: 30%. Importance: Significantly More Important. hierarchy_level: factor."}}
       ],
       "relationships": [
+        {{"source": "Technical Volume", "target": "Section L.3.1 Technical Volume", "keywords": "CHILD_OF, section containment", "description": "Proposal instruction belongs to Section L.3.1."}},
+        {{"source": "Factor 1 Technical Approach", "target": "Section M Evaluation Factors", "keywords": "CHILD_OF, section containment", "description": "Evaluation factor belongs to Section M."}},
+        {{"source": "Factor 2 Maintenance Approach", "target": "Section M Evaluation Factors", "keywords": "CHILD_OF, section containment", "description": "Evaluation factor belongs to Section M."}},
         {{"source": "Technical Volume", "target": "Factor 1 Technical Approach", "keywords": "GUIDES, golden thread, L↔M mapping", "description": "Submission instruction addresses content evaluated in this factor."}},
         {{"source": "Technical Volume", "target": "Factor 2 Maintenance Approach", "keywords": "GUIDES, golden thread, L↔M mapping", "description": "Submission instruction addresses content evaluated in this factor."}}
       ]

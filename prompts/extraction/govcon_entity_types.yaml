@@ -411,7 +411,9 @@ categories:
         notes:
           - "hierarchy_level is REQUIRED when inferable: factor, subfactor, or element."
           - "Use CHILD_OF between evaluation_factor nodes to encode hierarchy (subfactor -> factor, element -> subfactor)."
+          - "Emit CHILD_OF to document_section (or document) for every evaluation_factor when a section heading is present in the chunk."
           - "Do not classify rating adjectives alone (Outstanding/Good/Acceptable) as evaluation_factor nodes."
+          - "Do not use table row/column IDs as entity names — extract the criterion label."
         distinction: "EVALUATION_FACTOR = scoring criterion node; hierarchy is represented by hierarchy_level + parent_factor_if_stated metadata and CHILD_OF relationships"
         shipley_note: |-
           Factors form the backbone of the Compliance Matrix — each factor maps to
@@ -825,6 +827,15 @@ categories:
 # DISAMBIGUATION RULES
 # -----------------------------------------------------------------------------
 disambiguation_rules:
+
+  - title: "STRUCTURAL CONTAINMENT (mandatory)"
+    body: |-
+        When section headings appear, never emit orphan structural entities.
+        evaluation_factor, proposal_instruction, proposal_volume: emit document_section
+        (or document) parent + CHILD_OF in the same response.
+        work_scope_item: CHILD_OF nearest document_section or parent work_scope_item.
+        Subfactor/element: CHILD_OF parent evaluation_factor + section when present.
+        Forbidden names: bare table row/cell IDs ("Row 3", "Item 4.2") — use criterion label.
 
   - title: "REQUIREMENT vs WORKLOAD_METRIC"
     body: |-

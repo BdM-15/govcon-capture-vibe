@@ -66,9 +66,12 @@ FOCUS_PREFIX = "[EXTRACT_FOCUS:"
 _FOCUS_BY_DOC_TYPE: dict[str, str] = {
     "solicitation": (
         "Prioritize proposal_instruction, evaluation_factor, proposal_volume, and "
-        "document_section hierarchy. Emit GUIDES when Section L instructions map to "
+        "document_section hierarchy. When section headings appear, emit document_section "
+        "entities and mandatory CHILD_OF edges — every evaluation_factor and "
+        "proposal_instruction must attach to document_section or document in this chunk; "
+        "no orphan structural nodes. Emit GUIDES when Section L instructions map to "
         "Section M factors in the same chunk. Preserve page limits, weights, and "
-        "subfactor CHILD_OF chains verbatim."
+        "subfactor CHILD_OF chains verbatim. Never name factors from table row/cell IDs."
     ),
     "pws": (
         "Prioritize requirement, work_scope_item, workload_metric, performance_standard, "

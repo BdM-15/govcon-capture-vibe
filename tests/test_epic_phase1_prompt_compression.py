@@ -11,7 +11,7 @@ from prompts.govcon.extraction import EXTRACTION_PROMPTS
 from src.extraction.govcon_chunking import FOCUS_PREFIX, decorate_govcon_chunks
 from src.ontology.entity_catalog import get_default_catalog
 
-_MAX_COMPACT_GUIDANCE_CHARS = 6000
+_MAX_COMPACT_GUIDANCE_CHARS = 6500
 
 
 def test_user_prompt_has_no_duplicate_entity_types_guidance() -> None:
@@ -65,6 +65,7 @@ def test_chunk_banner_includes_extract_focus_for_classified_docs() -> None:
     assert FOCUS_PREFIX in content
     assert "evaluation_factor" in content
     assert "proposal_instruction" in content
+    assert "mandatory CHILD_OF" in content
 
 
 def test_prompt_budget_user_smaller_without_part_d_dup() -> None:

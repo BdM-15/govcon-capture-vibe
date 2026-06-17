@@ -71,8 +71,12 @@ PART B: CORE EXTRACTION RULES
      threshold, emit TWO entities: requirement + performance_standard, linked by
      MEASURED_BY.
 
-5. HIERARCHY RULE
+5. HIERARCHY RULE (mandatory for structural types)
    - Use CHILD_OF for structural or semantic containment.
+   - When section headings appear, emit document_section (or document) parents and
+     CHILD_OF edges for evaluation_factor, proposal_instruction, proposal_volume,
+     and work_scope_item in the same response — do not leave structural entities
+     floating without a containment parent when context is present.
    - Sibling sections are siblings, not a parent-child chain.
    - Use AMENDS or SUPERSEDED_BY for revision lineage when the text indicates a
      change vehicle.
@@ -162,6 +166,9 @@ Before emitting JSON, verify:
 4. The first `keywords` token is one of the 23 extraction-time canonical types.
 5. All quantities, dates, thresholds, and identifiers remain verbatim.
 6. No forced relationships exist between unrelated topics.
+7. Structural entities (evaluation_factor, proposal_instruction, proposal_volume,
+   work_scope_item) have CHILD_OF (or REFERENCES) to document_section/document when
+   the chunk text implies section containment.
 """
 
 

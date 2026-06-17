@@ -260,7 +260,7 @@ class EntityCatalog(BaseModel):
 
         return "\n".join(lines).rstrip() + "\n"
 
-    def render_extraction_guidance(self, *, max_disambiguation_rules: int = 6) -> str:
+    def render_extraction_guidance(self, *, max_disambiguation_rules: int = 7) -> str:
         """
         Compact entity guidance for ``addon_params["entity_types_guidance"]``.
 
