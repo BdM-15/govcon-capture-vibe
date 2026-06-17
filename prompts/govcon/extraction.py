@@ -180,11 +180,8 @@ Extract entities and relationships from the `---Input Text---` session below.
 3. **Canonical Relationship Type:** The `keywords` field MUST begin with the canonical UPPERCASE relationship type (e.g. `GUIDES`, `CHILD_OF`, `MEASURED_BY`) as the first comma-separated token. Optional semantic keywords MAY follow after a comma.
 4. **Quantity Limits:** In this response, output at most {max_total_records} total records and at most {max_entity_records} entity objects. Output fewer records if fewer high-value items are present. Only output relationship objects whose `source` and `target` are both included in this response.
 5. **Quantitative Preservation:** Preserve ALL numbers, rates, frequencies, dollar amounts, thresholds, and equipment counts exactly as stated.
-6. **Metadata Embedded in Description:** All type-specific metadata (criticality, modal_verb, weight, threshold, page_limit, clause_number, etc.) belongs inside the `description` field — see Part J of the system prompt.
+6. **Metadata Embedded in Description:** All type-specific metadata (criticality, modal_verb, weight, threshold, page_limit, clause_number, etc.) belongs inside the `description` field — see Part D of the system prompt.
 7. **Output Language:** Use {language}. Proper nouns (clause numbers, agency names, building IDs) must be preserved exactly as written.
-
----Entity Types---
-{entity_types_guidance}
 
 ---Input Text---
 ```
@@ -214,7 +211,7 @@ Based on the last extraction task, identify and extract any **missed or incorrec
 
 
 EXTRACTION_PROMPTS["entity_extraction_json_examples"] = [
-    "(Configure ENTITY_TYPE_PROMPT_FILE=govcon.yaml to load the 7 govcon JSON "
+    "(Configure ENTITY_TYPE_PROMPT_FILE=govcon.yaml to load the 3 govcon JSON "
     "examples from prompts/entity_type/govcon.yaml.)"
 ]
 

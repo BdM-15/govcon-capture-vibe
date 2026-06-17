@@ -60,6 +60,38 @@ logger = logging.getLogger(__name__)
 
 BANNER_TEMPLATE = "[GOVCON_DOC: type={doc_type}; note={note}]"
 BANNER_PREFIX = "[GOVCON_DOC:"
+FOCUS_TEMPLATE = "[EXTRACT_FOCUS: {focus}]"
+FOCUS_PREFIX = "[EXTRACT_FOCUS:"
+
+_FOCUS_BY_DOC_TYPE: dict[str, str] = {
+    "solicitation": (
+        "Prioritize proposal_instruction, evaluation_factor, proposal_volume, and "
+        "document_section hierarchy. Emit GUIDES when Section L instructions map to "
+        "Section M factors in the same chunk. Preserve page limits, weights, and "
+        "subfactor CHILD_OF chains verbatim."
+    ),
+    "pws": (
+        "Prioritize requirement, work_scope_item, workload_metric, performance_standard, "
+        "deliverable, and equipment. Split action obligations from measurable thresholds "
+        "(MEASURED_BY). Use CHILD_OF for section/task containment; QUANTIFIES for "
+        "workload drivers."
+    ),
+    "cdrl_exhibit": (
+        "Prioritize deliverable, requirement, document, and document_section. Preserve "
+        "CDRL IDs, frequencies, distribution codes, and PWS cross-references. Link "
+        "deliverables with TRACKED_BY when CDRL numbers appear."
+    ),
+    "template": (
+        "Prioritize contract_line_item, labor_category, pricing_element, and "
+        "proposal_instruction structure. Treat numeric cells as offeror placeholders — "
+        "do not emit them as government workload_metric facts."
+    ),
+}
+
+
+def render_focus_paragraph(doc_type: str) -> str:
+    """Return doc-type extraction focus text for the chunk banner (not addon_params)."""
+    return _FOCUS_BY_DOC_TYPE.get(doc_type, "")
 
 # Classification rules — ordered by specificity (most specific first).
 # Each rule: (doc_type, note, list of case-insensitive regex patterns).
@@ -235,10 +267,15 @@ def decorate_govcon_chunks(
         return chunks
 
     banner = BANNER_TEMPLATE.format(doc_type=doc_type, note=note)
+    focus = render_focus_paragraph(doc_type)
+    focus_banner = FOCUS_TEMPLATE.format(focus=focus) if focus else ""
     for chunk in chunks:
         content = str(chunk.get("content") or "")
         if content and not content.startswith(BANNER_PREFIX):
-            chunk["content"] = f"{banner}\n\n{content}"
+            prefix_parts = [banner]
+            if focus_banner:
+                prefix_parts.append(focus_banner)
+            chunk["content"] = "\n\n".join(prefix_parts + [content])
         chunk["govcon_doc_type"] = doc_type
     return chunks
 

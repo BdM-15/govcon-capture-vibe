@@ -32,6 +32,7 @@ def test_decorate_govcon_chunks_preserves_core_document_classifications(
     else:
         assert decorated[0]["govcon_doc_type"] == expected_doc_type
         assert decorated[0]["content"].startswith(f"[GOVCON_DOC: type={expected_doc_type};")
+        assert "[EXTRACT_FOCUS:" in decorated[0]["content"]
 
 
 def test_decorate_govcon_chunks_preserves_template_guardrail_for_native_chunks() -> None:

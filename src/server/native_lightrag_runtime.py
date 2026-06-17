@@ -260,7 +260,7 @@ def build_native_lightrag_runtime(
         func=embed_fn,
     )
 
-    entity_types_guidance = get_default_catalog().render_part_d()
+    entity_types_guidance = get_default_catalog().render_extraction_guidance()
     effective_graph_storage = graph_storage or "NetworkXStorage"
     storage = {
         "kv": LOCAL_KV_STORAGE,

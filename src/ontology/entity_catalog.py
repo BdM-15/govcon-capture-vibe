@@ -260,6 +260,49 @@ class EntityCatalog(BaseModel):
 
         return "\n".join(lines).rstrip() + "\n"
 
+    def render_extraction_guidance(self, *, max_disambiguation_rules: int = 6) -> str:
+        """
+        Compact entity guidance for ``addon_params["entity_types_guidance"]``.
+
+        Replaces full ``render_part_d()`` at LightRAG init (Phase 1 epic): type index,
+        top disambiguation pairs, forbidden/fallback — without per-type metadata bloat.
+        ``render_part_d()`` remains for tests and reference.
+        """
+        lines: list[str] = []
+        n_types = len(self.all_entries)
+
+        lines.append(f"GOVCON ENTITY TYPE INDEX ({n_types} types — classify exactly one per entity)")
+        lines.append("=" * 72)
+        lines.append(self.intro)
+        lines.append("")
+
+        for cat in self.categories:
+            lines.append(f"─── {cat.title} ───")
+            for entry in cat.entries:
+                lines.append(f"{entry.number}. {entry.name} — {entry.title}")
+            lines.append("")
+
+        if self.disambiguation_rules:
+            lines.append("─── TOP DISAMBIGUATION (apply when ambiguous) ───")
+            lines.append("")
+            for rule in self.disambiguation_rules[:max_disambiguation_rules]:
+                lines.append(f"{rule.title}:")
+                for body_line in rule.body.rstrip().splitlines():
+                    lines.append(body_line.rstrip())
+                lines.append("")
+
+        if self.forbidden_types:
+            lines.append("FORBIDDEN TYPES (never use): " + ", ".join(self.forbidden_types))
+            lines.append("")
+
+        if self.fallback_mapping:
+            lines.append("FALLBACK MAPPING:")
+            for fm in self.fallback_mapping:
+                lines.append(f"- {fm.from_pattern} → {fm.to}")
+            lines.append("")
+
+        return "\n".join(lines).rstrip() + "\n"
+
     @staticmethod
     def _render_entry(entry: EntityTypeDef) -> list[str]:
         """Render one entity type entry."""

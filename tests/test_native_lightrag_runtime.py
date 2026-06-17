@@ -159,7 +159,9 @@ def test_build_native_lightrag_runtime_constructs_direct_lightrag_and_health() -
         embed_factory=SimpleNamespace(func=lambda **kwargs: kwargs),
         embedding_func_cls=_FakeEmbeddingFunc,
         build_role_llm_routing_fn=fake_role_routing,
-        get_default_catalog=lambda: SimpleNamespace(render_part_d=lambda: "PART D"),
+        get_default_catalog=lambda: SimpleNamespace(
+            render_extraction_guidance=lambda: "COMPACT GUIDANCE",
+        ),
         make_rerank_func=lambda: "rerank-func",
         native_pipeline_available_fn=lambda: True,
         version_resolver=lambda pkg: {"lightrag-hku": "1.5.2"}[pkg],
@@ -209,7 +211,9 @@ def test_build_native_lightrag_runtime_applies_parser_routing_to_lightrag_kwargs
             vision_model_func="vision-llm",
             role_llm_configs={"extract": "extract-cfg"},
         ),
-        get_default_catalog=lambda: SimpleNamespace(render_part_d=lambda: "PART D"),
+        get_default_catalog=lambda: SimpleNamespace(
+            render_extraction_guidance=lambda: "COMPACT GUIDANCE",
+        ),
         make_rerank_func=lambda: None,
         native_pipeline_available_fn=lambda: True,
         version_resolver=lambda pkg: "1.5.2",
@@ -238,7 +242,9 @@ def test_build_native_lightrag_runtime_installs_chunk_guardrails() -> None:
             vision_model_func="vision-llm",
             role_llm_configs={"extract": "extract-cfg"},
         ),
-        get_default_catalog=lambda: SimpleNamespace(render_part_d=lambda: "PART D"),
+        get_default_catalog=lambda: SimpleNamespace(
+            render_extraction_guidance=lambda: "COMPACT GUIDANCE",
+        ),
         make_rerank_func=lambda: None,
         native_pipeline_available_fn=lambda: True,
         version_resolver=lambda pkg: "1.5.2",

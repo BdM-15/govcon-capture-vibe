@@ -2,9 +2,9 @@
 #
 # LightRAG loads YAML prompt profiles from prompts/entity_type/<filename>.
 # This file only externalizes JSON examples. Entity type guidance remains sourced
-# from prompts/extraction/govcon_entity_types.yaml -> render_part_d() ->
-# addon_params["entity_types_guidance"], which has higher precedence and carries
-# richer structure than the flat file field.
+# from prompts/extraction/govcon_entity_types.yaml -> render_extraction_guidance() ->
+# addon_params["entity_types_guidance"] (compact index; full Part D via render_part_d() for tests).
+# Phase 1 epic: 3 examples (L↔M, workload, anti-pattern).
 
 entity_extraction_json_examples:
   - |
@@ -36,35 +36,7 @@ entity_extraction_json_examples:
 
     ---
   - |
-    EXAMPLE 2: Requirements with Criticality and Workload Drivers
-
-    Input Text:
-    [Section X.Y]. [SERVICE PROGRAM NAME] ([PROG]): The Contractor shall implement and maintain the [PROG] to support all [mission category] events and activities described in this section of the PWS. Approximately [N] customers visit all [PROG] locations on a daily basis. The Contractor shall ensure all personnel supporting the [PROG] are trained and all locations' [service stations] are always covered with no more than [M] [service station] coverage discrepancies allowed per [period]. Unless otherwise stated, the Contractor shall support the [PROG] 24 hours a day / 7 days a week.
-
-    The Government shall provide facilities for [PROG] operations.
-
-    Note: [SERVICE PROGRAM NAME], [N], [M], [period] are RFP-specific. This pattern applies to any 24/7 service program — fitness centers, dining facilities, help desks, motor pools, recreation programs, IT operations, etc. Teaches: parent-requirement decomposition, MEASURED_BY threshold, GFI pattern, schedule-as-workload-driver.
-
-    Output:
-    {{
-      "entities": [
-        {{"name": "[Section X.Y] [Service Program] Implementation", "type": "requirement", "description": "[Section X.Y]. [SERVICE PROGRAM NAME] ([PROG]): The Contractor shall implement and maintain the [PROG] to support all [mission category] events and activities. Approximately [N] customers daily. Criticality: MANDATORY. Modal verb: shall. Labor drivers: [N] customers daily, 24/7 operations."}},
-        {{"name": "[Section X.Y] [Service Station] Coverage", "type": "requirement", "description": "The Contractor shall ensure all personnel supporting the [PROG] are trained and all locations' [service stations] are always covered. Criticality: MANDATORY. Modal verb: shall. Labor drivers: all locations, always covered."}},
-        {{"name": "[Section X.Y] [PROG] 24/7 Support", "type": "requirement", "description": "Unless otherwise stated, the Contractor shall support the [PROG] 24 hours a day / 7 days a week. Criticality: MANDATORY. Modal verb: shall. Labor drivers: 24 hours/day, 7 days/week, continuous operations."}},
-        {{"name": "[Service Station] Coverage Threshold", "type": "performance_standard", "description": "No more than [M] [service station] coverage discrepancies allowed per [period]. Threshold: no more than [M] discrepancies per [period]. Measurement: Periodic Inspection ([period])."}},
-        {{"name": "Government Furnished Facilities", "type": "government_furnished_item", "description": "The Government shall provide facilities for [PROG] operations. Customer-provided facilities supporting [PROG] operations. Government-furnished asset, not contractor obligation."}}
-      ],
-      "relationships": [
-        {{"source": "[Section X.Y] [Service Station] Coverage", "target": "[Service Station] Coverage Threshold", "keywords": "MEASURED_BY, threshold, periodic inspection", "description": "Coverage requirement is measured by discrepancy threshold."}},
-        {{"source": "[Section X.Y] [Service Program] Implementation", "target": "[Parent Section]", "keywords": "CHILD_OF", "description": "[Section X.Y] requirement is contained within [Parent Section]."}},
-        {{"source": "[Section X.Y] [Service Station] Coverage", "target": "[Section X.Y] [Service Program] Implementation", "keywords": "CHILD_OF", "description": "[Service station] coverage requirement is part of [Section X.Y]."}},
-        {{"source": "[Section X.Y] [PROG] 24/7 Support", "target": "[Section X.Y] [Service Program] Implementation", "keywords": "CHILD_OF", "description": "24/7 support requirement is part of [Section X.Y]."}}
-      ]
-    }}
-
-    ---
-  - |
-    EXAMPLE 3: Operational Requirements with Workload Metrics (CRITICAL EXAMPLE)
+    EXAMPLE 2: Operational Requirements with Workload Metrics
 
     Input Text:
     [Section X.Y.Z]. [PRIMARY FACILITY] [Service Counter]: The Contractor shall handle [product/service] sales. The Contractor shall service:
@@ -99,87 +71,7 @@ entity_extraction_json_examples:
 
     ---
   - |
-    EXAMPLE 4: Equipment Inventory Tables with Location-Level Data
-
-    Input Text (TABLE + Narrative):
-    [Section X.Y.Z]. Preventive Maintenance: The Contractor shall ensure [equipment] are maintained according to the manufacturer's recommendations by performing preventive maintenance tasks. The Contractor shall perform [frequency] operational checks to ensure all [equipment] operate safely, are clean, and are in good condition.
-
-    TABLE [X.Y]. [EQUIPMENT TYPE] LISTING, LOCATION, AND MAINTENANCE SCHEDULE:
-
-    [TIER 1 — High Frequency, e.g. WEEKLY]:
-    [Facility A]: [N] [Equipment Type 1], [N] [Equipment Type 2]
-    [Facility B]: [N] [Equipment Type 1], [N] [Equipment Type 2]
-    [Facility C]: [N] [Equipment Type 1], [N] [Equipment Type 2]
-    [Tier 1] Machine Totals: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units)
-
-    [TIER 2 — Medium Frequency, e.g. MONTHLY]:
-    [Facility D]: [N] [Equipment Type 1], [N] [Equipment Type 2]
-    [Facility E]: [N] [Equipment Type 1], [N] [Equipment Type 2]
-    [Tier 2] Machine Totals: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units)
-
-    [TIER 3 — Low Frequency, e.g. ON-CALL]:
-    [Facility F]: [N] [Equipment Type 1], [N] [Equipment Type 2]
-    [Facility G]: [N] [Equipment Type 1], [N] [Equipment Type 2]
-    [Tier 3] Machine Totals: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units)
-
-    Note: [Equipment Type], [Facility] IDs, and counts are RFP-specific. Pattern applies to any equipment-intensive contract — laundry, HVAC, ground vehicles, medical devices, IT hardware, generators, copiers. Three-tier maintenance frequency (high/medium/low or weekly/monthly/on-call) is a recurring government workload structure. Teaches: table-to-KG extraction, HAS_EQUIPMENT, facility-level granularity, APPLIES_TO from requirement to equipment inventory.
-
-    Output:
-    {{
-      "entities": [
-        {{"name": "Table [X.Y] [Equipment Type] Listing", "type": "document", "description": "TABLE [X.Y]. [EQUIPMENT TYPE] LISTING, LOCATION, AND MAINTENANCE SCHEDULE. Contains facility-level equipment inventory with maintenance schedule tiers."}},
-        {{"name": "[Section X.Y.Z] Preventive Maintenance Requirement", "type": "requirement", "description": "[Section X.Y.Z]. Preventive Maintenance: The Contractor shall ensure [equipment] are maintained per manufacturer's recommendations with [frequency] operational checks. Criticality: MANDATORY. Modal verb: shall. Labor drivers: [frequency] checks, [Tier 1 N] units high-frequency, [Tier 2 N] units medium-frequency, [Tier 3 N] units on-call."}},
-        {{"name": "[Facility A]", "type": "location", "description": "[Facility A]. Equipment counts: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units). Maintenance schedule: [Tier 1]."}},
-        {{"name": "[Facility B]", "type": "location", "description": "[Facility B]. Equipment counts: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units). Maintenance schedule: [Tier 1]."}},
-        {{"name": "[Facility C]", "type": "location", "description": "[Facility C]. Equipment counts: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units). Maintenance schedule: [Tier 1]."}},
-        {{"name": "[Facility D]", "type": "location", "description": "[Facility D]. Equipment counts: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units). Maintenance schedule: [Tier 2]."}},
-        {{"name": "[Facility E]", "type": "location", "description": "[Facility E]. Equipment counts: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units). Maintenance schedule: [Tier 2]."}},
-        {{"name": "[Facility F]", "type": "location", "description": "[Facility F]. Equipment counts: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units). Maintenance schedule: [Tier 3]."}},
-        {{"name": "[Facility G]", "type": "location", "description": "[Facility G]. Equipment counts: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units). Maintenance schedule: [Tier 3]."}},
-        {{"name": "[Tier 1] Maintenance Equipment Inventory", "type": "equipment", "description": "[Tier 1] maintenance schedule equipment. Total: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units) across [Facilities A, B, C]."}},
-        {{"name": "[Tier 2] Maintenance Equipment Inventory", "type": "equipment", "description": "[Tier 2] maintenance schedule equipment. Total: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units) in [Facilities D, E]."}},
-        {{"name": "[Tier 3] Maintenance Equipment Inventory", "type": "equipment", "description": "[Tier 3] maintenance schedule equipment. Total: [N] [Equipment Type 1], [N] [Equipment Type 2] ([N] total units) in [Facilities F, G]."}}
-      ],
-      "relationships": [
-        {{"source": "[Facility A]", "target": "[Tier 1] Maintenance Equipment Inventory", "keywords": "HAS_EQUIPMENT", "description": "Facility has [Tier 1] maintenance equipment."}},
-        {{"source": "[Facility B]", "target": "[Tier 1] Maintenance Equipment Inventory", "keywords": "HAS_EQUIPMENT", "description": "Facility has [Tier 1] maintenance equipment."}},
-        {{"source": "[Facility C]", "target": "[Tier 1] Maintenance Equipment Inventory", "keywords": "HAS_EQUIPMENT", "description": "Facility has [Tier 1] maintenance equipment."}},
-        {{"source": "[Section X.Y.Z] Preventive Maintenance Requirement", "target": "[Tier 1] Maintenance Equipment Inventory", "keywords": "APPLIES_TO", "description": "Maintenance requirement applies to [Tier 1] equipment."}},
-        {{"source": "Table [X.Y] [Equipment Type] Listing", "target": "[Parent Section]", "keywords": "CHILD_OF", "description": "Table is part of [Parent Section]."}},
-        {{"source": "[Section X.Y.Z] Preventive Maintenance Requirement", "target": "[Parent Section]", "keywords": "CHILD_OF", "description": "[Section X.Y.Z] requirement is contained within [Parent Section]."}}
-      ]
-    }}
-
-    ---
-  - |
-    EXAMPLE 5: GFP and CDRL Requirements
-
-    Input Text:
-    Government Furnished Property Reporting – The Contractor shall report GFP to the Contracting Officer within the task order specific time limits and using the current version of Government-furnished forms. [CDRL A016]. The Contractor shall report GFP: within 30 calendar days after the start of the period of performance, not later than 30 calendar days prior to the end of the period of performance, and at a minimum annually. The Contractor shall base reports on physical inventories.
-
-    Date of First Submission: Thirty (30) calendar days after the start of the Period of Performance (POP)
-    Frequency: As required
-
-    Output:
-    {{
-      "entities": [
-        {{"name": "Government Furnished Property Reporting", "type": "requirement", "description": "Government Furnished Property Reporting – The Contractor shall report GFP to the Contracting Officer within the task order specific time limits and using the current version of Government-furnished forms. [CDRL A016]. Criticality: MANDATORY. Modal verb: shall. CDRL reference: A016."}},
-        {{"name": "GFP Report Initial Submission", "type": "deliverable", "description": "The Contractor shall report GFP within 30 calendar days after the start of the period of performance. Due date: 30 calendar days after POP start."}},
-        {{"name": "GFP Report Final Submission", "type": "deliverable", "description": "GFP report due not later than 30 calendar days prior to the end of the period of performance. Due date: NLT 30 calendar days prior to POP end."}},
-        {{"name": "GFP Physical Inventory Requirement", "type": "requirement", "description": "The Contractor shall base reports on physical inventories. Criticality: MANDATORY. Modal verb: shall."}},
-        {{"name": "CDRL A016", "type": "deliverable", "description": "CDRL A016. Government Furnished Property reporting deliverable."}},
-        {{"name": "Contracting Officer", "type": "organization", "description": "Contracting Officer. Receives GFP reports from contractor."}}
-      ],
-      "relationships": [
-        {{"source": "Government Furnished Property Reporting", "target": "CDRL A016", "keywords": "TRACKED_BY", "description": "GFP reporting tracked by CDRL A016."}},
-        {{"source": "GFP Report Initial Submission", "target": "Government Furnished Property Reporting", "keywords": "CHILD_OF", "description": "Initial submission is part of GFP reporting requirement."}},
-        {{"source": "Government Furnished Property Reporting", "target": "Contracting Officer", "keywords": "SUBMITTED_TO", "description": "GFP reports submitted to Contracting Officer."}}
-      ]
-    }}
-
-    ---
-  - |
-    EXAMPLE 6: ANTI-PATTERN — NOT Extracting Forced Relationships
+    EXAMPLE 3: ANTI-PATTERN — NOT Extracting Forced Relationships
 
     When entities have NO semantic connection, do NOT create relationships just to connect them.
 
@@ -219,63 +111,3 @@ entity_extraction_json_examples:
     - No shared domain keywords
     - No logical business or technical dependency
     - Just trying to "connect everything" without semantic justification
-  - |
-    EXAMPLE 7: HIGH-DENSITY EXTRACTION (Section L↔M chunk with full traceability)
-
-    This example exists to counter under-extraction on enumerated chunks.
-    It uses generic placeholder names ("Factor 1", "Subfactor 1.A", "Plan A",
-    "Deliverable Tracking ID X", "FAR 52.XXX-XX") to teach the SHAPE of a
-    high-density L↔M extraction, not any specific RFP. When a chunk is this
-    rich, the JSON output MUST be this rich.
-
-    Input Text:
-    L.4 Volume II - Technical Volume. Offerors shall submit a Technical Volume not exceeding {{N}} pages, {{font}}, addressing Subfactors 1.A through 1.D. Subfactor 1.A (Plan A) shall include a staffing matrix listing FTEs, labor hours, and qualifications, and a mobilization schedule with critical path delivered NLT {{date}} (Deliverable Tracking ID X). Subfactor 1.B (Plan B) shall address {{N}}-day crisis continuity (limit {{M}} pages). Subfactor 1.C (Plan C) shall satisfy FAR 52.XXX-XX(h)(3) minimums. Subfactor 1.D (Plan D) shall be Task-Order-specific (Deliverable Tracking ID Y). M.2 Evaluation. Subfactor 1.A receives a combined technical/risk rating using the five-level scale (Outstanding/Good/Acceptable/Marginal/Unacceptable). Subfactors 1.B-1.D are rated Acceptable/Unacceptable; any Unacceptable renders the proposal un-awardable. Subfactor 1.A is more important than Factor 2 (Price).
-
-    Output:
-    {{
-      "entities": [
-        {{"name": "Volume II - Technical Volume", "type": "proposal_volume", "description": "Technical Volume submitted by offerors. Page limit: {{N}} pages. Format: {{font}}. Volume_id: II. Purpose: address Subfactors 1.A-1.D."}},
-        {{"name": "L.4 Technical Volume Submission Instruction", "type": "proposal_instruction", "description": "Offerors shall submit a Technical Volume not exceeding {{N}} pages, {{font}}, addressing Subfactors 1.A through 1.D. Page_limit: {{N}}. Format_reqs: {{font}}. Modal verb: shall. Criticality: MANDATORY."}},
-        {{"name": "Factor 1 - Technical", "type": "evaluation_factor", "description": "Technical evaluation factor containing four subfactors (1.A-1.D). Importance: more important than Factor 2 (Price). Subfactors: 1.A (rated tradeoff), 1.B, 1.C, 1.D (1.B-1.D are pass/fail gates)."}},
-        {{"name": "Subfactor 1.A - Plan A", "type": "evaluation_factor", "description": "Tradeoff subfactor rated combined technical/risk on a five-level adjectival scale: Outstanding, Good, Acceptable, Marginal, Unacceptable. Parent_factor: Factor 1. Subfactor_number: 1.A. More important than Factor 2 Price. hierarchy_level: subfactor."}},
-        {{"name": "Subfactor 1.B - Plan B", "type": "evaluation_factor", "description": "Acceptable/Unacceptable gate; Unacceptable renders proposal un-awardable. Page limit: {{M}} pages. Must address {{N}}-day crisis continuity. Parent_factor: Factor 1. Subfactor_number: 1.B. hierarchy_level: subfactor."}},
-        {{"name": "Subfactor 1.C - Plan C", "type": "evaluation_factor", "description": "Acceptable/Unacceptable gate; must satisfy FAR 52.XXX-XX(h)(3) minimums. Parent_factor: Factor 1. Subfactor_number: 1.C. hierarchy_level: subfactor."}},
-        {{"name": "Subfactor 1.D - Plan D", "type": "evaluation_factor", "description": "Acceptable/Unacceptable gate; must be task-order-specific (generic basic-contract plans are unacceptable). Parent_factor: Factor 1. Subfactor_number: 1.D. hierarchy_level: subfactor."}},
-        {{"name": "Factor 2 - Price", "type": "evaluation_factor", "description": "Price evaluation factor. Importance: less important than Subfactor 1.A. Evaluated on Total Evaluated Price (TEP) for reasonableness and realism."}},
-        {{"name": "Staffing Matrix (Plan A)", "type": "deliverable", "description": "Required content of Subfactor 1.A. Lists FTEs, labor hours, and qualifications. Submitted as part of Technical Volume."}},
-        {{"name": "Mobilization Schedule with Critical Path", "type": "deliverable", "description": "Required content of Subfactor 1.A. Critical path required NLT {{date}}. Tied to Deliverable Tracking ID X."}},
-        {{"name": "Deliverable Tracking ID X (Plan A)", "type": "deliverable", "description": "Deliverable tracking ID X. Plan A submitted with initial proposal and as required with CO approval prior to implementation. Must demonstrate fulfillment of task-order requirements, designate empowered on-site manager, address schedules, risks, critical path."}},
-        {{"name": "Deliverable Tracking ID Y (Plan D)", "type": "deliverable", "description": "Deliverable tracking ID Y. Plan D submitted with each task-order proposal; revisions due within {{N}} calendar days after PoP start. Inspection methods, discrepancies, corrective actions documented."}},
-        {{"name": "Five-Level Adjectival Rating Scale", "type": "performance_standard", "description": "Combined technical/risk rating scale: Outstanding (multiple strengths, very low risk), Good (at least one strength, low risk), Acceptable (offsetting strengths/weaknesses, moderate risk), Marginal (unoffset weaknesses, high risk), Unacceptable (one or more deficiencies, un-awardable). Used for Subfactor 1.A."}},
-        {{"name": "Acceptable/Unacceptable Pass-Fail Standard", "type": "performance_standard", "description": "Binary rating used for Subfactors 1.B, 1.C, 1.D. Any Unacceptable rating renders the entire proposal un-awardable."}},
-        {{"name": "FAR 52.XXX-XX (Cited Compliance Clause)", "type": "clause", "description": "Cited compliance clause referenced by Subfactor 1.C. Clause_number: 52.XXX-XX. Regulation: FAR. Subsection (h)(3) sets minimum compliance plan content."}}
-      ],
-      "relationships": [
-        {{"source": "L.4 Technical Volume Submission Instruction", "target": "Volume II - Technical Volume", "keywords": "APPLIES_TO, submission instruction governs volume", "description": "L.4 instruction applies to the Technical Volume offerors submit."}},
-        {{"source": "L.4 Technical Volume Submission Instruction", "target": "Factor 1 - Technical", "keywords": "GUIDES, instruction directs response to evaluation factor", "description": "L.4 directs offerors to address Subfactors 1.A-1.D of Factor 1."}},
-        {{"source": "Subfactor 1.A - Plan A", "target": "Factor 1 - Technical", "keywords": "CHILD_OF, subfactor hierarchy", "description": "Subfactor 1.A is a child evaluation factor (hierarchy_level=subfactor) under Factor 1 Technical."}},
-        {{"source": "Subfactor 1.B - Plan B", "target": "Factor 1 - Technical", "keywords": "CHILD_OF, subfactor hierarchy", "description": "Subfactor 1.B is a pass/fail child evaluation factor under Factor 1 Technical."}},
-        {{"source": "Subfactor 1.C - Plan C", "target": "Factor 1 - Technical", "keywords": "CHILD_OF, subfactor hierarchy", "description": "Subfactor 1.C is a pass/fail child evaluation factor under Factor 1 Technical."}},
-        {{"source": "Subfactor 1.D - Plan D", "target": "Factor 1 - Technical", "keywords": "CHILD_OF, subfactor hierarchy", "description": "Subfactor 1.D is a task-order-specific child evaluation factor under Factor 1 Technical."}},
-        {{"source": "Subfactor 1.A - Plan A", "target": "Five-Level Adjectival Rating Scale", "keywords": "MEASURED_BY", "description": "Subfactor 1.A is rated using the five-level adjectival scale."}},
-        {{"source": "Subfactor 1.B - Plan B", "target": "Acceptable/Unacceptable Pass-Fail Standard", "keywords": "MEASURED_BY", "description": "Subfactor 1.B is rated Acceptable/Unacceptable."}},
-        {{"source": "Subfactor 1.C - Plan C", "target": "Acceptable/Unacceptable Pass-Fail Standard", "keywords": "MEASURED_BY", "description": "Subfactor 1.C is rated Acceptable/Unacceptable."}},
-        {{"source": "Subfactor 1.D - Plan D", "target": "Acceptable/Unacceptable Pass-Fail Standard", "keywords": "MEASURED_BY", "description": "Subfactor 1.D is rated Acceptable/Unacceptable."}},
-        {{"source": "Subfactor 1.C - Plan C", "target": "FAR 52.XXX-XX (Cited Compliance Clause)", "keywords": "GOVERNED_BY", "description": "Subfactor 1.C must satisfy FAR 52.XXX-XX(h)(3) minimums."}},
-        {{"source": "Subfactor 1.A - Plan A", "target": "Staffing Matrix (Plan A)", "keywords": "SATISFIED_BY", "description": "Subfactor 1.A requires a staffing matrix as part of Plan A."}},
-        {{"source": "Subfactor 1.A - Plan A", "target": "Mobilization Schedule with Critical Path", "keywords": "SATISFIED_BY", "description": "Subfactor 1.A requires a mobilization schedule with critical path."}},
-        {{"source": "Mobilization Schedule with Critical Path", "target": "Deliverable Tracking ID X (Plan A)", "keywords": "TRACKED_BY", "description": "Mobilization schedule is tracked under Deliverable Tracking ID X."}},
-        {{"source": "Subfactor 1.D - Plan D", "target": "Deliverable Tracking ID Y (Plan D)", "keywords": "TRACKED_BY", "description": "Subfactor 1.D deliverable is tracked under Deliverable Tracking ID Y."}}
-      ]
-    }}
-
-    Note on density: this single chunk yields 15 entities and 15 relationships.
-    That is the expected ratio for Section L↔M chunks. Under-extraction here
-    (e.g. only emitting "Factor 1", "Factor 2", and one umbrella requirement)
-    would drop the entire compliance matrix downstream consumers depend on.
-
-    CRITICAL: The placeholder names above ({{N}}, {{date}}, "Plan A", "Subfactor 1.A",
-    "FAR 52.XXX-XX", "Deliverable Tracking ID X") are TEACHING DEVICES showing the
-    SHAPE of high-density L↔M extraction. In real chunks, substitute the actual
-    RFP-specific names verbatim. Do NOT copy "Plan A" or "FAR 52.XXX-XX" into
-    your output — that means you ignored the chunk and parroted the example.
