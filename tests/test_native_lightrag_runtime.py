@@ -86,6 +86,8 @@ def test_configure_native_parser_environment_sets_lightrag_parser_and_mineru_env
         "MAX_PARALLEL_PARSE_DOCLING": "1",
         "MAX_PARALLEL_ANALYZE": "4",
         "MINERU_LOCAL_EFFORT": "high",
+        "MINERU_POLL_INTERVAL_SECONDS": "2.0",
+        "MINERU_MAX_POLLS": "1800",
     }
     assert env == expected
     assert parser.routing == "pdf:mineru-ite,docx:native-ite"

@@ -352,6 +352,17 @@ class Settings(BaseSettings):
         description="Effort level for MinerU 3.3+ hybrid-auto-engine (high|medium|low). "
                     "Bridged at runtime via in-tree shim until stock lightrag-hku forwards it natively."
     )
+    mineru_poll_interval_seconds: float = Field(
+        default=2.0,
+        validation_alias="MINERU_POLL_INTERVAL_SECONDS",
+        description="Seconds between MinerU /tasks status polls (LightRAG MinerURawClient).",
+    )
+    mineru_max_polls: int = Field(
+        default=1800,
+        validation_alias="MINERU_MAX_POLLS",
+        description="Max MinerU /tasks poll attempts before timeout. At 2s interval, 1800 ≈ 60 min "
+                    "for large solicitation PDFs (stock LightRAG default 600 ≈ 20 min).",
+    )
 
     mineru_local_parse_method: str = Field(
         default="auto",
